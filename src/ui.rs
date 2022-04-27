@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::process::{Command, Child};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use std::thread;
 use std::fs;
 use sysinfo::{SystemExt, System, ProcessExt};
@@ -389,6 +389,9 @@ pub struct VibeCheckGUI {
 
     pub editing: Vec<u32>,
 
+    pub battery_synced: bool,
+    pub minute_sync: Instant,
+
     pub tab: VCGUITab,
     pub running: bool,
     pub toys: HashMap<u32, VCToy>,
@@ -425,6 +428,8 @@ impl VibeCheckGUI {
 
             editing: Vec::new(),
 
+            battery_synced: false,
+            minute_sync: Instant::now(),
             tab: VCGUITab::Main,
             running: false,
             toys: HashMap::new(),
@@ -575,6 +580,14 @@ impl VibeCheckGUI {
                         }
                     });
                 });
+                ui.with_layout(Layout::right_to_left(), |ui| {
+                    let dur_secs = self.minute_sync.elapsed().as_secs();
+                    ui.label(format!("Horny for: {:02}:{:02}:{:02}",
+                    (dur_secs / 60) / 60,
+                    (dur_secs / 60) % 60,
+                    dur_secs % 60,
+                ));
+                });
             });
         });
     }
@@ -600,6 +613,7 @@ impl VibeCheckGUI {
     }
 
     fn list_config(&mut self, ui: &mut egui::Ui) {
+
         ui.horizontal_wrapped(|ui| {
             ui.label("OSC Bind Host: ");ui.text_edit_singleline(&mut self.config.networking.bind.0);
         });
@@ -826,6 +840,29 @@ impl VibeCheckGUI {
             }
         }
     }
+
+    fn update_battery_percentages(&mut self) {
+
+        for toy in &mut self.toys {
+            if toy.1.device_handle.connected() {
+                let f = toy.1.device_handle.battery_level();
+                toy.1.battery_level = match self.async_rt.block_on(async {tokio::time::timeout(Duration::from_millis(500), f).await}) {
+                    Ok(battery) => {
+                        if let Ok(b) = battery {
+                            b
+                        } else {
+                            println!("[!] Failed to get battery! Cancel toy call for {}.", toy.1.toy_name);
+                            continue;
+                        }
+                    },
+                    Err(_e) => {
+                        println!("[!] Failed to get battery! Cancel toy call for {}.", toy.1.toy_name);
+                        continue;
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -963,6 +1000,14 @@ impl App for VibeCheckGUI {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &eframe::epi::Frame) {
+
+        let dur = self.minute_sync.elapsed();
+        if (dur.as_secs() % 120 == 0) && !self.battery_synced {
+            self.update_battery_percentages();
+            self.battery_synced = true;
+        } else if self.battery_synced && (dur.as_secs() % 2 == 1) {
+            self.battery_synced = false;
+        }
 
         if self.data_update_inc == 120 {
             self.data_update_inc = 0;
