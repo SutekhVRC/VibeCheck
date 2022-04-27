@@ -605,7 +605,7 @@ impl VibeCheckGUI {
             ui.vertical_centered(|ui| {
                 ui.add_space(5.0);
                 ui.add(Hyperlink::from_label_and_url("VibeCheck","https://github.com/SutekhVRC/VibeCheck"));
-                ui.label("0.0.9-alpha");
+                ui.label("0.0.10-alpha");
                 ui.add(Hyperlink::from_label_and_url(RichText::new("Made by Sutekh").monospace().color(Color32::WHITE),"https://github.com/SutekhVRC"));
                 ui.add_space(5.0);
             });
