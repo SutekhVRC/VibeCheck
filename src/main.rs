@@ -15,7 +15,7 @@ mod handling;
 use ui::VibeCheckGUI;
 
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 struct OSCNetworking {
     bind: (String, String),
     //vrchat: (String, String),
@@ -30,10 +30,10 @@ impl Default for OSCNetworking {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 struct IntifaceConfig(String);
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct VibeCheckConfig {
     networking: OSCNetworking,
     intiface_config: IntifaceConfig,

@@ -2,22 +2,19 @@ use std::collections::HashMap;
 use std::net::UdpSocket;
 use std::sync::Arc;
 use std::sync::mpsc::{Sender, Receiver};
-use std::task::Context;
 use std::time::Duration;
-use buttplug::client::{ButtplugClient, ButtplugClientEvent, ButtplugClientDeviceMessageType};
+use buttplug::client::{ButtplugClient, ButtplugClientEvent};
 use buttplug::client::ButtplugClientDevice;
-use eframe::egui::Button;
-use futures::{StreamExt, FutureExt, Stream};
+use futures::StreamExt;
 use futures_timer::Delay;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use std::thread;
 use tokio::sync::{self, broadcast::{Sender as BSender, Receiver as BReceiver}};
-use rosc::{self, OscMessage, OscPacket, OscType};
+use rosc::{self, OscMessage, OscPacket};
 
 use crate::ui::{ToyManagementEvent, ToyMode, FeatureParamMap, FeatureMode};
 use crate::{
-    get_user_home_dir,
     ui::ToyUpdate,
     ui::VCToy,
     ui::ToyFeature,
@@ -119,22 +116,22 @@ pub async fn client_event_handler(
                 },
                 ButtplugClientEvent::DeviceRemoved(dev) => {
     
-                    event_tx.send(EventSig::ToyRemove(dev.index()));
+                    let _ = event_tx.send(EventSig::ToyRemove(dev.index()));
                     println!("[*] Sent dev discon to UI.");
                 },
                 ButtplugClientEvent::ScanningFinished => println!("[!] Scanning finished!"),
                 ButtplugClientEvent::ServerDisconnect => {
-                    event_tx.send(EventSig::Shutdown);
+                    let _ = event_tx.send(EventSig::Shutdown);
                     println!("[!] Server disconnected!");
-                    client.stop_scanning().await;
-                    client.disconnect().await;
+                    let _ = client.stop_scanning().await;
+                    let _ = client.disconnect().await;
                     break;
                 },
                 ButtplugClientEvent::PingTimeout => {
-                    event_tx.send(EventSig::Shutdown);
+                    let _ = event_tx.send(EventSig::Shutdown);
                     println!("[!] Server timeout!");
-                    client.stop_scanning().await;
-                    client.disconnect().await;
+                    let _ = client.stop_scanning().await;
+                    let _ = client.disconnect().await;
                     break;
                 },
                 _ => {},
@@ -150,7 +147,7 @@ pub async fn client_event_handler(
         + Keep a thread count of connected toys. Add/remove as recvs ToyUpdates from main thread
         + Send toy updates like (battery updates)
 */
-pub async fn toy_management_handler(tme_send: Sender<ToyManagementEvent>, tme_recv: Receiver<ToyManagementEvent>, mut toys: HashMap<u32, VCToy>) {
+pub async fn toy_management_handler(_tme_send: Sender<ToyManagementEvent>, tme_recv: Receiver<ToyManagementEvent>, mut toys: HashMap<u32, VCToy>) {
 
     let f = |dev: Arc<ButtplugClientDevice>, mut toy_bcst_rx: BReceiver<ToySig>, mut feature_map: FeatureParamMap| {
         // Read toy config here?
@@ -178,25 +175,25 @@ pub async fn toy_management_handler(tme_send: Sender<ToyManagementEvent>, tme_re
                                                 ToyFeature::Vibrator(fm) => {
                                                     let vibe_level = ((lvl * 100.0).round() / 100.0) as f64;
                                                     if let FeatureMode::Custom(fi) = fm {
-                                                        dev.vibrate(buttplug::client::VibrateCommand::SpeedMap(HashMap::from([(fi, vibe_level)]))).await;
+                                                        let _ = dev.vibrate(buttplug::client::VibrateCommand::SpeedMap(HashMap::from([(fi, vibe_level)]))).await;
                                                     } else {
-                                                        dev.vibrate(buttplug::client::VibrateCommand::Speed(vibe_level)).await;
+                                                        let _ = dev.vibrate(buttplug::client::VibrateCommand::Speed(vibe_level)).await;
                                                     }
                                                 },
                                                 ToyFeature::Rotator(fm) => {
                                                     let rotate_level = ((lvl * 100.0).round() / 100.0) as f64;
                                                     if let FeatureMode::Custom(fi) = fm {
-                                                        dev.rotate(buttplug::client::RotateCommand::RotateMap(HashMap::from([(fi, (rotate_level,true))]))).await;
+                                                        let _ = dev.rotate(buttplug::client::RotateCommand::RotateMap(HashMap::from([(fi, (rotate_level,true))]))).await;
                                                     } else {
-                                                        dev.rotate(buttplug::client::RotateCommand::Rotate(rotate_level, true)).await;
+                                                        let _ = dev.rotate(buttplug::client::RotateCommand::Rotate(rotate_level, true)).await;
                                                     }
                                                 },
                                                 ToyFeature::Linear(fm) => {
                                                     let linear_level = ((lvl * 100.0).round() / 100.0) as f64;
                                                     if let FeatureMode::Custom(fi) = fm {
-                                                        dev.linear(buttplug::client::LinearCommand::LinearMap(HashMap::from([(fi, (500, linear_level))]))).await;
+                                                        let _ = dev.linear(buttplug::client::LinearCommand::LinearMap(HashMap::from([(fi, (500, linear_level))]))).await;
                                                     } else {
-                                                        dev.linear(buttplug::client::LinearCommand::Linear(500, linear_level)).await;
+                                                        let _ = dev.linear(buttplug::client::LinearCommand::Linear(500, linear_level)).await;
                                                     }
                                                 }
                                             }
@@ -306,14 +303,14 @@ pub async fn toy_management_handler(tme_send: Sender<ToyManagementEvent>, tme_re
                                         // OSC Listener thread will only die on StopListening event
                                         if let Some(toy) = running_toy_ths.remove(&id) {
                                             toy.abort();
-                                            toy.await;
+                                            let _ = toy.await;
                                             println!("[TOY ID: {}] Stopped listening. (ToyUpdate::RemoveToy)", id);
                                             running_toy_ths.remove(&id);
                                             toys.remove(&id);
                                         }
                                     },
                                     ToyUpdate::AlterToy(toy) => {
-                                        toy_bcst_tx.send(ToySig::UpdateToy(ToyUpdate::AlterToy(toy.clone())));
+                                        let _ = toy_bcst_tx.send(ToySig::UpdateToy(ToyUpdate::AlterToy(toy.clone())));
                                         toys.insert(toy.toy_id, toy);
                                     }
                                 }
@@ -328,7 +325,7 @@ pub async fn toy_management_handler(tme_send: Sender<ToyManagementEvent>, tme_re
                                         // Stop listening on every device and clean running thread hashmap
                                         for toy in &mut running_toy_ths {
                                             toy.1.abort();
-                                            toy.1.await;
+                                            let _ = toy.1.await;
                                             println!("[TOY ID: {}] Stopped listening. (TMSIG)", toy.0);
                                         }
                                         running_toy_ths.clear();

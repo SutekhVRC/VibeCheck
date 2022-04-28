@@ -4,7 +4,6 @@ use buttplug::core::messages::ButtplugCurrentSpecDeviceMessageType;
 use eframe::egui::CollapsingHeader;
 //use eframe::egui::style::{WidgetVisuals, Widgets};
 use eframe::egui::{ScrollArea, Layout, RichText, TopBottomPanel, Hyperlink, Context, Style, style::Visuals, Color32, TextStyle};
-use eframe::epaint::{FontId, FontFamily};
 //use eframe::epaint::{Stroke, Rounding};
 use eframe::{epi::App, egui::{self, CentralPanel}};
 use serde::{Serialize, Deserialize};
@@ -23,7 +22,8 @@ use sysinfo::{SystemExt, System, ProcessExt};
 use crate::file_exists;
 use crate::{
     VibeCheckConfig,
-    OSCNetworking,
+    check_valid_ipv4,
+    check_valid_port,
     get_user_home_dir,
     handling::EventSig,
     handling::{
@@ -387,7 +387,7 @@ pub enum VCError {
 
 pub struct VibeCheckGUI {
     pub config: VibeCheckConfig,
-    //pub config_edit: bool,
+    pub config_edit: VibeCheckConfig,
 
     pub editing: Vec<u32>,
 
@@ -424,9 +424,11 @@ impl VibeCheckGUI {
 
     pub fn new(config: VibeCheckConfig) -> Self {
 
+        let config_edit = config.clone();
+
         Self {
             config,
-            //config_edit: false,
+            config_edit,
 
             editing: Vec::new(),
 
@@ -614,20 +616,36 @@ impl VibeCheckGUI {
         });
     }
 
+    fn chk_valid_config_inputs(&mut self) -> bool {
+        if !check_valid_ipv4(&self.config_edit.networking.bind.0) {
+            return false;
+        }
+
+        if !check_valid_port(&self.config_edit.networking.bind.1) {
+            return false;
+        }
+
+        if !check_valid_port(&self.config_edit.intiface_config.0) {
+            return false;
+        }
+
+        true
+    }
+
     fn list_config(&mut self, ui: &mut egui::Ui) {
 
         ui.horizontal_wrapped(|ui| {
-            ui.label("OSC Bind Host: ");ui.text_edit_singleline(&mut self.config.networking.bind.0);
+            ui.label("OSC Bind Host: ");ui.text_edit_singleline(&mut self.config_edit.networking.bind.0);
         });
 
         ui.horizontal_wrapped(|ui| {
-            ui.label("OSC Bind Port: ");ui.text_edit_singleline(&mut self.config.networking.bind.1);
+            ui.label("OSC Bind Port: ");ui.text_edit_singleline(&mut self.config_edit.networking.bind.1);
         });
 
         ui.separator();
 
         ui.horizontal_wrapped(|ui| {
-            ui.label("Intiface WS Port: "); ui.text_edit_singleline(&mut self.config.intiface_config.0);
+            ui.label("Intiface WS Port: "); ui.text_edit_singleline(&mut self.config_edit.intiface_config.0);
         });
 
         //ui.label(format!("Bind: {}:{}", self.config.networking.bind.0,self.config.networking.bind.1));
@@ -1060,7 +1078,11 @@ impl App for VibeCheckGUI {
                         ui.label("VibeCheck Config");
                         ui.with_layout(Layout::right_to_left(), |ui| {
                             if ui.button("Save").clicked() {
-                                self.save_config();
+                                if self.chk_valid_config_inputs() {
+                                    self.save_config();
+                                } else {
+                                    self.config_edit = self.config.clone();
+                                }
                             }
                         });
                     });
