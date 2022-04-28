@@ -1,8 +1,10 @@
 use buttplug::client::ButtplugClientDevice;
 use buttplug::client::device::ClientDeviceMessageAttributesMap;
 use buttplug::core::messages::ButtplugCurrentSpecDeviceMessageType;
+use eframe::egui::CollapsingHeader;
 //use eframe::egui::style::{WidgetVisuals, Widgets};
 use eframe::egui::{ScrollArea, Layout, RichText, TopBottomPanel, Hyperlink, Context, Style, style::Visuals, Color32, TextStyle};
+use eframe::epaint::{FontId, FontFamily};
 //use eframe::epaint::{Stroke, Rounding};
 use eframe::{epi::App, egui::{self, CentralPanel}};
 use serde::{Serialize, Deserialize};
@@ -605,7 +607,7 @@ impl VibeCheckGUI {
             ui.vertical_centered(|ui| {
                 ui.add_space(5.0);
                 ui.add(Hyperlink::from_label_and_url("VibeCheck","https://github.com/SutekhVRC/VibeCheck"));
-                ui.label("0.0.10-alpha");
+                ui.label("0.0.11-alpha");
                 ui.add(Hyperlink::from_label_and_url(RichText::new("Made by Sutekh").monospace().color(Color32::WHITE),"https://github.com/SutekhVRC"));
                 ui.add_space(5.0);
             });
@@ -641,169 +643,184 @@ impl VibeCheckGUI {
         //let toys_count = self.toys.len();
 
         for toy in &mut self.toys {
-            ui.group(|ui| {
+
+            //ui.group(|ui| {
+                /*
                 ui.vertical_centered(|ui| {
                     ui.label(RichText::new(format!("{} [{}%]", toy.1.toy_name, (toy.1.battery_level*100.).round())));
                 });
-                ui.separator();
-                
-                if !self.editing.contains(&toy.0) {
-                    ui.horizontal_wrapped(|ui| {
-                        ui.label(RichText::new("Features"));
-                        ui.with_layout(Layout::right_to_left(), |ui| {
-                            if ui.button("Edit").clicked() {
-                                self.editing.push(*toy.0);
-                                return;
-                            }
-                        });
-                    });
-                    ui.separator();
-                    // List toy features
-                    ui.label(format!("{}",toy.1.param_feature_map));
-                } else {
-                    ui.horizontal_wrapped(|ui| {
-                        ui.label(RichText::new("Features"));
-                        ui.with_layout(Layout::right_to_left(), |ui| {
-                            if ui.button("Save").clicked() {
-                                match self.editing.binary_search(&toy.0) {
-                                    Ok(i) => {
-                                        alter_toy(self.tme_send.as_ref().unwrap(), toy.1.clone());
-                                        save_toy_config(&toy.1.toy_name, toy.1.param_feature_map.clone());
-                                        self.editing.remove(i);
-                                        return;
-                                    },
-                                    Err(_e) => {}
-                                }
-                            }
-                        });
-                    });
-                    ui.separator();
+                */
 
-                    // Edit parameters
-                    
-                    match toy.1.param_feature_map.v {
-                        Some(ref mut vibrators) => {
-
-                            ui.horizontal_wrapped(|ui| {
-                                ui.label(RichText::new("Vibrator(s) Parameter Mode:"));
-                                egui::ComboBox::from_id_source(format!("{} Vibrator Mode ({})", toy.1.toy_name, toy.1.toy_id))
-                                .selected_text(vibrators.get_param_mode_str())
-                                .show_ui(ui, |ui| {
-                                    ui.selectable_value(vibrators, Vibrators::Auto(toy.1.param_feature_map.v_auto.clone()), "Auto");
-                                    ui.selectable_value(vibrators, Vibrators::Custom(toy.1.param_feature_map.v_custom.clone()), "Custom");
-                                });
-                            });
-
-                            match vibrators {
-                                Vibrators::Auto(_auto_str) => {
-                                    ui.horizontal_wrapped(|ui| {
-                                        ui.label("Auto Parameter: ");
-                                        ui.text_edit_singleline(&mut toy.1.param_feature_map.v_auto);
-                                    });
-                                    toy.1.param_feature_map.v = Some(Vibrators::Auto(toy.1.param_feature_map.v_auto.clone()));
-                                },
-                                Vibrators::Custom(cmap) => {
-
-                                    for i in 0..cmap.len() {
-                                        if i > 0 {
-                                            ui.add_space(0.1);
+                ui.horizontal_wrapped(|ui| {
+                    CollapsingHeader::new(format!("{} [{}%]", toy.1.toy_name, (toy.1.battery_level*100.).round())).show(ui, |ui| {
+                        ui.group(|ui| {
+                            if !self.editing.contains(&toy.0) {
+                                ui.horizontal_wrapped(|ui| {
+                                    ui.label(RichText::new("Features"));
+                                    ui.with_layout(Layout::right_to_left(), |ui| {
+                                        if ui.button("Edit").clicked() {
+                                            self.editing.push(*toy.0);
+                                            return;
                                         }
-                                        ui.horizontal_wrapped(|ui| {
-                                            ui.label(format!("Vibrator ({}): ", toy.1.param_feature_map.v_custom[i].1));
-                                            ui.text_edit_singleline(&mut toy.1.param_feature_map.v_custom[i].0);
-                                        });
-                                    }
-                                    toy.1.param_feature_map.v = Some(Vibrators::Custom(toy.1.param_feature_map.v_custom.clone()));
-                                }
-                            }
-                        },
-                        None => {},
-                    }
-
-                    match toy.1.param_feature_map.r {
-
-                        Some(ref mut rotators) => {
-                            ui.separator();
-                            ui.horizontal_wrapped(|ui| {
-                                ui.label(RichText::new("Rotator(s) Parameter Mode:"));
-                                egui::ComboBox::from_id_source(format!("{} Rotator Mode ({})", toy.1.toy_name, toy.1.toy_id))
-                                .selected_text(rotators.get_param_mode_str())
-                                .show_ui(ui, |ui| {
-                                    ui.selectable_value(rotators, Rotators::Auto(toy.1.param_feature_map.r_auto.clone()), "Auto");
-                                    ui.selectable_value(rotators, Rotators::Custom(toy.1.param_feature_map.r_custom.clone()), "Custom");
-                                });
-                            });
-
-                            match rotators {
-                                Rotators::Auto(_auto_str) => {
-                                    ui.horizontal_wrapped(|ui| {
-                                        ui.label("Auto Parameter: ");
-                                        ui.text_edit_singleline(&mut toy.1.param_feature_map.r_auto);
                                     });
-                                    toy.1.param_feature_map.r = Some(Rotators::Auto(toy.1.param_feature_map.r_auto.clone()));
-                                },
-                                Rotators::Custom(cmap) => {
-
-                                    for i in 0..cmap.len() {
-                                        if i > 0 {
-                                            ui.add_space(0.1);
-                                        }
-                                        ui.horizontal_wrapped(|ui| {
-                                            ui.label(format!("Rotator ({}): ", toy.1.param_feature_map.r_custom[i].1));
-                                            ui.text_edit_singleline(&mut toy.1.param_feature_map.r_custom[i].0);
-                                        });
-                                    }
-                                    toy.1.param_feature_map.r = Some(Rotators::Custom(toy.1.param_feature_map.r_custom.clone()));
-                                }
-                            }
-                        },
-                        None => {},
-                    }
-
-                    match toy.1.param_feature_map.l {
-                        Some(ref mut linears) => {
-                            ui.separator();
-                            ui.horizontal_wrapped(|ui| {
-                                ui.label(RichText::new("Linear(s) Parameter Mode:"));
-                                egui::ComboBox::from_id_source(format!("{} Linear Mode ({})", toy.1.toy_name, toy.1.toy_id))
-                                .selected_text(linears.get_param_mode_str())
-                                .show_ui(ui, |ui| {
-                                    ui.selectable_value(linears, Linears::Auto(toy.1.param_feature_map.l_auto.clone()), "Auto");
-                                    ui.selectable_value(linears, Linears::Custom(toy.1.param_feature_map.l_custom.clone()), "Custom");
                                 });
-                            });
-
-
-                            match linears {
-                                Linears::Auto(_auto_str) => {
-                                    ui.horizontal_wrapped(|ui| {
-                                        ui.label("Auto Parameter: ");
-                                        ui.text_edit_singleline(&mut toy.1.param_feature_map.l_auto);
-                                    });
-                                    toy.1.param_feature_map.l = Some(Linears::Auto(toy.1.param_feature_map.l_auto.clone()));
-                                },
-                                Linears::Custom(cmap) => {
-                                    
-
-                                    for i in 0..cmap.len() {
-                                        if i > 0 {
-                                            ui.add_space(0.1);
+                                ui.separator();
+                                // List toy features
+                                ui.label(format!("{}",toy.1.param_feature_map));
+                            } else {
+                                ui.horizontal_wrapped(|ui| {
+                                    ui.label(RichText::new("Features"));
+                                    ui.with_layout(Layout::right_to_left(), |ui| {
+                                        if ui.button("Save").clicked() {
+                                            match self.editing.binary_search(&toy.0) {
+                                                Ok(i) => {
+                                                    alter_toy(self.tme_send.as_ref().unwrap(), toy.1.clone());
+                                                    save_toy_config(&toy.1.toy_name, toy.1.param_feature_map.clone());
+                                                    self.editing.remove(i);
+                                                    return;
+                                                },
+                                                Err(_e) => {}
+                                            }
                                         }
-                                        ui.horizontal_wrapped(|ui| {
-                                            ui.label(format!("Linear ({}): ", toy.1.param_feature_map.l_custom[i].1));
-                                            ui.text_edit_singleline(&mut toy.1.param_feature_map.l_custom[i].0);
-                                        });
-                                    }
+                                    });
+                                });
+                                ui.separator();
+            
+                                // Edit parameters
                                 
-                                    toy.1.param_feature_map.l = Some(Linears::Custom(toy.1.param_feature_map.l_custom.clone()));
+                                match toy.1.param_feature_map.v {
+                                    Some(ref mut vibrators) => {
+            
+                                        ui.horizontal_wrapped(|ui| {
+                                            ui.label(RichText::new("Vibrator(s)"));
+                                            ui.separator();
+                                            egui::ComboBox::from_id_source(format!("{} Vibrator Mode ({})", toy.1.toy_name, toy.1.toy_id))
+                                            .selected_text(vibrators.get_param_mode_str())
+                                            .show_ui(ui, |ui| {
+                                                ui.selectable_value(vibrators, Vibrators::Auto(toy.1.param_feature_map.v_auto.clone()), "Auto");
+                                                ui.selectable_value(vibrators, Vibrators::Custom(toy.1.param_feature_map.v_custom.clone()), "Custom");
+                                            });
+                                        });
+            
+                                        match vibrators {
+                                            Vibrators::Auto(_auto_str) => {
+                                                ui.horizontal_wrapped(|ui| {
+                                                    ui.label("Auto Parameter: ");
+                                                    ui.text_edit_singleline(&mut toy.1.param_feature_map.v_auto);
+                                                });
+                                                toy.1.param_feature_map.v = Some(Vibrators::Auto(toy.1.param_feature_map.v_auto.clone()));
+                                            },
+                                            Vibrators::Custom(cmap) => {
+            
+                                                for i in 0..cmap.len() {
+                                                    if i > 0 {
+                                                        ui.add_space(0.1);
+                                                    }
+                                                    ui.horizontal_wrapped(|ui| {
+                                                        ui.label(format!("Vibrator ({}): ", toy.1.param_feature_map.v_custom[i].1));
+                                                        ui.text_edit_singleline(&mut toy.1.param_feature_map.v_custom[i].0);
+                                                    });
+                                                }
+                                                toy.1.param_feature_map.v = Some(Vibrators::Custom(toy.1.param_feature_map.v_custom.clone()));
+                                            }
+                                        }
+                                    },
+                                    None => {},
+                                }
+            
+                                match toy.1.param_feature_map.r {
+            
+                                    Some(ref mut rotators) => {
+                                        ui.separator();
+                                        ui.horizontal_wrapped(|ui| {
+                                            ui.label(RichText::new("Rotator(s)"));
+                                            ui.separator();
+                                            egui::ComboBox::from_id_source(format!("{} Rotator Mode ({})", toy.1.toy_name, toy.1.toy_id))
+                                            .selected_text(rotators.get_param_mode_str())
+                                            .show_ui(ui, |ui| {
+                                                ui.selectable_value(rotators, Rotators::Auto(toy.1.param_feature_map.r_auto.clone()), "Auto");
+                                                ui.selectable_value(rotators, Rotators::Custom(toy.1.param_feature_map.r_custom.clone()), "Custom");
+                                            });
+                                        });
+            
+                                        match rotators {
+                                            Rotators::Auto(_auto_str) => {
+                                                ui.horizontal_wrapped(|ui| {
+                                                    ui.label("Auto Parameter: ");
+                                                    ui.text_edit_singleline(&mut toy.1.param_feature_map.r_auto);
+                                                });
+                                                toy.1.param_feature_map.r = Some(Rotators::Auto(toy.1.param_feature_map.r_auto.clone()));
+                                            },
+                                            Rotators::Custom(cmap) => {
+            
+                                                for i in 0..cmap.len() {
+                                                    if i > 0 {
+                                                        ui.add_space(0.1);
+                                                    }
+                                                    ui.horizontal_wrapped(|ui| {
+                                                        ui.label(format!("Rotator ({}): ", toy.1.param_feature_map.r_custom[i].1));
+                                                        ui.text_edit_singleline(&mut toy.1.param_feature_map.r_custom[i].0);
+                                                    });
+                                                }
+                                                toy.1.param_feature_map.r = Some(Rotators::Custom(toy.1.param_feature_map.r_custom.clone()));
+                                            }
+                                        }
+                                    },
+                                    None => {},
+                                }
+            
+                                match toy.1.param_feature_map.l {
+                                    Some(ref mut linears) => {
+                                        ui.separator();
+                                        ui.horizontal_wrapped(|ui| {
+                                            ui.label(RichText::new("Linear(s)"));
+                                            ui.separator();
+                                            egui::ComboBox::from_id_source(format!("{} Linear Mode ({})", toy.1.toy_name, toy.1.toy_id))
+                                            .selected_text(linears.get_param_mode_str())
+                                            .show_ui(ui, |ui| {
+                                                ui.selectable_value(linears, Linears::Auto(toy.1.param_feature_map.l_auto.clone()), "Auto");
+                                                ui.selectable_value(linears, Linears::Custom(toy.1.param_feature_map.l_custom.clone()), "Custom");
+                                            });
+                                        });
+            
+            
+                                        match linears {
+                                            Linears::Auto(_auto_str) => {
+                                                ui.horizontal_wrapped(|ui| {
+                                                    ui.label("Auto Parameter: ");
+                                                    ui.text_edit_singleline(&mut toy.1.param_feature_map.l_auto);
+                                                });
+                                                toy.1.param_feature_map.l = Some(Linears::Auto(toy.1.param_feature_map.l_auto.clone()));
+                                            },
+                                            Linears::Custom(cmap) => {
+                                                
+            
+                                                for i in 0..cmap.len() {
+                                                    if i > 0 {
+                                                        ui.add_space(0.1);
+                                                    }
+                                                    ui.horizontal_wrapped(|ui| {
+                                                        ui.label(format!("Linear ({}): ", toy.1.param_feature_map.l_custom[i].1));
+                                                        ui.text_edit_singleline(&mut toy.1.param_feature_map.l_custom[i].0);
+                                                    });
+                                                }
+                                            
+                                                toy.1.param_feature_map.l = Some(Linears::Custom(toy.1.param_feature_map.l_custom.clone()));
+                                            }
+                                        }
+                                    },
+                                    None => {},
                                 }
                             }
-                        },
-                        None => {},
-                    }
+                        });
+                    });
+                });
 
-                }
-            });
+
+//                ui.separator();
+                
+
+            //});
             ui.add_space(1.5);
         }
     }
@@ -988,13 +1005,15 @@ impl App for VibeCheckGUI {
                 if !proc.1.kill() {
                     println!("[!] Failed to kill IntifaceCLI. Shutting down..");
                     std::process::exit(0);
+                } else {
+                    println!("[*] Sent intiface kill.");
                 }
             }
         }
 
         self.set_error_handling_channels();
         self.start_intiface_engine();
-        thread::sleep(Duration::from_secs(2));
+        //thread::sleep(Duration::from_secs(2));
         self.start_client_event_handler();
         self.start_toy_management_handler();
     }
