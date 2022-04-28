@@ -20,8 +20,8 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - You can set each toy feature type to a toy feature mode (Auto or Custom)
 - Toy feature modes: (Auto) One parameter will activate every instance of a toy feature type / (Custom) Allows you to set a parameter per feature in a feature type.
 - Save the toy configuration when done.
-- Press start to start receiving input from VRChat
-- Note: You can change toy configurations while the app is started.
+- Press "Enable" to start receiving input from VRChat
+- Note: You can change toy configurations while the app is enabled.
 
 ## Install Instructions
 
