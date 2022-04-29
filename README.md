@@ -11,7 +11,7 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 
 ## Dependencies
 - [Intiface Desktop](https://intiface.com/desktop/)
-- A bluetooth adapter. I recommend [this one](https://www.amazon.com/dp/B09DMP6T22?psc=1&ref=ppx_yo2ov_dt_b_product_details)
+- A bluetooth LE adapter. I recommend [this one](https://www.amazon.com/dp/B09DMP6T22?psc=1&ref=ppx_yo2ov_dt_b_product_details)
 
 ## TL;DR
 - Install Dependencies and have a bluetooth adapter.
