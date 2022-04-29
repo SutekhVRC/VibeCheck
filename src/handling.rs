@@ -16,6 +16,7 @@ use tokio::sync::{
 };
 use tokio::task::JoinHandle;
 
+use crate::OSCNetworking;
 use crate::ui::{FeatureMode, FeatureParamMap, ToyManagementEvent, ToyMode};
 use crate::{ui::TmSig, ui::ToyFeature, ui::ToyUpdate, ui::VCError, ui::VCToy};
 
@@ -150,6 +151,7 @@ pub async fn toy_management_handler(
     _tme_send: Sender<ToyManagementEvent>,
     tme_recv: Receiver<ToyManagementEvent>,
     mut toys: HashMap<u32, VCToy>,
+    vc_config: OSCNetworking,
 ) {
     let f = |dev: Arc<ButtplugClientDevice>,
              mut toy_bcst_rx: BReceiver<ToySig>,
@@ -300,7 +302,8 @@ pub async fn toy_management_handler(
             // Create OSC listener thread
             let toy_bcst_tx_osc = toy_bcst_tx.clone();
             println!("[+] Spawning OSC listener..");
-            thread::spawn(move || toy_input_routine(toy_bcst_tx_osc));
+            let vc_conf_clone = vc_config.clone();
+            thread::spawn(move || toy_input_routine(toy_bcst_tx_osc, vc_conf_clone));
 
             loop {
                 // Recv event (listening)
@@ -383,9 +386,9 @@ pub async fn toy_management_handler(
     receives OSC messages
     broadcasts the OSC messages to each toy
 */
-fn toy_input_routine(toy_bcst_tx: BSender<ToySig>) {
+fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, vc_config: OSCNetworking) {
 
-    let bind_sock = UdpSocket::bind("127.0.0.1:10069").unwrap();
+    let bind_sock = UdpSocket::bind(format!("{}:{}", vc_config.bind.0, vc_config.bind.1)).unwrap();
     println!("Listen sock is bound");
     bind_sock.set_nonblocking(true).unwrap();
     //bind_sock.set_read_timeout(Some(Duration::from_millis(20)));

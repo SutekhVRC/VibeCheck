@@ -562,6 +562,7 @@ impl VibeCheckGUI {
             tme_recv_tx,
             tme_send_rx,
             self.toys.clone(),
+            self.config.networking.clone(),
         )));
     }
 
@@ -1240,8 +1241,11 @@ impl App for VibeCheckGUI {
                         ui.with_layout(Layout::right_to_left(), |ui| {
                             if ui.button("Save").clicked() {
                                 if self.chk_valid_config_inputs() {
+                                    println!("[!] Valid config inputs!");
+                                    self.config = self.config_edit.clone();
                                     self.save_config();
                                 } else {
+                                    println!("[!] Invalid config inputs!");
                                     self.config_edit = self.config.clone();
                                 }
                             }

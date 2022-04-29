@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+//#![windows_subsystem = "windows"]
 
 use directories::BaseDirs;
 use eframe::epaint::Vec2;
@@ -14,7 +14,7 @@ mod ui;
 use ui::VibeCheckGUI;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-struct OSCNetworking {
+pub struct OSCNetworking {
     bind: (String, String),
     //vrchat: (String, String),
 }
