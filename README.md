@@ -41,7 +41,7 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 ### Avatar Setup
 
 - Setup your avatar to have a [VRChat Contact Receiver](https://docs.vrchat.com/docs/contacts#vrccontactreceiver) wherever you want the toy(s) to be controlled from.
-- Ex. A contact receiver sphere in the hips area would control the toy(s) when a contact sender with a matching collision tag enters the receiver sphere.
+- Ex. A contact receiver sphere in the hips area would control the toy(s) when a contact sender with a matching collision tag enters the receiver sphere. The contact receiver **MUST** be in proximity mode to function correctly, because VibeCheck expects float input from VRChat. **NOTE:** (Capsule mode does not work with Proximity)
 - If you want another person to be able to interact with your receiver make sure they add the matching collision tags to their senders.
 - The parameter(s) you enter into the contact receivers are the parameters you will assign to toys in the VibeCheck app.
 
