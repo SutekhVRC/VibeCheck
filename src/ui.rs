@@ -631,7 +631,7 @@ impl VibeCheckGUI {
                     "VibeCheck",
                     "https://github.com/SutekhVRC/VibeCheck",
                 ));
-                ui.label("0.0.14-alpha");
+                ui.label("0.0.15-alpha");
                 ui.add(Hyperlink::from_label_and_url(
                     RichText::new("Made by Sutekh")
                         .monospace()
@@ -1140,6 +1140,8 @@ fn populate_toy_feature_param_map(toy: &mut VCToy, param_feature_map: Option<Fea
                 _ => {}
             }
         }
+        // Save toy on add
+        save_toy_config(&toy.toy_name, toy.param_feature_map.clone());
     }
 }
 
