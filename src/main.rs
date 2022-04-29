@@ -22,7 +22,7 @@ struct OSCNetworking {
 impl Default for OSCNetworking {
     fn default() -> Self {
         Self {
-            bind: ("127.0.0.1".to_string(), "10069".to_string()),
+            bind: ("127.0.0.1".to_string(), "9001".to_string()),
             //vrchat: ("127.0.0.1".to_string(), "9000".to_string()),
         }
     }
