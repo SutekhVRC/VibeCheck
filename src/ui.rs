@@ -1185,7 +1185,7 @@ impl App for VibeCheckGUI {
 
         let procs = sys.processes();
         for proc in procs {
-            if proc.1.name() == "IntifaceCli.exe" {
+            if proc.1.name() == "IntifaceCLI.exe" {
                 if !proc.1.kill() {
                     println!("[!] Failed to kill IntifaceCLI. Shutting down..");
                     std::process::exit(0);
