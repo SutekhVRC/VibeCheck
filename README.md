@@ -41,10 +41,8 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 ### Avatar Setup
 
 #### VibeCheck Standard Tags
-- Using standard tags allows people to generally be setup for people without having to match tags and re-upload avatars.
-- Person 1
-- vibecheck_tag_1
-- vibecheck_tag_2
+- Using standard tags allows people to generally be setup for people without having to match tags and re-upload avatars. I recommend unchecking 'Allow Self' to avoid triggering your own toys.
+- Standard tag: 'vibecheck_tag'
 
 #### Steps
 - Setup your avatar to have a [VRChat Contact Receiver](https://docs.vrchat.com/docs/contacts#vrccontactreceiver) wherever you want the toy(s) to be controlled from.
