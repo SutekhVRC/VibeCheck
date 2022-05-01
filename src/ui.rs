@@ -492,7 +492,7 @@ impl VibeCheckGUI {
                         .unwrap();
                     let toys_sd = self.toys.clone();
                     for toy in toys_sd {
-                        self.async_rt.block_on(async move {toy.1.device_handle.stop().await;});
+                        self.async_rt.block_on(async move {let _ = toy.1.device_handle.stop().await;});
                     }
 
                     self.running = false;
