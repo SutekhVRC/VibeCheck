@@ -480,6 +480,7 @@ impl VibeCheckGUI {
                         .unwrap()
                         .send(ToyManagementEvent::Sig(TmSig::StartListening))
                         .unwrap();
+                    
                     self.running = true;
                 }
             } else {
@@ -489,6 +490,11 @@ impl VibeCheckGUI {
                         .unwrap()
                         .send(ToyManagementEvent::Sig(TmSig::StopListening))
                         .unwrap();
+                    let toys_sd = self.toys.clone();
+                    for toy in toys_sd {
+                        self.async_rt.block_on(async move {toy.1.device_handle.stop().await;});
+                    }
+
                     self.running = false;
                 }
             }
@@ -645,7 +651,7 @@ impl VibeCheckGUI {
                     "VibeCheck",
                     "https://github.com/SutekhVRC/VibeCheck",
                 ));
-                ui.label("0.0.18-alpha");
+                ui.label("0.0.19-alpha");
                 ui.add(Hyperlink::from_label_and_url(
                     RichText::new("Made by Sutekh")
                         .monospace()
@@ -1344,6 +1350,9 @@ impl App for VibeCheckGUI {
     }
 
     fn on_exit(&mut self) {
+        for toy in &mut self.toys {
+            self.async_rt.block_on(async move {toy.1.device_handle.stop().await;});
+        }
         self.stop_intiface_engine();
         self.config.horny_timer = self.minute_sync.elapsed().as_secs();
         self.save_config();
