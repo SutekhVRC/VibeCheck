@@ -490,10 +490,15 @@ impl VibeCheckGUI {
                         .unwrap()
                         .send(ToyManagementEvent::Sig(TmSig::StopListening))
                         .unwrap();
-                    let toys_sd = self.toys.clone();
-                    for toy in toys_sd {
-                        self.async_rt.block_on(async move {let _ = toy.1.device_handle.stop().await;});
-                    }
+                        let toys_sd = self.toys.clone();
+                        for toy in toys_sd {
+                            self.async_rt.block_on(async move {
+                                match toy.1.device_handle.stop().await {
+                                    Ok(_) => println!("[*] Stop command sent: {}", toy.1.toy_name),
+                                    Err(_e) => println!("[!] Err stopping device: {}", _e),
+                                }
+                            });
+                        }
 
                     self.running = false;
                 }
@@ -718,7 +723,7 @@ impl VibeCheckGUI {
         if self.toys.len() == 0 {
             ui.vertical_centered(|ui| {
                 ui.add_space(90.);
-                ui.heading("Connect A Toy");
+                ui.heading("Connect a toy.. Please ;-;");
             });
             return;
         }
@@ -1350,9 +1355,17 @@ impl App for VibeCheckGUI {
     }
 
     fn on_exit(&mut self) {
-        for toy in &mut self.toys {
-            self.async_rt.block_on(async move {let _ = toy.1.device_handle.stop().await;});
+
+        let toys_sd = self.toys.clone();
+        for toy in toys_sd {
+            self.async_rt.block_on(async move {
+                match toy.1.device_handle.stop().await {
+                    Ok(_) => println!("[*] Stop command sent: {}", toy.1.toy_name),
+                    Err(_e) => println!("[!] Err stopping device: {}", _e),
+                }
+            });
         }
+        thread::sleep(Duration::from_secs(1));
         self.stop_intiface_engine();
         self.config.horny_timer = self.minute_sync.elapsed().as_secs();
         self.save_config();
