@@ -1351,7 +1351,7 @@ impl App for VibeCheckGUI {
 
     fn on_exit(&mut self) {
         for toy in &mut self.toys {
-            self.async_rt.block_on(async move {toy.1.device_handle.stop().await;});
+            self.async_rt.block_on(async move {let _ = toy.1.device_handle.stop().await;});
         }
         self.stop_intiface_engine();
         self.config.horny_timer = self.minute_sync.elapsed().as_secs();
