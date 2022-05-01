@@ -68,7 +68,9 @@ VibeCheck functions by receiving OSC input from VRChat.
 
 ## Thanks to the people below for testing and suggestions!
 
-Tinitre
-Buneskapp
-Nitro
-MikuLove
+- Tinitre
+- Buneskapp
+- Nitro
+- MikuLove
+- Googii
+- Kali

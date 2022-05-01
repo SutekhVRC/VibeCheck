@@ -38,34 +38,48 @@ pub enum VCGUITab {
     Config,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Copy)]
+pub struct LevelTweaks {
+    pub minimum_level: f64,
+    pub maximum_level: f64,
+    pub idle_level: f64,
+}
+
+impl Default for LevelTweaks {
+    fn default() -> Self {
+        LevelTweaks { minimum_level: 0., maximum_level: 100., idle_level: 0. }
+    }
+}
+
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Vibrators {
-    Auto(String),
-    Custom(Vec<(String, u32)>),
+    Auto(String, LevelTweaks),
+    Custom(Vec<(String, u32, LevelTweaks)>),
 }
 
 impl ToyFeatureTrait for Vibrators {
     fn get_param_mode_str(&self) -> String {
         match self {
-            Self::Auto(_) => "Auto".to_string(),
+            Self::Auto(..) => "Auto".to_string(),
             Self::Custom(_) => "Custom".to_string(),
         }
     }
 
     fn get_auto_mut_ref(&mut self) -> Option<&mut String> {
         match self {
-            Self::Auto(ref mut p) => Some(p),
+            Self::Auto(ref mut p, _) => Some(p),
             _ => None,
         }
     }
 
-    fn get_custom_mut_refs(&mut self) -> Option<Vec<(&mut String, u32)>> {
+    fn get_custom_mut_refs(&mut self) -> Option<Vec<(&mut String, u32, LevelTweaks)>> {
         match self {
             Self::Custom(cmap) => {
                 let mut ret_vec = vec![];
 
                 for map in cmap {
-                    ret_vec.push((&mut map.0, map.1));
+                    ret_vec.push((&mut map.0, map.1, map.2));
                 }
                 if ret_vec.is_empty() {
                     None
@@ -80,32 +94,32 @@ impl ToyFeatureTrait for Vibrators {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Rotators {
-    Auto(String),
-    Custom(Vec<(String, u32)>),
+    Auto(String, LevelTweaks),
+    Custom(Vec<(String, u32, LevelTweaks)>),
 }
 
 impl ToyFeatureTrait for Rotators {
     fn get_param_mode_str(&self) -> String {
         match self {
-            Self::Auto(_) => "Auto".to_string(),
+            Self::Auto(..) => "Auto".to_string(),
             Self::Custom(_) => "Custom".to_string(),
         }
     }
 
     fn get_auto_mut_ref(&mut self) -> Option<&mut String> {
         match self {
-            Self::Auto(ref mut p) => Some(p),
+            Self::Auto(ref mut p, _) => Some(p),
             _ => None,
         }
     }
 
-    fn get_custom_mut_refs(&mut self) -> Option<Vec<(&mut String, u32)>> {
+    fn get_custom_mut_refs(&mut self) -> Option<Vec<(&mut String, u32, LevelTweaks)>> {
         match self {
             Self::Custom(cmap) => {
                 let mut ret_vec = vec![];
 
                 for map in cmap {
-                    ret_vec.push((&mut map.0, map.1));
+                    ret_vec.push((&mut map.0, map.1, map.2));
                 }
                 if ret_vec.is_empty() {
                     None
@@ -119,32 +133,32 @@ impl ToyFeatureTrait for Rotators {
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Linears {
-    Auto(String),
-    Custom(Vec<(String, u32)>),
+    Auto(String, LevelTweaks),
+    Custom(Vec<(String, u32, LevelTweaks)>),
 }
 
 impl ToyFeatureTrait for Linears {
     fn get_param_mode_str(&self) -> String {
         match self {
-            Self::Auto(_) => "Auto".to_string(),
+            Self::Auto(..) => "Auto".to_string(),
             Self::Custom(_) => "Custom".to_string(),
         }
     }
 
     fn get_auto_mut_ref(&mut self) -> Option<&mut String> {
         match self {
-            Self::Auto(ref mut p) => Some(p),
+            Self::Auto(ref mut p, _) => Some(p),
             _ => None,
         }
     }
 
-    fn get_custom_mut_refs(&mut self) -> Option<Vec<(&mut String, u32)>> {
+    fn get_custom_mut_refs(&mut self) -> Option<Vec<(&mut String, u32, LevelTweaks)>> {
         match self {
             Self::Custom(cmap) => {
                 let mut ret_vec = vec![];
 
                 for map in cmap {
-                    ret_vec.push((&mut map.0, map.1));
+                    ret_vec.push((&mut map.0, map.1, map.2));
                 }
                 if ret_vec.is_empty() {
                     None
@@ -160,23 +174,23 @@ impl ToyFeatureTrait for Linears {
 trait ToyFeatureTrait {
     fn get_param_mode_str(&self) -> String;
     fn get_auto_mut_ref(&mut self) -> Option<&mut String>;
-    fn get_custom_mut_refs(&mut self) -> Option<Vec<(&mut String, u32)>>;
+    fn get_custom_mut_refs(&mut self) -> Option<Vec<(&mut String, u32, LevelTweaks)>>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeatureParamMap {
     // Vibrators
     pub v: Option<Vibrators>,
-    pub v_custom: Vec<(String, u32)>,
-    pub v_auto: String,
+    pub v_custom: Vec<(String, u32, LevelTweaks)>,
+    pub v_auto: (String, LevelTweaks),
     // Rotators
     pub r: Option<Rotators>,
-    pub r_custom: Vec<(String, u32)>,
-    pub r_auto: String,
+    pub r_custom: Vec<(String, u32, LevelTweaks)>,
+    pub r_auto: (String, LevelTweaks),
     // Linears
     pub l: Option<Linears>,
-    pub l_custom: Vec<(String, u32)>,
-    pub l_auto: String,
+    pub l_custom: Vec<(String, u32, LevelTweaks)>,
+    pub l_auto: (String, LevelTweaks),
 }
 
 impl fmt::Display for FeatureParamMap {
@@ -184,7 +198,7 @@ impl fmt::Display for FeatureParamMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(v) = &self.v {
             match v {
-                Vibrators::Auto(p) => {
+                Vibrators::Auto(p, _) => {
                     write!(f, "Vibrators | Auto: {}", p);
                 }
                 Vibrators::Custom(cmap) => {
@@ -200,7 +214,7 @@ impl fmt::Display for FeatureParamMap {
         if let Some(r) = &self.r {
             write!(f, "\n");
             match r {
-                Rotators::Auto(p) => {
+                Rotators::Auto(p, _) => {
                     write!(f, "Rotators  | Auto: {}", p);
                 }
                 Rotators::Custom(cmap) => {
@@ -216,7 +230,7 @@ impl fmt::Display for FeatureParamMap {
         if let Some(l) = &self.l {
             write!(f, "\n");
             match l {
-                Linears::Auto(p) => {
+                Linears::Auto(p, _) => {
                     write!(f, "Linears  | Auto: {}", p);
                 }
                 Linears::Custom(cmap) => {
@@ -237,13 +251,13 @@ impl FeatureParamMap {
         FeatureParamMap {
             v: None,
             v_custom: vec![],
-            v_auto: String::new(),
+            v_auto: (String::new(), LevelTweaks::default()),
             r: None,
             r_custom: vec![],
-            r_auto: String::new(),
+            r_auto: (String::new(), LevelTweaks::default()),
             l: None,
             l_custom: vec![],
-            l_auto: String::new(),
+            l_auto: (String::new(), LevelTweaks::default()),
         }
     }
 
@@ -251,15 +265,15 @@ impl FeatureParamMap {
         let mut features = vec![];
         if let Some(v) = &self.v {
             match v {
-                Vibrators::Auto(p) => {
+                Vibrators::Auto(p, l) => {
                     if *p == *param {
-                        features.push(ToyFeature::Vibrator(FeatureMode::Auto));
+                        features.push(ToyFeature::Vibrator(FeatureMode::Auto(l.clone())));
                     }
                 }
                 Vibrators::Custom(cmap) => {
                     for map in cmap {
                         if map.0 == *param {
-                            features.push(ToyFeature::Vibrator(FeatureMode::Custom(map.1)));
+                            features.push(ToyFeature::Vibrator(FeatureMode::Custom(map.1, map.2)));
                         }
                     }
                 }
@@ -268,15 +282,15 @@ impl FeatureParamMap {
 
         if let Some(r) = &self.r {
             match r {
-                Rotators::Auto(p) => {
+                Rotators::Auto(p, l) => {
                     if *p == *param {
-                        features.push(ToyFeature::Rotator(FeatureMode::Auto));
+                        features.push(ToyFeature::Rotator(FeatureMode::Auto(l.clone())));
                     }
                 }
                 Rotators::Custom(cmap) => {
                     for map in cmap {
                         if map.0 == *param {
-                            features.push(ToyFeature::Rotator(FeatureMode::Custom(map.1)));
+                            features.push(ToyFeature::Rotator(FeatureMode::Custom(map.1, map.2)));
                         }
                     }
                 }
@@ -285,15 +299,15 @@ impl FeatureParamMap {
 
         if let Some(l) = &self.l {
             match l {
-                Linears::Auto(p) => {
+                Linears::Auto(p, l) => {
                     if *p == *param {
-                        features.push(ToyFeature::Linear(FeatureMode::Auto));
+                        features.push(ToyFeature::Linear(FeatureMode::Auto(l.clone())));
                     }
                 }
                 Linears::Custom(cmap) => {
                     for map in cmap {
                         if map.0 == *param {
-                            features.push(ToyFeature::Linear(FeatureMode::Custom(map.1)));
+                            features.push(ToyFeature::Linear(FeatureMode::Custom(map.1, map.2)));
                         }
                     }
                 }
@@ -323,8 +337,8 @@ pub enum ToyFeature {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum FeatureMode {
-    Auto,
-    Custom(u32),
+    Auto(LevelTweaks),
+    Custom(u32, LevelTweaks),
 }
 
 /*
@@ -631,7 +645,7 @@ impl VibeCheckGUI {
                     "VibeCheck",
                     "https://github.com/SutekhVRC/VibeCheck",
                 ));
-                ui.label("0.0.16-alpha");
+                ui.label("0.0.17-alpha");
                 ui.add(Hyperlink::from_label_and_url(
                     RichText::new("Made by Sutekh")
                         .monospace()
@@ -768,7 +782,7 @@ impl VibeCheckGUI {
                                                 ui.selectable_value(
                                                     vibrators,
                                                     Vibrators::Auto(
-                                                        toy.1.param_feature_map.v_auto.clone(),
+                                                        toy.1.param_feature_map.v_auto.0.clone(), toy.1.param_feature_map.v_auto.1
                                                     ),
                                                     "Auto",
                                                 );
@@ -784,15 +798,25 @@ impl VibeCheckGUI {
                                     });
 
                                     match vibrators {
-                                        Vibrators::Auto(_auto_str) => {
+                                        Vibrators::Auto(..) => {
                                             ui.horizontal_wrapped(|ui| {
-                                                ui.label("Auto Parameter: ");
+                                                ui.label("Parameter: ");
                                                 ui.text_edit_singleline(
-                                                    &mut toy.1.param_feature_map.v_auto,
+                                                    &mut toy.1.param_feature_map.v_auto.0,
                                                 );
                                             });
+                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_auto.1.idle_level, 0.0..=1.0).text("Idle Level"));
+                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_auto.1.minimum_level, 0.0..=1.0).text("Minimum Level"));
+                                            if toy.1.param_feature_map.v_auto.1.minimum_level > toy.1.param_feature_map.v_auto.1.maximum_level {
+                                                toy.1.param_feature_map.v_auto.1.minimum_level = toy.1.param_feature_map.v_auto.1.maximum_level-0.01;
+                                            }
+                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_auto.1.maximum_level, 0.0..=1.0).text("Maximum Level"));
+                                            if toy.1.param_feature_map.v_auto.1.maximum_level < toy.1.param_feature_map.v_auto.1.minimum_level {
+                                                toy.1.param_feature_map.v_auto.1.maximum_level = toy.1.param_feature_map.v_auto.1.minimum_level+0.01;
+                                            }
                                             toy.1.param_feature_map.v = Some(Vibrators::Auto(
-                                                toy.1.param_feature_map.v_auto.clone(),
+                                                toy.1.param_feature_map.v_auto.0.clone(),
+                                                toy.1.param_feature_map.v_auto.1,
                                             ));
                                         }
                                         Vibrators::Custom(cmap) => {
@@ -809,6 +833,16 @@ impl VibeCheckGUI {
                                                         &mut toy.1.param_feature_map.v_custom[i].0,
                                                     );
                                                 });
+
+                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_custom[i].2.idle_level, 0.0..=1.0).text("Idle Level"));
+                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_custom[i].2.minimum_level, 0.0..=1.0).text("Minimum Level"));
+                                                if toy.1.param_feature_map.v_custom[i].2.minimum_level > toy.1.param_feature_map.v_custom[i].2.maximum_level {
+                                                    toy.1.param_feature_map.v_custom[i].2.minimum_level = toy.1.param_feature_map.v_custom[i].2.maximum_level-0.01;
+                                                }
+                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_custom[i].2.maximum_level, 0.0..=1.0).text("Maximum Level"));
+                                                if toy.1.param_feature_map.v_custom[i].2.maximum_level < toy.1.param_feature_map.v_custom[i].2.minimum_level {
+                                                    toy.1.param_feature_map.v_custom[i].2.maximum_level = toy.1.param_feature_map.v_custom[i].2.minimum_level+0.01;
+                                                }
                                             }
                                             toy.1.param_feature_map.v = Some(Vibrators::Custom(
                                                 toy.1.param_feature_map.v_custom.clone(),
@@ -836,7 +870,8 @@ impl VibeCheckGUI {
                                                 ui.selectable_value(
                                                     rotators,
                                                     Rotators::Auto(
-                                                        toy.1.param_feature_map.r_auto.clone(),
+                                                        toy.1.param_feature_map.r_auto.0.clone(),
+                                                        toy.1.param_feature_map.r_auto.1
                                                     ),
                                                     "Auto",
                                                 );
@@ -852,15 +887,24 @@ impl VibeCheckGUI {
                                     });
 
                                     match rotators {
-                                        Rotators::Auto(_auto_str) => {
+                                        Rotators::Auto(..) => {
                                             ui.horizontal_wrapped(|ui| {
-                                                ui.label("Auto Parameter: ");
+                                                ui.label("Parameter: ");
                                                 ui.text_edit_singleline(
-                                                    &mut toy.1.param_feature_map.r_auto,
+                                                    &mut toy.1.param_feature_map.r_auto.0,
                                                 );
                                             });
+                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_auto.1.idle_level, 0.0..=1.0).text("Idle Level"));
+                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_auto.1.minimum_level, 0.0..=1.0).text("Minimum Level"));
+                                            if toy.1.param_feature_map.r_auto.1.minimum_level > toy.1.param_feature_map.r_auto.1.maximum_level {
+                                                toy.1.param_feature_map.r_auto.1.minimum_level = toy.1.param_feature_map.r_auto.1.maximum_level-0.01;
+                                            }
+                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_auto.1.maximum_level, 0.0..=1.0).text("Maximum Level"));
+                                            if toy.1.param_feature_map.r_auto.1.maximum_level < toy.1.param_feature_map.r_auto.1.minimum_level {
+                                                toy.1.param_feature_map.r_auto.1.maximum_level = toy.1.param_feature_map.r_auto.1.minimum_level+0.01;
+                                            }
                                             toy.1.param_feature_map.r = Some(Rotators::Auto(
-                                                toy.1.param_feature_map.r_auto.clone(),
+                                                toy.1.param_feature_map.r_auto.0.clone(), toy.1.param_feature_map.r_auto.1
                                             ));
                                         }
                                         Rotators::Custom(cmap) => {
@@ -877,6 +921,16 @@ impl VibeCheckGUI {
                                                         &mut toy.1.param_feature_map.r_custom[i].0,
                                                     );
                                                 });
+
+                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_custom[i].2.idle_level, 0.0..=1.0).text("Idle Level"));
+                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_custom[i].2.minimum_level, 0.0..=1.0).text("Minimum Level"));
+                                                if toy.1.param_feature_map.r_custom[i].2.minimum_level > toy.1.param_feature_map.r_custom[i].2.maximum_level {
+                                                    toy.1.param_feature_map.r_custom[i].2.minimum_level = toy.1.param_feature_map.r_custom[i].2.maximum_level-0.01;
+                                                }
+                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_custom[i].2.maximum_level, 0.0..=1.0).text("Maximum Level"));
+                                                if toy.1.param_feature_map.r_custom[i].2.maximum_level < toy.1.param_feature_map.r_custom[i].2.minimum_level {
+                                                    toy.1.param_feature_map.r_custom[i].2.maximum_level = toy.1.param_feature_map.r_custom[i].2.minimum_level+0.01;
+                                                }
                                             }
                                             toy.1.param_feature_map.r = Some(Rotators::Custom(
                                                 toy.1.param_feature_map.r_custom.clone(),
@@ -904,7 +958,8 @@ impl VibeCheckGUI {
                                                 ui.selectable_value(
                                                     linears,
                                                     Linears::Auto(
-                                                        toy.1.param_feature_map.l_auto.clone(),
+                                                        toy.1.param_feature_map.l_auto.0.clone(),
+                                                        toy.1.param_feature_map.l_auto.1
                                                     ),
                                                     "Auto",
                                                 );
@@ -920,15 +975,25 @@ impl VibeCheckGUI {
                                     });
 
                                     match linears {
-                                        Linears::Auto(_auto_str) => {
+                                        Linears::Auto(..) => {
                                             ui.horizontal_wrapped(|ui| {
                                                 ui.label("Auto Parameter: ");
                                                 ui.text_edit_singleline(
-                                                    &mut toy.1.param_feature_map.l_auto,
+                                                    &mut toy.1.param_feature_map.l_auto.0,
                                                 );
                                             });
+                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_auto.1.idle_level, 0.0..=1.0).text("Idle Level"));
+                                            if toy.1.param_feature_map.l_auto.1.minimum_level > toy.1.param_feature_map.l_auto.1.maximum_level {
+                                                toy.1.param_feature_map.l_auto.1.minimum_level = toy.1.param_feature_map.l_auto.1.maximum_level-0.01;
+                                            }
+                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_auto.1.minimum_level, 0.0..=1.0).text("Minimum Level"));
+                                            if toy.1.param_feature_map.l_auto.1.maximum_level < toy.1.param_feature_map.l_auto.1.minimum_level {
+                                                toy.1.param_feature_map.l_auto.1.maximum_level = toy.1.param_feature_map.l_auto.1.minimum_level+0.01;
+                                            }
+                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_auto.1.maximum_level, 0.0..=1.0).text("Maximum Level"));
                                             toy.1.param_feature_map.l = Some(Linears::Auto(
-                                                toy.1.param_feature_map.l_auto.clone(),
+                                                toy.1.param_feature_map.l_auto.0.clone(),
+                                                toy.1.param_feature_map.l_auto.1
                                             ));
                                         }
                                         Linears::Custom(cmap) => {
@@ -945,6 +1010,16 @@ impl VibeCheckGUI {
                                                         &mut toy.1.param_feature_map.l_custom[i].0,
                                                     );
                                                 });
+
+                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_custom[i].2.idle_level, 0.0..=1.0).text("Idle Level"));
+                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_custom[i].2.minimum_level, 0.0..=1.0).text("Minimum Level"));
+                                                if toy.1.param_feature_map.l_custom[i].2.minimum_level > toy.1.param_feature_map.l_custom[i].2.maximum_level {
+                                                    toy.1.param_feature_map.l_custom[i].2.minimum_level = toy.1.param_feature_map.l_custom[i].2.maximum_level-0.01;
+                                                }
+                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_custom[i].2.maximum_level, 0.0..=1.0).text("Maximum Level"));
+                                                if toy.1.param_feature_map.l_custom[i].2.maximum_level < toy.1.param_feature_map.l_custom[i].2.minimum_level {
+                                                    toy.1.param_feature_map.l_custom[i].2.maximum_level = toy.1.param_feature_map.l_custom[i].2.minimum_level+0.01;
+                                                }
                                             }
 
                                             toy.1.param_feature_map.l = Some(Linears::Custom(
@@ -1105,42 +1180,42 @@ fn populate_toy_feature_param_map(toy: &mut VCToy, param_feature_map: Option<Fea
                     for i in 0..feature.1.feature_count.unwrap() {
                         toy.param_feature_map
                             .v_custom
-                            .push((format!("/avatar/parameters/custom_vibrate_{}", i), i));
+                            .push((format!("/avatar/parameters/custom_vibrate_{}", i), i, LevelTweaks::default()));
                     }
                     toy.param_feature_map.v_auto =
-                        "/avatar/parameters/vibrate_auto_default".to_string();
+                        ("/avatar/parameters/vibrate_auto_default".to_string(), LevelTweaks::default());
                     toy.param_feature_map.v = Some(Vibrators::Auto(
-                        "/avatar/parameters/vibrate_auto_default".to_string(),
+                        "/avatar/parameters/vibrate_auto_default".to_string(), LevelTweaks::default(),
                     ));
                 }
                 ButtplugCurrentSpecDeviceMessageType::RotateCmd => {
                     for i in 0..feature.1.feature_count.unwrap() {
                         toy.param_feature_map
                             .r_custom
-                            .push((format!("/avatar/parameters/custom_rotate_{}", i), i));
+                            .push((format!("/avatar/parameters/custom_rotate_{}", i), i, LevelTweaks::default()));
                     }
                     toy.param_feature_map.r_auto =
-                        "/avatar/parameters/rotate_auto_default".to_string();
+                        ("/avatar/parameters/rotate_auto_default".to_string(), LevelTweaks::default());
                     toy.param_feature_map.r = Some(Rotators::Auto(
-                        "/avatar/parameters/rotate_auto_default".to_string(),
+                        "/avatar/parameters/rotate_auto_default".to_string(), LevelTweaks::default()
                     ));
                 }
                 ButtplugCurrentSpecDeviceMessageType::LinearCmd => {
                     for i in 0..feature.1.feature_count.unwrap() {
                         toy.param_feature_map
                             .l_custom
-                            .push((format!("/avatar/parameters/custom_linear_{}", i), i));
+                            .push((format!("/avatar/parameters/custom_linear_{}", i), i, LevelTweaks::default()));
                     }
                     toy.param_feature_map.l_auto =
-                        "/avatar/parameters/linear_auto_default".to_string();
+                        ("/avatar/parameters/linear_auto_default".to_string(), LevelTweaks::default());
                     toy.param_feature_map.l = Some(Linears::Auto(
-                        "/avatar/parameters/linear_auto_default".to_string(),
+                        "/avatar/parameters/linear_auto_default".to_string(), LevelTweaks::default()
                     ));
                 }
                 _ => {}
             }
         }
-        // Save toy on add
+        // Save toy on first time add
         save_toy_config(&toy.toy_name, toy.param_feature_map.clone());
     }
 }

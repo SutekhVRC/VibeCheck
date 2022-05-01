@@ -182,28 +182,65 @@ pub async fn toy_management_handler(
                                                 ToyFeature::Vibrator(fm) => {
                                                     let vibe_level =
                                                         ((lvl * 100.0).round() / 100.0) as f64;
-                                                    if let FeatureMode::Custom(fi) = fm {
-                                                        let _ = dev.vibrate(buttplug::client::VibrateCommand::SpeedMap(HashMap::from([(fi, vibe_level)]))).await;
-                                                    } else {
-                                                        let _ = dev.vibrate(buttplug::client::VibrateCommand::Speed(vibe_level)).await;
+
+                                                    match fm {
+                                                        FeatureMode::Custom(fi, lt) => {
+                                                            if vibe_level != 0.0 && vibe_level >= lt.minimum_level && vibe_level <= lt.maximum_level {
+                                                                let _ = dev.vibrate(buttplug::client::VibrateCommand::SpeedMap(HashMap::from([(fi, vibe_level)]))).await;
+                                                            } else if vibe_level == 0.0 {
+                                                                let _ = dev.vibrate(buttplug::client::VibrateCommand::SpeedMap(HashMap::from([(fi, lt.idle_level)]))).await;
+                                                            }
+                                                        },
+                                                        FeatureMode::Auto(lt) => {
+
+                                                            if vibe_level != 0.0 && vibe_level >= lt.minimum_level && vibe_level <= lt.maximum_level {
+                                                                let _ = dev.vibrate(buttplug::client::VibrateCommand::Speed(vibe_level)).await;
+                                                            } else if vibe_level == 0.0 {
+                                                                let _ = dev.vibrate(buttplug::client::VibrateCommand::Speed(lt.idle_level)).await;
+                                                            }
+                                                        }
                                                     }
                                                 }
                                                 ToyFeature::Rotator(fm) => {
                                                     let rotate_level =
                                                         ((lvl * 100.0).round() / 100.0) as f64;
-                                                    if let FeatureMode::Custom(fi) = fm {
-                                                        let _ = dev.rotate(buttplug::client::RotateCommand::RotateMap(HashMap::from([(fi, (rotate_level,true))]))).await;
-                                                    } else {
-                                                        let _ = dev.rotate(buttplug::client::RotateCommand::Rotate(rotate_level, true)).await;
+
+                                                    match fm {
+                                                        FeatureMode::Custom(fi, lt) => {
+                                                            if rotate_level != 0.0 && rotate_level >= lt.minimum_level && rotate_level <= lt.maximum_level {
+                                                                let _ = dev.rotate(buttplug::client::RotateCommand::RotateMap(HashMap::from([(fi, (rotate_level, true))]))).await;
+                                                            } else if rotate_level == 0.0 {
+                                                                let _ = dev.rotate(buttplug::client::RotateCommand::RotateMap(HashMap::from([(fi, (lt.idle_level, true))]))).await;
+                                                            }
+                                                        },
+                                                        FeatureMode::Auto(lt) => {
+                                                            if rotate_level != 0.0 && rotate_level >= lt.minimum_level && rotate_level <= lt.maximum_level {
+                                                                let _ = dev.rotate(buttplug::client::RotateCommand::Rotate(rotate_level, true)).await;
+                                                            } else if rotate_level == 0.0 {
+                                                                let _ = dev.rotate(buttplug::client::RotateCommand::Rotate(lt.idle_level, true)).await;
+                                                            }
+                                                        }
                                                     }
                                                 }
                                                 ToyFeature::Linear(fm) => {
                                                     let linear_level =
                                                         ((lvl * 100.0).round() / 100.0) as f64;
-                                                    if let FeatureMode::Custom(fi) = fm {
-                                                        let _ = dev.linear(buttplug::client::LinearCommand::LinearMap(HashMap::from([(fi, (500, linear_level))]))).await;
-                                                    } else {
-                                                        let _ = dev.linear(buttplug::client::LinearCommand::Linear(500, linear_level)).await;
+
+                                                    match fm {
+                                                        FeatureMode::Custom(fi, lt) => {
+                                                            if linear_level != 0.0 && linear_level >= lt.minimum_level && linear_level <= lt.maximum_level {
+                                                                let _ = dev.linear(buttplug::client::LinearCommand::LinearMap(HashMap::from([(fi, (500, linear_level))]))).await;
+                                                            } else if linear_level == 0.0 {
+                                                                let _ = dev.linear(buttplug::client::LinearCommand::LinearMap(HashMap::from([(fi, (500, lt.idle_level))]))).await;
+                                                            }
+                                                        },
+                                                        FeatureMode::Auto(lt) => {
+                                                            if linear_level != 0.0 && linear_level >= lt.minimum_level && linear_level <= lt.maximum_level {
+                                                                let _ = dev.linear(buttplug::client::LinearCommand::Linear(500, linear_level)).await;
+                                                            } else if linear_level == 0.0 {
+                                                                let _ = dev.linear(buttplug::client::LinearCommand::Linear(500, lt.idle_level)).await;
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
