@@ -397,7 +397,7 @@ pub struct VibeCheckGUI {
     pub config: VibeCheckConfig,
     pub config_edit: VibeCheckConfig,
 
-    pub editing: Vec<u32>,
+    pub editing: HashMap<u32, u32>,
 
     pub battery_synced: bool,
     pub minute_sync: Instant,
@@ -436,7 +436,7 @@ impl VibeCheckGUI {
             config,
             config_edit,
 
-            editing: Vec::new(),
+            editing: HashMap::new(),
 
             battery_synced: false,
             minute_sync: Instant::now(),
@@ -645,7 +645,7 @@ impl VibeCheckGUI {
                     "VibeCheck",
                     "https://github.com/SutekhVRC/VibeCheck",
                 ));
-                ui.label("0.0.17-alpha");
+                ui.label("0.0.18-alpha");
                 ui.add(Hyperlink::from_label_and_url(
                     RichText::new("Made by Sutekh")
                         .monospace()
@@ -708,15 +708,15 @@ impl VibeCheckGUI {
     }
 
     fn list_toys(&mut self, ui: &mut egui::Ui) {
-        //let toys_count = self.toys.len();
 
-        for toy in &mut self.toys {
-            //ui.group(|ui| {
-            /*
+        if self.toys.len() == 0 {
             ui.vertical_centered(|ui| {
-                ui.label(RichText::new(format!("{} [{}%]", toy.1.toy_name, (toy.1.battery_level*100.).round())));
+                ui.add_space(90.);
+                ui.heading("Connect A Toy");
             });
-            */
+            return;
+        }
+        for toy in &mut self.toys {
 
             ui.horizontal_wrapped(|ui| {
                 CollapsingHeader::new(format!(
@@ -726,12 +726,12 @@ impl VibeCheckGUI {
                 ))
                 .show(ui, |ui| {
                     ui.group(|ui| {
-                        if !self.editing.contains(&toy.0) {
+                        if !self.editing.contains_key(&toy.0) {
                             ui.horizontal_wrapped(|ui| {
                                 ui.label(RichText::new("Features"));
                                 ui.with_layout(Layout::right_to_left(), |ui| {
                                     if ui.button("Edit").clicked() {
-                                        self.editing.push(*toy.0);
+                                        self.editing.insert(*toy.0, *toy.0);
                                         return;
                                     }
                                 });
@@ -744,20 +744,16 @@ impl VibeCheckGUI {
                                 ui.label(RichText::new("Features"));
                                 ui.with_layout(Layout::right_to_left(), |ui| {
                                     if ui.button("Save").clicked() {
-                                        match self.editing.binary_search(&toy.0) {
-                                            Ok(i) => {
-                                                alter_toy(
-                                                    self.tme_send.as_ref().unwrap(),
-                                                    toy.1.clone(),
-                                                );
-                                                save_toy_config(
-                                                    &toy.1.toy_name,
-                                                    toy.1.param_feature_map.clone(),
-                                                );
-                                                self.editing.remove(i);
-                                                return;
-                                            }
-                                            Err(_e) => {}
+                                        if let Some(_) = self.editing.remove(&toy.0) {
+                                            alter_toy(
+                                                self.tme_send.as_ref().unwrap(),
+                                                toy.1.clone(),
+                                            );
+                                            save_toy_config(
+                                                &toy.1.toy_name,
+                                                toy.1.param_feature_map.clone(),
+                                            );
+                                            return;
                                         }
                                     }
                                 });
@@ -1132,7 +1128,12 @@ fn load_toy_config(toy_name: &String) -> Option<FeatureParamMap> {
     } else {
         let con = fs::read_to_string(config_path).unwrap();
 
-        let feature_param_map: FeatureParamMap = serde_json::from_str(&con).unwrap();
+        let feature_param_map: FeatureParamMap = match serde_json::from_str(&con) {
+            Ok(fpm) => fpm,
+            Err(_) => {
+                return None;
+            }
+        };
         return Some(feature_param_map);
     }
 }
@@ -1270,6 +1271,12 @@ impl App for VibeCheckGUI {
             }
         }
 
+        // Set horny time
+        println!("[*] Horny Timer Loaded: {}", self.config.horny_timer);
+        let sync_now = Instant::now().checked_sub(Duration::from_secs(self.config.horny_timer)).unwrap();
+        println!("[*] Time Sync: {}", sync_now.elapsed().as_secs());
+        self.minute_sync = sync_now;
+
         self.set_error_handling_channels();
         self.start_intiface_engine();
         //thread::sleep(Duration::from_secs(2));
@@ -1338,6 +1345,8 @@ impl App for VibeCheckGUI {
 
     fn on_exit(&mut self) {
         self.stop_intiface_engine();
+        self.config.horny_timer = self.minute_sync.elapsed().as_secs();
+        self.save_config();
         std::process::exit(0);
     }
 

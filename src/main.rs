@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+//#![windows_subsystem = "windows"]
 
 use directories::BaseDirs;
 use eframe::epaint::Vec2;
@@ -35,6 +35,7 @@ struct IntifaceConfig(String);
 pub struct VibeCheckConfig {
     networking: OSCNetworking,
     intiface_config: IntifaceConfig,
+    horny_timer: u64,
 }
 
 fn config_load() -> VibeCheckConfig {
@@ -65,6 +66,7 @@ fn config_load() -> VibeCheckConfig {
             serde_json::to_string(&VibeCheckConfig {
                 networking: OSCNetworking::default(),
                 intiface_config: IntifaceConfig("6969".to_string()),
+                horny_timer: 0,
             })
             .unwrap(),
         )
@@ -76,13 +78,30 @@ fn config_load() -> VibeCheckConfig {
 
     match fs::read_to_string(&vc_config_file) {
         Ok(fc) => match serde_json::from_str(&fc) {
-            Ok(o) => return o,
+            Ok(o) => {
+                println!("[*] Config Loaded Successfully!");
+                return o;
+            },
             Err(_e) => {
                 println!(
                     "[-] Failed to parse json from file: {} [{}]",
                     vc_config_file, _e
                 );
-                std::process::exit(0);
+                println!("[*] Resetting to default config.");
+
+                let def_conf = VibeCheckConfig {
+                    networking: OSCNetworking::default(),
+                    intiface_config: IntifaceConfig("6969".to_string()),
+                    horny_timer: 0,
+                };
+
+                fs::write(
+                    &vc_config_file,
+                    serde_json::to_string(&def_conf).unwrap(),
+                )
+                .unwrap();
+                // If fail to parse config overwrite with new default
+                return def_conf;
             }
         },
         Err(_e) => {
@@ -90,7 +109,18 @@ fn config_load() -> VibeCheckConfig {
                 "[-] Could not parse bytes from file: {} [{}].. Skipping..",
                 vc_config_file, _e
             );
-            std::process::exit(0);
+            println!("[*] Resetting to default config.");
+            let def_conf = VibeCheckConfig {
+                networking: OSCNetworking::default(),
+                intiface_config: IntifaceConfig("6969".to_string()),
+                horny_timer: 0,
+            };
+            fs::write(
+                &vc_config_file,
+                serde_json::to_string(&def_conf).unwrap(),
+            )
+            .unwrap();
+            return def_conf;
         }
     }
 }
