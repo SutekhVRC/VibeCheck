@@ -656,7 +656,7 @@ impl VibeCheckGUI {
                     "VibeCheck",
                     "https://github.com/SutekhVRC/VibeCheck",
                 ));
-                ui.label("0.0.19-alpha");
+                ui.label("0.0.20-alpha");
                 ui.add(Hyperlink::from_label_and_url(
                     RichText::new("Made by Sutekh")
                         .monospace()
