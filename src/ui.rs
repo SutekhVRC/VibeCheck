@@ -20,6 +20,7 @@ use std::process::{Child, Command};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::Arc;
 use std::thread;
+use std::os::windows::process::CommandExt;
 use std::time::{Duration, Instant};
 use sysinfo::{ProcessExt, System, SystemExt};
 use tokio::runtime::Runtime;
@@ -520,6 +521,7 @@ impl VibeCheckGUI {
             "--log",
             "1",
         ])
+        .creation_flags(0x08000000)
         .spawn()
         {
             Ok(p) => Some(p),
