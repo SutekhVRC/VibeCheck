@@ -1365,7 +1365,7 @@ impl App for VibeCheckGUI {
 
         // Set horny time
         println!("[*] Horny Timer Loaded: {}", self.config.horny_timer);
-        let sync_now = Instant::now().checked_sub(Duration::from_secs(self.config.horny_timer)).unwrap();
+        let sync_now = Instant::now().checked_sub(Duration::from_secs(self.config.horny_timer)).unwrap_or_else(|| Instant::now());
         println!("[*] Time Sync: {}", sync_now.elapsed().as_secs());
         self.minute_sync = sync_now;
 
