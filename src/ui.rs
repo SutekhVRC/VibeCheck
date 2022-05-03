@@ -7,6 +7,7 @@ use eframe::egui::{
     style::Visuals, Color32, Context, Hyperlink, Layout, RichText, ScrollArea, Style, TextStyle,
     TopBottomPanel,
 };
+use eframe::epaint::{FontId, FontFamily};
 //use eframe::epaint::{Stroke, Rounding};
 use core::fmt;
 use eframe::{
@@ -26,7 +27,7 @@ use sysinfo::{ProcessExt, System, SystemExt};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 
-use crate::file_exists;
+use crate::{file_exists, OSCNetworking};
 use crate::{
     check_valid_ipv4, check_valid_port, get_user_home_dir,
     handling::EventSig,
@@ -197,7 +198,7 @@ pub struct FeatureParamMap {
 impl fmt::Display for FeatureParamMap {
     #[allow(unused_must_use)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(v) = &self.v {
+        if let Some(ref v) = self.v {
             match v {
                 Vibrators::Auto(p, _) => {
                     write!(f, "Vibrators | Auto: {}", p);
@@ -212,7 +213,7 @@ impl fmt::Display for FeatureParamMap {
             }
         }
 
-        if let Some(r) = &self.r {
+        if let Some(ref r) = self.r {
             write!(f, "\n");
             match r {
                 Rotators::Auto(p, _) => {
@@ -228,7 +229,7 @@ impl fmt::Display for FeatureParamMap {
             }
         }
 
-        if let Some(l) = &self.l {
+        if let Some(ref l) = self.l {
             write!(f, "\n");
             match l {
                 Linears::Auto(p, _) => {
@@ -382,7 +383,7 @@ pub enum ToyUpdate {
 
 pub enum TmSig {
     StopListening,
-    StartListening,
+    StartListening(OSCNetworking),
 }
 
 pub enum ToyManagementEvent {
@@ -467,44 +468,37 @@ impl VibeCheckGUI {
     }
 
     fn exec_handler(&mut self, ui: &mut egui::Ui) {
-        ui.with_layout(Layout::right_to_left(), |ui| {
-            if ui.button("Intiface Restart").clicked() {
-                self.stop_intiface_engine();
-                thread::sleep(Duration::from_secs(2));
-                self.start_intiface_engine();
-            }
 
-            if !self.running {
-                if ui.button("Enable").clicked() {
-                    self.tme_send
-                        .as_ref()
-                        .unwrap()
-                        .send(ToyManagementEvent::Sig(TmSig::StartListening))
-                        .unwrap();
-                    
-                    self.running = true;
-                }
-            } else {
-                if ui.button("Disable").clicked() {
-                    self.tme_send
-                        .as_ref()
-                        .unwrap()
-                        .send(ToyManagementEvent::Sig(TmSig::StopListening))
-                        .unwrap();
-                        let toys_sd = self.toys.clone();
-                        for toy in toys_sd {
-                            self.async_rt.block_on(async move {
-                                match toy.1.device_handle.stop().await {
-                                    Ok(_) => println!("[*] Stop command sent: {}", toy.1.toy_name),
-                                    Err(_e) => println!("[!] Err stopping device: {}", _e),
-                                }
-                            });
-                        }
-
-                    self.running = false;
-                }
+        if !self.running {
+            if ui.button(RichText::new("Enable").font(FontId::new(15., FontFamily::Monospace))).clicked() {
+                self.tme_send
+                    .as_ref()
+                    .unwrap()
+                    .send(ToyManagementEvent::Sig(TmSig::StartListening(self.config.networking.clone())))
+                    .unwrap();
+                
+                self.running = true;
             }
-        });
+        } else {
+            if ui.button("Disable").clicked() {
+                self.tme_send
+                    .as_ref()
+                    .unwrap()
+                    .send(ToyManagementEvent::Sig(TmSig::StopListening))
+                    .unwrap();
+                    let toys_sd = self.toys.clone();
+                    for toy in toys_sd {
+                        self.async_rt.block_on(async move {
+                            match toy.1.device_handle.stop().await {
+                                Ok(_) => println!("[*] Stop command sent: {}", toy.1.toy_name),
+                                Err(_e) => println!("[!] Err stopping device: {}", _e),
+                            }
+                        });
+                    }
+
+                self.running = false;
+            }
+        }
     }
 
     fn start_intiface_engine(&mut self) {
@@ -585,6 +579,8 @@ impl VibeCheckGUI {
         self.tme_recv = Some(tme_recv_rx);
         self.tme_send = Some(tme_send_tx);
 
+        
+
         self.toy_management_h_thread = Some(self.async_rt.spawn(toy_management_handler(
             tme_recv_tx,
             tme_send_rx,
@@ -619,12 +615,12 @@ impl VibeCheckGUI {
             egui::menu::bar(ui, |ui| {
                 ui.with_layout(Layout::left_to_right(), |ui| {
                     ui.horizontal_wrapped(|ui| {
-                        if ui.button("Main").clicked() {
+                        if ui.button("Toys").clicked() {
                             self.tab = VCGUITab::Main;
                         }
                         ui.separator();
 
-                        if ui.button("Config").clicked() {
+                        if ui.button("Settings").clicked() {
                             self.tab = VCGUITab::Config;
                         }
                     });
@@ -645,6 +641,7 @@ impl VibeCheckGUI {
     fn gui_header(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
             ui.heading("VibeCheck");
+            self.exec_handler(ui);
             ui.add_space(3.);
         });
         ui.separator();
@@ -658,7 +655,7 @@ impl VibeCheckGUI {
                     "VibeCheck",
                     "https://github.com/SutekhVRC/VibeCheck",
                 ));
-                ui.label("0.0.21-alpha");
+                ui.label("0.0.22-alpha");
                 ui.add(Hyperlink::from_label_and_url(
                     RichText::new("Made by Sutekh")
                         .monospace()
@@ -687,6 +684,7 @@ impl VibeCheckGUI {
     }
 
     fn list_config(&mut self, ui: &mut egui::Ui) {
+
         ui.horizontal_wrapped(|ui| {
             ui.label("OSC Bind Host: ");
             ui.text_edit_singleline(&mut self.config_edit.networking.bind.0);
@@ -697,12 +695,27 @@ impl VibeCheckGUI {
             ui.text_edit_singleline(&mut self.config_edit.networking.bind.1);
         });
 
+
+        ui.separator();
+
+        ui.horizontal_wrapped(|ui| {
+            ui.label("Intiface Settings");
+        
+            ui.with_layout(Layout::right_to_left(), |ui| {
+                if ui.button("Restart Intiface").clicked() {
+                    self.stop_intiface_engine();
+                    thread::sleep(Duration::from_secs(2));
+                    self.start_intiface_engine();
+                }
+            });
+        });
         ui.separator();
 
         ui.horizontal_wrapped(|ui| {
             ui.label("Intiface WS Port: ");
             ui.text_edit_singleline(&mut self.config_edit.intiface_config.0);
         });
+
 
         //ui.label(format!("Bind: {}:{}", self.config.networking.bind.0,self.config.networking.bind.1));
         //ui.label(format!("VRChat: {}:{}", self.config.networking.vrchat.0,self.config.networking.vrchat.1));
@@ -732,16 +745,16 @@ impl VibeCheckGUI {
         for toy in &mut self.toys {
 
             ui.horizontal_wrapped(|ui| {
-                CollapsingHeader::new(format!(
+                CollapsingHeader::new(RichText::new(format!(
                     "{} [{}%]",
                     toy.1.toy_name,
                     (toy.1.battery_level * 100.).round()
-                ))
+                )).font(FontId::new(15., FontFamily::Monospace)))
                 .show(ui, |ui| {
                     ui.group(|ui| {
                         if !self.editing.contains_key(&toy.0) {
                             ui.horizontal_wrapped(|ui| {
-                                ui.label(RichText::new("Features"));
+                                ui.label(RichText::new("Features").font(FontId::new(14., FontFamily::Monospace)));
                                 ui.with_layout(Layout::right_to_left(), |ui| {
                                     if ui.button("Edit").clicked() {
                                         self.editing.insert(*toy.0, *toy.0);
@@ -1247,6 +1260,7 @@ impl App for VibeCheckGUI {
         ctx.set_style(style);
         let mut visuals = Visuals::default();
         visuals.override_text_color = Some(Color32::from_rgb(0xef, 0x98, 0xff));
+        visuals.hyperlink_color = Color32::from_rgb(0xef, 0x98, 0xff);
 
         /*
         let wv = WidgetVisuals {
@@ -1321,20 +1335,15 @@ impl App for VibeCheckGUI {
 
             match self.tab {
                 VCGUITab::Main => {
-                    ui.horizontal_wrapped(|ui| {
-                        ui.label("Main");
-                        self.exec_handler(ui);
-                    });
-                    ui.separator();
+
                     ScrollArea::new([false, true]).show(ui, |ui| {
                         self.list_toys(ui);
                         ui.add_space(60.);
                     });
-                    //self.main_tab(ui);
                 }
                 VCGUITab::Config => {
                     ui.horizontal_wrapped(|ui| {
-                        ui.label("VibeCheck Config");
+                        ui.label("VibeCheck Settings");
                         ui.with_layout(Layout::right_to_left(), |ui| {
                             if ui.button("Save").clicked() {
                                 if self.chk_valid_config_inputs() {
@@ -1367,7 +1376,7 @@ impl App for VibeCheckGUI {
                 }
             });
         }
-        thread::sleep(Duration::from_secs(1));
+
         self.stop_intiface_engine();
         self.config.horny_timer = self.minute_sync.elapsed().as_secs();
         self.save_config();

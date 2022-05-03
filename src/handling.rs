@@ -151,7 +151,7 @@ pub async fn toy_management_handler(
     _tme_send: Sender<ToyManagementEvent>,
     tme_recv: Receiver<ToyManagementEvent>,
     mut toys: HashMap<u32, VCToy>,
-    vc_config: OSCNetworking,
+    mut vc_config: OSCNetworking,
 ) {
     let f = |dev: Arc<ButtplugClientDevice>,
              mut toy_bcst_rx: BReceiver<ToySig>,
@@ -294,7 +294,8 @@ pub async fn toy_management_handler(
                     // Handle Management Signals
                     ToyManagementEvent::Sig(tm_sig) => {
                         match tm_sig {
-                            TmSig::StartListening => {
+                            TmSig::StartListening(osc_net) => {
+                                vc_config = osc_net;
                                 listening = true;
                             }
                             TmSig::StopListening => {
@@ -387,7 +388,8 @@ pub async fn toy_management_handler(
                             // Handle Management Signals
                             ToyManagementEvent::Sig(tm_sig) => {
                                 match tm_sig {
-                                    TmSig::StartListening => {
+                                    TmSig::StartListening(osc_net) => {
+                                        vc_config = osc_net;
                                         // Already listening
                                     }
                                     TmSig::StopListening => {
