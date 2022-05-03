@@ -641,8 +641,11 @@ impl VibeCheckGUI {
     fn gui_header(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
             ui.heading("VibeCheck");
-            self.exec_handler(ui);
-            ui.add_space(3.);
+        });
+        ui.horizontal_wrapped(|ui| {
+            ui.with_layout(Layout::right_to_left(), |ui| {
+                self.exec_handler(ui);
+            });
         });
         ui.separator();
     }
@@ -655,7 +658,7 @@ impl VibeCheckGUI {
                     "VibeCheck",
                     "https://github.com/SutekhVRC/VibeCheck",
                 ));
-                ui.label("0.0.22-alpha");
+                ui.label("0.0.23-alpha");
                 ui.add(Hyperlink::from_label_and_url(
                     RichText::new("Made by Sutekh")
                         .monospace()
@@ -827,12 +830,23 @@ impl VibeCheckGUI {
                                                     &mut toy.1.param_feature_map.v_auto.0,
                                                 );
                                             });
-                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_auto.1.idle_level, 0.0..=1.0).text("Idle Level"));
-                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_auto.1.minimum_level, 0.0..=1.0).text("Minimum Level"));
+                                            ui.horizontal_wrapped(|ui| {
+                                                ui.label("Idle:   "); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_auto.1.idle_level, 0.0..=1.0)
+                                                .fixed_decimals(2));
+                                            });
+
+                                            ui.horizontal_wrapped(|ui| {
+                                                ui.label("Minimum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_auto.1.minimum_level, 0.0..=1.0)
+                                                .fixed_decimals(2));
+                                            });
+
                                             if toy.1.param_feature_map.v_auto.1.minimum_level > toy.1.param_feature_map.v_auto.1.maximum_level {
                                                 toy.1.param_feature_map.v_auto.1.minimum_level = toy.1.param_feature_map.v_auto.1.maximum_level-0.01;
                                             }
-                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_auto.1.maximum_level, 0.0..=1.0).text("Maximum Level"));
+                                            ui.horizontal_wrapped(|ui| {
+                                                ui.label("Maximum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_auto.1.maximum_level, 0.0..=1.0).fixed_decimals(2));
+                                            });
+
                                             if toy.1.param_feature_map.v_auto.1.maximum_level < toy.1.param_feature_map.v_auto.1.minimum_level {
                                                 toy.1.param_feature_map.v_auto.1.maximum_level = toy.1.param_feature_map.v_auto.1.minimum_level+0.01;
                                             }
@@ -856,12 +870,22 @@ impl VibeCheckGUI {
                                                     );
                                                 });
 
-                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_custom[i].2.idle_level, 0.0..=1.0).text("Idle Level"));
-                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_custom[i].2.minimum_level, 0.0..=1.0).text("Minimum Level"));
+                                                ui.horizontal_wrapped(|ui| {
+                                                    ui.label("Idle:   "); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_custom[i].2.idle_level, 0.0..=1.0).fixed_decimals(2));
+                                                });
+                                                
+                                                ui.horizontal_wrapped(|ui| {
+                                                    ui.label("Minimum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_custom[i].2.minimum_level, 0.0..=1.0).fixed_decimals(2));
+                                                });
+                                                
                                                 if toy.1.param_feature_map.v_custom[i].2.minimum_level > toy.1.param_feature_map.v_custom[i].2.maximum_level {
                                                     toy.1.param_feature_map.v_custom[i].2.minimum_level = toy.1.param_feature_map.v_custom[i].2.maximum_level-0.01;
                                                 }
-                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_custom[i].2.maximum_level, 0.0..=1.0).text("Maximum Level"));
+
+                                                ui.horizontal_wrapped(|ui| {
+                                                    ui.label("Maximum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_custom[i].2.maximum_level, 0.0..=1.0).fixed_decimals(2));
+                                                });
+                                                
                                                 if toy.1.param_feature_map.v_custom[i].2.maximum_level < toy.1.param_feature_map.v_custom[i].2.minimum_level {
                                                     toy.1.param_feature_map.v_custom[i].2.maximum_level = toy.1.param_feature_map.v_custom[i].2.minimum_level+0.01;
                                                 }
@@ -916,12 +940,23 @@ impl VibeCheckGUI {
                                                     &mut toy.1.param_feature_map.r_auto.0,
                                                 );
                                             });
-                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_auto.1.idle_level, 0.0..=1.0).text("Idle Level"));
-                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_auto.1.minimum_level, 0.0..=1.0).text("Minimum Level"));
+
+                                            ui.horizontal_wrapped(|ui| {
+                                                ui.label("Idle:   "); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_auto.1.idle_level, 0.0..=1.0).fixed_decimals(2));
+                                            });
+                                            
+                                            ui.horizontal_wrapped(|ui| {
+                                                ui.label("Minimum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_auto.1.minimum_level, 0.0..=1.0).fixed_decimals(2));
+                                            });
+                                            
                                             if toy.1.param_feature_map.r_auto.1.minimum_level > toy.1.param_feature_map.r_auto.1.maximum_level {
                                                 toy.1.param_feature_map.r_auto.1.minimum_level = toy.1.param_feature_map.r_auto.1.maximum_level-0.01;
                                             }
-                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_auto.1.maximum_level, 0.0..=1.0).text("Maximum Level"));
+
+                                            ui.horizontal_wrapped(|ui| {
+                                                ui.label("Maximum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_auto.1.maximum_level, 0.0..=1.0).fixed_decimals(2));
+                                            });
+
                                             if toy.1.param_feature_map.r_auto.1.maximum_level < toy.1.param_feature_map.r_auto.1.minimum_level {
                                                 toy.1.param_feature_map.r_auto.1.maximum_level = toy.1.param_feature_map.r_auto.1.minimum_level+0.01;
                                             }
@@ -944,12 +979,21 @@ impl VibeCheckGUI {
                                                     );
                                                 });
 
-                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_custom[i].2.idle_level, 0.0..=1.0).text("Idle Level"));
-                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_custom[i].2.minimum_level, 0.0..=1.0).text("Minimum Level"));
+                                                ui.horizontal_wrapped(|ui| {
+                                                    ui.label("Idle:   "); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_custom[i].2.idle_level, 0.0..=1.0).fixed_decimals(2));
+                                                });
+
+                                                ui.horizontal_wrapped(|ui| {
+                                                    ui.label("Minimum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_custom[i].2.minimum_level, 0.0..=1.0).fixed_decimals(2));
+                                                });
                                                 if toy.1.param_feature_map.r_custom[i].2.minimum_level > toy.1.param_feature_map.r_custom[i].2.maximum_level {
                                                     toy.1.param_feature_map.r_custom[i].2.minimum_level = toy.1.param_feature_map.r_custom[i].2.maximum_level-0.01;
                                                 }
-                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_custom[i].2.maximum_level, 0.0..=1.0).text("Maximum Level"));
+                                                
+                                                ui.horizontal_wrapped(|ui| {
+                                                    ui.label("Maximum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_custom[i].2.maximum_level, 0.0..=1.0).fixed_decimals(2));
+                                                });
+
                                                 if toy.1.param_feature_map.r_custom[i].2.maximum_level < toy.1.param_feature_map.r_custom[i].2.minimum_level {
                                                     toy.1.param_feature_map.r_custom[i].2.maximum_level = toy.1.param_feature_map.r_custom[i].2.minimum_level+0.01;
                                                 }
@@ -1004,15 +1048,26 @@ impl VibeCheckGUI {
                                                     &mut toy.1.param_feature_map.l_auto.0,
                                                 );
                                             });
-                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_auto.1.idle_level, 0.0..=1.0).text("Idle Level"));
+
+                                            ui.horizontal_wrapped(|ui| {
+                                                ui.label("Idle:   "); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_auto.1.idle_level, 0.0..=1.0).fixed_decimals(2));
+                                            });
+                                            
                                             if toy.1.param_feature_map.l_auto.1.minimum_level > toy.1.param_feature_map.l_auto.1.maximum_level {
                                                 toy.1.param_feature_map.l_auto.1.minimum_level = toy.1.param_feature_map.l_auto.1.maximum_level-0.01;
                                             }
-                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_auto.1.minimum_level, 0.0..=1.0).text("Minimum Level"));
+
+                                            ui.horizontal_wrapped(|ui| {
+                                                ui.label("Minimum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_auto.1.minimum_level, 0.0..=1.0).fixed_decimals(2));
+                                            });
+
                                             if toy.1.param_feature_map.l_auto.1.maximum_level < toy.1.param_feature_map.l_auto.1.minimum_level {
                                                 toy.1.param_feature_map.l_auto.1.maximum_level = toy.1.param_feature_map.l_auto.1.minimum_level+0.01;
                                             }
-                                            ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_auto.1.maximum_level, 0.0..=1.0).text("Maximum Level"));
+                                            ui.horizontal_wrapped(|ui| {
+                                                ui.label("Maximum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_auto.1.maximum_level, 0.0..=1.0).fixed_decimals(2));
+                                            });
+
                                             toy.1.param_feature_map.l = Some(Linears::Auto(
                                                 toy.1.param_feature_map.l_auto.0.clone(),
                                                 toy.1.param_feature_map.l_auto.1
@@ -1033,12 +1088,22 @@ impl VibeCheckGUI {
                                                     );
                                                 });
 
-                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_custom[i].2.idle_level, 0.0..=1.0).text("Idle Level"));
-                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_custom[i].2.minimum_level, 0.0..=1.0).text("Minimum Level"));
+                                                ui.horizontal_wrapped(|ui| {
+                                                    ui.label("Idle:   "); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_custom[i].2.idle_level, 0.0..=1.0).fixed_decimals(2));
+                                                });
+                                                
+                                                ui.horizontal_wrapped(|ui| {
+                                                    ui.label("Minimum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_custom[i].2.minimum_level, 0.0..=1.0).fixed_decimals(2));
+                                                });
+                                                
                                                 if toy.1.param_feature_map.l_custom[i].2.minimum_level > toy.1.param_feature_map.l_custom[i].2.maximum_level {
                                                     toy.1.param_feature_map.l_custom[i].2.minimum_level = toy.1.param_feature_map.l_custom[i].2.maximum_level-0.01;
                                                 }
-                                                ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_custom[i].2.maximum_level, 0.0..=1.0).text("Maximum Level"));
+
+                                                ui.horizontal_wrapped(|ui| {
+                                                    ui.label("Maximum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_custom[i].2.maximum_level, 0.0..=1.0).fixed_decimals(2));
+                                                });
+                                                
                                                 if toy.1.param_feature_map.l_custom[i].2.maximum_level < toy.1.param_feature_map.l_custom[i].2.minimum_level {
                                                     toy.1.param_feature_map.l_custom[i].2.maximum_level = toy.1.param_feature_map.l_custom[i].2.minimum_level+0.01;
                                                 }
