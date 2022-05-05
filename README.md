@@ -19,12 +19,9 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - Setup avatar to send a synced float parameter (or multiple float parameters) to utilize OSC and send input to VibeCheck. You probably want to drive the parameters with [Avatar Dynamics Contacts](https://docs.vrchat.com/docs/contacts) scripts.
 - Start VibeCheck
 - Turn on toy(s) (If toy is supported it will autoconnect)
-- Edit toy configuration in VibeCheck (Auto/Custom)
-- A toy feature in the context of VibeCheck is a literal feature of the toy (Vibrators/Rotators/Linears). A toy can have multiple features as well as multiple features of the same feature type. Ex. A Lovense Lush has one vibrator. That is one feature type (Vibrator) and one feature total. But there are other toys that have multiple feature types as well as multiple features of the same feature type (Ex. multiple vibrators or multiple rotators).
-- You can set each toy feature type to a toy feature mode (Auto or Custom)
-- Toy feature modes: (Auto) One parameter will activate every instance of a toy feature type / (Custom) Allows you to set a parameter per feature in a feature type.
+- Configure toy(s) in VibeCheck.
 - Save the toy configuration when done.
-- Press "Enable" to start receiving input from VRChat
+- Press "Enable" to start receiving input from VRChat, (Make sure VRChat has OSC enabled and your avatar OSC file is up to date)
 - Note: You can change toy configurations while the app is enabled.
 
 ## Install Instructions
