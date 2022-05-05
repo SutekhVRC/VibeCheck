@@ -1,5 +1,5 @@
 **README & instructions not finished.**
-# VIbeCheck is in Alpha Testing and will be getting updates frequently.
+# VibeCheck is in Alpha Testing and will be getting updates frequently.
 
 # VibeCheck
 
