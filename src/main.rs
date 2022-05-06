@@ -130,7 +130,7 @@ fn main() {
 
     native_opts.initial_window_size = Some(Vec2::new(450., 500.));
 
-    run_native(Box::new(VibeCheckGUI::new(config_load())), native_opts);
+    run_native("VibeCheck", native_opts, Box::new(|cc| Box::new(VibeCheckGUI::new(config_load(), cc))));
 }
 
 fn check_valid_port(port: &String) -> bool {

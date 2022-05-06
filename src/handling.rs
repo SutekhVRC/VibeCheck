@@ -321,7 +321,7 @@ pub async fn toy_management_handler(
             let (toy_bcst_tx, _toy_bcst_rx): (BSender<ToySig>, BReceiver<ToySig>) =
                 sync::broadcast::channel(1024);
 
-            // Create toy treads
+            // Create toy threads
             for toy in &toys {
                 let f_run = f(
                     toy.1.device_handle.clone(),

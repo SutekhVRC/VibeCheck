@@ -1,6 +1,7 @@
 use buttplug::client::device::ClientDeviceMessageAttributesMap;
 use buttplug::client::ButtplugClientDevice;
 use buttplug::core::messages::ButtplugCurrentSpecDeviceMessageType;
+use eframe::CreationContext;
 use eframe::egui::CollapsingHeader;
 //use eframe::egui::style::{WidgetVisuals, Widgets};
 use eframe::egui::{
@@ -8,11 +9,12 @@ use eframe::egui::{
     TopBottomPanel,
 };
 use eframe::epaint::{FontId, FontFamily};
+
 //use eframe::epaint::{Stroke, Rounding};
 use core::fmt;
 use eframe::{
     egui::{self, CentralPanel},
-    epi::App,
+    App,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -431,17 +433,69 @@ pub struct VibeCheckGUI {
 }
 
 impl VibeCheckGUI {
-    pub fn new(config: VibeCheckConfig) -> Self {
+    pub fn new(config: VibeCheckConfig, cc: &CreationContext<'_>) -> Self {
         let config_edit = config.clone();
 
-        Self {
+        // Set fonts
+        let mut style: Style = (*cc.egui_ctx.style()).clone();
+        style.override_text_style = Some(TextStyle::Monospace);
+        cc.egui_ctx.set_style(style);
+        let mut visuals = Visuals::default();
+        visuals.override_text_color = Some(Color32::from_rgb(0xef, 0x98, 0xff));
+        visuals.hyperlink_color = Color32::from_rgb(0xef, 0x98, 0xff);
+
+        /*
+        let wv = WidgetVisuals {
+            bg_fill: Color32::from_rgb(0xef, 0x98, 0xff),
+            bg_stroke: Stroke::new(0.1, Color32::WHITE),
+            rounding: Rounding::none(),
+            fg_stroke: Stroke::new(0.1, Color32::WHITE),
+            expansion: 0.1,
+        };//Color32::from_rgb(0xef, 0x98, 0xff);
+
+        let widgets = Widgets {
+            noninteractive: wv,
+            inactive: wv,
+            hovered: wv,
+            active: wv,
+            open: wv,
+        };
+        */
+
+        //visuals.widgets = widgets;
+
+        cc.egui_ctx.set_visuals(visuals);
+
+        let sys = System::new_all();
+
+        let procs = sys.processes();
+        for proc in procs {
+            if proc.1.name() == "IntifaceCLI.exe" {
+                if !proc.1.kill() {
+                    println!("[!] Failed to kill IntifaceCLI. Shutting down..");
+                    std::process::exit(0);
+                } else {
+                    println!("[*] Sent intiface kill.");
+                }
+            }
+        }
+
+        // Set horny time
+        println!("[*] Horny Timer Loaded: {}", config.horny_timer);
+        let sync_now = Instant::now().checked_sub(Duration::from_secs(config.horny_timer)).unwrap_or_else(|| Instant::now());
+        println!("[*] Time Sync: {}", sync_now.elapsed().as_secs());
+        let minute_sync = sync_now;
+
+
+
+        let mut init = Self {
             config,
             config_edit,
 
             editing: HashMap::new(),
 
             battery_synced: false,
-            minute_sync: Instant::now(),
+            minute_sync,
             tab: VCGUITab::Main,
             running: false,
             toys: HashMap::new(),
@@ -464,7 +518,14 @@ impl VibeCheckGUI {
             data_update_inc: 0,
             async_rt: Runtime::new().unwrap(),
             intiface_child_proc_h: None,
-        }
+        };
+
+        init.set_error_handling_channels();
+        init.start_intiface_engine();
+        //thread::sleep(Duration::from_secs(2));
+        init.start_client_event_handler();
+        init.start_toy_management_handler();
+        init
     }
 
     fn exec_handler(&mut self, ui: &mut egui::Ui) {
@@ -658,7 +719,7 @@ impl VibeCheckGUI {
                     "VibeCheck",
                     "https://github.com/SutekhVRC/VibeCheck",
                 ));
-                ui.label("0.0.24-alpha");
+                ui.label("0.0.25-alpha");
                 ui.add(Hyperlink::from_label_and_url(
                     RichText::new("Made by Sutekh")
                         .monospace()
@@ -1313,70 +1374,8 @@ fn populate_toy_feature_param_map(toy: &mut VCToy, param_feature_map: Option<Fea
 }
 
 impl App for VibeCheckGUI {
-    fn setup(
-        &mut self,
-        ctx: &egui::Context,
-        _frame: &eframe::epi::Frame,
-        _storage: Option<&dyn eframe::epi::Storage>,
-    ) {
-        // Set fonts
-        let mut style: Style = (*ctx.style()).clone();
-        style.override_text_style = Some(TextStyle::Monospace);
-        ctx.set_style(style);
-        let mut visuals = Visuals::default();
-        visuals.override_text_color = Some(Color32::from_rgb(0xef, 0x98, 0xff));
-        visuals.hyperlink_color = Color32::from_rgb(0xef, 0x98, 0xff);
 
-        /*
-        let wv = WidgetVisuals {
-            bg_fill: Color32::from_rgb(0xef, 0x98, 0xff),
-            bg_stroke: Stroke::new(0.1, Color32::WHITE),
-            rounding: Rounding::none(),
-            fg_stroke: Stroke::new(0.1, Color32::WHITE),
-            expansion: 0.1,
-        };//Color32::from_rgb(0xef, 0x98, 0xff);
-
-        let widgets = Widgets {
-            noninteractive: wv,
-            inactive: wv,
-            hovered: wv,
-            active: wv,
-            open: wv,
-        };
-        */
-
-        //visuals.widgets = widgets;
-
-        ctx.set_visuals(visuals);
-
-        let sys = System::new_all();
-
-        let procs = sys.processes();
-        for proc in procs {
-            if proc.1.name() == "IntifaceCLI.exe" {
-                if !proc.1.kill() {
-                    println!("[!] Failed to kill IntifaceCLI. Shutting down..");
-                    std::process::exit(0);
-                } else {
-                    println!("[*] Sent intiface kill.");
-                }
-            }
-        }
-
-        // Set horny time
-        println!("[*] Horny Timer Loaded: {}", self.config.horny_timer);
-        let sync_now = Instant::now().checked_sub(Duration::from_secs(self.config.horny_timer)).unwrap_or_else(|| Instant::now());
-        println!("[*] Time Sync: {}", sync_now.elapsed().as_secs());
-        self.minute_sync = sync_now;
-
-        self.set_error_handling_channels();
-        self.start_intiface_engine();
-        //thread::sleep(Duration::from_secs(2));
-        self.start_client_event_handler();
-        self.start_toy_management_handler();
-    }
-
-    fn update(&mut self, ctx: &egui::Context, _frame: &eframe::epi::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let dur = self.minute_sync.elapsed();
         if (dur.as_secs() % 120 == 0) && !self.battery_synced {
             self.update_battery_percentages();
@@ -1430,7 +1429,7 @@ impl App for VibeCheckGUI {
         });
     }
 
-    fn on_exit(&mut self) {
+    fn on_exit(&mut self, _ctx: &eframe::glow::Context) {
 
         let toys_sd = self.toys.clone();
         for toy in toys_sd {
@@ -1446,9 +1445,5 @@ impl App for VibeCheckGUI {
         self.config.horny_timer = self.minute_sync.elapsed().as_secs();
         self.save_config();
         std::process::exit(0);
-    }
-
-    fn name(&self) -> &str {
-        "VibeCheck"
     }
 }
