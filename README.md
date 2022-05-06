@@ -58,6 +58,11 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 7. Once you are in VRChat you will need to enable OSC in the expressions menu. If you have use OSC before with your avatar, remember to refresh the OSC config for that avatar (In the OSC expressions menu).
 8. You should be all set now. Enjoyyyyyy ;}
 
+### Feature Modifiers
+- Idle: The idle level of the feature. Idle starts once the feature has been triggered for the first time.
+- Minimum: The minimum level the feature is allowed to be active at. Minimum does not influence idle.
+- Maximum: The maximum level the feature is allowed to be active at. Maximum does not influence idle.
+
 ## General
 
 VibeCheck functions by receiving OSC input from VRChat. 
