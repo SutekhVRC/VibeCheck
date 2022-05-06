@@ -1,5 +1,5 @@
-**README & instructions not finished.**
-# VibeCheck is in Alpha Testing and will be getting updates frequently.
+### VibeCheck is in Alpha Testing and will be getting updates frequently.
+**Please report bugs/issues or feature requests if you have them!**
 
 # VibeCheck
 
@@ -14,7 +14,7 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - A bluetooth LE adapter. I recommend [this one](https://www.amazon.com/dp/B09DMP6T22?psc=1&ref=ppx_yo2ov_dt_b_product_details)
 
 ## TL;DR
-- Install Dependencies and have a bluetooth adapter.
+- Install [Dependencies](https://github.com/SutekhVRC/VibeCheck#dependencies) and have a bluetooth adapter.
 - [Download Installer](https://github.com/SutekhVRC/VibeCheck/releases/latest) and Install VibeCheck.
 - Setup avatar to send a synced float parameter (or multiple float parameters) to utilize OSC and send input to VibeCheck. You probably want to drive the parameters with [Avatar Dynamics Contacts](https://docs.vrchat.com/docs/contacts) scripts.
 - Start VibeCheck
