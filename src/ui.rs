@@ -386,6 +386,12 @@ pub enum ToyUpdate {
 pub enum TmSig {
     StopListening,
     StartListening(OSCNetworking),
+    /*
+    Running,
+    Stopped,
+    */
+    Listening,
+    BindError,
 }
 
 pub enum ToyManagementEvent {
@@ -397,7 +403,13 @@ pub enum VCError {
     HandlingErr(crate::handling::HandlerErr),
 }
 
-pub struct VibeCheckGUI {
+pub enum RunningState<'a> {
+    Running,
+    Stopped,
+    Error(&'a str)
+}
+
+pub struct VibeCheckGUI<'a> {
     pub config: VibeCheckConfig,
     pub config_edit: VibeCheckConfig,
 
@@ -407,7 +419,7 @@ pub struct VibeCheckGUI {
     pub minute_sync: Instant,
 
     pub tab: VCGUITab,
-    pub running: bool,
+    pub running: RunningState<'a>,
     pub toys: HashMap<u32, VCToy>,
     //================================================
     // Handlers error recvr
@@ -432,7 +444,7 @@ pub struct VibeCheckGUI {
     pub intiface_child_proc_h: Option<Child>,
 }
 
-impl VibeCheckGUI {
+impl VibeCheckGUI<'_> {
     pub fn new(config: VibeCheckConfig, cc: &CreationContext<'_>) -> Self {
         let config_edit = config.clone();
 
@@ -480,11 +492,7 @@ impl VibeCheckGUI {
             }
         }
 
-        // Set horny time
-        println!("[*] Horny Timer Loaded: {}", config.horny_timer);
-        let sync_now = Instant::now().checked_sub(Duration::from_secs(config.horny_timer)).unwrap_or_else(|| Instant::now());
-        println!("[*] Time Sync: {}", sync_now.elapsed().as_secs());
-        let minute_sync = sync_now;
+        let minute_sync = Instant::now();
 
 
 
@@ -497,7 +505,7 @@ impl VibeCheckGUI {
             battery_synced: false,
             minute_sync,
             tab: VCGUITab::Main,
-            running: false,
+            running: RunningState::Stopped,
             toys: HashMap::new(),
             //======================================
             // Error channels
@@ -530,17 +538,41 @@ impl VibeCheckGUI {
 
     fn exec_handler(&mut self, ui: &mut egui::Ui) {
 
-        if !self.running {
-            if ui.button(RichText::new("Enable").font(FontId::new(15., FontFamily::Monospace))).clicked() {
-                self.tme_send
-                    .as_ref()
-                    .unwrap()
-                    .send(ToyManagementEvent::Sig(TmSig::StartListening(self.config.networking.clone())))
-                    .unwrap();
-                
-                self.running = true;
-            }
-        } else {
+
+        if let RunningState::Stopped = self.running {
+            let ed_button = ui.button(RichText::new("Enable").font(FontId::new(15., FontFamily::Monospace)));
+                if ed_button.clicked() {
+                    self.tme_send
+                        .as_ref()
+                        .unwrap()
+                        .send(ToyManagementEvent::Sig(TmSig::StartListening(self.config.networking.clone())))
+                        .unwrap();
+                    match self.tme_recv.as_ref().unwrap().recv() {
+                        Ok(tme) => {
+                            match tme {
+                                ToyManagementEvent::Sig(sig) => {
+                                    match sig {
+                                        TmSig::Listening => {
+                                            self.running = RunningState::Running;
+                                        },
+                                        TmSig::BindError => {
+                                            println!("[!] Bind Error: Sending shutdown signal!");
+        
+                                            self.tme_send.as_ref().unwrap().send(ToyManagementEvent::Sig(TmSig::StopListening)).unwrap();
+                                            self.running = RunningState::Error("Bind Error! Set a different bind port in Settings!");
+                                        },
+                                        _ => {},// 
+                                    }
+                                },
+                                _ => {},// Got unexpected Sig
+                            }
+                        },
+                        Err(_e) => {},// Recv failed
+                    }// tme recv
+                }
+        }
+
+        if let RunningState::Running = self.running {
             if ui.button("Disable").clicked() {
                 self.tme_send
                     .as_ref()
@@ -557,9 +589,134 @@ impl VibeCheckGUI {
                         });
                     }
 
-                self.running = false;
+                self.running = RunningState::Stopped;
             }
         }
+
+        if let RunningState::Error(err) = self.running {
+            let ed_button = ui.button(RichText::new("Enable").font(FontId::new(15., FontFamily::Monospace)));
+            if ed_button.clicked() {
+                self.tme_send
+                    .as_ref()
+                    .unwrap()
+                    .send(ToyManagementEvent::Sig(TmSig::StartListening(self.config.networking.clone())))
+                    .unwrap();
+                match self.tme_recv.as_ref().unwrap().recv() {
+                    Ok(tme) => {
+                        match tme {
+                            ToyManagementEvent::Sig(sig) => {
+                                match sig {
+                                    TmSig::Listening => {
+                                        self.running = RunningState::Running;
+                                    },
+                                    TmSig::BindError => {
+                                        println!("[!] Bind Error: Sending shutdown signal!");
+    
+                                        self.tme_send.as_ref().unwrap().send(ToyManagementEvent::Sig(TmSig::StopListening)).unwrap();
+                                        self.running = RunningState::Error("Bind Error! Set a different bind port in Settings!");
+                                    },
+                                    _ => {},// 
+                                }
+                            },
+                            _ => {},// Got unexpected Sig
+                        }
+                    },
+                    Err(_e) => {},// Recv failed
+                }// tme recv
+            }
+            let err_msg = err.clone();
+            ui.label(RichText::new(err_msg).color(Color32::RED));
+        }
+/*
+        match self.running {
+
+            RunningState::Error(ref err) => {
+                let ed_button = ui.button(RichText::new("Enable").font(FontId::new(15., FontFamily::Monospace)));
+                if ed_button.clicked() {
+                    self.tme_send
+                        .as_ref()
+                        .unwrap()
+                        .send(ToyManagementEvent::Sig(TmSig::StartListening(self.config.networking.clone())))
+                        .unwrap();
+                    match self.tme_recv.as_ref().unwrap().recv() {
+                        Ok(tme) => {
+                            match tme {
+                                ToyManagementEvent::Sig(sig) => {
+                                    match sig {
+                                        TmSig::Listening => {
+                                            self.running = RunningState::Running;
+                                        },
+                                        TmSig::BindError => {
+                                            println!("[!] Bind Error: Sending shutdown signal!");
+        
+                                            self.tme_send.as_ref().unwrap().send(ToyManagementEvent::Sig(TmSig::StopListening)).unwrap();
+                                            self.running = RunningState::Error("Bind Error! Set a different bind port in Settings!".to_string());
+                                        },
+                                        _ => {},// 
+                                    }
+                                },
+                                _ => {},// Got unexpected Sig
+                            }
+                        },
+                        Err(_e) => {},// Recv failed
+                    }// tme recv
+                }
+                ui.label(RichText::new(err).color(Color32::RED));
+            }
+            
+            RunningState::Stopped => {
+                let ed_button = ui.button(RichText::new("Enable").font(FontId::new(15., FontFamily::Monospace)));
+                if ed_button.clicked() {
+                    self.tme_send
+                        .as_ref()
+                        .unwrap()
+                        .send(ToyManagementEvent::Sig(TmSig::StartListening(self.config.networking.clone())))
+                        .unwrap();
+                    match self.tme_recv.as_ref().unwrap().recv() {
+                        Ok(tme) => {
+                            match tme {
+                                ToyManagementEvent::Sig(sig) => {
+                                    match sig {
+                                        TmSig::Listening => {
+                                            self.running = RunningState::Running;
+                                        },
+                                        TmSig::BindError => {
+                                            println!("[!] Bind Error: Sending shutdown signal!");
+        
+                                            self.tme_send.as_ref().unwrap().send(ToyManagementEvent::Sig(TmSig::StopListening)).unwrap();
+                                            self.running = RunningState::Error("Bind Error! Set a different bind port in Settings!".to_string());
+                                        },
+                                        _ => {},// 
+                                    }
+                                },
+                                _ => {},// Got unexpected Sig
+                            }
+                        },
+                        Err(_e) => {},// Recv failed
+                    }// tme recv
+                }
+            },
+            RunningState::Running => {
+                if ui.button("Disable").clicked() {
+                    self.tme_send
+                        .as_ref()
+                        .unwrap()
+                        .send(ToyManagementEvent::Sig(TmSig::StopListening))
+                        .unwrap();
+                        let toys_sd = self.toys.clone();
+                        for toy in toys_sd {
+                            self.async_rt.block_on(async move {
+                                match toy.1.device_handle.stop().await {
+                                    Ok(_) => println!("[*] Stop command sent: {}", toy.1.toy_name),
+                                    Err(_e) => println!("[!] Err stopping device: {}", _e),
+                                }
+                            });
+                        }
+    
+                    self.running = RunningState::Stopped;
+                }
+            }
+        }*/
     }
 
     fn start_intiface_engine(&mut self) {
@@ -1373,7 +1530,7 @@ fn populate_toy_feature_param_map(toy: &mut VCToy, param_feature_map: Option<Fea
     }
 }
 
-impl App for VibeCheckGUI {
+impl<'a> App for VibeCheckGUI<'a> {
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let dur = self.minute_sync.elapsed();
@@ -1442,7 +1599,6 @@ impl App for VibeCheckGUI {
         }
 
         self.stop_intiface_engine();
-        self.config.horny_timer = self.minute_sync.elapsed().as_secs();
         self.save_config();
         std::process::exit(0);
     }

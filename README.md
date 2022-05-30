@@ -5,9 +5,16 @@
 
 An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC implementation.
 
+
 ## Buttplug IO Supported Toys
 - [Supported Toys (All)](https://iostindex.com/?filter0ButtplugSupport=4)
 - [Supported Toys (Lovense)](https://iostindex.com/?filter0ButtplugSupport=4&filter1Brand=Lovense)
+
+## Common Windows OS Bluetooth radio issues
+- [Windows OS only supports the use of 1 Bluetooth radio](https://docs.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-faq#how-many-bluetooth-radios-can-windows-support)
+- Motherboard integrated bluetooth radios commonly have connection issues without an antenna, as well as can only handle one connected device.
+- Motherboard integrated bluetooth radios will interfere with external bluetooth adapters (USB adapters / etc.).
+- [Motherboard integrated bluetooth radios interfering](https://kb.plugable.com/bluetooth-adapter/your-computer-has-had-a-different-bluetooth-adapter-previously-or-has-a-built-in-adapter)
 
 ## Dependencies
 - [Intiface Desktop](https://intiface.com/desktop/)

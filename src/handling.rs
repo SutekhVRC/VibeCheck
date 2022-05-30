@@ -300,7 +300,8 @@ pub async fn toy_management_handler(
                             }
                             TmSig::StopListening => {
                                 // Already not listening
-                            }
+                            },
+                            _ => {},
                         }
                     }
                 } // Event handled
@@ -341,7 +342,8 @@ pub async fn toy_management_handler(
             let toy_bcst_tx_osc = toy_bcst_tx.clone();
             println!("[+] Spawning OSC listener..");
             let vc_conf_clone = vc_config.clone();
-            thread::spawn(move || toy_input_routine(toy_bcst_tx_osc, vc_conf_clone));
+            let tme_send_clone = _tme_send.clone();
+            thread::spawn(move || toy_input_routine(toy_bcst_tx_osc, tme_send_clone, vc_conf_clone));
 
             loop {
                 // Recv event (listening)
@@ -407,7 +409,8 @@ pub async fn toy_management_handler(
                                         toy_async_rt.shutdown_background();
                                         listening = false;
                                         break;
-                                    }
+                                    },
+                                    _ => {},
                                 }
                             }
                         } // Event handled
@@ -425,9 +428,18 @@ pub async fn toy_management_handler(
     receives OSC messages
     broadcasts the OSC messages to each toy
 */
-fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, vc_config: OSCNetworking) {
+fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: Sender<ToyManagementEvent>, vc_config: OSCNetworking) {
 
-    let bind_sock = UdpSocket::bind(format!("{}:{}", vc_config.bind.0, vc_config.bind.1)).unwrap();
+    let bind_sock = match UdpSocket::bind(format!("{}:{}", vc_config.bind.0, vc_config.bind.1)) {
+        Ok(s) => {
+            let _ = tme_send.send(ToyManagementEvent::Sig(TmSig::Listening));
+            s
+        },
+        Err(_e) => {
+            let _ = tme_send.send(ToyManagementEvent::Sig(TmSig::BindError));
+            return;
+        }
+    };
     println!("Listen sock is bound");
     bind_sock.set_nonblocking(true).unwrap();
     //bind_sock.set_read_timeout(Some(Duration::from_millis(20)));

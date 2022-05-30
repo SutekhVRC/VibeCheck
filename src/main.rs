@@ -35,7 +35,6 @@ struct IntifaceConfig(String);
 pub struct VibeCheckConfig {
     networking: OSCNetworking,
     intiface_config: IntifaceConfig,
-    horny_timer: u64,
 }
 
 fn config_load() -> VibeCheckConfig {
@@ -66,7 +65,6 @@ fn config_load() -> VibeCheckConfig {
             serde_json::to_string(&VibeCheckConfig {
                 networking: OSCNetworking::default(),
                 intiface_config: IntifaceConfig("6969".to_string()),
-                horny_timer: 0,
             })
             .unwrap(),
         )
@@ -92,7 +90,6 @@ fn config_load() -> VibeCheckConfig {
                 let def_conf = VibeCheckConfig {
                     networking: OSCNetworking::default(),
                     intiface_config: IntifaceConfig("6969".to_string()),
-                    horny_timer: 0,
                 };
 
                 fs::write(
@@ -113,7 +110,6 @@ fn config_load() -> VibeCheckConfig {
             let def_conf = VibeCheckConfig {
                 networking: OSCNetworking::default(),
                 intiface_config: IntifaceConfig("6969".to_string()),
-                horny_timer: 0,
             };
             fs::write(
                 &vc_config_file,
