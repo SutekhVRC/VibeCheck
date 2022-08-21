@@ -441,7 +441,8 @@ fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: Sender<ToyManagemen
         }
     };
     println!("Listen sock is bound");
-    bind_sock.set_nonblocking(true).unwrap();
+    bind_sock.set_nonblocking(false).unwrap();
+    let _ = bind_sock.set_read_timeout(Some(Duration::from_secs(1)));
     //bind_sock.set_read_timeout(Some(Duration::from_millis(20)));
     loop {
         // try recv OSC packet
