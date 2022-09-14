@@ -4,7 +4,7 @@ use futures::StreamExt;
 use futures_timer::Delay;
 use rosc::{self, OscMessage, OscPacket};
 use std::collections::HashMap;
-use std::net::UdpSocket;
+use std::net::{UdpSocket, SocketAddrV4};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 use std::thread;
@@ -16,7 +16,6 @@ use tokio::sync::{
 };
 use tokio::task::JoinHandle;
 
-use crate::OSCNetworking;
 use crate::ui::{FeatureMode, FeatureParamMap, ToyManagementEvent, ToyMode};
 use crate::{ui::TmSig, ui::ToyFeature, ui::ToyUpdate, ui::VCError, ui::VCToy};
 
@@ -151,7 +150,7 @@ pub async fn toy_management_handler(
     _tme_send: Sender<ToyManagementEvent>,
     tme_recv: Receiver<ToyManagementEvent>,
     mut toys: HashMap<u32, VCToy>,
-    mut vc_config: OSCNetworking,
+    mut vc_config: SocketAddrV4,
 ) {
     let f = |dev: Arc<ButtplugClientDevice>,
              mut toy_bcst_rx: BReceiver<ToySig>,
@@ -428,9 +427,9 @@ pub async fn toy_management_handler(
     receives OSC messages
     broadcasts the OSC messages to each toy
 */
-fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: Sender<ToyManagementEvent>, vc_config: OSCNetworking) {
+fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: Sender<ToyManagementEvent>, vc_config: SocketAddrV4) {
 
-    let bind_sock = match UdpSocket::bind(format!("{}:{}", vc_config.bind.0, vc_config.bind.1)) {
+    let bind_sock = match UdpSocket::bind(vc_config) {
         Ok(s) => {
             let _ = tme_send.send(ToyManagementEvent::Sig(TmSig::Listening));
             s

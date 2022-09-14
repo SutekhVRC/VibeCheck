@@ -12,6 +12,7 @@ use eframe::epaint::{FontId, FontFamily};
 
 //use eframe::epaint::{Stroke, Rounding};
 use core::fmt;
+use std::net::{SocketAddrV4, Ipv4Addr};
 use eframe::{
     egui::{self, CentralPanel},
     App,
@@ -29,9 +30,9 @@ use sysinfo::{ProcessExt, System, SystemExt};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 
-use crate::{file_exists, OSCNetworking};
+use crate::{file_exists, VibeCheckUserConfig};
 use crate::{
-    check_valid_ipv4, check_valid_port, get_user_home_dir,
+    get_user_home_dir,
     handling::EventSig,
     handling::{client_event_handler, toy_management_handler},
     VibeCheckConfig,
@@ -385,7 +386,7 @@ pub enum ToyUpdate {
 
 pub enum TmSig {
     StopListening,
-    StartListening(OSCNetworking),
+    StartListening(SocketAddrV4),
     /*
     Running,
     Stopped,
@@ -411,7 +412,7 @@ pub enum RunningState<'a> {
 
 pub struct VibeCheckGUI<'a> {
     pub config: VibeCheckConfig,
-    pub config_edit: VibeCheckConfig,
+    pub config_edit: VibeCheckUserConfig,
 
     pub editing: HashMap<u32, u32>,
 
@@ -446,7 +447,7 @@ pub struct VibeCheckGUI<'a> {
 
 impl VibeCheckGUI<'_> {
     pub fn new(config: VibeCheckConfig, cc: &CreationContext<'_>) -> Self {
-        let config_edit = config.clone();
+        let config_edit = config.clone().as_user_config();
 
         // Set fonts
         let mut style: Style = (*cc.egui_ctx.style()).clone();
@@ -638,7 +639,7 @@ impl VibeCheckGUI<'_> {
         ))
         .args([
             "--wsinsecureport",
-            format!("{}", self.config.intiface_config.0).as_str(),
+            &self.config.intiface_config.ip().to_string(),
             "--stayopen",
             "--log",
             "1",
@@ -798,32 +799,16 @@ impl VibeCheckGUI<'_> {
         });
     }
 
-    fn chk_valid_config_inputs(&mut self) -> bool {
-        if !check_valid_ipv4(&self.config_edit.networking.bind.0) {
-            return false;
-        }
-
-        if !check_valid_port(&self.config_edit.networking.bind.1) {
-            return false;
-        }
-
-        if !check_valid_port(&self.config_edit.intiface_config.0) {
-            return false;
-        }
-
-        true
-    }
-
     fn list_config(&mut self, ui: &mut egui::Ui) {
 
         ui.horizontal_wrapped(|ui| {
             ui.label("OSC Bind Host: ");
-            ui.text_edit_singleline(&mut self.config_edit.networking.bind.0);
+            ui.text_edit_singleline(&mut self.config_edit.networking_addr);
         });
 
         ui.horizontal_wrapped(|ui| {
             ui.label("OSC Bind Port: ");
-            ui.text_edit_singleline(&mut self.config_edit.networking.bind.1);
+            ui.text_edit_singleline(&mut self.config_edit.networking_port);
         });
 
 
@@ -844,13 +829,30 @@ impl VibeCheckGUI<'_> {
 
         ui.horizontal_wrapped(|ui| {
             ui.label("Intiface WS Port: ");
-            ui.text_edit_singleline(&mut self.config_edit.intiface_config.0);
+            ui.text_edit_singleline(&mut self.config_edit.intiface_port);
         });
-
 
         //ui.label(format!("Bind: {}:{}", self.config.networking.bind.0,self.config.networking.bind.1));
         //ui.label(format!("VRChat: {}:{}", self.config.networking.vrchat.0,self.config.networking.vrchat.1));
         //ui.label(format!("Intiface WS Port: {}", self.config.intiface_config.0));
+    }
+
+    fn save_user_config(&mut self) -> Result<(), ()> {
+        match self.config_edit.networking_addr.parse::<Ipv4Addr>() {
+            Ok(ip) => self.config.networking.set_ip(ip),
+            Err(_) => return Err(()),
+        }
+
+        match self.config_edit.networking_port.clone().parse() {
+            Ok(port) => self.config.networking.set_port(port),
+            Err(_) => return Err(()),
+        }
+        match self.config_edit.intiface_port.clone().parse() {
+            Ok(port) => self.config.intiface_config.set_port(port),
+            Err(_) => return Err(()),
+        }
+
+        Ok(())
     }
 
     fn save_config(&mut self) {
@@ -1477,13 +1479,12 @@ impl<'a> App for VibeCheckGUI<'a> {
                         ui.label("VibeCheck Settings");
                         ui.with_layout(Layout::right_to_left(), |ui| {
                             if ui.button("Save").clicked() {
-                                if self.chk_valid_config_inputs() {
-                                    println!("[!] Valid config inputs!");
-                                    self.config = self.config_edit.clone();
-                                    self.save_config();
-                                } else {
-                                    println!("[!] Invalid config inputs!");
-                                    self.config_edit = self.config.clone();
+                                match self.save_user_config() {
+                                    Ok(()) => println!("[!] Valid config inputs!"),
+                                    Err(()) => {
+                                        self.config_edit = self.config.clone().as_user_config();
+                                        println!("[!] Invalid config inputs!");
+                                    }
                                 }
                             }
                         });

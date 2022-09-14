@@ -5,7 +5,7 @@ use eframe::epaint::Vec2;
 use eframe::{run_native, NativeOptions};
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, SocketAddrV4};
 use std::path::Path;
 
 mod handling;
@@ -13,29 +13,36 @@ mod ui;
 
 use ui::VibeCheckGUI;
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct OSCNetworking {
-    bind: (String, String),
-    //vrchat: (String, String),
+fn default_socket() -> SocketAddrV4 {
+    SocketAddrV4::new(Ipv4Addr::new(127,0,0,1), 9001)
 }
 
-impl Default for OSCNetworking {
-    fn default() -> Self {
-        Self {
-            bind: ("127.0.0.1".to_string(), "9001".to_string()),
-            //vrchat: ("127.0.0.1".to_string(), "9000".to_string()),
-        }
-    }
+fn default_intiface() -> SocketAddrV4 {
+    SocketAddrV4::new(Ipv4Addr::new(0,0,0,0), 6969)
 }
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-struct IntifaceConfig(String);
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct VibeCheckConfig {
-    networking: OSCNetworking,
-    intiface_config: IntifaceConfig,
+    networking: SocketAddrV4,
+    intiface_config: SocketAddrV4,
 }
+
+pub struct VibeCheckUserConfig {
+    networking_addr: String,
+    networking_port: String,
+    intiface_port: String,
+}
+
+impl VibeCheckConfig {
+    fn as_user_config(self) -> VibeCheckUserConfig {
+        return VibeCheckUserConfig {
+            networking_addr: self.networking.ip().to_string(),
+            networking_port: self.networking.port().to_string(),
+            intiface_port: self.intiface_config.port().to_string(),
+        };
+    }
+}
+
 
 fn config_load() -> VibeCheckConfig {
     let vc_root_dir = format!(
@@ -63,8 +70,8 @@ fn config_load() -> VibeCheckConfig {
         fs::write(
             &vc_config_file,
             serde_json::to_string(&VibeCheckConfig {
-                networking: OSCNetworking::default(),
-                intiface_config: IntifaceConfig("6969".to_string()),
+                networking: default_socket(),
+                intiface_config: default_intiface(),
             })
             .unwrap(),
         )
@@ -88,8 +95,8 @@ fn config_load() -> VibeCheckConfig {
                 println!("[*] Resetting to default config.");
 
                 let def_conf = VibeCheckConfig {
-                    networking: OSCNetworking::default(),
-                    intiface_config: IntifaceConfig("6969".to_string()),
+                    networking: default_socket(),
+                    intiface_config: default_intiface(),
                 };
 
                 fs::write(
@@ -108,8 +115,8 @@ fn config_load() -> VibeCheckConfig {
             );
             println!("[*] Resetting to default config.");
             let def_conf = VibeCheckConfig {
-                networking: OSCNetworking::default(),
-                intiface_config: IntifaceConfig("6969".to_string()),
+                networking: default_socket(),
+                intiface_config: default_intiface(),
             };
             fs::write(
                 &vc_config_file,
@@ -127,26 +134,6 @@ fn main() {
     native_opts.initial_window_size = Some(Vec2::new(450., 500.));
 
     run_native("VibeCheck", native_opts, Box::new(|cc| Box::new(VibeCheckGUI::new(config_load(), cc))));
-}
-
-fn check_valid_port(port: &String) -> bool {
-    if let Ok(p) = port.parse::<u64>() {
-        if p > 0 && p < 65535 {
-            true
-        } else {
-            false
-        }
-    } else {
-        false
-    }
-}
-
-fn check_valid_ipv4(ip: &String) -> bool {
-    if ip.parse::<Ipv4Addr>().is_err() {
-        false
-    } else {
-        true
-    }
 }
 
 fn path_exists(p: &String) -> bool {
