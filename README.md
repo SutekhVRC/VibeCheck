@@ -1,4 +1,5 @@
 ### VibeCheck is in Alpha Testing and will be getting updates frequently.
+## VibeCheck is undergoing a rewrite. (Bug fixes / optimizations / more features)
 **Please report bugs/issues or feature requests if you have them!**
 
 # VibeCheck
