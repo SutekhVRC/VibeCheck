@@ -96,7 +96,10 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
             match event {
                 ButtplugClientEvent::DeviceAdded(dev) => {
                     Delay::new(Duration::from_secs(3)).await;
-                    let battery_level = dev.battery_level().await.unwrap();
+                    let battery_level = match dev.battery_level().await {
+                        Ok(battery_lvl) => battery_lvl,
+                        Err(_e) => 0.0,
+                    };
 
                     let _ = event_tx.send(EventSig::ToyAdd(VCToy {
                         toy_id: dev.index(),
