@@ -1,6 +1,7 @@
-use buttplug::client::device::ClientDeviceMessageAttributesMap;
-use buttplug::client::ButtplugClientDevice;
-use buttplug::core::messages::ButtplugCurrentSpecDeviceMessageType;
+//use buttplug::client::device::ClientDeviceMessageAttributesMap;
+//use buttplug::client::ButtplugClientDevice;
+//use buttplug::core::message::ClientDeviceMessageAttributes;
+//use buttplug::core::messages::ButtplugCurrentSpecDeviceMessageType;
 use eframe::CreationContext;
 use eframe::egui::CollapsingHeader;
 //use eframe::egui::style::{WidgetVisuals, Widgets};
@@ -10,370 +11,44 @@ use eframe::egui::{
 };
 use eframe::epaint::{FontId, FontFamily};
 
-//use eframe::epaint::{Stroke, Rounding};
-use core::fmt;
 use eframe::{
     egui::{self, CentralPanel},
     App,
 };
-use serde::{Deserialize, Serialize};
+
 use std::collections::HashMap;
 use std::fs;
-use std::process::{Child, Command};
+//use std::process::{Child, Command};
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::sync::Arc;
 use std::thread;
-use std::os::windows::process::CommandExt;
+//use std::os::windows::process::CommandExt;
 use std::time::{Duration, Instant};
 use sysinfo::{ProcessExt, System, SystemExt};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 
-use crate::{file_exists, OSCNetworking};
+use crate::config::{load_toy_config, save_toy_config};
+use crate::toyops::{alter_toy, VCFeatureType, VCToyFeature};
+use crate::vcupdate::{VibeCheckUpdater, VERSION};
 use crate::{
-    check_valid_ipv4, check_valid_port, get_user_home_dir,
-    handling::EventSig,
-    handling::{client_event_handler, toy_management_handler},
-    VibeCheckConfig,
+    util::{
+        check_valid_ipv4,
+        check_valid_port,
+        get_user_home_dir
+    },
+    handling::{EventSig, client_event_handler, toy_management_handler},
+    config::{
+        VibeCheckConfig,
+        OSCNetworking,
+    },
+    toyops::{
+        VCToy,
+    },
 };
 
 pub enum VCGUITab {
     Main,
     Config,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Copy)]
-pub struct LevelTweaks {
-    pub minimum_level: f64,
-    pub maximum_level: f64,
-    pub idle_level: f64,
-}
-
-impl Default for LevelTweaks {
-    fn default() -> Self {
-        LevelTweaks { minimum_level: 0., maximum_level: 100., idle_level: 0. }
-    }
-}
-
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum Vibrators {
-    Auto(String, LevelTweaks),
-    Custom(Vec<(String, u32, LevelTweaks)>),
-}
-
-impl ToyFeatureTrait for Vibrators {
-    fn get_param_mode_str(&self) -> String {
-        match self {
-            Self::Auto(..) => "Auto".to_string(),
-            Self::Custom(_) => "Custom".to_string(),
-        }
-    }
-
-    fn get_auto_mut_ref(&mut self) -> Option<&mut String> {
-        match self {
-            Self::Auto(ref mut p, _) => Some(p),
-            _ => None,
-        }
-    }
-
-    fn get_custom_mut_refs(&mut self) -> Option<Vec<(&mut String, u32, LevelTweaks)>> {
-        match self {
-            Self::Custom(cmap) => {
-                let mut ret_vec = vec![];
-
-                for map in cmap {
-                    ret_vec.push((&mut map.0, map.1, map.2));
-                }
-                if ret_vec.is_empty() {
-                    None
-                } else {
-                    Some(ret_vec)
-                }
-            }
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum Rotators {
-    Auto(String, LevelTweaks),
-    Custom(Vec<(String, u32, LevelTweaks)>),
-}
-
-impl ToyFeatureTrait for Rotators {
-    fn get_param_mode_str(&self) -> String {
-        match self {
-            Self::Auto(..) => "Auto".to_string(),
-            Self::Custom(_) => "Custom".to_string(),
-        }
-    }
-
-    fn get_auto_mut_ref(&mut self) -> Option<&mut String> {
-        match self {
-            Self::Auto(ref mut p, _) => Some(p),
-            _ => None,
-        }
-    }
-
-    fn get_custom_mut_refs(&mut self) -> Option<Vec<(&mut String, u32, LevelTweaks)>> {
-        match self {
-            Self::Custom(cmap) => {
-                let mut ret_vec = vec![];
-
-                for map in cmap {
-                    ret_vec.push((&mut map.0, map.1, map.2));
-                }
-                if ret_vec.is_empty() {
-                    None
-                } else {
-                    Some(ret_vec)
-                }
-            }
-            _ => None,
-        }
-    }
-}
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum Linears {
-    Auto(String, LevelTweaks),
-    Custom(Vec<(String, u32, LevelTweaks)>),
-}
-
-impl ToyFeatureTrait for Linears {
-    fn get_param_mode_str(&self) -> String {
-        match self {
-            Self::Auto(..) => "Auto".to_string(),
-            Self::Custom(_) => "Custom".to_string(),
-        }
-    }
-
-    fn get_auto_mut_ref(&mut self) -> Option<&mut String> {
-        match self {
-            Self::Auto(ref mut p, _) => Some(p),
-            _ => None,
-        }
-    }
-
-    fn get_custom_mut_refs(&mut self) -> Option<Vec<(&mut String, u32, LevelTweaks)>> {
-        match self {
-            Self::Custom(cmap) => {
-                let mut ret_vec = vec![];
-
-                for map in cmap {
-                    ret_vec.push((&mut map.0, map.1, map.2));
-                }
-                if ret_vec.is_empty() {
-                    None
-                } else {
-                    Some(ret_vec)
-                }
-            }
-            _ => None,
-        }
-    }
-}
-
-trait ToyFeatureTrait {
-    fn get_param_mode_str(&self) -> String;
-    fn get_auto_mut_ref(&mut self) -> Option<&mut String>;
-    fn get_custom_mut_refs(&mut self) -> Option<Vec<(&mut String, u32, LevelTweaks)>>;
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FeatureParamMap {
-    // Vibrators
-    pub v: Option<Vibrators>,
-    pub v_custom: Vec<(String, u32, LevelTweaks)>,
-    pub v_auto: (String, LevelTweaks),
-    // Rotators
-    pub r: Option<Rotators>,
-    pub r_custom: Vec<(String, u32, LevelTweaks)>,
-    pub r_auto: (String, LevelTweaks),
-    // Linears
-    pub l: Option<Linears>,
-    pub l_custom: Vec<(String, u32, LevelTweaks)>,
-    pub l_auto: (String, LevelTweaks),
-}
-
-impl fmt::Display for FeatureParamMap {
-    #[allow(unused_must_use)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(ref v) = self.v {
-            match v {
-                Vibrators::Auto(p, _) => {
-                    write!(f, "Vibrators | Auto: {}", p);
-                }
-                Vibrators::Custom(cmap) => {
-                    let mut base_str = String::from("Vibrators | Custom");
-                    for map in cmap {
-                        base_str.push_str(format!("\nVibrator ({}): {}", map.1, map.0).as_str());
-                    }
-                    write!(f, "{}", base_str);
-                }
-            }
-        }
-
-        if let Some(ref r) = self.r {
-            write!(f, "\n");
-            match r {
-                Rotators::Auto(p, _) => {
-                    write!(f, "Rotators  | Auto: {}", p);
-                }
-                Rotators::Custom(cmap) => {
-                    let mut base_str = String::from("Rotators  | Custom");
-                    for map in cmap {
-                        base_str.push_str(format!("\nRotator  ({}): {}", map.1, map.0).as_str());
-                    }
-                    write!(f, "{}", base_str);
-                }
-            }
-        }
-
-        if let Some(ref l) = self.l {
-            write!(f, "\n");
-            match l {
-                Linears::Auto(p, _) => {
-                    write!(f, "Linears  | Auto: {}", p);
-                }
-                Linears::Custom(cmap) => {
-                    let mut base_str = String::from("Linears  | Custom");
-                    for map in cmap {
-                        base_str.push_str(format!("\nLinear  ({}): {}", map.1, map.0).as_str());
-                    }
-                    write!(f, "{}", base_str);
-                }
-            }
-        }
-        write!(f, "")
-    }
-}
-
-impl FeatureParamMap {
-    pub fn new() -> Self {
-        FeatureParamMap {
-            v: None,
-            v_custom: vec![],
-            v_auto: (String::new(), LevelTweaks::default()),
-            r: None,
-            r_custom: vec![],
-            r_auto: (String::new(), LevelTweaks::default()),
-            l: None,
-            l_custom: vec![],
-            l_auto: (String::new(), LevelTweaks::default()),
-        }
-    }
-
-    pub fn get_features_from_param(&self, param: &String) -> Option<Vec<ToyFeature>> {
-        let mut features = vec![];
-        if let Some(v) = &self.v {
-            match v {
-                Vibrators::Auto(p, l) => {
-                    if *p == *param {
-                        features.push(ToyFeature::Vibrator(FeatureMode::Auto(l.clone())));
-                    }
-                }
-                Vibrators::Custom(cmap) => {
-                    for map in cmap {
-                        if map.0 == *param {
-                            features.push(ToyFeature::Vibrator(FeatureMode::Custom(map.1, map.2)));
-                        }
-                    }
-                }
-            }
-        }
-
-        if let Some(r) = &self.r {
-            match r {
-                Rotators::Auto(p, l) => {
-                    if *p == *param {
-                        features.push(ToyFeature::Rotator(FeatureMode::Auto(l.clone())));
-                    }
-                }
-                Rotators::Custom(cmap) => {
-                    for map in cmap {
-                        if map.0 == *param {
-                            features.push(ToyFeature::Rotator(FeatureMode::Custom(map.1, map.2)));
-                        }
-                    }
-                }
-            }
-        }
-
-        if let Some(l) = &self.l {
-            match l {
-                Linears::Auto(p, l) => {
-                    if *p == *param {
-                        features.push(ToyFeature::Linear(FeatureMode::Auto(l.clone())));
-                    }
-                }
-                Linears::Custom(cmap) => {
-                    for map in cmap {
-                        if map.0 == *param {
-                            features.push(ToyFeature::Linear(FeatureMode::Custom(map.1, map.2)));
-                        }
-                    }
-                }
-            }
-        }
-
-        if features.is_empty() {
-            return None;
-        } else {
-            return Some(features);
-        }
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum ToyFeature {
-    /*
-        FEATURE(INDEX)
-    */
-    // Vibrator (vibrator index)
-    Vibrator(FeatureMode),
-    // Rotator (index)
-    Rotator(FeatureMode),
-    // Linear (index)
-    Linear(FeatureMode),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum FeatureMode {
-    Auto(LevelTweaks),
-    Custom(u32, LevelTweaks),
-}
-
-/*
-impl fmt::Display for ToyFeature {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ToyFeature::Vibrator(id) => write!(f, "Vibrator ({})", id),
-            ToyFeature::Rotator(id) => write!(f, "Rotator ({})", id),
-            ToyFeature::Linear(id) => write!(f, "Mode: {}, Linear ({})", ),
-        }
-    }
-}*/
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ToyMode {
-    Auto(String),
-    Custom,
-}
-
-#[derive(Clone, Debug)]
-pub struct VCToy {
-    pub toy_id: u32,
-    pub toy_name: String,
-    pub battery_level: f64,
-    pub toy_connected: bool,
-    pub toy_features: ClientDeviceMessageAttributesMap,
-    pub osc_params_list: Vec<String>,
-    pub toy_param_mode: ToyMode,
-    pub param_feature_map: FeatureParamMap,
-    pub listening: bool,
-    pub device_handle: Arc<ButtplugClientDevice>,
 }
 
 #[derive(Clone, Debug)]
@@ -413,7 +88,8 @@ pub struct VibeCheckGUI<'a> {
     pub config: VibeCheckConfig,
     pub config_edit: VibeCheckConfig,
 
-    pub editing: HashMap<u32, u32>,
+    // toy_id, FeatureEditState
+    pub toy_editing: HashMap<(u32, VCFeatureType, u32), VCToyFeature>,
 
     pub battery_synced: bool,
     pub minute_sync: Instant,
@@ -438,10 +114,12 @@ pub struct VibeCheckGUI<'a> {
     pub tme_send: Option<Sender<ToyManagementEvent>>,
     //================================================
     pub toy_input_h_thread: Option<JoinHandle<()>>,
-    //
+    //================================================
     pub data_update_inc: u64,
     pub async_rt: Runtime,
-    pub intiface_child_proc_h: Option<Child>,
+    //================================================
+    pub update_engine: VibeCheckUpdater,
+
 }
 
 impl VibeCheckGUI<'_> {
@@ -500,7 +178,7 @@ impl VibeCheckGUI<'_> {
             config,
             config_edit,
 
-            editing: HashMap::new(),
+            toy_editing: HashMap::new(),
 
             battery_synced: false,
             minute_sync,
@@ -525,154 +203,105 @@ impl VibeCheckGUI<'_> {
             toy_input_h_thread: None,
             data_update_inc: 0,
             async_rt: Runtime::new().unwrap(),
-            intiface_child_proc_h: None,
+            //======================================
+            update_engine: VibeCheckUpdater::new(),
         };
 
         init.set_error_handling_channels();
-        init.start_intiface_engine();
+        //init.start_intiface_engine();
         //thread::sleep(Duration::from_secs(2));
         init.start_client_event_handler();
         init.start_toy_management_handler();
         init
     }
 
-    fn exec_handler(&mut self, ui: &mut egui::Ui) {
+    fn update_vibecheck(&mut self) {
+        if let RunningState::Running = self.running {
+            self.disable_vibecheck();
+        }
+        let blob = self.update_engine.release_blob.take().unwrap();
 
+        thread::spawn(move || {
+            VibeCheckUpdater::update_vibecheck(blob);
+        });
+        thread::sleep(std::time::Duration::from_secs(1));
+        std::process::exit(0);
+    }
+
+    fn disable_vibecheck(&mut self) {
+        self.tme_send
+        .as_ref()
+        .unwrap()
+        .send(ToyManagementEvent::Sig(TmSig::StopListening))
+        .unwrap();
+        let toys_sd = self.toys.clone();
+        for toy in toys_sd {
+            self.async_rt.block_on(async move {
+                match toy.1.device_handle.stop().await {
+                    Ok(_) => println!("[*] Stop command sent: {}", toy.1.toy_name),
+                    Err(_e) => println!("[!] Err stopping device: {}", _e),
+                }
+            });
+        }
+
+        self.running = RunningState::Stopped;
+    }
+
+    fn enable_vibecheck(&mut self) {
+        // Send Start listening signal
+        self.tme_send.as_ref().unwrap().send(ToyManagementEvent::Sig(TmSig::StartListening(self.config.networking.clone()))).unwrap();
+        
+        // Check if listening succeded or not
+        match self.tme_recv.as_ref().unwrap().recv() {
+            Ok(tme) => {
+                match tme {
+                    ToyManagementEvent::Sig(sig) => {
+                        match sig {
+                            TmSig::Listening => {
+                                self.running = RunningState::Running;
+                            },
+                            TmSig::BindError => {
+                                println!("[!] Bind Error: Sending shutdown signal!");
+
+                                self.tme_send.as_ref().unwrap().send(ToyManagementEvent::Sig(TmSig::StopListening)).unwrap();
+                                self.running = RunningState::Error("Bind Error! Set a different bind port in Settings!");
+                            },
+                            _ => {},// 
+                        }
+                    },
+                    _ => {},// Got unexpected Sig
+                }
+            },
+            Err(_e) => {},// Recv failed
+        }// tme recv
+    }
+
+    fn exec_handler(&mut self, ui: &mut egui::Ui) {
 
         if let RunningState::Stopped = self.running {
             let ed_button = ui.button(RichText::new("Enable").font(FontId::new(15., FontFamily::Monospace)));
                 if ed_button.clicked() {
-                    self.tme_send
-                        .as_ref()
-                        .unwrap()
-                        .send(ToyManagementEvent::Sig(TmSig::StartListening(self.config.networking.clone())))
-                        .unwrap();
-                    match self.tme_recv.as_ref().unwrap().recv() {
-                        Ok(tme) => {
-                            match tme {
-                                ToyManagementEvent::Sig(sig) => {
-                                    match sig {
-                                        TmSig::Listening => {
-                                            self.running = RunningState::Running;
-                                        },
-                                        TmSig::BindError => {
-                                            println!("[!] Bind Error: Sending shutdown signal!");
-        
-                                            self.tme_send.as_ref().unwrap().send(ToyManagementEvent::Sig(TmSig::StopListening)).unwrap();
-                                            self.running = RunningState::Error("Bind Error! Set a different bind port in Settings!");
-                                        },
-                                        _ => {},// 
-                                    }
-                                },
-                                _ => {},// Got unexpected Sig
-                            }
-                        },
-                        Err(_e) => {},// Recv failed
-                    }// tme recv
+                    self.enable_vibecheck();
                 }
         }
 
         if let RunningState::Running = self.running {
             if ui.button("Disable").clicked() {
-                self.tme_send
-                    .as_ref()
-                    .unwrap()
-                    .send(ToyManagementEvent::Sig(TmSig::StopListening))
-                    .unwrap();
-                    let toys_sd = self.toys.clone();
-                    for toy in toys_sd {
-                        self.async_rt.block_on(async move {
-                            match toy.1.device_handle.stop().await {
-                                Ok(_) => println!("[*] Stop command sent: {}", toy.1.toy_name),
-                                Err(_e) => println!("[!] Err stopping device: {}", _e),
-                            }
-                        });
-                    }
-
-                self.running = RunningState::Stopped;
+                self.disable_vibecheck();
             }
         }
 
         if let RunningState::Error(err) = self.running {
             let ed_button = ui.button(RichText::new("Enable").font(FontId::new(15., FontFamily::Monospace)));
             if ed_button.clicked() {
-                self.tme_send
-                    .as_ref()
-                    .unwrap()
-                    .send(ToyManagementEvent::Sig(TmSig::StartListening(self.config.networking.clone())))
-                    .unwrap();
-                match self.tme_recv.as_ref().unwrap().recv() {
-                    Ok(tme) => {
-                        match tme {
-                            ToyManagementEvent::Sig(sig) => {
-                                match sig {
-                                    TmSig::Listening => {
-                                        self.running = RunningState::Running;
-                                    },
-                                    TmSig::BindError => {
-                                        println!("[!] Bind Error: Sending shutdown signal!");
-    
-                                        self.tme_send.as_ref().unwrap().send(ToyManagementEvent::Sig(TmSig::StopListening)).unwrap();
-                                        self.running = RunningState::Error("Bind Error! Set a different bind port in Settings!");
-                                    },
-                                    _ => {},// 
-                                }
-                            },
-                            _ => {},// Got unexpected Sig
-                        }
-                    },
-                    Err(_e) => {},// Recv failed
-                }// tme recv
+                self.enable_vibecheck();
             }
             let err_msg = err.clone();
             ui.label(RichText::new(err_msg).color(Color32::RED));
         }
     }
 
-    fn start_intiface_engine(&mut self) {
-        // Start intiface-cli
-        println!("[*] Starting intiface");
-        self.intiface_child_proc_h = match Command::new(format!(
-            "{}\\AppData\\Local\\IntifaceDesktop\\engine\\IntifaceCLI.exe",
-            get_user_home_dir()
-        ))
-        .args([
-            "--wsinsecureport",
-            format!("{}", self.config.intiface_config.0).as_str(),
-            "--stayopen",
-            "--log",
-            "1",
-        ])
-        .creation_flags(0x08000000)
-        .spawn()
-        {
-            Ok(p) => Some(p),
-            Err(_e) => {
-                // Cant start intiface
-                return;
-            }
-        };
-
-        println!("[*] Started intiface");
-    }
-
-    fn stop_intiface_engine(&mut self) {
-        let mut icph = self.intiface_child_proc_h.take();
-        match icph {
-            Some(ref mut ph) => {
-                if let Ok(()) = ph.kill() {
-                    println!("[*] Intiface Engine Killed.");
-                } else {
-                    println!("[!] Intiface was not running.");
-                }
-            }
-            None => {
-                println!("[!] Got None for intiface process handle.");
-            }
-        }
-        println!("[*] Stopped Intiface");
-    }
-
+    // Start CEH
     fn start_client_event_handler(&mut self) {
         // Client Event Handler Channels
         let (client_eh_event_tx, client_eh_event_rx): (Sender<EventSig>, Receiver<EventSig>) =
@@ -751,6 +380,19 @@ impl VibeCheckGUI<'_> {
                         if ui.button("Settings").clicked() {
                             self.tab = VCGUITab::Config;
                         }
+
+                        if !self.update_engine.up_to_date {
+                            ui.separator();
+                            if ui
+                                .button(
+                                    RichText::new("Update").color(Color32::GREEN).monospace(),
+                                )
+                                .clicked()
+                            {
+                                self.update_vibecheck();
+                                std::thread::sleep(std::time::Duration::from_secs(5));
+                            }
+                        }
                     });
                 });
                 ui.with_layout(Layout::right_to_left(), |ui| {
@@ -786,13 +428,13 @@ impl VibeCheckGUI<'_> {
                     "VibeCheck",
                     "https://github.com/SutekhVRC/VibeCheck",
                 ));
-                ui.label("0.0.27-alpha");
                 ui.add(Hyperlink::from_label_and_url(
                     RichText::new("Made by Sutekh")
                         .monospace()
                         .color(Color32::WHITE),
                     "https://github.com/SutekhVRC",
                 ));
+                ui.label(VERSION);
                 ui.add_space(5.0);
             });
         });
@@ -804,10 +446,6 @@ impl VibeCheckGUI<'_> {
         }
 
         if !check_valid_port(&self.config_edit.networking.bind.1) {
-            return false;
-        }
-
-        if !check_valid_port(&self.config_edit.intiface_config.0) {
             return false;
         }
 
@@ -825,32 +463,6 @@ impl VibeCheckGUI<'_> {
             ui.label("OSC Bind Port: ");
             ui.text_edit_singleline(&mut self.config_edit.networking.bind.1);
         });
-
-
-        ui.separator();
-
-        ui.horizontal_wrapped(|ui| {
-            ui.label("Intiface Settings");
-        
-            ui.with_layout(Layout::right_to_left(), |ui| {
-                if ui.button("Restart Intiface").clicked() {
-                    self.stop_intiface_engine();
-                    thread::sleep(Duration::from_secs(2));
-                    self.start_intiface_engine();
-                }
-            });
-        });
-        ui.separator();
-
-        ui.horizontal_wrapped(|ui| {
-            ui.label("Intiface WS Port: ");
-            ui.text_edit_singleline(&mut self.config_edit.intiface_config.0);
-        });
-
-
-        //ui.label(format!("Bind: {}:{}", self.config.networking.bind.0,self.config.networking.bind.1));
-        //ui.label(format!("VRChat: {}:{}", self.config.networking.vrchat.0,self.config.networking.vrchat.1));
-        //ui.label(format!("Intiface WS Port: {}", self.config.intiface_config.0));
     }
 
     fn save_config(&mut self) {
@@ -875,6 +487,8 @@ impl VibeCheckGUI<'_> {
         }
         for toy in &mut self.toys {
 
+            let features = toy.1.param_feature_map.features.clone();
+            
             ui.horizontal_wrapped(|ui| {
                 CollapsingHeader::new(RichText::new(format!(
                     "{} [{}%]",
@@ -882,26 +496,136 @@ impl VibeCheckGUI<'_> {
                     (toy.1.battery_level * 100.).round()
                 )).font(FontId::new(15., FontFamily::Monospace)))
                 .show(ui, |ui| {
-                    ui.group(|ui| {
-                        if !self.editing.contains_key(&toy.0) {
+
+                    for i in 0..features.len() {//Iterate through all features of toy
+                        if self.toy_editing.contains_key(&(*toy.0, features[i].feature_type, features[i].feature_index)) {// Editing
+                            
+
+                            
+                            let mut saved = false;
+                            //let self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap() = self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap();
+                            ui.group(|ui| {
+                            ui.horizontal_wrapped(|ui| {
+                                let fref = self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap();
+                                
+                                ui.vertical(|ui| {
+                                    ui.label(format!("{:?} - {}", fref.feature_type, features[i].feature_index));
+                                    ui.separator()
+                                });
+
+                                ui.with_layout(Layout::right_to_left(), |ui| {
+
+                                    if ui.button("Save").clicked() {
+                                        // Saved
+                                        self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().saved = true;
+                                        // Set features to toy
+                                        toy.1.param_feature_map.features[i] = self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().to_owned();
+                                        // Take feature out of edit mode
+                                        self.toy_editing.remove(&(*toy.0, features[i].feature_type, features[i].feature_index));
+                                        
+                                        // Send update toy message
+                                        alter_toy(
+                                            self.tme_send.as_ref().unwrap(),
+                                            toy.1.clone(),
+                                        );
+                                        save_toy_config(
+                                            &toy.1.toy_name,
+                                            toy.1.param_feature_map.clone(),
+                                        );
+                                        saved = true;// Stop editing routine
+                                    }
+                                });
+                            });
+
+                            if saved {
+                                return;
+                            }
+
+                            let mut button_color = Color32::GREEN;
+                            let mut button_text = "Enabled";
+                            if !self.toy_editing.get(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_enabled {
+                                button_color = Color32::RED;
+                                button_text = "Disabled";
+                            }
+
+                            ui.checkbox(&mut self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_enabled, RichText::new(button_text).color(button_color));
+                            ui.horizontal_wrapped(|ui| {
+                                ui.label("OSC Parameter:");ui.text_edit_singleline(&mut self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().osc_parameter);
+                            });
+                            ui.checkbox(&mut self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().smooth_enabled, "Smoothing");
+                            if self.toy_editing.get(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().smooth_enabled {
+                                ui.horizontal_wrapped(|ui| {
+                                    ui.label("Smoothing Rate:"); ui.add(egui::Slider::new(&mut self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_levels.smooth_rate, 1.0..=20.0)
+                                    .fixed_decimals(2));
+                                });  
+                            }
+                          
+                            ui.horizontal_wrapped(|ui| {
+                                ui.label("Idle:   "); ui.add(egui::Slider::new(&mut self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_levels.idle_level, 0.0..=1.0)
+                                .fixed_decimals(2));
+                            });
+
+                            ui.horizontal_wrapped(|ui| {
+                                ui.label("Minimum:"); ui.add(egui::Slider::new(&mut self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_levels.minimum_level, 0.0..=1.0)
+                                .fixed_decimals(2));
+                            });
+
+                            // Minimum cant be more than maximum
+                            if self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_levels.minimum_level > self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_levels.maximum_level {
+                                self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_levels.minimum_level = self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_levels.maximum_level-0.01;
+                            }
+                            ui.horizontal_wrapped(|ui| {
+                                ui.label("Maximum:"); ui.add(egui::Slider::new(&mut self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_levels.maximum_level, 0.0..=1.0).fixed_decimals(2));
+                            });
+
+                            // Maximum cant be less than minimum
+                            if self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_levels.maximum_level < self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_levels.minimum_level {
+                                self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_levels.maximum_level = self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap().feature_levels.minimum_level+0.01;
+                            }
+
+                        });
+                        } else {// Saved
+                            ui.group(|ui| {
+                            ui.horizontal_wrapped(|ui| {
+                                ui.label(format!("{:?}[{}]: {}", toy.1.param_feature_map.features[i].feature_type, toy.1.param_feature_map.features[i].feature_index, toy.1.param_feature_map.features[i].osc_parameter));
+                                ui.with_layout(Layout::right_to_left(), |ui| {
+                                    if ui.button("Edit").clicked() {
+                                        toy.1.param_feature_map.features[i].saved = false;
+                                        self.toy_editing.insert((*toy.0, features[i].feature_type, features[i].feature_index), toy.1.param_feature_map.features[i].clone());
+                                    }
+                                    if toy.1.param_feature_map.features[i].feature_enabled {
+                                        ui.colored_label(Color32::GREEN, "Enabled");
+                                    } else {
+                                        ui.colored_label(Color32::RED, "Disabled");
+                                    }
+                                });
+                            });
+                            });
+                        }
+                    }
+
+                        /*
+                        if !self.toy_editing.contains_key(&toy.0) {
                             ui.horizontal_wrapped(|ui| {
                                 ui.label(RichText::new("Features").font(FontId::new(14., FontFamily::Monospace)));
                                 ui.with_layout(Layout::right_to_left(), |ui| {
                                     if ui.button("Edit").clicked() {
-                                        self.editing.insert(*toy.0, *toy.0);
+                                        self.toy_editing.insert(*toy.0, *toy.0);
                                         return;
                                     }
                                 });
                             });
                             ui.separator();
-                            // List toy features
-                            ui.label(format!("{}", toy.1.param_feature_map));
+                            // List toy features when not editing
+                            for feature in toy.1.param_feature_map.features {
+                                
+                            }
                         } else {
                             ui.horizontal_wrapped(|ui| {
                                 ui.label(RichText::new("Features"));
                                 ui.with_layout(Layout::right_to_left(), |ui| {
                                     if ui.button("Save").clicked() {
-                                        if let Some(_) = self.editing.remove(&toy.0) {
+                                        if let Some(_) = self.toy_editing.remove(&toy.0) {
                                             alter_toy(
                                                 self.tme_send.as_ref().unwrap(),
                                                 toy.1.clone(),
@@ -919,334 +643,9 @@ impl VibeCheckGUI<'_> {
 
                             // Edit parameters
 
-                            match toy.1.param_feature_map.v {
-                                Some(ref mut vibrators) => {
-                                    ui.horizontal_wrapped(|ui| {
-                                        ui.label(RichText::new("Vibrator(s)"));
-                                        ui.separator();
-                                        egui::ComboBox::from_id_source(format!(
-                                            "{} Vibrator Mode ({})",
-                                            toy.1.toy_name, toy.1.toy_id
-                                        ))
-                                        .selected_text(vibrators.get_param_mode_str())
-                                        .show_ui(
-                                            ui,
-                                            |ui| {
-                                                ui.selectable_value(
-                                                    vibrators,
-                                                    Vibrators::Auto(
-                                                        toy.1.param_feature_map.v_auto.0.clone(), toy.1.param_feature_map.v_auto.1
-                                                    ),
-                                                    "Auto",
-                                                );
-                                                ui.selectable_value(
-                                                    vibrators,
-                                                    Vibrators::Custom(
-                                                        toy.1.param_feature_map.v_custom.clone(),
-                                                    ),
-                                                    "Custom",
-                                                );
-                                            },
-                                        );
-                                    });
-
-                                    match vibrators {
-                                        Vibrators::Auto(..) => {
-                                            ui.horizontal_wrapped(|ui| {
-                                                ui.label("Parameter: ");
-                                                ui.text_edit_singleline(
-                                                    &mut toy.1.param_feature_map.v_auto.0,
-                                                );
-                                            });
-                                            ui.horizontal_wrapped(|ui| {
-                                                ui.label("Idle:   "); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_auto.1.idle_level, 0.0..=1.0)
-                                                .fixed_decimals(2));
-                                            });
-
-                                            ui.horizontal_wrapped(|ui| {
-                                                ui.label("Minimum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_auto.1.minimum_level, 0.0..=1.0)
-                                                .fixed_decimals(2));
-                                            });
-
-                                            if toy.1.param_feature_map.v_auto.1.minimum_level > toy.1.param_feature_map.v_auto.1.maximum_level {
-                                                toy.1.param_feature_map.v_auto.1.minimum_level = toy.1.param_feature_map.v_auto.1.maximum_level-0.01;
-                                            }
-                                            ui.horizontal_wrapped(|ui| {
-                                                ui.label("Maximum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_auto.1.maximum_level, 0.0..=1.0).fixed_decimals(2));
-                                            });
-
-                                            if toy.1.param_feature_map.v_auto.1.maximum_level < toy.1.param_feature_map.v_auto.1.minimum_level {
-                                                toy.1.param_feature_map.v_auto.1.maximum_level = toy.1.param_feature_map.v_auto.1.minimum_level+0.01;
-                                            }
-                                            toy.1.param_feature_map.v = Some(Vibrators::Auto(
-                                                toy.1.param_feature_map.v_auto.0.clone(),
-                                                toy.1.param_feature_map.v_auto.1,
-                                            ));
-                                        }
-                                        Vibrators::Custom(cmap) => {
-                                            for i in 0..cmap.len() {
-                                                if i > 0 {
-                                                    ui.add_space(0.1);
-                                                }
-                                                ui.horizontal_wrapped(|ui| {
-                                                    ui.label(format!(
-                                                        "Vibrator ({}): ",
-                                                        toy.1.param_feature_map.v_custom[i].1
-                                                    ));
-                                                    ui.text_edit_singleline(
-                                                        &mut toy.1.param_feature_map.v_custom[i].0,
-                                                    );
-                                                });
-
-                                                ui.horizontal_wrapped(|ui| {
-                                                    ui.label("Idle:   "); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_custom[i].2.idle_level, 0.0..=1.0).fixed_decimals(2));
-                                                });
-                                                
-                                                ui.horizontal_wrapped(|ui| {
-                                                    ui.label("Minimum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_custom[i].2.minimum_level, 0.0..=1.0).fixed_decimals(2));
-                                                });
-                                                
-                                                if toy.1.param_feature_map.v_custom[i].2.minimum_level > toy.1.param_feature_map.v_custom[i].2.maximum_level {
-                                                    toy.1.param_feature_map.v_custom[i].2.minimum_level = toy.1.param_feature_map.v_custom[i].2.maximum_level-0.01;
-                                                }
-
-                                                ui.horizontal_wrapped(|ui| {
-                                                    ui.label("Maximum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.v_custom[i].2.maximum_level, 0.0..=1.0).fixed_decimals(2));
-                                                });
-                                                
-                                                if toy.1.param_feature_map.v_custom[i].2.maximum_level < toy.1.param_feature_map.v_custom[i].2.minimum_level {
-                                                    toy.1.param_feature_map.v_custom[i].2.maximum_level = toy.1.param_feature_map.v_custom[i].2.minimum_level+0.01;
-                                                }
-                                            }
-                                            toy.1.param_feature_map.v = Some(Vibrators::Custom(
-                                                toy.1.param_feature_map.v_custom.clone(),
-                                            ));
-                                        }
-                                    }
-                                }
-                                None => {}
-                            }
-
-                            match toy.1.param_feature_map.r {
-                                Some(ref mut rotators) => {
-                                    ui.separator();
-                                    ui.horizontal_wrapped(|ui| {
-                                        ui.label(RichText::new("Rotator(s)"));
-                                        ui.separator();
-                                        egui::ComboBox::from_id_source(format!(
-                                            "{} Rotator Mode ({})",
-                                            toy.1.toy_name, toy.1.toy_id
-                                        ))
-                                        .selected_text(rotators.get_param_mode_str())
-                                        .show_ui(
-                                            ui,
-                                            |ui| {
-                                                ui.selectable_value(
-                                                    rotators,
-                                                    Rotators::Auto(
-                                                        toy.1.param_feature_map.r_auto.0.clone(),
-                                                        toy.1.param_feature_map.r_auto.1
-                                                    ),
-                                                    "Auto",
-                                                );
-                                                ui.selectable_value(
-                                                    rotators,
-                                                    Rotators::Custom(
-                                                        toy.1.param_feature_map.r_custom.clone(),
-                                                    ),
-                                                    "Custom",
-                                                );
-                                            },
-                                        );
-                                    });
-
-                                    match rotators {
-                                        Rotators::Auto(..) => {
-                                            ui.horizontal_wrapped(|ui| {
-                                                ui.label("Parameter: ");
-                                                ui.text_edit_singleline(
-                                                    &mut toy.1.param_feature_map.r_auto.0,
-                                                );
-                                            });
-
-                                            ui.horizontal_wrapped(|ui| {
-                                                ui.label("Idle:   "); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_auto.1.idle_level, 0.0..=1.0).fixed_decimals(2));
-                                            });
-                                            
-                                            ui.horizontal_wrapped(|ui| {
-                                                ui.label("Minimum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_auto.1.minimum_level, 0.0..=1.0).fixed_decimals(2));
-                                            });
-                                            
-                                            if toy.1.param_feature_map.r_auto.1.minimum_level > toy.1.param_feature_map.r_auto.1.maximum_level {
-                                                toy.1.param_feature_map.r_auto.1.minimum_level = toy.1.param_feature_map.r_auto.1.maximum_level-0.01;
-                                            }
-
-                                            ui.horizontal_wrapped(|ui| {
-                                                ui.label("Maximum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_auto.1.maximum_level, 0.0..=1.0).fixed_decimals(2));
-                                            });
-
-                                            if toy.1.param_feature_map.r_auto.1.maximum_level < toy.1.param_feature_map.r_auto.1.minimum_level {
-                                                toy.1.param_feature_map.r_auto.1.maximum_level = toy.1.param_feature_map.r_auto.1.minimum_level+0.01;
-                                            }
-                                            toy.1.param_feature_map.r = Some(Rotators::Auto(
-                                                toy.1.param_feature_map.r_auto.0.clone(), toy.1.param_feature_map.r_auto.1
-                                            ));
-                                        }
-                                        Rotators::Custom(cmap) => {
-                                            for i in 0..cmap.len() {
-                                                if i > 0 {
-                                                    ui.add_space(0.1);
-                                                }
-                                                ui.horizontal_wrapped(|ui| {
-                                                    ui.label(format!(
-                                                        "Rotator ({}): ",
-                                                        toy.1.param_feature_map.r_custom[i].1
-                                                    ));
-                                                    ui.text_edit_singleline(
-                                                        &mut toy.1.param_feature_map.r_custom[i].0,
-                                                    );
-                                                });
-
-                                                ui.horizontal_wrapped(|ui| {
-                                                    ui.label("Idle:   "); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_custom[i].2.idle_level, 0.0..=1.0).fixed_decimals(2));
-                                                });
-
-                                                ui.horizontal_wrapped(|ui| {
-                                                    ui.label("Minimum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_custom[i].2.minimum_level, 0.0..=1.0).fixed_decimals(2));
-                                                });
-                                                if toy.1.param_feature_map.r_custom[i].2.minimum_level > toy.1.param_feature_map.r_custom[i].2.maximum_level {
-                                                    toy.1.param_feature_map.r_custom[i].2.minimum_level = toy.1.param_feature_map.r_custom[i].2.maximum_level-0.01;
-                                                }
-                                                
-                                                ui.horizontal_wrapped(|ui| {
-                                                    ui.label("Maximum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.r_custom[i].2.maximum_level, 0.0..=1.0).fixed_decimals(2));
-                                                });
-
-                                                if toy.1.param_feature_map.r_custom[i].2.maximum_level < toy.1.param_feature_map.r_custom[i].2.minimum_level {
-                                                    toy.1.param_feature_map.r_custom[i].2.maximum_level = toy.1.param_feature_map.r_custom[i].2.minimum_level+0.01;
-                                                }
-                                            }
-                                            toy.1.param_feature_map.r = Some(Rotators::Custom(
-                                                toy.1.param_feature_map.r_custom.clone(),
-                                            ));
-                                        }
-                                    }
-                                }
-                                None => {}
-                            }
-
-                            match toy.1.param_feature_map.l {
-                                Some(ref mut linears) => {
-                                    ui.separator();
-                                    ui.horizontal_wrapped(|ui| {
-                                        ui.label(RichText::new("Linear(s)"));
-                                        ui.separator();
-                                        egui::ComboBox::from_id_source(format!(
-                                            "{} Linear Mode ({})",
-                                            toy.1.toy_name, toy.1.toy_id
-                                        ))
-                                        .selected_text(linears.get_param_mode_str())
-                                        .show_ui(
-                                            ui,
-                                            |ui| {
-                                                ui.selectable_value(
-                                                    linears,
-                                                    Linears::Auto(
-                                                        toy.1.param_feature_map.l_auto.0.clone(),
-                                                        toy.1.param_feature_map.l_auto.1
-                                                    ),
-                                                    "Auto",
-                                                );
-                                                ui.selectable_value(
-                                                    linears,
-                                                    Linears::Custom(
-                                                        toy.1.param_feature_map.l_custom.clone(),
-                                                    ),
-                                                    "Custom",
-                                                );
-                                            },
-                                        );
-                                    });
-
-                                    match linears {
-                                        Linears::Auto(..) => {
-                                            ui.horizontal_wrapped(|ui| {
-                                                ui.label("Auto Parameter: ");
-                                                ui.text_edit_singleline(
-                                                    &mut toy.1.param_feature_map.l_auto.0,
-                                                );
-                                            });
-
-                                            ui.horizontal_wrapped(|ui| {
-                                                ui.label("Idle:   "); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_auto.1.idle_level, 0.0..=1.0).fixed_decimals(2));
-                                            });
-                                            
-                                            if toy.1.param_feature_map.l_auto.1.minimum_level > toy.1.param_feature_map.l_auto.1.maximum_level {
-                                                toy.1.param_feature_map.l_auto.1.minimum_level = toy.1.param_feature_map.l_auto.1.maximum_level-0.01;
-                                            }
-
-                                            ui.horizontal_wrapped(|ui| {
-                                                ui.label("Minimum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_auto.1.minimum_level, 0.0..=1.0).fixed_decimals(2));
-                                            });
-
-                                            if toy.1.param_feature_map.l_auto.1.maximum_level < toy.1.param_feature_map.l_auto.1.minimum_level {
-                                                toy.1.param_feature_map.l_auto.1.maximum_level = toy.1.param_feature_map.l_auto.1.minimum_level+0.01;
-                                            }
-                                            ui.horizontal_wrapped(|ui| {
-                                                ui.label("Maximum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_auto.1.maximum_level, 0.0..=1.0).fixed_decimals(2));
-                                            });
-
-                                            toy.1.param_feature_map.l = Some(Linears::Auto(
-                                                toy.1.param_feature_map.l_auto.0.clone(),
-                                                toy.1.param_feature_map.l_auto.1
-                                            ));
-                                        }
-                                        Linears::Custom(cmap) => {
-                                            for i in 0..cmap.len() {
-                                                if i > 0 {
-                                                    ui.add_space(0.1);
-                                                }
-                                                ui.horizontal_wrapped(|ui| {
-                                                    ui.label(format!(
-                                                        "Linear ({}): ",
-                                                        toy.1.param_feature_map.l_custom[i].1
-                                                    ));
-                                                    ui.text_edit_singleline(
-                                                        &mut toy.1.param_feature_map.l_custom[i].0,
-                                                    );
-                                                });
-
-                                                ui.horizontal_wrapped(|ui| {
-                                                    ui.label("Idle:   "); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_custom[i].2.idle_level, 0.0..=1.0).fixed_decimals(2));
-                                                });
-                                                
-                                                ui.horizontal_wrapped(|ui| {
-                                                    ui.label("Minimum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_custom[i].2.minimum_level, 0.0..=1.0).fixed_decimals(2));
-                                                });
-                                                
-                                                if toy.1.param_feature_map.l_custom[i].2.minimum_level > toy.1.param_feature_map.l_custom[i].2.maximum_level {
-                                                    toy.1.param_feature_map.l_custom[i].2.minimum_level = toy.1.param_feature_map.l_custom[i].2.maximum_level-0.01;
-                                                }
-
-                                                ui.horizontal_wrapped(|ui| {
-                                                    ui.label("Maximum:"); ui.add(egui::Slider::new(&mut toy.1.param_feature_map.l_custom[i].2.maximum_level, 0.0..=1.0).fixed_decimals(2));
-                                                });
-                                                
-                                                if toy.1.param_feature_map.l_custom[i].2.maximum_level < toy.1.param_feature_map.l_custom[i].2.minimum_level {
-                                                    toy.1.param_feature_map.l_custom[i].2.maximum_level = toy.1.param_feature_map.l_custom[i].2.minimum_level+0.01;
-                                                }
-                                            }
-
-                                            toy.1.param_feature_map.l = Some(Linears::Custom(
-                                                toy.1.param_feature_map.l_custom.clone(),
-                                            ));
-                                        }
-                                    }
-                                }
-                                None => {}
-                            }
-                        }
-                    });
+                            
+                        }*/
+                    //});
                 });
             });
 
@@ -1267,9 +666,9 @@ impl VibeCheckGUI<'_> {
 
                             // Load config with toy name
                             if let Some(fmap) = load_toy_config(&toy.toy_name) {
-                                populate_toy_feature_param_map(&mut toy, Some(fmap));
+                                toy.populate_toy_feature_param_map(Some(fmap));
                             } else {
-                                populate_toy_feature_param_map(&mut toy, None);
+                                toy.populate_toy_feature_param_map(None);
                             }
                             println!("[TOY FEATURES]\n{:?}", toy.param_feature_map);
                             self.tme_send
@@ -1327,116 +726,6 @@ impl VibeCheckGUI<'_> {
                 }
             }
         }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-struct ToyConfig {
-    feature_param_map: HashMap<String, ToyFeature>,
-}
-
-fn load_toy_config(toy_name: &String) -> Option<FeatureParamMap> {
-    let config_path = format!(
-        "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}.json",
-        get_user_home_dir(),
-        toy_name
-    );
-
-    if !file_exists(&config_path) {
-        return None;
-    } else {
-        let con = fs::read_to_string(config_path).unwrap();
-
-        let feature_param_map: FeatureParamMap = match serde_json::from_str(&con) {
-            Ok(fpm) => fpm,
-            Err(_) => {
-                return None;
-            }
-        };
-        return Some(feature_param_map);
-    }
-}
-
-fn save_toy_config(toy_name: &String, feature_param_map: FeatureParamMap) {
-    let config_path = format!(
-        "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}.json",
-        get_user_home_dir(),
-        toy_name
-    );
-
-    fs::write(
-        &config_path,
-        serde_json::to_string(&feature_param_map).unwrap(),
-    )
-    .unwrap();
-}
-
-fn alter_toy(tme_send: &Sender<ToyManagementEvent>, altered_toy: VCToy) {
-    let _ = tme_send.send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered_toy)));
-}
-
-/*
-    Parse configs of toy names and populate toys on ToyAdd
-    If no config put toy to Auto params
-*/
-fn populate_toy_feature_param_map(toy: &mut VCToy, param_feature_map: Option<FeatureParamMap>) {
-    // If a param feature map is passed configure the toy
-    // If None is passed set toy to auto defaults
-
-    if let Some(map) = param_feature_map {
-        toy.param_feature_map = map;
-    } else {
-        let features = toy.toy_features.clone();
-        println!(
-            "Populating toy: {} | feature count: {}",
-            toy.toy_id,
-            toy.toy_features.len()
-        );
-
-        for feature in features {
-            // When in Auto there only needs to be one auto param per feature type
-            match feature.0 {
-                ButtplugCurrentSpecDeviceMessageType::VibrateCmd => {
-                    for i in 0..feature.1.feature_count.unwrap() {
-                        toy.param_feature_map
-                            .v_custom
-                            .push((format!("/avatar/parameters/custom_vibrate_{}", i), i, LevelTweaks::default()));
-                    }
-                    toy.param_feature_map.v_auto =
-                        ("/avatar/parameters/vibrate_auto_default".to_string(), LevelTweaks::default());
-                    toy.param_feature_map.v = Some(Vibrators::Auto(
-                        "/avatar/parameters/vibrate_auto_default".to_string(), LevelTweaks::default(),
-                    ));
-                }
-                ButtplugCurrentSpecDeviceMessageType::RotateCmd => {
-                    for i in 0..feature.1.feature_count.unwrap() {
-                        toy.param_feature_map
-                            .r_custom
-                            .push((format!("/avatar/parameters/custom_rotate_{}", i), i, LevelTweaks::default()));
-                    }
-                    toy.param_feature_map.r_auto =
-                        ("/avatar/parameters/rotate_auto_default".to_string(), LevelTweaks::default());
-                    toy.param_feature_map.r = Some(Rotators::Auto(
-                        "/avatar/parameters/rotate_auto_default".to_string(), LevelTweaks::default()
-                    ));
-                }
-                ButtplugCurrentSpecDeviceMessageType::LinearCmd => {
-                    for i in 0..feature.1.feature_count.unwrap() {
-                        toy.param_feature_map
-                            .l_custom
-                            .push((format!("/avatar/parameters/custom_linear_{}", i), i, LevelTweaks::default()));
-                    }
-                    toy.param_feature_map.l_auto =
-                        ("/avatar/parameters/linear_auto_default".to_string(), LevelTweaks::default());
-                    toy.param_feature_map.l = Some(Linears::Auto(
-                        "/avatar/parameters/linear_auto_default".to_string(), LevelTweaks::default()
-                    ));
-                }
-                _ => {}
-            }
-        }
-        // Save toy on first time add
-        save_toy_config(&toy.toy_name, toy.param_feature_map.clone());
     }
 }
 
@@ -1508,7 +797,7 @@ impl<'a> App for VibeCheckGUI<'a> {
             });
         }
 
-        self.stop_intiface_engine();
+        //self.stop_intiface_engine();
         self.save_config();
         std::process::exit(0);
     }

@@ -1,4 +1,24 @@
-### VibeCheck is in Alpha Testing and will be getting updates frequently.
+### VibeCheck is in Beta Testing and will be getting updates frequently.
+## VibeCheck rewrite complete (0.1.1)!
+### Features added:
+
+    - Supports Bluetooth LE and Lovense Connect
+    - Feature input smoothing and feature disabling/enabling
+    - Support for other toy feature types like Max 2 Constriction for example. (Only through bluetooth)
+    - VibeCheck now checks if it is up to date and if not, displays an "Update" button that will close and update VibeCheck.
+    - No longer relies on IntifaceCLI!
+    - Can use Lovense Connect toys and bluetooth toys at the same time
+
+### Bug fixes:
+
+    - CEH bug with battery querying toys and crashing if no response from toy.
+
+### Optimizations
+
+    - Toy input optimizations (Smoothing itself is also an optimization technically)
+    - OSC listener optimizations
+    - No longer relies on IntifaceCLI!
+
 **Please report bugs/issues or feature requests if you have them!**
 
 # VibeCheck
@@ -16,9 +36,14 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - Motherboard integrated bluetooth radios will interfere with external bluetooth adapters (USB adapters / etc.).
 - [Motherboard integrated bluetooth radios interfering](https://kb.plugable.com/bluetooth-adapter/your-computer-has-had-a-different-bluetooth-adapter-previously-or-has-a-built-in-adapter)
 
+## Common Lovense Connect issues
+- Toys not showing up in VibeCheck: Sometimes Lovense Connect can be slow updating their NAT punchthrough API and you just have to wait for it to populate. (If you have waited for a good amount of time restarting vibecheck will force check the NAT punchthrough API for Lovense to detect your toy)
+- Another reason a toy may not show up on the Lovense Connect NAT punchthrough API is that you have multiple subnets in your network. (Make sure that the computer or phone using the Lovense Connect app is on the same network/subnet as the computer with VibeCheck running.)
+- You can check if your toys and lovense connect app is detected [here](https://api.lovense.com/api/lan/getToys).
+
 ## Dependencies
-- [Intiface Desktop](https://intiface.com/desktop/)
-- A bluetooth LE adapter. I recommend [this one](https://www.amazon.com/dp/B09DMP6T22?psc=1&ref=ppx_yo2ov_dt_b_product_details)
+- (Lovense Connect Only) Lovense Connect app on phone / Lovense Connect adapter for PC Lovense Connect app
+- (Bluetooth Only) A bluetooth LE adapter. I recommend [this one](https://www.amazon.com/dp/B09DMP6T22?psc=1&ref=ppx_yo2ov_dt_b_product_details)
 
 ## TL;DR
 - Install [Dependencies](https://github.com/SutekhVRC/VibeCheck#dependencies) and have a bluetooth adapter.
@@ -33,16 +58,11 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 
 ## Install Instructions
 
-### Install Intiface
-
-- Install Intiface Desktop.
-- Note: You will not need to ever open Intiface Desktop, only have it installed.
-
 ### Install VibeCheck
 
 - Download and install the MSI from the [latest version of VibeCheck](https://github.com/SutekhVRC/VibeCheck/releases/latest).
 
-### Avatar Setup
+### Avatar Setup (You can do whatever you want you don't NEED to use contacts scripts. VibeCheck just listens for OSC parameters.)
 
 #### VibeCheck Standard Tags
 - Using standard tags allows people to generally be setup for people without having to match tags and re-upload avatars. I recommend unchecking 'Allow Self' to avoid triggering your own toys.

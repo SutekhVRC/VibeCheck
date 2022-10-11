@@ -1,20 +1,21 @@
 [package]
 name = "vibecheck"
-version = "0.0.27"
+version = "0.1.1"
 edition = "2021"
 authors = ["SutekhVRC"]
 
 [dependencies]
-buttplug = "5.1.8"
+buttplug = "6.0.1"
 tokio = {version = "1.17.0", features = ["rt-multi-thread", "sync", "macros", "io-std", "time"]}
 futures-util = "0.3.21"
 tracing-subscriber = "0.3.9"
 futures = "0.3.21"
 futures-timer = "3.0.2"
 tracing = "0.1.32"
-rosc = "0.7.0"
+rosc = "0.9.0"
 serde = {version = "1.0.136", features = ["derive"]}
-serde_json = "1.0.79"
+serde_json = "1.0.85"
 eframe = "0.18.0"
 directories = "4.0.1"
-sysinfo = "0.23.10"
+sysinfo = "0.26.2"
+reqwest = {version = "0.11.11", features = ["blocking"]}

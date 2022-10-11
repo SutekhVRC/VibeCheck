@@ -1,5 +1,9 @@
 use buttplug::client::ButtplugClientDevice;
-use buttplug::client::{ButtplugClient, ButtplugClientEvent};
+use buttplug::client::ButtplugClientEvent;
+use buttplug::util::in_process_client;
+use buttplug::core::message::ActuatorType;
+use buttplug::client::ScalarCommand::ScalarMap;
+use buttplug::client::RotateCommand::RotateMap;
 use futures::StreamExt;
 use futures_timer::Delay;
 use rosc::{self, OscMessage, OscPacket};
@@ -17,8 +21,11 @@ use tokio::sync::{
 use tokio::task::JoinHandle;
 
 use crate::config::OSCNetworking;
-use crate::ui::{FeatureMode, FeatureParamMap, ToyManagementEvent, ToyMode};
-use crate::{ui::TmSig, ui::ToyFeature, ui::ToyUpdate, ui::VCError, ui::VCToy};
+use crate::toyops::LevelTweaks;
+use crate::toyops::VCFeatureType;
+use crate::toyops::{VCToy, FeatureParamMap};
+use crate::ui::ToyManagementEvent;
+use crate::{ui::TmSig, ui::ToyUpdate, ui::VCError};
 
 pub struct HandlerErr {
     pub id: i32,
@@ -52,6 +59,7 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
 
     Delay::new(Duration::from_secs(3)).await;
 
+    /* Old
     let client = ButtplugClient::new("VibeCheck");
     let mut event_stream = client.event_stream();
 
@@ -67,6 +75,9 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
             return;
         }
     }
+    */
+    let client = in_process_client("VibeCheck", false).await;
+    let mut event_stream = client.event_stream();
     println!("[*] Connected to process");
 
     // Start scanning for toys
@@ -79,19 +90,7 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
     }
 
     loop {
-        /*
-                loop {
-                    let c = event_stream.size_hint();
-                    println!("{:?}", c);
-                    if c.0 != 0 {
-                        break;
-                    }
-                    Delay::new(Duration::from_secs(1)).await;
-                }
-                /*
-                    Make event handler a new thread and have loop that reads from mpsc channel and abort
-                */
-        */
+
         if let Some(event) = event_stream.next().await {
             match event {
                 ButtplugClientEvent::DeviceAdded(dev) => {
@@ -101,14 +100,20 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
                         Err(_e) => 0.0,
                     };
 
+                    /*
+                    println!("Discovering features..");
+                    dev.message_attributes().scalar_cmd().as_ref().unwrap().iter().for_each(|f| {
+                        println!("{}", f.actuator_type());
+                    });
+                    */
+
                     let _ = event_tx.send(EventSig::ToyAdd(VCToy {
                         toy_id: dev.index(),
-                        toy_name: dev.name.clone(),
+                        toy_name: dev.name().clone(),
                         battery_level,
                         toy_connected: dev.connected(),
-                        toy_features: dev.allowed_messages.clone(),
+                        toy_features: dev.message_attributes().clone(),
                         osc_params_list: vec![],
-                        toy_param_mode: ToyMode::Auto("".to_string()),
                         param_feature_map: FeatureParamMap::new(),
                         listening: false,
                         device_handle: dev.clone(),
@@ -144,6 +149,24 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
     println!("[!] Event handler returning!");
 }
 
+// Parse scalar levels and logic for level tweaks
+pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, mut scalar_level: f64, feature_index: u32, actuator_type: ActuatorType, feature_levels: LevelTweaks) {
+    // Floor or Ceiling a float if actuator type is Constrict
+    if actuator_type == ActuatorType::Constrict {
+        if scalar_level < 0.50 {
+            scalar_level = scalar_level.floor();
+        } else {
+            scalar_level = scalar_level.ceil();
+        }
+    }
+    if scalar_level != 0.0 && scalar_level >= feature_levels.minimum_level && scalar_level <= feature_levels.maximum_level {
+        //println!("{} {} {}", feature_index, actuator_type, scalar_level);
+        let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (scalar_level, actuator_type))]))).await;
+    } else if scalar_level == 0.0 {// if level is 0 put at idle
+        let _e = dev.scalar(&buttplug::client::ScalarCommand::ScalarMap(HashMap::from([(feature_index, (feature_levels.idle_level, actuator_type))]))).await;
+    }
+}
+
 /*
     This handler will send and receive updates to toys
     - communicate ToyUpdate to and from main thread SEND/RECV (Toys will be indexed on the main thread) (Connects and disconnect toy updates are handled by client event handler)
@@ -161,6 +184,7 @@ pub async fn toy_management_handler(
              mut feature_map: FeatureParamMap| {
         // Read toy config here?
         async move {
+            
             while dev.connected() {
                 match toy_bcst_rx.recv().await {
                     Ok(ts) => {
@@ -170,87 +194,82 @@ pub async fn toy_management_handler(
 
                                 // Does parameter name assign to a feature on this toy?
 
-                                // Parse param get Vec of Features
-                                // these vec items will match the param
-                                // Toy feature Auto/Custom
-                                // Parse if Auto or Custom
-                                // if Auto Speed() if Custom get index from param hashmap
+                                /*
+                                    - Enumerate features for an OSC parameter
+                                    - Clamp float to hundredths place and cast to 64 bit
+                                    - Iterate through each feature
+                                */
 
                                 if let Some(features) =
                                     feature_map.get_features_from_param(&msg.addr)
                                 {
                                     if let Some(lvl) = msg.args.pop().unwrap().float() {
-                                        for feature in features {
-                                            match feature {
-                                                ToyFeature::Vibrator(fm) => {
-                                                    let vibe_level =
-                                                        ((lvl * 100.0).round() / 100.0) as f64;
 
-                                                    match fm {
-                                                        FeatureMode::Custom(fi, lt) => {
-                                                            if vibe_level != 0.0 && vibe_level >= lt.minimum_level && vibe_level <= lt.maximum_level {
-                                                                let _ = dev.vibrate(buttplug::client::VibrateCommand::SpeedMap(HashMap::from([(fi, vibe_level)]))).await;
-                                                            } else if vibe_level == 0.0 {
-                                                                let _ = dev.vibrate(buttplug::client::VibrateCommand::SpeedMap(HashMap::from([(fi, lt.idle_level)]))).await;
-                                                            }
-                                                        },
-                                                        FeatureMode::Auto(lt) => {
+                                        // Clamp float accuracy to hundredths and cast as 64 bit float
+                                        let mut float_level = ((lvl * 100.0).round() / 100.0) as f64;
 
-                                                            if vibe_level != 0.0 && vibe_level >= lt.minimum_level && vibe_level <= lt.maximum_level {
-                                                                let _ = dev.vibrate(buttplug::client::VibrateCommand::Speed(vibe_level)).await;
-                                                            } else if vibe_level == 0.0 {
-                                                                let _ = dev.vibrate(buttplug::client::VibrateCommand::Speed(lt.idle_level)).await;
-                                                            }
-                                                        }
+                                        // Iterate through features enumerated from OSC param
+                                        for (feature_type, feature_index, feature_levels, smooth_enabled, smooth_entries) in features {
+                                            
+                                            // Smoothing enabled
+                                            if smooth_enabled {
+
+                                                // Reached smooth rate maximum and not a 0 value
+                                                if smooth_entries.len() == feature_levels.smooth_rate as usize && float_level != 0.0 {
+
+                                                    // Get Mean of all numbers in smoothing rate and then round to hundreths and cast as f64
+                                                    float_level = ((smooth_entries.iter().sum::<f64>() as f64 / smooth_entries.len() as f64 * 100.0).round() / 100.0) as f64;
+                                                    smooth_entries.clear();
+    
+                                                // Value is not 0 and have not reached smoothing maximum
+                                                } else {
+    
+                                                    if float_level == 0.0 {
+                                                        // let 0 through
+                                                    } else {                                                
+                                                        smooth_entries.push(float_level);
+                                                        continue;
                                                     }
                                                 }
-                                                ToyFeature::Rotator(fm) => {
-                                                    let rotate_level =
-                                                        ((lvl * 100.0).round() / 100.0) as f64;
+                                            }
 
-                                                    match fm {
-                                                        FeatureMode::Custom(fi, lt) => {
-                                                            if rotate_level != 0.0 && rotate_level >= lt.minimum_level && rotate_level <= lt.maximum_level {
-                                                                let _ = dev.rotate(buttplug::client::RotateCommand::RotateMap(HashMap::from([(fi, (rotate_level, true))]))).await;
-                                                            } else if rotate_level == 0.0 {
-                                                                let _ = dev.rotate(buttplug::client::RotateCommand::RotateMap(HashMap::from([(fi, (lt.idle_level, true))]))).await;
-                                                            }
-                                                        },
-                                                        FeatureMode::Auto(lt) => {
-                                                            if rotate_level != 0.0 && rotate_level >= lt.minimum_level && rotate_level <= lt.maximum_level {
-                                                                let _ = dev.rotate(buttplug::client::RotateCommand::Rotate(rotate_level, true)).await;
-                                                            } else if rotate_level == 0.0 {
-                                                                let _ = dev.rotate(buttplug::client::RotateCommand::Rotate(lt.idle_level, true)).await;
-                                                            }
-                                                        }
+                                            match feature_type {
+                                                VCFeatureType::Vibrator => {
+                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Vibrate, feature_levels).await;
+                                                },
+                                                // We handle Rotator differently because it is not included in the Scalar feature set
+                                                VCFeatureType::Rotator => {
+                                                    if float_level != 0.0 && float_level >= feature_levels.minimum_level && float_level <= feature_levels.maximum_level {
+                                                        let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (float_level, true))]))).await;
+                                                    } else if float_level == 0.0 {
+                                                        let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (feature_levels.idle_level, true))]))).await;
                                                     }
-                                                }
-                                                ToyFeature::Linear(fm) => {
-                                                    let linear_level =
-                                                        ((lvl * 100.0).round() / 100.0) as f64;
-
-                                                    match fm {
-                                                        FeatureMode::Custom(fi, lt) => {
-                                                            if linear_level != 0.0 && linear_level >= lt.minimum_level && linear_level <= lt.maximum_level {
-                                                                let _ = dev.linear(buttplug::client::LinearCommand::LinearMap(HashMap::from([(fi, (500, linear_level))]))).await;
-                                                            } else if linear_level == 0.0 {
-                                                                let _ = dev.linear(buttplug::client::LinearCommand::LinearMap(HashMap::from([(fi, (500, lt.idle_level))]))).await;
-                                                            }
-                                                        },
-                                                        FeatureMode::Auto(lt) => {
-                                                            if linear_level != 0.0 && linear_level >= lt.minimum_level && linear_level <= lt.maximum_level {
-                                                                let _ = dev.linear(buttplug::client::LinearCommand::Linear(500, linear_level)).await;
-                                                            } else if linear_level == 0.0 {
-                                                                let _ = dev.linear(buttplug::client::LinearCommand::Linear(500, lt.idle_level)).await;
-                                                            }
-                                                        }
+                                                },
+                                                VCFeatureType::Constrict => {
+                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Constrict, feature_levels).await;
+                                                },
+                                                VCFeatureType::Oscillate => {
+                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Oscillate, feature_levels).await;
+                                                },
+                                                VCFeatureType::Position => {
+                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Position, feature_levels).await;
+                                                },
+                                                VCFeatureType::Inflate => {
+                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Inflate, feature_levels).await;
+                                                },
+                                                // We handle Linear differently because it is not included in the Scalar feature set
+                                                VCFeatureType::Linear => {
+                                                    if float_level != 0.0 && float_level >= feature_levels.minimum_level && float_level <= feature_levels.maximum_level {
+                                                        let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, float_level))]))).await;
+                                                    } else if float_level == 0.0 {
+                                                        let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, feature_levels.idle_level))]))).await;
                                                     }
                                                 }
                                             }
                                         }
                                     }
                                 }
-                            }
+                            },
                             ToySig::UpdateToy(toy) => {
                                 match toy {
                                     // Update feature map while toy running!
