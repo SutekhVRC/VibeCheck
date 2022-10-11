@@ -80,12 +80,12 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 1. Run VibeCheck.
 2. If VibeCheck is your only OSC app that receives data from VRChat, skip step 3.
 3. If you are using multiple OSC apps that **Receive** data from VRChat consider using my OSC router app: [VOR](https://github.com/SutekhVRC/VOR/releases/latest). Then go to the 'Settings' tab and setup VibeCheck's OSC bind host/port to listen on.
-4. Make sure bluetooth adapter is plugged in/enabled, and turn on your toy(s).
-5. Once your toy(s) are connected, configure them to use the parameters you put in the Contacts Receiver scripts. Click on the toy you want to configure, and click 'Edit'. The edit mode will look different depending on the toy being used. A toy's "features" will be organized into "feature types". The feature types supported are: Vibration/Rotation/Linear. There will be a feature mode for each feature type. The two feature modes are Auto and Custom. Auto mode means one parameter will control every feature in that feature type. Custom mode allows you to set unique parameters for each feature within a feature type. You have full control of the parameter address to listen for. So you will have to input the whole parameter address. You will almost always only need to use the avatar parameters address. So inputting your parameter will follow this format: /avatar/parameters/YOUR_CONTACTS_RECEIVER_PARAMETER_HERE. So if I put the parameter name 'vtest' into my contacts receiver on my avatar I would input '/avatar/parameters/vtest' for my parameter in the toy's configuration. Once you are done press 'Save'.
+4. Make sure your [connection method is setup](https://github.com/SutekhVRC/VibeCheck#connection-methods), and turn on your toy(s).
+5. Once your toy(s) are connected, configure them to use the parameters you put in the Contacts Receiver scripts. Click on the toy's features you want to configure, and click 'Edit' on the feature u want to configure. The edit mode will look different depending on the toy being used. You have full control of the parameter address to listen for. So you will have to input the whole parameter address. You will almost always only need to use the avatar parameters address. So inputting your parameter will follow this format: /avatar/parameters/YOUR_CONTACTS_RECEIVER_PARAMETER_HERE. So if I put the parameter name 'vtest' into my contacts receiver on my avatar I would input '/avatar/parameters/vtest' for my parameter in the toy's configuration. Once you are done press 'Save'.
 
 ![Toy Config](./images/Toy_config.png)
 
-6. Once your toy is configured press 'Enable' to start using VibeCheck with VRChat.
+6. Once your toy is configured/saved press 'Enable' to start using VibeCheck with VRChat.
 7. Once you are in VRChat you will need to enable OSC in the expressions menu. If you have use OSC before with your avatar, remember to refresh the OSC config for that avatar (In the OSC expressions menu).
 8. You should be all set now. Enjoyyyyyy ;}
 
