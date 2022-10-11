@@ -90,9 +90,29 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 8. You should be all set now. Enjoyyyyyy ;}
 
 ### Feature Modifiers
+
 - Idle: The idle level of the feature. Idle starts once the feature has been triggered for the first time.
 - Minimum: The minimum level the feature is allowed to be active at. Minimum does not influence idle.
 - Maximum: The maximum level the feature is allowed to be active at. Maximum does not influence idle.
+
+## Connection methods
+
+## Bluetooth LE adapter
+
+- Make sure to disable all bluetooth radio adapters except the one you are using for VibeCheck.
+- Plug in your Bluetoopth adapter.
+- Start VibeCheck
+- Turn on toys
+- When toys are connected click enable!
+
+## Lovense Connect
+
+- Make sure the VibeCheck PC and your phone or computer running Lovense Connect are on the same network/subnet
+- Connect your toys to Lovense Connect
+- It may take like 30 seconds for Lovense Connect to update their NAT punchtrough API
+- Be aware if you are using Bluetooth connected toys at the same time as Lovense Connect connected toys that they dont conflict with eachother (Same type of toy or one toy connecting through both ways at once)
+- Start VibeCheck: VibeCheck should find your Lovense Connect toys from the Lovense API. If not wait a bit longer and/or maybe restart VibeCheck to re-trigger VibeCheck to check the Lovense API again.
+- Press Enable!
 
 ## General
 
