@@ -97,7 +97,7 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 
 ## Connection methods
 
-## Bluetooth LE adapter
+### Bluetooth LE adapter
 
 - Make sure to disable all bluetooth radio adapters except the one you are using for VibeCheck.
 - Plug in your Bluetoopth adapter.
@@ -105,7 +105,7 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - Turn on toys
 - When toys are connected click enable!
 
-## Lovense Connect
+### Lovense Connect
 
 - Make sure the VibeCheck PC and your phone or computer running Lovense Connect are on the same network/subnet
 - Connect your toys to Lovense Connect
