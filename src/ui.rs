@@ -49,6 +49,7 @@ use crate::{
 pub enum VCGUITab {
     Main,
     Config,
+    LC,
 }
 
 #[derive(Clone, Debug)]
@@ -120,6 +121,7 @@ pub struct VibeCheckGUI<'a> {
     //================================================
     pub update_engine: VibeCheckUpdater,
 
+    pub lovense_connect_toys: HashMap<String, crate::lovense::LovenseConnectToy>,
 }
 
 impl VibeCheckGUI<'_> {
@@ -205,6 +207,8 @@ impl VibeCheckGUI<'_> {
             async_rt: Runtime::new().unwrap(),
             //======================================
             update_engine: VibeCheckUpdater::new(),
+
+            lovense_connect_toys: HashMap::new(),
         };
 
         init.set_error_handling_channels();
@@ -380,6 +384,10 @@ impl VibeCheckGUI<'_> {
                         if ui.button("Settings").clicked() {
                             self.tab = VCGUITab::Config;
                         }
+                        ui.separator();
+                        if ui.button("LC Debug").clicked() {
+                            self.tab = VCGUITab::LC;
+                        }
 
                         if !self.update_engine.up_to_date {
                             ui.separator();
@@ -438,6 +446,68 @@ impl VibeCheckGUI<'_> {
                 ui.add_space(5.0);
             });
         });
+    }
+
+    fn refresh_lovense_connect(&mut self) {
+        if let Some(status) = crate::lovense::get_toys_from_natp_api() {
+            self.lovense_connect_toys = status;
+        }
+    }
+    fn lovense_connect_status(&mut self, ui: &mut egui::Ui) {
+
+        /*
+            pub struct LovenseConnectToy {
+                nickName: String,
+                hVersion: String,
+                fVersion: u64,
+                name: String,
+                id: String,
+                battery: u8,
+                version: String,
+                status: u64,
+            }
+        */
+        ui.horizontal(|ui| {
+        ui.heading("Detected Lovense Connect Toys");
+
+            ui.with_layout(Layout::right_to_left(), |ui| {
+                if ui.button("Refresh").clicked() {
+                    self.refresh_lovense_connect();
+                }
+            });
+        });
+        ui.separator();
+        
+        ScrollArea::new([true, true])
+        .id_source("lc_debug")
+        .max_height(ui.available_height())
+        .auto_shrink([false, false])
+        .stick_to_right()
+        .show(ui, |ui| {
+
+            for toy in &self.lovense_connect_toys {
+
+                CollapsingHeader::new(RichText::new(format!(
+                    "{}({}) [{}]",
+                    toy.1.name,
+                    toy.1.nickName,
+                    toy.0
+                )).font(FontId::new(15., FontFamily::Monospace)))
+                .show(ui, |ui| {
+                    ui.label(format!("Toy: {}", toy.0));
+                    ui.label(format!("Name: {}", toy.1.name));
+                    ui.label(format!("NickName: {}", toy.1.nickName));
+                    ui.label(format!("hVersion: {}", toy.1.hVersion));
+                    ui.label(format!("fVersion: {}", toy.1.fVersion));
+                    ui.label(format!("ID: {}", toy.1.id));
+                    ui.label(format!("Battery: {}", toy.1.battery));
+                    ui.label(format!("Version: {}", toy.1.version));
+                    ui.label(format!("Status: {}", toy.1.status));
+                ui.separator();
+                });
+            }
+        });
+
     }
 
     fn chk_valid_config_inputs(&mut self) -> bool {
@@ -499,11 +569,9 @@ impl VibeCheckGUI<'_> {
 
                     for i in 0..features.len() {//Iterate through all features of toy
                         if self.toy_editing.contains_key(&(*toy.0, features[i].feature_type, features[i].feature_index)) {// Editing
-                            
 
-                            
                             let mut saved = false;
-                            //let self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap() = self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap();
+                            
                             ui.group(|ui| {
                             ui.horizontal_wrapped(|ui| {
                                 let fref = self.toy_editing.get_mut(&(*toy.0, features[i].feature_type, features[i].feature_index)).unwrap();
@@ -670,7 +738,7 @@ impl VibeCheckGUI<'_> {
                             } else {
                                 toy.populate_toy_feature_param_map(None);
                             }
-                            println!("[TOY FEATURES]\n{:?}", toy.param_feature_map);
+                            //println!("[TOY FEATURES]\n{:?}", toy.param_feature_map);
                             self.tme_send
                                 .as_ref()
                                 .unwrap()
@@ -678,7 +746,7 @@ impl VibeCheckGUI<'_> {
                                 .unwrap();
                             // Load toy config for name of toy if it exists otherwise create the config for the toy name
                             self.toys.insert(toy.toy_id, toy.clone());
-                            println!("[+] Toy added: {} | {}", toy.toy_name, toy.toy_id);
+                            //println!("[+] Toy added: {} | {}", toy.toy_name, toy.toy_id);
                         }
                         EventSig::ToyRemove(id) => {
                             self.tme_send
@@ -687,7 +755,7 @@ impl VibeCheckGUI<'_> {
                                 .send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(id)))
                                 .unwrap();
                             self.toys.remove(&id);
-                            println!("[!] Removed toy: {}", id);
+                            //println!("[!] Removed toy: {}", id);
                         }
                         EventSig::Shutdown => {}
                     }
@@ -779,6 +847,9 @@ impl<'a> App for VibeCheckGUI<'a> {
                     });
                     ui.separator();
                     self.list_config(ui);
+                },
+                VCGUITab::LC => {
+                    self.lovense_connect_status(ui);
                 }
             }
             self.gui_footer(ctx);
