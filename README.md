@@ -39,7 +39,8 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 ## Common Lovense Connect issues
 - Toys not showing up in VibeCheck: Sometimes Lovense Connect can be slow updating their NAT punchthrough API and you just have to wait for it to populate. (If you have waited for a good amount of time restarting vibecheck will force check the NAT punchthrough API for Lovense to detect your toy)
 - Another reason a toy may not show up on the Lovense Connect NAT punchthrough API is that you have multiple subnets in your network. (Make sure that the computer or phone using the Lovense Connect app is on the same network/subnet as the computer with VibeCheck running.)
-- You can check if your toys and lovense connect app is detected [here](https://api.lovense.com/api/lan/getToys).
+- Using a VPN can cause issues
+- You can check if your toys and lovense connect app is detected by lovense servers by going to the LC Debug tab and clicking refresh or visit [here](https://api.lovense.com/api/lan/getToys).
 
 ## Dependencies
 - (Lovense Connect Only) Lovense Connect app on phone / Lovense Connect adapter for PC Lovense Connect app
@@ -110,6 +111,7 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - Make sure the VibeCheck PC and your phone or computer running Lovense Connect are on the same network/subnet
 - Connect your toys to Lovense Connect
 - It may take like 30 seconds for Lovense Connect to update their NAT punchtrough API
+- You can check if your toys and lovense connect app is detected by lovense servers by going to the LC Debug tab and clicking refresh or visit [here](https://api.lovense.com/api/lan/getToys).
 - Be aware if you are using Bluetooth connected toys at the same time as Lovense Connect connected toys that they dont conflict with eachother (Same type of toy or one toy connecting through both ways at once)
 - Start VibeCheck: VibeCheck should find your Lovense Connect toys from the Lovense API. If not wait a bit longer and/or maybe restart VibeCheck to re-trigger VibeCheck to check the Lovense API again.
 - Press Enable!
