@@ -25,7 +25,7 @@
 
 An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC implementation.
 
-[SutekhVRC Discord](https://discord.gg/SC3W6YwPHs)
+Questions and help: [SutekhVRC Discord](https://discord.gg/SC3W6YwPHs)
 
 ## Buttplug IO Supported Toys
 - [Supported Toys (All)](https://iostindex.com/?filter0ButtplugSupport=4)
