@@ -87,7 +87,7 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 ![Toy Config](./images/Toy_config.png)
 
 6. Once your toy is configured/saved press 'Enable' to start using VibeCheck with VRChat.
-7. Once you are in VRChat you will need to enable OSC in the expressions menu. If you have use OSC before with your avatar, remember to refresh the OSC config for that avatar (In the OSC expressions menu).
+7. Once you are in VRChat you will need to enable OSC in the expressions menu. If you have use OSC before with your avatar, remember to refresh the OSC config for that avatar (In the OSC expressions menu OR delete the avatar's OSC config file).
 8. You should be all set now. Enjoyyyyyy ;}
 
 ### Feature Modifiers
@@ -106,14 +106,41 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - Turn on toys
 - When toys are connected click enable!
 
+#### Bluetooth Pros/Cons
+
+- Pros
+    - Supports many different toys.
+    - Supports more features of toys like Constriction on Max 2 for example.
+
+- Cons
+    - Less stable connection than Lovense Connect.
+
+
 ### Lovense Connect
 
 - Make sure the VibeCheck PC and your phone or computer running Lovense Connect are on the same network/subnet
 - Connect your toys to Lovense Connect
 - It may take like 30 seconds for Lovense Connect to update their NAT punchtrough API
 - You can check if your toys and lovense connect app is detected by lovense servers by going to the LC Debug tab and clicking refresh or visit [here](https://api.lovense.com/api/lan/getToys).
-- Be aware if you are using Bluetooth connected toys at the same time as Lovense Connect connected toys that they dont conflict with eachother (Same type of toy or one toy connecting through both ways at once)
-- Start VibeCheck: VibeCheck should find your Lovense Connect toys from the Lovense API. If not wait a bit longer and/or maybe restart VibeCheck to re-trigger VibeCheck to check the Lovense API again.
+- Start VibeCheck: VibeCheck should find your Lovense Connect toys from the Lovense API. (Check the LC Debug tab. Click "Refresh" to see if Lovense has detected your toys.) If not wait a bit longer.
+- Press Enable!
+
+#### Lovense Connect Pros/Cons
+
+- Pros
+    - More stable connection than Bluetooth LE.
+    - Easy to use.
+    - If using Lovense Connect phone app as long as your phone is connected to the same network as your PC running vibecheck,and your toy is near your phone. You can technically be as far away as your phone can connect to your wifi and it will still take input from VibeCheck!
+
+- Cons
+    - Can only use with Lovense toys.
+    - Only Vibration/Rotation/Linear features are supported.
+
+### Connect using both methods at the same time
+
+- Connect your toys to the Lovense Connect app first
+- Next start VibeCheck then turn on the toys that will connect through bluetooth
+- VibeCheck should show both Bluetooth and Lovense Connect toys!
 - Press Enable!
 
 ## General
