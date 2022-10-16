@@ -9,6 +9,7 @@ mod handling;
 mod ui;
 mod util;
 mod toyops;
+mod lovense;
 
 fn main() {
 
