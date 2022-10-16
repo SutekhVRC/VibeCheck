@@ -59,23 +59,6 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
 
     Delay::new(Duration::from_secs(3)).await;
 
-    /* Old
-    let client = ButtplugClient::new("VibeCheck");
-    let mut event_stream = client.event_stream();
-
-    // Create in-process connector
-    match client.connect_in_process(None).await {
-        Ok(_) => {}
-        Err(_e) => {
-            let _ = error_tx.send(VCError::HandlingErr(HandlerErr {
-                id: -1,
-                msg: format!("Failed to connect in process. {}", _e),
-            }));
-            println!("CON PROC ERR: {}", _e);
-            return;
-        }
-    }
-    */
     let client = in_process_client("VibeCheck", false).await;
     let mut event_stream = client.event_stream();
     println!("[*] Connected to process");
@@ -119,23 +102,23 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
                         device_handle: dev.clone(),
                     }));
 
-                    println!("[+] Device connected!!!!");
+                    //println!("[+] Device connected!!!!");
                 }
                 ButtplugClientEvent::DeviceRemoved(dev) => {
                     let _ = event_tx.send(EventSig::ToyRemove(dev.index()));
-                    println!("[*] Sent dev discon to UI.");
+                    //println!("[*] Sent dev discon to UI.");
                 }
                 ButtplugClientEvent::ScanningFinished => println!("[!] Scanning finished!"),
                 ButtplugClientEvent::ServerDisconnect => {
                     let _ = event_tx.send(EventSig::Shutdown);
-                    println!("[!] Server disconnected!");
+                    //println!("[!] Server disconnected!");
                     let _ = client.stop_scanning().await;
                     let _ = client.disconnect().await;
                     break;
                 }
                 ButtplugClientEvent::PingTimeout => {
                     let _ = event_tx.send(EventSig::Shutdown);
-                    println!("[!] Server timeout!");
+                    //println!("[!] Server timeout!");
                     let _ = client.stop_scanning().await;
                     let _ = client.disconnect().await;
                     break;
