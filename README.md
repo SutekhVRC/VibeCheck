@@ -93,6 +93,7 @@ Questions and help: [SutekhVRC Discord](https://discord.gg/SC3W6YwPHs)
 
 ### Feature Modifiers
 
+- Smoothing: Smooths the float inputs received from OSC.
 - Idle: The idle level of the feature. Idle starts once the feature has been triggered for the first time.
 - Minimum: The minimum level the feature is allowed to be active at. Minimum does not influence idle.
 - Maximum: The maximum level the feature is allowed to be active at. Maximum does not influence idle.
