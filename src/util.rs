@@ -1,6 +1,28 @@
 use std::net::Ipv4Addr;
 use std::path::Path;
+use std::io::Cursor;
 use directories::BaseDirs;
+use image::io::Reader as IReader;
+use image::ImageFormat;
+
+// Originally From egui discussions https://github.com/emilk/egui/discussions/1574
+// Modified to work with embedded icon data
+pub fn load_icon(bytes: Vec<u8>) -> eframe::IconData {
+    let (icon_rgba, icon_width, icon_height) = {
+        let mut reader = IReader::new(Cursor::new(bytes));
+        reader.set_format(ImageFormat::Ico);
+        let image = reader.decode().unwrap().into_rgba8();
+        let (width, height) = image.dimensions();
+        let rgba = image.into_raw();
+        (rgba, width, height)
+    };
+
+    eframe::IconData {
+        rgba: icon_rgba,
+        width: icon_width,
+        height: icon_height,
+    }
+}
 
 pub fn check_valid_port(port: &String) -> bool {
     if let Ok(p) = port.parse::<u16>() {
