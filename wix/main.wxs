@@ -143,7 +143,8 @@
                 Name="VibeCheck" 
                 Description="VRChat OSC app for lewd things."
                 Target="[APPLICATIONFOLDER]\bin\vibecheck.exe"
-                WorkingDirectory="APPLICATIONROOTDIRECTORY"/>
+                WorkingDirectory="APPLICATIONROOTDIRECTORY"
+                Icon="vibecheck.ico"/>
             <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall"/>
             <RegistryValue Root="HKCU" Key="Software\SutekhVRC\vibecheck" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
           </Component>
@@ -198,7 +199,6 @@
         -->
         <Icon Id='vibecheck.ico' SourceFile='images\vibecheck.ico'/>
         <Property Id='ARPPRODUCTICON' Value='vibecheck.ico' />
-
         
         <!--
           Adding a URL to Add/Remove Programs control panel listing for the
