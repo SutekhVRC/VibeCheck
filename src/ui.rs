@@ -433,8 +433,8 @@ impl VibeCheckGUI<'_> {
             ui.vertical_centered(|ui| {
                 ui.add_space(5.0);
                 ui.add(Hyperlink::from_label_and_url(
-                    "VibeCheck",
-                    "https://github.com/SutekhVRC/VibeCheck",
+                    "Join Discord",
+                    "https://discord.gg/g6kUFtMtpw",
                 ));
                 ui.add(Hyperlink::from_label_and_url(
                     RichText::new("Made by Sutekh")

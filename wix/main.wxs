@@ -61,7 +61,7 @@
 
     <Product
         Id='*'
-        Name='vibecheck'
+        Name='VibeCheck'
         UpgradeCode='E3C31B62-EA8E-466B-809B-0B86B0293AAA'
         Manufacturer='SutekhVRC'
         Language='1033'
@@ -246,7 +246,7 @@
 
           The banner BMP dimensions are 493 x 58 pixels.
         -->
-        <!--<WixVariable Id='WixUIBannerBmp' Value='wix\Banner.bmp'/>-->
+        <WixVariable Id='WixUIBannerBmp' Value='images\vibecheck-bmp-493x58.bmp'/>
 
         
         <!--
@@ -257,7 +257,7 @@
 
           The dialog BMP dimensions are 493 x 312 pixels.
         -->
-        <!--<WixVariable Id='WixUIDialogBmp' Value='wix\Dialog.bmp'/>-->
+        <WixVariable Id='WixUIDialogBmp' Value='images\vibecheck-bmp-493x312.bmp'/>
 
     </Product>
 
