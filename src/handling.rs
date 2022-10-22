@@ -57,8 +57,6 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
 
     println!("[*] Initializing CEH..");
 
-    Delay::new(Duration::from_secs(3)).await;
-
     let client = in_process_client("VibeCheck", false).await;
     let mut event_stream = client.event_stream();
     println!("[*] Connected to process");
@@ -69,9 +67,10 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
             id: -2,
             msg: format!("Failed to scan for bluetooth devices. {}", e),
         }));
+        println!("Failed to scan!!!!");
         return;
     }
-
+    println!("[*] Handling Events..");
     loop {
 
         if let Some(event) = event_stream.next().await {
@@ -82,14 +81,7 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
                         Ok(battery_lvl) => battery_lvl,
                         Err(_e) => 0.0,
                     };
-
-                    /*
-                    println!("Discovering features..");
-                    dev.message_attributes().scalar_cmd().as_ref().unwrap().iter().for_each(|f| {
-                        println!("{}", f.actuator_type());
-                    });
-                    */
-
+                
                     let _ = event_tx.send(EventSig::ToyAdd(VCToy {
                         toy_id: dev.index(),
                         toy_name: dev.name().clone(),
@@ -102,28 +94,33 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
                         device_handle: dev.clone(),
                     }));
 
-                    //println!("[+] Device connected!!!!");
+                    println!("[+] Device connected!!!!");
                 }
                 ButtplugClientEvent::DeviceRemoved(dev) => {
                     let _ = event_tx.send(EventSig::ToyRemove(dev.index()));
-                    //println!("[*] Sent dev discon to UI.");
+                    println!("[*] Sent dev discon to UI.");
                 }
                 ButtplugClientEvent::ScanningFinished => println!("[!] Scanning finished!"),
                 ButtplugClientEvent::ServerDisconnect => {
                     let _ = event_tx.send(EventSig::Shutdown);
-                    //println!("[!] Server disconnected!");
+                    println!("[!] Server disconnected!");
                     let _ = client.stop_scanning().await;
                     let _ = client.disconnect().await;
                     break;
                 }
                 ButtplugClientEvent::PingTimeout => {
                     let _ = event_tx.send(EventSig::Shutdown);
-                    //println!("[!] Server timeout!");
+                    println!("[!] Server timeout!");
                     let _ = client.stop_scanning().await;
                     let _ = client.disconnect().await;
                     break;
                 }
-                _ => {}
+                ButtplugClientEvent::Error(e) => {
+                    println!("Client Event Error: {:?}", e);
+                },
+                ButtplugClientEvent::ServerConnect => {
+                    println!("Server Connect");
+                }
             }
         } else {
             println!("GOT NONE IN EVENT HANDLER");
@@ -133,15 +130,15 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
 }
 
 // Parse scalar levels and logic for level tweaks
-pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, mut scalar_level: f64, feature_index: u32, actuator_type: ActuatorType, feature_levels: LevelTweaks) {
+pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, scalar_level: f64, feature_index: u32, actuator_type: ActuatorType, feature_levels: LevelTweaks) {
     // Floor or Ceiling a float if actuator type is Constrict
-    if actuator_type == ActuatorType::Constrict {
+    /*if actuator_type == ActuatorType::Constrict {
         if scalar_level < 0.50 {
             scalar_level = scalar_level.floor();
         } else {
             scalar_level = scalar_level.ceil();
         }
-    }
+    } dont need*/
     if scalar_level != 0.0 && scalar_level >= feature_levels.minimum_level && scalar_level <= feature_levels.maximum_level {
         //println!("{} {} {}", feature_index, actuator_type, scalar_level);
         let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (scalar_level, actuator_type))]))).await;
