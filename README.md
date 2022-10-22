@@ -36,6 +36,8 @@ Questions and help: [SutekhVRC Discord](https://discord.gg/g6kUFtMtpw)
 - Motherboard integrated bluetooth radios commonly have connection issues without an antenna, as well as can only handle one connected device.
 - Motherboard integrated bluetooth radios will interfere with external bluetooth adapters (USB adapters / etc.).
 - [Motherboard integrated bluetooth radios interfering](https://kb.plugable.com/bluetooth-adapter/your-computer-has-had-a-different-bluetooth-adapter-previously-or-has-a-built-in-adapter)
+- Bluetooth was disabled or adapter wasnt connected when starting VibeCheck
+    - Plugin in bluetooth adapter and enable bluetooth and start vibecheck.
 
 ## Common Lovense Connect issues
 - Toys not showing up in VibeCheck: Sometimes Lovense Connect can be slow updating their NAT punchthrough API and you just have to wait for it to populate. (If you have waited for a good amount of time restarting vibecheck will force check the NAT punchthrough API for Lovense to detect your toy)
