@@ -39,6 +39,7 @@ impl VCToy {
         if features.linear_cmd().is_some() {
             let mut indexer = 0;
             features.linear_cmd().as_ref().unwrap().iter().for_each(|_linear_feature| {
+                
                 self.param_feature_map.features.push(VCToyFeature::new(format!("/avatar/parameters/{:?}_{}", VCFeatureType::Linear, indexer), indexer, VCFeatureType::Linear));
                 indexer += 1;
             });
@@ -47,6 +48,7 @@ impl VCToy {
         if features.rotate_cmd().is_some() {
             let mut indexer = 0;
             features.rotate_cmd().as_ref().unwrap().iter().for_each(|_rotate_feature| {
+                
                 self.param_feature_map.features.push(VCToyFeature::new(format!("/avatar/parameters/{:?}_{}", VCFeatureType::Rotator, indexer), indexer, VCFeatureType::Rotator));
                 indexer += 1;
             });
@@ -56,7 +58,7 @@ impl VCToy {
             let mut indexer = 0;
             
             features.scalar_cmd().as_ref().unwrap().iter().for_each(|scalar_feature| {
-
+                
                 // Filter out Rotators
                 match scalar_feature.actuator_type() {
                     &ActuatorType::Rotate => {},
@@ -79,7 +81,8 @@ impl VCToy {
         match param_feature_map {
             Some(map) => {
                 // If feature count differs the user probably swapped between connection types
-                if self.param_feature_map.features.len() == map.features.len() {
+                let conn_toy_feature_len = self.toy_features.scalar_cmd().as_ref().unwrap().iter().len() + self.toy_features.rotate_cmd().as_ref().iter().len() + self.toy_features.linear_cmd().as_ref().iter().len();
+                if conn_toy_feature_len != map.features.len() {
                     self.populate_routine();
                     return;
                 }
