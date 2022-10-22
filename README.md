@@ -104,6 +104,7 @@ Questions and help: [SutekhVRC Discord](https://discord.gg/g6kUFtMtpw)
 
 - Make sure to disable all bluetooth radio adapters except the one you are using for VibeCheck.
 - Plug in your Bluetoopth adapter.
+- Make sure bluetooth is enabled BEFORE you start VibeCheck.
 - Start VibeCheck
 - Turn on toys
 - When toys are connected click enable!
