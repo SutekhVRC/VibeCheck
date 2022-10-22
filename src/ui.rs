@@ -733,8 +733,9 @@ impl VibeCheckGUI<'_> {
                             // Load toy config for name of toy if it exists otherwise create the config for the toy name
 
                             // Load config with toy name
-                            if let Some(fmap) = load_toy_config(&toy.toy_name) {
-                                toy.populate_toy_feature_param_map(Some(fmap));
+                            let toy_config = load_toy_config(&toy.toy_name);
+                            if toy_config.is_some() {
+                                toy.populate_toy_feature_param_map(toy_config);
                             } else {
                                 toy.populate_toy_feature_param_map(None);
                             }
