@@ -47,7 +47,7 @@ Questions and help: [SutekhVRC Discord](https://discord.gg/g6kUFtMtpw)
 
 ## Dependencies
 - (Lovense Connect Only) Lovense Connect app on phone / Lovense Connect adapter for PC Lovense Connect app
-- (Bluetooth Only) A bluetooth LE adapter. I recommend [this one](https://www.amazon.com/dp/B09DMP6T22?psc=1&ref=ppx_yo2ov_dt_b_product_details)
+- (Bluetooth Only) A bluetooth LE adapter. You will definitely want one with a reasonable range.
 
 ## TL;DR
 - Install [Dependencies](https://github.com/SutekhVRC/VibeCheck#dependencies) and have a bluetooth adapter.
