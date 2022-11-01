@@ -1,3 +1,6 @@
+# Tauri Branch!
+Rewriting VibeCheck as a Tauri app!
+
 ### VibeCheck is in Beta Testing and will be getting updates frequently.
 ## VibeCheck rewrite complete (0.1.1)!
 ### Features added:
