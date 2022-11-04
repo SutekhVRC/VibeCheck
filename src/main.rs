@@ -1,20 +1,21 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![cfg_attr(
+    all(not(debug_assertions), target_os = "windows"),
+    windows_subsystem = "windows"
+)]
 
-use eframe::epaint::Vec2;
-use eframe::{run_native, NativeOptions};
+//use crate::util::load_icon;
 
-use crate::util::load_icon;
-
-mod config;
+//mod config;
 mod vcupdate;
-mod handling;
-mod ui;
+//mod handling;
+//mod ui;
 mod util;
-mod toyops;
+//mod toyops;
 mod lovense;
 
 fn main() {
 
+    /*
     // Native UI Options
     let mut native_opts = NativeOptions::default();
     native_opts.initial_window_size = Some(Vec2::new(450., 500.));
@@ -26,4 +27,8 @@ fn main() {
         "VibeCheck",
         native_opts,
         Box::new(|cc| Box::new(ui::VibeCheckGUI::new(config::config_load(), cc))));
+    */
+    tauri::Builder::default()
+    .run(tauri::generate_context!())
+    .expect("error while running tauri application");
 }

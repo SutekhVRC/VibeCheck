@@ -2,19 +2,7 @@
 //use buttplug::client::ButtplugClientDevice;
 //use buttplug::core::message::ClientDeviceMessageAttributes;
 //use buttplug::core::messages::ButtplugCurrentSpecDeviceMessageType;
-use eframe::CreationContext;
-use eframe::egui::CollapsingHeader;
-//use eframe::egui::style::{WidgetVisuals, Widgets};
-use eframe::egui::{
-    style::Visuals, Color32, Context, Hyperlink, Layout, RichText, ScrollArea, Style, TextStyle,
-    TopBottomPanel,
-};
-use eframe::epaint::{FontId, FontFamily};
 
-use eframe::{
-    egui::{self, CentralPanel},
-    App,
-};
 
 use std::collections::HashMap;
 use std::fs;

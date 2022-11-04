@@ -7,6 +7,7 @@ use image::ImageFormat;
 
 // Originally From egui discussions https://github.com/emilk/egui/discussions/1574
 // Modified to work with embedded icon data
+/* EFRAME
 pub fn load_icon(bytes: Vec<u8>) -> eframe::IconData {
     let (icon_rgba, icon_width, icon_height) = {
         let mut reader = IReader::new(Cursor::new(bytes));
@@ -23,6 +24,7 @@ pub fn load_icon(bytes: Vec<u8>) -> eframe::IconData {
         height: icon_height,
     }
 }
+*/
 
 pub fn check_valid_port(port: &String) -> bool {
     if let Ok(p) = port.parse::<u16>() {

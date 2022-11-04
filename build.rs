@@ -1,3 +1,10 @@
+
+fn main() {
+    tauri_build::build()
+}
+
+/*
+
 use std::io;
 #[cfg(windows)]
 use winres::WindowsResource;
@@ -8,3 +15,4 @@ fn main() -> io::Result<()> {
     }
     Ok(())
 }
+*/
