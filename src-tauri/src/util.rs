@@ -1,9 +1,9 @@
 use std::net::Ipv4Addr;
 use std::path::Path;
-use std::io::Cursor;
+//use std::io::Cursor;
 use directories::BaseDirs;
-use image::io::Reader as IReader;
-use image::ImageFormat;
+//use image::io::Reader as IReader;
+//use image::ImageFormat;
 
 // Originally From egui discussions https://github.com/emilk/egui/discussions/1574
 // Modified to work with embedded icon data

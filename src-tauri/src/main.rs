@@ -5,13 +5,18 @@
 
 //use crate::util::load_icon;
 
-//mod config;
+mod config;
 mod vcupdate;
-//mod handling;
-//mod ui;
+mod handling;
+mod ui;
 mod util;
-//mod toyops;
+mod toyops;
 mod lovense;
+
+#[tauri::command]
+fn vibecheck_version() -> String {
+    vcupdate::VERSION.to_string()
+}
 
 fn main() {
 
@@ -28,7 +33,13 @@ fn main() {
         native_opts,
         Box::new(|cc| Box::new(ui::VibeCheckGUI::new(config::config_load(), cc))));
     */
+
+    //let _js_handler = ;
+
+
     tauri::Builder::default()
+    .invoke_handler(tauri::generate_handler![vibecheck_version])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
+

@@ -113,56 +113,17 @@ pub struct VibeCheckGUI<'a> {
 }
 
 impl VibeCheckGUI<'_> {
-    pub fn new(config: VibeCheckConfig, cc: &CreationContext<'_>) -> Self {
+    pub fn new(config: VibeCheckConfig) -> Self {
         let config_edit = config.clone();
 
-        // Set fonts
-        let mut style: Style = (*cc.egui_ctx.style()).clone();
+        /* Set fonts
+         * Keeping for colors and font
         style.override_text_style = Some(TextStyle::Monospace);
-        cc.egui_ctx.set_style(style);
-        let mut visuals = Visuals::default();
         visuals.override_text_color = Some(Color32::from_rgb(0xef, 0x98, 0xff));
         visuals.hyperlink_color = Color32::from_rgb(0xef, 0x98, 0xff);
-
-        /*
-        let wv = WidgetVisuals {
-            bg_fill: Color32::from_rgb(0xef, 0x98, 0xff),
-            bg_stroke: Stroke::new(0.1, Color32::WHITE),
-            rounding: Rounding::none(),
-            fg_stroke: Stroke::new(0.1, Color32::WHITE),
-            expansion: 0.1,
-        };//Color32::from_rgb(0xef, 0x98, 0xff);
-
-        let widgets = Widgets {
-            noninteractive: wv,
-            inactive: wv,
-            hovered: wv,
-            active: wv,
-            open: wv,
-        };
         */
 
-        //visuals.widgets = widgets;
-
-        cc.egui_ctx.set_visuals(visuals);
-
-        let sys = System::new_all();
-
-        let procs = sys.processes();
-        for proc in procs {
-            if proc.1.name() == "IntifaceCLI.exe" {
-                if !proc.1.kill() {
-                    println!("[!] Failed to kill IntifaceCLI. Shutting down..");
-                    std::process::exit(0);
-                } else {
-                    println!("[*] Sent intiface kill.");
-                }
-            }
-        }
-
         let minute_sync = Instant::now();
-
-
 
         let mut init = Self {
             config,
@@ -268,28 +229,34 @@ impl VibeCheckGUI<'_> {
         }// tme recv
     }
 
-    fn exec_handler(&mut self, ui: &mut egui::Ui) {
+    fn exec_handler(&mut self) {
 
         if let RunningState::Stopped = self.running {
+            /*
             let ed_button = ui.button(RichText::new("Enable").font(FontId::new(15., FontFamily::Monospace)));
                 if ed_button.clicked() {
                     self.enable_vibecheck();
                 }
+                */
         }
 
         if let RunningState::Running = self.running {
+            /*
             if ui.button("Disable").clicked() {
                 self.disable_vibecheck();
             }
+            */
         }
 
         if let RunningState::Error(err) = self.running {
+            /*
             let ed_button = ui.button(RichText::new("Enable").font(FontId::new(15., FontFamily::Monospace)));
             if ed_button.clicked() {
                 self.enable_vibecheck();
             }
+            */
             let err_msg = err.clone();
-            ui.label(RichText::new(err_msg).color(Color32::RED));
+            //ui.label(RichText::new(err_msg).color(Color32::RED));
         }
     }
 
@@ -359,7 +326,8 @@ impl VibeCheckGUI<'_> {
         self.error_tx = Some(error_tx);
     }
 
-    fn set_tab(&mut self, ctx: &Context) {
+    fn set_tab(&mut self) {
+        /*
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.with_layout(Layout::left_to_right(), |ui| {
@@ -402,9 +370,11 @@ impl VibeCheckGUI<'_> {
                 });
             });
         });
+        */
     }
 
-    fn gui_header(&mut self, ui: &mut egui::Ui) {
+    fn gui_header(&mut self) {
+        /*
         ui.vertical_centered(|ui| {
             ui.heading("VibeCheck");
         });
@@ -414,9 +384,11 @@ impl VibeCheckGUI<'_> {
             });
         });
         ui.separator();
+        */
     }
 
-    fn gui_footer(&mut self, ctx: &Context) {
+    fn gui_footer(&mut self) {
+        /*
         TopBottomPanel::bottom("footer").show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(5.0);
@@ -434,6 +406,7 @@ impl VibeCheckGUI<'_> {
                 ui.add_space(5.0);
             });
         });
+        */
     }
 
     fn refresh_lovense_connect(&mut self) {
@@ -441,7 +414,7 @@ impl VibeCheckGUI<'_> {
             self.lovense_connect_toys = status;
         }
     }
-    fn lovense_connect_status(&mut self, ui: &mut egui::Ui) {
+    fn lovense_connect_status(&mut self) {
 
         /*
             pub struct LovenseConnectToy {
@@ -455,6 +428,7 @@ impl VibeCheckGUI<'_> {
                 status: u64,
             }
         */
+        /*
         ui.horizontal(|ui| {
         ui.heading("Detected Lovense Connect Toys");
 
@@ -495,7 +469,7 @@ impl VibeCheckGUI<'_> {
                 });
             }
         });
-
+        */
     }
 
     fn chk_valid_config_inputs(&mut self) -> bool {
@@ -510,8 +484,9 @@ impl VibeCheckGUI<'_> {
         true
     }
 
-    fn list_config(&mut self, ui: &mut egui::Ui) {
+    fn list_config(&mut self) {
 
+        /*
         ui.horizontal_wrapped(|ui| {
             ui.label("OSC Bind Host: ");
             ui.text_edit_singleline(&mut self.config_edit.networking.bind.0);
@@ -521,6 +496,7 @@ impl VibeCheckGUI<'_> {
             ui.label("OSC Bind Port: ");
             ui.text_edit_singleline(&mut self.config_edit.networking.bind.1);
         });
+        */
     }
 
     fn save_config(&mut self) {
@@ -534,19 +510,21 @@ impl VibeCheckGUI<'_> {
         .unwrap();
     }
 
-    fn list_toys(&mut self, ui: &mut egui::Ui) {
+    fn list_toys(&mut self) {
 
         if self.toys.len() == 0 {
+            /*
             ui.vertical_centered(|ui| {
                 ui.add_space(90.);
                 ui.heading("Connect a toy.. Please ;-;");
             });
+            */
             return;
         }
         for toy in &mut self.toys {
 
             let features = toy.1.param_feature_map.features.clone();
-            
+            /*
             ui.horizontal_wrapped(|ui| {
                 CollapsingHeader::new(RichText::new(format!(
                     "{} [{}%]",
@@ -704,11 +682,11 @@ impl VibeCheckGUI<'_> {
                     //});
                 });
             });
-
+            */
             //                ui.separator();
 
             //});
-            ui.add_space(1.5);
+            //ui.add_space(1.5);
         }
     }
 
@@ -786,6 +764,7 @@ impl VibeCheckGUI<'_> {
     }
 }
 
+/*
 impl<'a> App for VibeCheckGUI<'a> {
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -862,3 +841,4 @@ impl<'a> App for VibeCheckGUI<'a> {
         std::process::exit(0);
     }
 }
+*/
