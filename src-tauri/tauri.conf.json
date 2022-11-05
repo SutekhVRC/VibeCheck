@@ -3,7 +3,7 @@
     "beforeBuildCommand": "yarn build",
     "beforeDevCommand": "yarn dev",
     "devPath": "http://localhost:1420",
-    "distDir": "../src"
+    "distDir": "../dist"
   },
   "package": {
     "productName": "vibecheck",
