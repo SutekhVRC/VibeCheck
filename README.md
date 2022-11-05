@@ -152,8 +152,6 @@ Questions and help: [SutekhVRC Discord](https://discord.gg/g6kUFtMtpw)
 
 VibeCheck functions by receiving OSC input from VRChat. 
 
-guh was here
-
 ## Thanks to the people below for testing and suggestions!
 
 - Tinitre
