@@ -2,25 +2,6 @@
 Rewriting VibeCheck as a Tauri app!
 
 ### VibeCheck is in Beta Testing and will be getting updates frequently.
-## VibeCheck rewrite complete (0.1.1)!
-### Features added:
-
-    - Supports Bluetooth LE and Lovense Connect
-    - Feature input smoothing and feature disabling/enabling
-    - Support for other toy feature types like Max 2 Constriction for example. (Only through bluetooth)
-    - VibeCheck now checks if it is up to date and if not, displays an "Update" button that will close and update VibeCheck.
-    - No longer relies on IntifaceCLI!
-    - Can use Lovense Connect toys and bluetooth toys at the same time
-
-### Bug fixes:
-
-    - CEH bug with battery querying toys and crashing if no response from toy.
-
-### Optimizations
-
-    - Toy input optimizations (Smoothing itself is also an optimization technically)
-    - OSC listener optimizations
-    - No longer relies on IntifaceCLI!
 
 **Please report bugs/issues or feature requests if you have them!**
 
