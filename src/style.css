@@ -4,8 +4,8 @@
   line-height: 24px;
   font-weight: 400;
 
-  color: #0f0f0f;
-  background-color: #f6f6f6;
+  color: #ffa4f7;
+  background-color: #ffc247;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -61,7 +61,7 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  color: #0f0f0f;
+  color: #e0baff;
   background-color: #ffffff;
   transition: border-color 0.25s;
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
