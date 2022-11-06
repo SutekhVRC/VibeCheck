@@ -24,8 +24,8 @@ use crate::config::OSCNetworking;
 use crate::toyops::LevelTweaks;
 use crate::toyops::VCFeatureType;
 use crate::toyops::{VCToy, FeatureParamMap};
-use crate::ui::ToyManagementEvent;
-use crate::{ui::TmSig, ui::ToyUpdate, ui::VCError};
+use crate::vcore::ToyManagementEvent;
+use crate::{vcore::TmSig, vcore::ToyUpdate, vcore::VCError};
 
 pub struct HandlerErr {
     pub id: i32,
@@ -312,6 +312,8 @@ pub async fn toy_management_handler(
         }
 
         if listening {
+            // This is a nested runtime maybe remove
+            // Would need to pass toy thread handles to VibeCheckState
             let toy_async_rt = Runtime::new().unwrap();
             println!("[*] Started listening!");
             // Recv events (listening)

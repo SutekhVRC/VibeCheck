@@ -5,40 +5,36 @@
 
 //use crate::util::load_icon;
 
+use config::config_load;
+
+use parking_lot::Mutex;
+
 mod config;
 mod vcupdate;
 mod handling;
-mod ui;
+mod frontend_native;
+mod vcore;
 mod util;
 mod toyops;
 mod lovense;
 
-#[tauri::command]
-fn vibecheck_version() -> String {
-    vcupdate::VERSION.to_string()
-}
-
 fn main() {
 
-    /*
-    // Native UI Options
-    let mut native_opts = NativeOptions::default();
-    native_opts.initial_window_size = Some(Vec2::new(450., 500.));
-    
-    let icon_bytes = include_bytes!("../images/vibecheck-ico32x32.ico");
-    native_opts.icon_data = Some(load_icon(icon_bytes.to_vec()));
-
-    run_native(
-        "VibeCheck",
-        native_opts,
-        Box::new(|cc| Box::new(ui::VibeCheckGUI::new(config::config_load(), cc))));
-    */
-
-    //let _js_handler = ;
-
-
     tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![vibecheck_version])
+    .manage(
+        vcore::VCStateMutex(
+            Mutex::new(
+                vcore::VibeCheckState::new(
+                    config::config_load()
+    ))))
+    .invoke_handler(
+        tauri::generate_handler![
+            frontend_native::vibecheck_version,
+            frontend_native::vibecheck_enable,
+            frontend_native::vibecheck_disable,
+            frontend_native::get_vibecheck_config,
+            ]
+    )
     .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    .expect("Failed to generate Tauri context");
 }

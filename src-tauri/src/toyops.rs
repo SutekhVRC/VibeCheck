@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize};
 use core::fmt;
 use std::{collections::HashMap, sync::{mpsc::Sender, Arc}};
 
-use crate::{ui::{ToyManagementEvent, ToyUpdate}, config::save_toy_config};
+use crate::{vcore::{ToyManagementEvent, ToyUpdate}, config::save_toy_config};
 
 
 #[derive(Clone, Debug)]
