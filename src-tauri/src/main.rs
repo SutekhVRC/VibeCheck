@@ -3,11 +3,8 @@
     windows_subsystem = "windows"
 )]
 
-//use crate::util::load_icon;
-
-use config::config_load;
-
 use parking_lot::Mutex;
+use tauri::Manager;
 
 mod config;
 mod vcupdate;
@@ -20,7 +17,7 @@ mod lovense;
 
 fn main() {
 
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
     .manage(
         vcore::VCStateMutex(
             Mutex::new(
@@ -33,8 +30,24 @@ fn main() {
             frontend_native::vibecheck_enable,
             frontend_native::vibecheck_disable,
             frontend_native::get_vibecheck_config,
+            frontend_native::vibecheck_start_bt_scan,
+            frontend_native::vibecheck_stop_bt_scan,
             ]
     )
-    .run(tauri::generate_context!())
+    .build(tauri::generate_context!())
     .expect("Failed to generate Tauri context");
+
+    app.run(|_app_handle, event| match event {
+        tauri::RunEvent::ExitRequested { .. } => {
+            println!("Exit Request!");
+        },
+        tauri::RunEvent::MainEventsCleared => {
+            let state = _app_handle.state::<vcore::VCStateMutex>();
+            let vc_lock = state.0.lock();
+            
+            // Handle inter-thread data
+            vcore::message_handling(vc_lock);
+        },
+        _ => {}
+    });
 }
