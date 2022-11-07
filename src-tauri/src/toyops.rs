@@ -39,7 +39,7 @@ impl VCToy {
         if features.linear_cmd().is_some() {
             let mut indexer = 0;
             features.linear_cmd().as_ref().unwrap().iter().for_each(|_linear_feature| {
-                
+
                 self.param_feature_map.features.push(VCToyFeature::new(format!("/avatar/parameters/{:?}_{}", VCFeatureType::Linear, indexer), indexer, VCFeatureType::Linear));
                 indexer += 1;
             });
