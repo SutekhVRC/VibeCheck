@@ -1,6 +1,5 @@
 use buttplug::client::ButtplugClientDevice;
 use buttplug::client::ButtplugClientEvent;
-use buttplug::util::in_process_client;
 use buttplug::core::message::ActuatorType;
 use buttplug::client::ScalarCommand::ScalarMap;
 use buttplug::client::RotateCommand::RotateMap;
@@ -51,26 +50,12 @@ pub enum ToySig {
     - communicate errors and handler state (Errors to tell main thread its shutting down && State to receive shutdown from main thread) RECV/SEND
     - communicate toy events (add/remove) ONLY SEND?
 */
-pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<EventSig>) {
+pub async fn client_event_handler(mut event_stream: impl futures::Stream<Item = ButtplugClientEvent> + std::marker::Unpin, _error_tx: Sender<VCError>, event_tx: Sender<EventSig>) {
     // Listen for toys and add them if it connects send add update
     // If a toy disconnects send remove update
 
-    println!("[*] Initializing CEH..");
 
-    let client = in_process_client("VibeCheck", false).await;
-    let mut event_stream = client.event_stream();
-    println!("[*] Connected to process");
-
-    // Start scanning for toys
-    if let Err(e) = client.start_scanning().await {
-        let _ = error_tx.send(VCError::HandlingErr(HandlerErr {
-            id: -2,
-            msg: format!("Failed to scan for bluetooth devices. {}", e),
-        }));
-        println!("Failed to scan!!!!");
-        return;
-    }
-    println!("[*] Handling Events..");
+    println!("[*] BP Client Event Handler Handling Events..");
     loop {
 
         if let Some(event) = event_stream.next().await {
@@ -98,21 +83,21 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
                 }
                 ButtplugClientEvent::DeviceRemoved(dev) => {
                     let _ = event_tx.send(EventSig::ToyRemove(dev.index()));
-                    println!("[*] Sent dev discon to UI.");
+                    println!("[*] Sent dev discon message.");
                 }
                 ButtplugClientEvent::ScanningFinished => println!("[!] Scanning finished!"),
                 ButtplugClientEvent::ServerDisconnect => {
                     let _ = event_tx.send(EventSig::Shutdown);
                     println!("[!] Server disconnected!");
-                    let _ = client.stop_scanning().await;
-                    let _ = client.disconnect().await;
+                    //let _ = client.stop_scanning().await;
+                    //let _ = client.disconnect().await;
                     break;
                 }
                 ButtplugClientEvent::PingTimeout => {
                     let _ = event_tx.send(EventSig::Shutdown);
                     println!("[!] Server timeout!");
-                    let _ = client.stop_scanning().await;
-                    let _ = client.disconnect().await;
+                    //let _ = client.stop_scanning().await;
+                    //let _ = client.disconnect().await;
                     break;
                 }
                 ButtplugClientEvent::Error(e) => {
