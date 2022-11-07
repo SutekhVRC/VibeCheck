@@ -36,10 +36,31 @@ pub fn vibecheck_enable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Resu
  * Args: VibeCheck State
  * Return: Result<Ok, Err(str)>
  */
-#[tauri::command(async)]
+#[tauri::command]
 pub fn vibecheck_disable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), &'static str> {
-    let vc_lock = vc_state.0.lock();
-    vcore::native_vibecheck_disable(vc_lock)
+    tauri::async_runtime::block_on(async move {vcore::native_vibecheck_disable(vc_state).await})
+}
+
+/*
+ * vibecheck_start_bt_scan
+ * Starts scanning for BTLE devices
+ * Args: VibeCheck State
+ * Return: None
+ */
+#[tauri::command]
+pub fn vibecheck_start_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) {
+    tauri::async_runtime::block_on(async move {vcore::native_vibecheck_start_bt_scan(vc_state).await})
+}
+
+/*
+ * vibecheck_stop_bt_scan
+ * Stops scanning for BTLE devices
+ * Args: VibeCheck State
+ * Return: None
+ */
+#[tauri::command]
+pub fn vibecheck_stop_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) {
+    tauri::async_runtime::block_on(async move {vcore::native_vibecheck_stop_bt_scan(vc_state).await})
 }
 
 /*
