@@ -13,12 +13,16 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 //use std::os::windowsess::CommandExt;
 use std::time::{Duration, Instant};
+use buttplug::client::ButtplugClient;
+use buttplug::util::in_process_client;
+use futures_util::__private::async_await;
 use sysinfo::{ProcessExt, System, SystemExt};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use parking_lot::{RwLock, Mutex, RawMutex};
 use parking_lot::MutexGuard;
 use crate::config::{load_toy_config, save_toy_config};
+use crate::handling::HandlerErr;
 use crate::toyops::{alter_toy, VCFeatureType, VCToyFeature};
 use crate::vcupdate::{VibeCheckUpdater, VERSION};
 use crate::{
@@ -46,6 +50,8 @@ pub struct VCStateMutex(pub Mutex<VibeCheckState>);
 pub struct VibeCheckState {
 
     pub config: VibeCheckConfig,
+
+    pub bp_client: ButtplugClient,
 
     pub running: RunningState,
     pub toys: HashMap<u32, VCToy>,
@@ -89,9 +95,13 @@ impl VibeCheckState {
         // Create async runtime for toy handling routines
         let async_rt = Runtime::new().unwrap();
 
+        let bp_client = async_rt.block_on(async move {in_process_client("VibeCheck", false).await});
+        println!("[*] Connected to process");
+        let event_stream = bp_client.event_stream();
+
         // Client Event Handler Channels
         let (client_eh_event_tx, client_eh_event_rx): (Sender<EventSig>, Receiver<EventSig>) = mpsc::channel();
-        let client_eh_thread = async_rt.spawn(client_event_handler(error_tx.clone(), client_eh_event_tx));
+        let client_eh_thread = async_rt.spawn(client_event_handler(event_stream, error_tx.clone(), client_eh_event_tx));
 
         // Setup channels
         let (tme_recv_tx, tme_recv_rx): (Sender<ToyManagementEvent>, Receiver<ToyManagementEvent>) = mpsc::channel();
@@ -110,10 +120,12 @@ impl VibeCheckState {
         ));
 
         // Timer prob remove idrc
-        let minute_sync = Instant::now();
+        //let minute_sync = Instant::now();
 
         Self {
             config,
+
+            bp_client,
 
             running: RunningState::Stopped,
             toys,
@@ -147,10 +159,6 @@ impl VibeCheckState {
             lovense_connect_toys: HashMap::new(),
         }
     }
-}
-
-pub fn core_routine() {
-
 }
 
 
@@ -201,25 +209,17 @@ fn update_vibecheck(&mut self) {
     std::process::exit(0);
 }*/
 
-pub fn native_vibecheck_disable(mut vc_lock: MutexGuard<VibeCheckState>) -> Result<(), &'static str> {
+pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), &'static str> {
+
+    let mut vc_lock = vc_state.0.lock();
 
     vc_lock.tme_send
     .send(ToyManagementEvent::Sig(TmSig::StopListening))
     .unwrap();
-    let toys_sd = vc_lock.toys.clone();
 
-    for toy in toys_sd {
-        vc_lock.async_rt.block_on(async move {
-            match toy.1.device_handle.stop().await {
-                Ok(_) => println!("[*] Stop command sent: {}", toy.1.toy_name),
-                Err(_e) => {
-                    println!("[!] Err stopping device: {}", _e);
-                },
-            }
-        });
-    }
-
+    let _ = vc_lock.bp_client.stop_all_devices().await;
     vc_lock.running = RunningState::Stopped;
+
     Ok(())
 }
 
@@ -266,6 +266,32 @@ pub fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -> Resu
             Err("Failed to recv from TME receiver.")
         },// Recv failed
     }// tme recv
+}
+
+pub async fn native_vibecheck_start_bt_scan(vc_state: tauri::State<'_, VCStateMutex>) {
+    let vc_lock = vc_state.0.lock();
+    // Start scanning for toys
+    if let Err(e) = vc_lock.bp_client.start_scanning().await {
+        let _ = vc_lock.error_tx.send(VCError::HandlingErr(HandlerErr {
+            id: -2,
+            msg: format!("Failed to scan for bluetooth devices. {}", e),
+        }));
+        println!("Failed to scan.");
+        return;
+    }
+}
+
+pub async fn native_vibecheck_stop_bt_scan(vc_state: tauri::State<'_, VCStateMutex>) {
+    let vc_lock = vc_state.0.lock();
+    // Start scanning for toys
+    if let Err(e) = vc_lock.bp_client.stop_scanning().await {
+        let _ = vc_lock.error_tx.send(VCError::HandlingErr(HandlerErr {
+            id: -2,
+            msg: format!("Failed to stop scan for bluetooth devices. {}", e),
+        }));
+        println!("Failed to stop scan.");
+        return;
+    }
 }
 
 /*
@@ -327,18 +353,6 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
     map.insert("port", config.networking.bind.1);
 
     return map;
-
-    /*
-    ui.horizontal_wrapped(|ui| {
-        ui.label("OSC Bind Host: ");
-        ui.text_edit_singleline(&mut self.config_edit.networking.bind.0);
-    });
-
-    ui.horizontal_wrapped(|ui| {
-        ui.label("OSC Bind Port: ");
-        ui.text_edit_singleline(&mut self.config_edit.networking.bind.1);
-    });
-    */
 }
 /*
 fn save_config(&mut self) {
@@ -532,49 +546,44 @@ fn list_toys(&mut self) {
         //ui.add_space(1.5);
     }
 }*/
-/*
-fn update_toys(&mut self) {
-    if let Some(ref tu_channel) = self.eh_sig_recvr {
-        match tu_channel.try_recv() {
-            Ok(tu) => {
-                match tu {
-                    EventSig::ToyAdd(mut toy) => {
-                        // Load toy config for name of toy if it exists otherwise create the config for the toy name
 
-                        // Load config with toy name
-                        let toy_config = load_toy_config(&toy.toy_name);
-                        if toy_config.is_some() {
-                            toy.populate_toy_feature_param_map(toy_config);
-                        } else {
-                            toy.populate_toy_feature_param_map(None);
-                        }
-                        //println!("[TOY FEATURES]\n{:?}", toy.param_feature_map);
-                        self.tme_send
-                            .as_ref()
-                            .unwrap()
-                            .send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone())))
-                            .unwrap();
-                        // Load toy config for name of toy if it exists otherwise create the config for the toy name
-                        self.toys.insert(toy.toy_id, toy.clone());
-                        //println!("[+] Toy added: {} | {}", toy.toy_name, toy.toy_id);
+pub fn message_handling(mut vc_lock: MutexGuard<VibeCheckState>) {
+
+    // Update Toys States
+    match vc_lock.client_eh_event_rx.try_recv() {
+        Ok(tu) => {
+            match tu {
+                EventSig::ToyAdd(mut toy) => {
+                    // Load toy config for name of toy if it exists otherwise create the config for the toy name
+
+                    // Load config with toy name
+                    let toy_config = load_toy_config(&toy.toy_name);
+                    if toy_config.is_some() {
+                        toy.populate_toy_feature_param_map(toy_config);
+                    } else {
+                        toy.populate_toy_feature_param_map(None);
                     }
-                    EventSig::ToyRemove(id) => {
-                        self.tme_send
-                            .as_ref()
-                            .unwrap()
-                            .send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(id)))
-                            .unwrap();
-                        self.toys.remove(&id);
-                        //println!("[!] Removed toy: {}", id);
-                    }
-                    EventSig::Shutdown => {}
+                    //println!("[TOY FEATURES]\n{:?}", toy.param_feature_map);
+                    vc_lock.tme_send
+                        .send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone())))
+                        .unwrap();
+                    // Load toy config for name of toy if it exists otherwise create the config for the toy name
+                    vc_lock.toys.insert(toy.toy_id, toy.clone());
+                    //println!("[+] Toy added: {} | {}", toy.toy_name, toy.toy_id);
                 }
+                EventSig::ToyRemove(id) => {
+                    vc_lock.tme_send
+                        .send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(id)))
+                        .unwrap();
+                    vc_lock.toys.remove(&id);
+                    //println!("[!] Removed toy: {}", id);
+                }
+                EventSig::Shutdown => {}
             }
-            Err(_e) => {}
         }
+        Err(_e) => {}
     }
-}*/
-
+}
 
 /*
 fn update_battery_percentages(&mut self) {
@@ -607,7 +616,11 @@ fn update_battery_percentages(&mut self) {
         }
     }
 }*/
-
+/*
+ * Update Battery For Toys
+ * Update Toy States
+ * 
+ */
 
 /*
 impl<'a> App for VibeCheckGUI<'a> {
