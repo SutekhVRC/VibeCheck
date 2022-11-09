@@ -15,6 +15,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 use buttplug::client::ButtplugClient;
 use buttplug::util::in_process_client;
+
 use futures_util::__private::async_await;
 use sysinfo::{ProcessExt, System, SystemExt};
 use tokio::runtime::Runtime;
@@ -95,9 +96,12 @@ impl VibeCheckState {
         // Create async runtime for toy handling routines
         let async_rt = Runtime::new().unwrap();
 
-        let bp_client = async_rt.block_on(async move {in_process_client("VibeCheck", false).await});
+        let bp_client = async_rt.block_on(async move {
+            in_process_client("VibeCheck", false).await
+        });
         println!("[*] Connected to process");
         let event_stream = bp_client.event_stream();
+
 
         // Client Event Handler Channels
         let (client_eh_event_tx, client_eh_event_rx): (Sender<EventSig>, Receiver<EventSig>) = mpsc::channel();
@@ -212,6 +216,9 @@ fn update_vibecheck(&mut self) {
 pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), &'static str> {
 
     let mut vc_lock = vc_state.0.lock();
+    if let RunningState::Stopped = vc_lock.running {
+        return Err("Already disabled.");
+    }
 
     vc_lock.tme_send
     .send(ToyManagementEvent::Sig(TmSig::StopListening))
@@ -227,6 +234,10 @@ pub fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -> Resu
     // Send Start listening signal
 
     let mut vc_lock = vc_state.0.lock();
+    if let RunningState::Running = vc_lock.running {
+        return Err("Already enabled.");
+    }
+
     vc_lock.tme_send.send(ToyManagementEvent::Sig(TmSig::StartListening(vc_lock.config.networking.clone()))).unwrap();
     
     // Check if listening succeded or not
