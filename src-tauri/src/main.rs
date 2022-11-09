@@ -14,17 +14,25 @@ mod vcore;
 mod util;
 mod toyops;
 mod lovense;
+mod bluetooth;
 
 fn main() {
 
     let quit = tauri::CustomMenuItem::new("quit".to_string(), "Quit");
+    let restart = tauri::CustomMenuItem::new("restart".to_string(), "Restart");
     let hide_app = tauri::CustomMenuItem::new("hide".to_string(), "Hide");
     let show_app = tauri::CustomMenuItem::new("show".to_string(), "Show");
+    let enable_osc = tauri::CustomMenuItem::new("enable_osc".to_string(), "Enable");
+    let disable_osc = tauri::CustomMenuItem::new("disable_osc".to_string(), "Disable");
 
     let tray_menu = SystemTrayMenu::new()
+    .add_item(enable_osc)
+    .add_item(disable_osc)
+    .add_native_item(tauri::SystemTrayMenuItem::Separator)
     .add_item(hide_app)
     .add_item(show_app)
     .add_native_item(tauri::SystemTrayMenuItem::Separator)
+    .add_item(restart)
     .add_item(quit);
 
     let app = tauri::Builder::default()
@@ -35,16 +43,24 @@ fn main() {
                 "quit" => {
                     app.exit(0);
                 },
+                "restart" => {
+                    app.restart();
+                },
                 "hide" => {
                     let window = app.get_window("main").unwrap();
                     window.hide().unwrap();
                 },
                 "show" => {
-                    app.windows().iter().for_each(|w| {
-                        println!("{}", w.0);
-                    });
                     let window = app.get_window("main").unwrap();
                     window.show().unwrap();
+                },
+                "enable_osc" => {
+                    let vc_lock = app.state::<vcore::VCStateMutex>();
+                    let _ = vcore::native_vibecheck_enable(vc_lock);
+                },
+                "disable_osc" => {
+                    let vc_lock = app.state::<vcore::VCStateMutex>();
+                    let _ = tauri::async_runtime::block_on(async move {vcore::native_vibecheck_disable(vc_lock).await});
                 }
                 _ => {},
             }
