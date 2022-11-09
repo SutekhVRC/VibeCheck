@@ -77,7 +77,14 @@ pub fn get_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> 
     vcore::native_get_vibecheck_config(vc_state)
 }
 
-
+/*
+ * set_vibecheck_config
+ * Sets and saves the vibecheck config
+ * Args: VibeCheck State, bind map
+ * Return: Result<Ok(()), Err(VibeCheckConfigError)>
+ * Map Config Contents
+ * bind : HashMap<host, port>
+ */
 #[tauri::command(async)]
 pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, bind: HashMap<String, String>) -> Result<(), vcore::VibeCheckConfigError>{
     vcore::native_set_vibecheck_config(vc_state, bind)
