@@ -3,6 +3,8 @@
     windows_subsystem = "windows"
 )]
 
+use std::sync::Arc;
+
 use parking_lot::Mutex;
 use tauri::{Manager, SystemTrayMenu};
 
@@ -17,6 +19,17 @@ mod lovense;
 mod bluetooth;
 
 fn main() {
+
+    let vibecheck_state_pointer = Arc::new(
+        Mutex::new(
+            vcore::VibeCheckState::new(
+                config::config_load())));
+
+    let handling_pointer = vibecheck_state_pointer.clone();
+    {
+        let lock = vibecheck_state_pointer.lock();
+        lock.async_rt.spawn(handling::message_handling(handling_pointer));
+    }
 
     let quit = tauri::CustomMenuItem::new("quit".to_string(), "Quit");
     let restart = tauri::CustomMenuItem::new("restart".to_string(), "Restart");
@@ -68,11 +81,7 @@ fn main() {
         _ => {}
     })
     .manage(
-        vcore::VCStateMutex(
-            Mutex::new(
-                vcore::VibeCheckState::new(
-                    config::config_load()
-    ))))
+        vcore::VCStateMutex(vibecheck_state_pointer.clone()))
     .invoke_handler(
         tauri::generate_handler![
             frontend_native::vibecheck_version,
@@ -82,12 +91,30 @@ fn main() {
             frontend_native::set_vibecheck_config,
             frontend_native::vibecheck_start_bt_scan,
             frontend_native::vibecheck_stop_bt_scan,
+            frontend_native::get_toys,
             ]
     )
     .build(tauri::generate_context!())
     .expect("Failed to generate Tauri context");
+    /*
+    loop {
+            let iteration = app.run_iteration();
+            if iteration.window_count == 0 {
+                app.app_handle().tray_handle().destroy();
+                kill_children();
+                break;
+            }
+            let state = app.state::<vcore::VCStateMutex>();
+            let vc_lock = state.0.lock();
+            
+            // Handle inter-thread data
+            vcore::message_handling(vc_lock);
+    }*/
+    
+    
+    app.run(|_app_handle, event| {
 
-    app.run(|_app_handle, event| match event {
+        match event {
         tauri::RunEvent::WindowEvent { label, event, .. } => {
             match event {
                 tauri::WindowEvent::CloseRequested { api, .. } => {
@@ -102,12 +129,18 @@ fn main() {
         },
         tauri::RunEvent::MainEventsCleared => {
 
+            /*
             let state = _app_handle.state::<vcore::VCStateMutex>();
             let vc_lock = state.0.lock();
             
             // Handle inter-thread data
-            vcore::message_handling(vc_lock);
+            // Problem: This does not continuously execute (When app is hidden does not execute)
+            handling::message_handling(vc_lock);*/
+            //println!("[+] State MainEventsCleared.");
         },
+        tauri::RunEvent::Ready => {
+            println!("[+] App Ready");
+        }
         _ => {}
-    });
+    }});
 }

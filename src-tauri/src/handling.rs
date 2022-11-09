@@ -5,6 +5,7 @@ use buttplug::client::ScalarCommand::ScalarMap;
 use buttplug::client::RotateCommand::RotateMap;
 use futures::StreamExt;
 use futures_timer::Delay;
+use parking_lot::Mutex;
 use rosc::{self, OscMessage, OscPacket};
 use std::collections::HashMap;
 use std::net::UdpSocket;
@@ -20,17 +21,21 @@ use tokio::sync::{
 use tokio::task::JoinHandle;
 
 use crate::config::OSCNetworking;
+use crate::config::load_toy_config;
 use crate::toyops::LevelTweaks;
 use crate::toyops::VCFeatureType;
 use crate::toyops::{VCToy, FeatureParamMap};
 use crate::vcore::ToyManagementEvent;
+use crate::vcore::VibeCheckState;
 use crate::{vcore::TmSig, vcore::ToyUpdate, vcore::VCError};
+use tokio::sync::mpsc::UnboundedSender;
 
 pub struct HandlerErr {
     pub id: i32,
     pub msg: String,
 }
 
+#[derive(Debug)]
 pub enum EventSig {
     ToyAdd(VCToy),
     ToyRemove(u32),
@@ -44,13 +49,70 @@ pub enum ToySig {
     OSCMsg(rosc::OscMessage),
 }
 
+pub async fn message_handling(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>) {
+
+    loop {
+        let event = {
+            let mut lock = vibecheck_state_pointer.lock();
+            //println!("[+] Got event recv lock!");
+            // Can optimize this by Arc<> around the receiver and cloning pointer from lock and receiving from it
+            // that way can release lock and wait for packets
+            lock.client_eh_event_rx.try_recv()
+        };
+        //println!("Event: {:?}", event);
+        // Update Toys States
+        match event {
+            Ok(tu) => {
+                match tu {
+                    EventSig::ToyAdd(mut toy) => {
+                        // Load toy config for name of toy if it exists otherwise create the config for the toy name
+
+                        // Load config with toy name
+                        let toy_config = load_toy_config(&toy.toy_name);
+                        if toy_config.is_some() {
+                            toy.populate_toy_feature_param_map(toy_config);
+                        } else {
+                            toy.populate_toy_feature_param_map(None);
+                        }
+                        //println!("[TOY FEATURES]\n{:?}", toy.param_feature_map);
+                        {
+                            let mut vc_lock = vibecheck_state_pointer.lock();
+                            //println!("[+] Got toy add lock!");
+                            vc_lock.tme_send
+                            .send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone())))
+                            .unwrap();
+                        // Load toy config for name of toy if it exists otherwise create the config for the toy name
+                            vc_lock.toys.insert(toy.toy_id, toy.clone());
+                        }
+
+                        println!("[+] Toy added: {} | {}", toy.toy_name, toy.toy_id);
+                    }
+                    EventSig::ToyRemove(id) => {
+                        let mut vc_lock = vibecheck_state_pointer.lock();
+                        //println!("[+] Got toy remove recv lock!");
+                        vc_lock.tme_send
+                            .send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(id)))
+                            .unwrap();
+                        vc_lock.toys.remove(&id);
+                        //println!("[!] Removed toy: {}", id);
+                    }
+                    EventSig::Shutdown => {}
+                }
+            }
+            Err(_e) => {
+                Delay::new(Duration::from_secs(1)).await;}
+        }
+    }
+}
+
+
 /*
     This handler will handle the adding and removal of toys
     Needs Signals in and out to communicate with main thread
     - communicate errors and handler state (Errors to tell main thread its shutting down && State to receive shutdown from main thread) RECV/SEND
     - communicate toy events (add/remove) ONLY SEND?
 */
-pub async fn client_event_handler(mut event_stream: impl futures::Stream<Item = ButtplugClientEvent> + std::marker::Unpin, _error_tx: Sender<VCError>, event_tx: Sender<EventSig>) {
+pub async fn client_event_handler(mut event_stream: impl futures::Stream<Item = ButtplugClientEvent> + std::marker::Unpin, _error_tx: Sender<VCError>, event_tx: UnboundedSender<EventSig>) {
     // Listen for toys and add them if it connects send add update
     // If a toy disconnects send remove update
 

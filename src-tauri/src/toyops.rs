@@ -5,6 +5,16 @@ use std::{collections::HashMap, sync::{mpsc::Sender, Arc}};
 
 use crate::{vcore::{ToyManagementEvent, ToyUpdate}, config::save_toy_config};
 
+#[derive(Serialize)]
+pub struct FrontendVCToyModel {
+    pub toy_id: u32,
+    pub toy_name: String,
+    pub battery_level: f64,
+    pub toy_connected: bool,
+    pub osc_params_list: Vec<String>,
+    pub param_feature_map: FeatureParamMap,
+    pub listening: bool,
+}
 
 #[derive(Clone, Debug)]
 pub struct VCToy {

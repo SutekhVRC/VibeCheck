@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use crate::{vcupdate, vcore};
+use crate::{vcupdate, vcore, toyops::FrontendVCToyModel};
 
 /*
  * vibecheck_version
@@ -88,4 +88,15 @@ pub fn get_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> 
 #[tauri::command(async)]
 pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, bind: HashMap<String, String>) -> Result<(), vcore::VibeCheckConfigError>{
     vcore::native_set_vibecheck_config(vc_state, bind)
+}
+
+/*
+ * get_toys
+ * Gets toy states
+ * Args: None
+ * Return: Option<Vec<FrontendVCToyModel>>
+ */
+#[tauri::command(async)]
+pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashMap<u32, FrontendVCToyModel>> {
+    vcore::native_get_toys(vc_state)
 }

@@ -19,12 +19,13 @@ use buttplug::util::in_process_client;
 use futures_util::__private::async_await;
 use sysinfo::{ProcessExt, System, SystemExt};
 use tokio::runtime::Runtime;
+
 use tokio::task::JoinHandle;
 use parking_lot::{RwLock, Mutex, RawMutex};
 use parking_lot::MutexGuard;
 use crate::config::{load_toy_config, save_toy_config};
 use crate::handling::HandlerErr;
-use crate::toyops::{alter_toy, VCFeatureType, VCToyFeature};
+use crate::toyops::{alter_toy, VCFeatureType, VCToyFeature, FrontendVCToyModel};
 use crate::vcupdate::{VibeCheckUpdater, VERSION};
 use crate::{
     util::{
@@ -42,11 +43,17 @@ use crate::{
     },
 };
 
+use tokio::sync::{
+    mpsc::unbounded_channel,
+    mpsc::UnboundedReceiver,
+    mpsc::UnboundedSender,
+};
+
 fn debug_out(s: &'static str) {
     println!("{}", s);
 }
 
-pub struct VCStateMutex(pub Mutex<VibeCheckState>);
+pub struct VCStateMutex(pub Arc<Mutex<VibeCheckState>>);
 
 pub struct VibeCheckState {
 
@@ -66,7 +73,7 @@ pub struct VibeCheckState {
     //================================================
     // Client Event Handler
     pub client_eh_thread: JoinHandle<()>,
-    pub client_eh_event_rx: Receiver<EventSig>,
+    pub client_eh_event_rx: UnboundedReceiver<EventSig>,
     //================================================
     // Toy Management Handler
     pub toy_management_h_thread: JoinHandle<()>,
@@ -104,7 +111,9 @@ impl VibeCheckState {
 
 
         // Client Event Handler Channels
-        let (client_eh_event_tx, client_eh_event_rx): (Sender<EventSig>, Receiver<EventSig>) = mpsc::channel();
+        // MAKING THESE ASYNC
+        //let (client_eh_event_tx, client_eh_event_rx): (Sender<EventSig>, Receiver<EventSig>) = mpsc::channel();
+        let (client_eh_event_tx, client_eh_event_rx): (UnboundedSender<EventSig>, UnboundedReceiver<EventSig>) = unbounded_channel();
         let client_eh_thread = async_rt.spawn(client_event_handler(event_stream, error_tx.clone(), client_eh_event_tx));
 
         // Setup channels
@@ -333,6 +342,9 @@ fn stop_toy_management_handler(&mut self) {
 }
 */
 
+/*
+ * This could probably be implemented in the frontend
+ */
 fn refresh_lovense_connect(mut vc_lock: MutexGuard<VibeCheckState>) {
     if let Some(status) = crate::lovense::get_toys_from_natp_api() {
         vc_lock.lovense_connect_toys = status;
@@ -429,6 +441,52 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), VibeCheckCo
     }
     Ok(())
 }
+
+
+/*
+pub struct FrontendVCToyModel {
+    pub toy_id: u32,
+    pub toy_name: String,
+    pub battery_level: f64,
+    pub toy_connected: bool,
+    pub osc_params_list: Vec<String>,
+    pub param_feature_map: FeatureParamMap,
+    pub listening: bool,
+}
+ */
+
+pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashMap<u32, FrontendVCToyModel>> {
+    
+    let mut toys_out = HashMap::<u32, FrontendVCToyModel>::new();
+
+    let toys_store = {
+        let vc_lock = vc_state.0.lock();
+        vc_lock.toys.clone()
+    };
+    println!("Got {} toys from lock", toys_store.len());
+    for toy in toys_store {
+
+        let frontend_toy = FrontendVCToyModel {
+            toy_id: toy.1.toy_id,
+            toy_name: toy.1.toy_name.clone(),
+            battery_level: toy.1.battery_level,
+            toy_connected: toy.1.toy_connected,
+            osc_params_list: toy.1.osc_params_list.clone(),
+            param_feature_map: toy.1.param_feature_map.clone(),
+            listening: toy.1.listening,
+        };
+
+        toys_out.insert(toy.0, frontend_toy);   
+    }
+
+    println!("Got {} toys!", toys_out.len());
+    if !toys_out.is_empty() {
+        return Some(toys_out);
+    }
+
+    None
+}
+
 
 /*
 fn list_toys(&mut self) {
@@ -611,43 +669,7 @@ fn list_toys(&mut self) {
     }
 }*/
 
-pub fn message_handling(mut vc_lock: MutexGuard<VibeCheckState>) {
 
-    // Update Toys States
-    match vc_lock.client_eh_event_rx.try_recv() {
-        Ok(tu) => {
-            match tu {
-                EventSig::ToyAdd(mut toy) => {
-                    // Load toy config for name of toy if it exists otherwise create the config for the toy name
-
-                    // Load config with toy name
-                    let toy_config = load_toy_config(&toy.toy_name);
-                    if toy_config.is_some() {
-                        toy.populate_toy_feature_param_map(toy_config);
-                    } else {
-                        toy.populate_toy_feature_param_map(None);
-                    }
-                    //println!("[TOY FEATURES]\n{:?}", toy.param_feature_map);
-                    vc_lock.tme_send
-                        .send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone())))
-                        .unwrap();
-                    // Load toy config for name of toy if it exists otherwise create the config for the toy name
-                    vc_lock.toys.insert(toy.toy_id, toy.clone());
-                    //println!("[+] Toy added: {} | {}", toy.toy_name, toy.toy_id);
-                }
-                EventSig::ToyRemove(id) => {
-                    vc_lock.tme_send
-                        .send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(id)))
-                        .unwrap();
-                    vc_lock.toys.remove(&id);
-                    //println!("[!] Removed toy: {}", id);
-                }
-                EventSig::Shutdown => {}
-            }
-        }
-        Err(_e) => {}
-    }
-}
 
 /*
 fn update_battery_percentages(&mut self) {

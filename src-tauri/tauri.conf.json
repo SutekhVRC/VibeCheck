@@ -19,7 +19,7 @@
     },
     "bundle": {
       "active": true,
-      "category": "DeveloperTool",
+      "category": "VR Software",
       "copyright": "",
       "deb": {
         "depends": []
@@ -29,7 +29,7 @@
         "icons/vibecheck-ico32x32.ico",
         "icons/vibecheck.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.vibecheck.dev",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -42,6 +42,10 @@
       "shortDescription": "",
       "targets": "all",
       "windows": {
+        "wix": {
+          "fragmentPaths": [""],
+          "componentRefs": [""]
+        },
         "certificateThumbprint": null,
         "digestAlgorithm": "sha256",
         "timestampUrl": ""
