@@ -76,3 +76,9 @@ pub fn vibecheck_stop_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) {
 pub fn get_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> HashMap<&str, String> {
     vcore::native_get_vibecheck_config(vc_state)
 }
+
+
+#[tauri::command(async)]
+pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, bind: HashMap<String, String>) -> Result<(), vcore::VibeCheckConfigError>{
+    vcore::native_set_vibecheck_config(vc_state, bind)
+}

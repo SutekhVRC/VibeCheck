@@ -79,6 +79,7 @@ fn main() {
             frontend_native::vibecheck_enable,
             frontend_native::vibecheck_disable,
             frontend_native::get_vibecheck_config,
+            frontend_native::set_vibecheck_config,
             frontend_native::vibecheck_start_bt_scan,
             frontend_native::vibecheck_stop_bt_scan,
             ]

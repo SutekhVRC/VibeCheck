@@ -339,18 +339,18 @@ fn refresh_lovense_connect(mut vc_lock: MutexGuard<VibeCheckState>) {
     }
 }
 
-/*
-fn chk_valid_config_inputs(&mut self) -> bool {
-    if !check_valid_ipv4(&self.config_edit.networking.bind.0) {
-        return false;
+
+fn chk_valid_config_inputs(host: &String, port: &String) -> Result<(), VibeCheckConfigError> {
+    if !check_valid_ipv4(&host) {
+        return Err(VibeCheckConfigError::InvalidHost);
     }
 
-    if !check_valid_port(&self.config_edit.networking.bind.1) {
-        return false;
+    if !check_valid_port(&port) {
+        return Err(VibeCheckConfigError::InvalidPort);
     }
 
-    true
-}*/
+    Ok(())
+}
 
 pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> HashMap<&str, String> {
 
@@ -365,17 +365,70 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
 
     return map;
 }
-/*
-fn save_config(&mut self) {
-    fs::write(
+
+#[derive(serde::Serialize)]
+pub enum VibeCheckConfigError {
+    InvalidHost,
+    InvalidPort,
+    SerializeFailure,
+    WriteFailure,
+}
+
+pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, bind: HashMap<String, String>) -> Result<(), VibeCheckConfigError> {
+
+    if !bind.contains_key("host") {
+        println!("[!] host key does not exist!");
+        return Err(VibeCheckConfigError::InvalidHost);
+    }
+    if !bind.contains_key("port") {
+        println!("[!] port key does not exist!");
+        return Err(VibeCheckConfigError::InvalidPort);
+    }
+
+    let host = bind.get("host").unwrap();
+    let port = bind.get("port").unwrap();
+
+    match chk_valid_config_inputs(&host, &port) {
+        Ok(()) => println!("[+] Config OK!"),
+        Err(e) => return Err(e),
+    }
+
+    let config = {
+        let mut vc_lock = vc_state.0.lock();
+        vc_lock.config.networking.bind.0 = host.to_owned();
+        vc_lock.config.networking.bind.1 = port.to_owned();
+        vc_lock.config.clone()
+    };
+
+    save_config(config)
+
+}
+
+fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), VibeCheckConfigError> {
+
+    let json_config_str = match serde_json::to_string(&config) {
+        Ok(s) => s,
+        Err(_e) => {
+            println!("[!] Failed to serialize VibeCheckConfig into a String.");
+            return Err(VibeCheckConfigError::SerializeFailure);
+        }
+    };
+
+    match fs::write(
         format!(
             "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\Config.json",
             get_user_home_dir()
         ),
-        serde_json::to_string(&self.config).unwrap(),
-    )
-    .unwrap();
-}*/
+        json_config_str,
+    ) {
+        Ok(()) => {},
+        Err(_e) => {
+            println!("[!] Failure writing VibeCheck config.");
+            return Err(VibeCheckConfigError::WriteFailure);
+        }
+    }
+    Ok(())
+}
 
 /*
 fn list_toys(&mut self) {
