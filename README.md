@@ -1,4 +1,7 @@
-### VibeCheck is in Beta Testing and will be getting updates frequently.
+### VibeCheck 2.0 is in development
+VibeCheck 2.0 is in development using the new Tauri platform.
+New features and UI ahead!
+To keep up with development or have any ideas to suggest, join the [Discord](https://discord.gg/g6kUFtMtpw)
 ## VibeCheck rewrite complete (0.1.1)!
 ### Features added:
 
