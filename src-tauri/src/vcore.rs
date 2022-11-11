@@ -17,6 +17,7 @@ use buttplug::client::ButtplugClient;
 use buttplug::util::in_process_client;
 
 use futures_util::__private::async_await;
+use serde::Serialize;
 use sysinfo::{ProcessExt, System, SystemExt};
 use tokio::runtime::Runtime;
 
@@ -25,8 +26,8 @@ use parking_lot::{RwLock, Mutex, RawMutex};
 use parking_lot::MutexGuard;
 use crate::config::{load_toy_config, save_toy_config};
 use crate::handling::HandlerErr;
-use crate::toyops::{alter_toy, VCFeatureType, VCToyFeature, FrontendVCToyModel};
-use crate::vcupdate::{VibeCheckUpdater, VERSION};
+use crate::toyops::{VCFeatureType, VCToyFeature, FrontendOutVCToyModel, AlterVCToyModel};
+//use crate::vcupdate::{VibeCheckUpdater, VERSION};
 use crate::{
     util::{
         check_valid_ipv4,
@@ -85,9 +86,9 @@ pub struct VibeCheckState {
     // Async Runtime for toy event handlers
     pub async_rt: Runtime,
     //================================================
-    pub update_engine: VibeCheckUpdater,
+    //pub update_engine: VibeCheckUpdater,
 
-    pub lovense_connect_toys: HashMap<String, crate::lovense::LovenseConnectToy>,
+    //pub lovense_connect_toys: HashMap<String, crate::lovense::LovenseConnectToy>,
 }
 
 impl VibeCheckState {
@@ -165,11 +166,11 @@ impl VibeCheckState {
 
             //======================================
             // Update engine
-            update_engine: VibeCheckUpdater::new(),
+            //update_engine: VibeCheckUpdater::new(),
 
             //======================================
             // Lovense Connect toys
-            lovense_connect_toys: HashMap::new(),
+            //lovense_connect_toys: HashMap::new(),
         }
     }
 }
@@ -344,13 +345,13 @@ fn stop_toy_management_handler(&mut self) {
 
 /*
  * This could probably be implemented in the frontend
- */
+
 fn refresh_lovense_connect(mut vc_lock: MutexGuard<VibeCheckState>) {
     if let Some(status) = crate::lovense::get_toys_from_natp_api() {
         vc_lock.lovense_connect_toys = status;
     }
 }
-
+*/
 
 fn chk_valid_config_inputs(host: &String, port: &String) -> Result<(), VibeCheckConfigError> {
     if !check_valid_ipv4(&host) {
@@ -455,9 +456,9 @@ pub struct FrontendVCToyModel {
 }
  */
 
-pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashMap<u32, FrontendVCToyModel>> {
+pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashMap<u32, FrontendOutVCToyModel>> {
     
-    let mut toys_out = HashMap::<u32, FrontendVCToyModel>::new();
+    let mut toys_out = HashMap::<u32, FrontendOutVCToyModel>::new();
 
     let toys_store = {
         let vc_lock = vc_state.0.lock();
@@ -466,12 +467,12 @@ pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashM
     println!("Got {} toys from lock", toys_store.len());
     for toy in toys_store {
 
-        let frontend_toy = FrontendVCToyModel {
+        let frontend_toy = FrontendOutVCToyModel {
             toy_id: toy.1.toy_id,
             toy_name: toy.1.toy_name.clone(),
             battery_level: toy.1.battery_level,
             toy_connected: toy.1.toy_connected,
-            osc_params_list: toy.1.osc_params_list.clone(),
+            //osc_params_list: toy.1.osc_params_list.clone(),
             param_feature_map: toy.1.param_feature_map.clone(),
             listening: toy.1.listening,
         };
@@ -487,6 +488,54 @@ pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashM
     None
 }
 
+#[derive(Serialize)]
+pub enum ToyAlterError {
+    NoFeatureIndex,
+    NoToyIndex,
+    TMESendFailure
+}
+
+pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, altered_feature: AlterVCToyModel) -> Result<(), ToyAlterError> {
+
+    let altered = {
+        let mut vc_lock = vc_state.0.lock();
+        if let Some(toy) = vc_lock.toys.get_mut(&toy_id) {
+            
+            let mut feature_found = false;
+            
+            toy.param_feature_map.features.iter_mut().for_each(|toy_feature| {
+                
+                if toy_feature.feature_index == altered_feature.feature_index {
+                    
+                    feature_found = true;
+
+                    toy_feature.feature_enabled = altered_feature.feature_enabled;
+                    toy_feature.osc_parameter = altered_feature.osc_parameter.clone();
+                    toy_feature.feature_levels = altered_feature.feature_levels;
+                    toy_feature.smooth_enabled = altered_feature.smooth_enabled;
+                }
+            });
+            if !feature_found {
+                return Err(ToyAlterError::NoFeatureIndex);
+            }
+            toy.clone()
+        } else {
+            return Err(ToyAlterError::NoToyIndex);
+        }
+    };
+
+    save_toy_config(&altered.toy_name, altered.param_feature_map.clone());
+
+    let send_res = {
+        let vc_lock = vc_state.0.lock();
+        vc_lock.tme_send.send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)))
+    };
+
+    match send_res {
+        Ok(()) => Ok(()),
+        Err(_e) => Err(ToyAlterError::TMESendFailure),
+    }
+}
 
 /*
 fn list_toys(&mut self) {

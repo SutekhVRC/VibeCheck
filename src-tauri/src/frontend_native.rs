@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use crate::{vcupdate, vcore, toyops::FrontendVCToyModel};
+use crate::{vcore::{self, ToyAlterError}, toyops::{FrontendOutVCToyModel, AlterVCToyModel}};
 
 /*
  * vibecheck_version
@@ -16,7 +16,7 @@ use crate::{vcupdate, vcore, toyops::FrontendVCToyModel};
  */
 #[tauri::command]
 pub fn vibecheck_version() -> String {
-    vcupdate::VERSION.to_string()
+    "0.2.0-beta-windows".to_string()
 }
 
 /*
@@ -97,6 +97,32 @@ pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, bin
  * Return: Option<Vec<FrontendVCToyModel>>
  */
 #[tauri::command(async)]
-pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashMap<u32, FrontendVCToyModel>> {
+pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashMap<u32, FrontendOutVCToyModel>> {
     vcore::native_get_toys(vc_state)
+}
+
+/*
+ * alter_toy
+ * Alters a toy state
+ * Args: toy_id, AlterVCToyModel
+ * Javascript input example
+ * let altered = {
+ * feature_enabled: true,
+ *  osc_parameter: "/avatar/parameters/vibin",
+ *  feature_index: 0,
+ *  feature_levels: {
+ *      minimum_level: 0.00,
+ *      maximum_level: 100.00,
+ *      idle_level: 0.00,
+ *      smooth_rate: 2.00,
+ *  },
+ *      smooth_enabled: true,
+ *  };
+ * let alter_err = window.__TAURI_INVOKE__("alter_toy", {toyId: 0, frontendToy: altered});
+ *
+ * Return: Result<Ok(()), Err(ToyAlterError)>
+ */
+#[tauri::command(async)]
+pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, toy_feature: AlterVCToyModel) -> Result<(), ToyAlterError> {
+    vcore::native_alter_toy(vc_state, toy_id, toy_feature)
 }
