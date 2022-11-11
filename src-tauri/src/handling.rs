@@ -135,7 +135,7 @@ pub async fn client_event_handler(mut event_stream: impl futures::Stream<Item = 
                         battery_level,
                         toy_connected: dev.connected(),
                         toy_features: dev.message_attributes().clone(),
-                        osc_params_list: vec![],
+                        //osc_params_list: vec![],
                         param_feature_map: FeatureParamMap::new(),
                         listening: false,
                         device_handle: dev.clone(),
