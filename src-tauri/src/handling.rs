@@ -29,6 +29,7 @@ use crate::vcore::ToyManagementEvent;
 use crate::vcore::VibeCheckState;
 use crate::{vcore::TmSig, vcore::ToyUpdate, vcore::VCError};
 use tokio::sync::mpsc::UnboundedSender;
+use tauri::api::notification::Notification;
 
 pub struct HandlerErr {
     pub id: i32,
@@ -38,7 +39,7 @@ pub struct HandlerErr {
 #[derive(Debug)]
 pub enum EventSig {
     ToyAdd(VCToy),
-    ToyRemove(u32),
+    ToyRemove(u32, String),
     Shutdown,
 }
 
@@ -49,7 +50,7 @@ pub enum ToySig {
     OSCMsg(rosc::OscMessage),
 }
 
-pub async fn message_handling(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>) {
+pub async fn message_handling(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, identifier: String) {
 
     loop {
         let event = {
@@ -85,15 +86,27 @@ pub async fn message_handling(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>
                             vc_lock.toys.insert(toy.toy_id, toy.clone());
                         }
 
+                        let _ = Notification::new(identifier.clone())
+                        .title("Toy Connected")
+                        .body(format!("{} ({}%)", toy.toy_name, (100.0 * toy.battery_level)).as_str())
+                        .show();
+
                         println!("[+] Toy added: {} | {}", toy.toy_name, toy.toy_id);
                     }
-                    EventSig::ToyRemove(id) => {
+                    EventSig::ToyRemove(id, toy_name) => {
                         let mut vc_lock = vibecheck_state_pointer.lock();
                         //println!("[+] Got toy remove recv lock!");
                         vc_lock.tme_send
                             .send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(id)))
                             .unwrap();
                         vc_lock.toys.remove(&id);
+
+                        
+                        let _ = Notification::new(identifier.clone())
+                        .title("Toy Disconnected")
+                        .body(format!("{}", toy_name).as_str())
+                        .show();
+                        
                         //println!("[!] Removed toy: {}", id);
                     }
                     EventSig::Shutdown => {}
@@ -144,7 +157,7 @@ pub async fn client_event_handler(mut event_stream: impl futures::Stream<Item = 
                     println!("[+] Device connected!!!!");
                 }
                 ButtplugClientEvent::DeviceRemoved(dev) => {
-                    let _ = event_tx.send(EventSig::ToyRemove(dev.index()));
+                    let _ = event_tx.send(EventSig::ToyRemove(dev.index(), dev.name().clone()));
                     println!("[*] Sent dev discon message.");
                 }
                 ButtplugClientEvent::ScanningFinished => println!("[!] Scanning finished!"),

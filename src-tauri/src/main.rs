@@ -25,12 +25,6 @@ fn main() {
             vcore::VibeCheckState::new(
                 config::config_load())));
 
-    let handling_pointer = vibecheck_state_pointer.clone();
-    {
-        let lock = vibecheck_state_pointer.lock();
-        lock.async_rt.spawn(handling::message_handling(handling_pointer));
-    }
-
     let quit = tauri::CustomMenuItem::new("quit".to_string(), "Quit");
     let restart = tauri::CustomMenuItem::new("restart".to_string(), "Restart");
     let hide_app = tauri::CustomMenuItem::new("hide".to_string(), "Hide");
@@ -97,22 +91,16 @@ fn main() {
     )
     .build(tauri::generate_context!())
     .expect("Failed to generate Tauri context");
-    /*
-    loop {
-            let iteration = app.run_iteration();
-            if iteration.window_count == 0 {
-                app.app_handle().tray_handle().destroy();
-                kill_children();
-                break;
-            }
-            let state = app.state::<vcore::VCStateMutex>();
-            let vc_lock = state.0.lock();
-            
-            // Handle inter-thread data
-            vcore::message_handling(vc_lock);
-    }*/
-    
-    
+
+    let identifier = app.config().tauri.bundle.identifier.clone();
+    let handling_pointer = vibecheck_state_pointer.clone();
+    {
+        let lock = vibecheck_state_pointer.lock();
+        lock.async_rt.spawn(handling::message_handling(handling_pointer, identifier));
+    }
+
+
+
     app.run(|_app_handle, event| {
 
         match event {
