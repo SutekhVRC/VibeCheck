@@ -1,19 +1,29 @@
 use buttplug::{core::message::{ActuatorType, ClientDeviceMessageAttributes}, client::ButtplugClientDevice};
 use serde::{Serialize, Deserialize};
 use core::fmt;
-use std::{collections::HashMap, sync::{mpsc::Sender, Arc}};
+use std::{collections::HashMap, sync::Arc};
 
-use crate::{vcore::{ToyManagementEvent, ToyUpdate}, config::save_toy_config};
+use crate::config::save_toy_config;
 
 #[derive(Serialize)]
-pub struct FrontendVCToyModel {
+pub struct FrontendOutVCToyModel {
     pub toy_id: u32,
     pub toy_name: String,
     pub battery_level: f64,
     pub toy_connected: bool,
-    pub osc_params_list: Vec<String>,
+    //pub osc_params_list: Vec<String>,
     pub param_feature_map: FeatureParamMap,
     pub listening: bool,
+}
+
+// Make type for passing in information to the feature map
+#[derive(Deserialize)]
+pub struct AlterVCToyModel {
+    pub feature_enabled: bool,
+    pub osc_parameter: String,
+    pub feature_index: u32,
+    pub feature_levels: LevelTweaks,
+    pub smooth_enabled: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -23,7 +33,7 @@ pub struct VCToy {
     pub battery_level: f64,
     pub toy_connected: bool,
     pub toy_features: ClientDeviceMessageAttributes,
-    pub osc_params_list: Vec<String>,
+    //pub osc_params_list: Vec<String>,
     pub param_feature_map: FeatureParamMap,
     pub listening: bool,
     pub device_handle: Arc<ButtplugClientDevice>,
@@ -106,6 +116,42 @@ impl VCToy {
     }
 }
 
+/*
+[
+    {
+        "feature_enabled": true,
+        "feature_index": 0,
+        "feature_levels": {
+            "idle_level": 0,
+            "maximum_level": 100,
+            "minimum_level": 0,
+            "smooth_rate": 2
+        },
+        "feature_type": "Vibrator",
+        "osc_parameter": "/avatar/parameters/vibe",
+        "saved": true,
+        "smooth_enabled": true,
+        "smooth_entries": []
+    },
+    {
+        "feature_enabled": true,
+        "feature_index": 1,
+        "feature_levels": {
+            "idle_level": 0,
+            "maximum_level": 100,
+            "minimum_level": 0,
+            "smooth_rate": 2
+        },
+        "feature_type": "Vibrator",
+        "osc_parameter": "/avatar/parameters/vibe1",
+        "saved": true,
+        "smooth_enabled": true,
+        "smooth_entries": []
+    }
+]
+ */
+
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VCToyFeature {
 
@@ -122,12 +168,12 @@ pub struct VCToyFeature {
     pub smooth_enabled: bool,
     pub smooth_entries: Vec<f64>,
 
-    pub saved: bool,
+    //pub saved: bool,
 }
 
 impl VCToyFeature {
     fn new(osc_parameter: String, feature_index: u32, feature_type: VCFeatureType) -> Self {
-        VCToyFeature { feature_enabled: true, feature_type, osc_parameter, feature_index, feature_levels: LevelTweaks::default(), smooth_enabled: true, smooth_entries: Vec::new(), saved: true }
+        VCToyFeature { feature_enabled: true, feature_type, osc_parameter, feature_index, feature_levels: LevelTweaks::default(), smooth_enabled: true, smooth_entries: Vec::new() }
     }
 }
 
@@ -146,10 +192,6 @@ impl Eq for VCFeatureType {}
 #[derive(Serialize, Deserialize)]
 pub struct ToyConfig {
     pub toy_feature_map: HashMap<String, VCToyFeature>,
-}
-
-pub fn alter_toy(tme_send: &Sender<ToyManagementEvent>, altered_toy: VCToy) {
-    let _ = tme_send.send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered_toy)));
 }
 
 /*
