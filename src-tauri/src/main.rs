@@ -9,14 +9,14 @@ use parking_lot::Mutex;
 use tauri::{Manager, SystemTrayMenu};
 
 mod config;
-mod vcupdate;
+//mod vcupdate;
 mod handling;
 mod frontend_native;
 mod vcore;
 mod util;
 mod toyops;
-mod lovense;
-mod bluetooth;
+//mod lovense;
+//mod bluetooth;
 
 fn main() {
 
@@ -92,6 +92,7 @@ fn main() {
             frontend_native::vibecheck_start_bt_scan,
             frontend_native::vibecheck_stop_bt_scan,
             frontend_native::get_toys,
+            frontend_native::alter_toy,
             ]
     )
     .build(tauri::generate_context!())
