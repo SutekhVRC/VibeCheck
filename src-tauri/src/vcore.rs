@@ -8,25 +8,16 @@
 use std::collections::HashMap;
 use std::fs;
 use std::sync::Arc;
-//use std::process::{Child, Command};
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::thread;
-//use std::os::windowsess::CommandExt;
-use std::time::{Duration, Instant};
 use buttplug::client::ButtplugClient;
 use buttplug::util::in_process_client;
-
-use futures_util::__private::async_await;
 use serde::Serialize;
-use sysinfo::{ProcessExt, System, SystemExt};
 use tokio::runtime::Runtime;
-
 use tokio::task::JoinHandle;
-use parking_lot::{RwLock, Mutex, RawMutex};
-use parking_lot::MutexGuard;
-use crate::config::{load_toy_config, save_toy_config};
+use parking_lot::Mutex;
+use crate::config::save_toy_config;
 use crate::handling::HandlerErr;
-use crate::toyops::{VCFeatureType, VCToyFeature, FrontendOutVCToyModel, AlterVCToyModel};
+use crate::toyops::{FrontendOutVCToyModel, AlterVCToyModel};
 //use crate::vcupdate::{VibeCheckUpdater, VERSION};
 use crate::{
     util::{
