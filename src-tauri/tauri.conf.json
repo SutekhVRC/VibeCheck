@@ -19,6 +19,7 @@
     },
     "bundle": {
       "active": true,
+      "publisher": "SutekhVRC",
       "category": "Lifestyle",
       "copyright": "",
       "deb": {
