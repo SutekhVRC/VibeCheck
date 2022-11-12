@@ -6,7 +6,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "vibecheck",
+    "productName": "VibeCheck",
     "version": "0.2.0"
   },
   "tauri": {
@@ -19,7 +19,7 @@
     },
     "bundle": {
       "active": true,
-      "category": "VR Software",
+      "category": "Lifestyle",
       "copyright": "",
       "deb": {
         "depends": []
@@ -43,8 +43,8 @@
       "targets": "all",
       "windows": {
         "wix": {
-          "fragmentPaths": [""],
-          "componentRefs": [""]
+          "bannerPath": "wix/vibecheck-bmp-493x58.bmp",
+          "dialogImagePath": "wix/vibecheck-bmp-493x312.bmp"
         },
         "certificateThumbprint": null,
         "digestAlgorithm": "sha256",
