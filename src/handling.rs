@@ -1,6 +1,5 @@
 use buttplug::client::ButtplugClientDevice;
 use buttplug::client::ButtplugClientEvent;
-use buttplug::util::in_process_client;
 use buttplug::core::message::ActuatorType;
 use buttplug::client::ScalarCommand::ScalarMap;
 use buttplug::client::RotateCommand::RotateMap;
@@ -57,7 +56,7 @@ pub async fn client_event_handler(error_tx: Sender<VCError>, event_tx: Sender<Ev
 
     println!("[*] Initializing CEH..");
 
-    let client = in_process_client("VibeCheck", false).await;
+    let client = super::util::vc_toy_client_server_init("VibeCheck", false).await;
     let mut event_stream = client.event_stream();
     println!("[*] Connected to process");
 

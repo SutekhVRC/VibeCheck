@@ -340,8 +340,6 @@ impl VibeCheckGUI<'_> {
         self.tme_recv = Some(tme_recv_rx);
         self.tme_send = Some(tme_send_tx);
 
-        
-
         self.toy_management_h_thread = Some(self.async_rt.spawn(toy_management_handler(
             tme_recv_tx,
             tme_send_rx,
@@ -671,55 +669,8 @@ impl VibeCheckGUI<'_> {
                             });
                         }
                     }
-
-                        /*
-                        if !self.toy_editing.contains_key(&toy.0) {
-                            ui.horizontal_wrapped(|ui| {
-                                ui.label(RichText::new("Features").font(FontId::new(14., FontFamily::Monospace)));
-                                ui.with_layout(Layout::right_to_left(), |ui| {
-                                    if ui.button("Edit").clicked() {
-                                        self.toy_editing.insert(*toy.0, *toy.0);
-                                        return;
-                                    }
-                                });
-                            });
-                            ui.separator();
-                            // List toy features when not editing
-                            for feature in toy.1.param_feature_map.features {
-                                
-                            }
-                        } else {
-                            ui.horizontal_wrapped(|ui| {
-                                ui.label(RichText::new("Features"));
-                                ui.with_layout(Layout::right_to_left(), |ui| {
-                                    if ui.button("Save").clicked() {
-                                        if let Some(_) = self.toy_editing.remove(&toy.0) {
-                                            alter_toy(
-                                                self.tme_send.as_ref().unwrap(),
-                                                toy.1.clone(),
-                                            );
-                                            save_toy_config(
-                                                &toy.1.toy_name,
-                                                toy.1.param_feature_map.clone(),
-                                            );
-                                            return;
-                                        }
-                                    }
-                                });
-                            });
-                            ui.separator();
-
-                            // Edit parameters
-
-                            
-                        }*/
-                    //});
                 });
             });
-
-            //                ui.separator();
-
-            //});
             ui.add_space(1.5);
         }
     }

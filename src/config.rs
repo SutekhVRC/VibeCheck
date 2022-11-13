@@ -110,6 +110,7 @@ pub fn config_load() -> VibeCheckConfig {
 }
 
 pub fn load_toy_config(toy_name: &String) -> Option<FeatureParamMap> {
+
     let config_path = format!(
         "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}.json",
         get_user_home_dir(),
@@ -117,17 +118,20 @@ pub fn load_toy_config(toy_name: &String) -> Option<FeatureParamMap> {
     );
 
     if !file_exists(&config_path) {
+        // Config doesn't exist
         return None;
     } else {
-        let con = fs::read_to_string(config_path).unwrap();
-
-        let feature_param_map: FeatureParamMap = match serde_json::from_str(&con) {
-            Ok(fpm) => fpm,
-            Err(_) => {
-                return None;
-            }
-        };
-        return Some(feature_param_map);
+        // Try to read as 
+        if let Ok(con) = fs::read_to_string(config_path) {
+            let feature_param_map: FeatureParamMap = match serde_json::from_str(&con) {
+                Ok(fpm) => fpm,
+                Err(_) => {
+                    return None;
+                }
+            };
+            return Some(feature_param_map);
+        }
+        return None;
     }
 }
 
