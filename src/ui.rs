@@ -23,7 +23,6 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 //use std::os::windows::process::CommandExt;
 use std::time::{Duration, Instant};
-use sysinfo::{ProcessExt, System, SystemExt};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 
@@ -157,20 +156,6 @@ impl VibeCheckGUI<'_> {
         //visuals.widgets = widgets;
 
         cc.egui_ctx.set_visuals(visuals);
-
-        let sys = System::new_all();
-
-        let procs = sys.processes();
-        for proc in procs {
-            if proc.1.name() == "IntifaceCLI.exe" {
-                if !proc.1.kill() {
-                    println!("[!] Failed to kill IntifaceCLI. Shutting down..");
-                    std::process::exit(0);
-                } else {
-                    println!("[*] Sent intiface kill.");
-                }
-            }
-        }
 
         let minute_sync = Instant::now();
 

@@ -2,10 +2,14 @@ use std::net::Ipv4Addr;
 use std::path::Path;
 use std::io::Cursor;
 use buttplug::client::ButtplugClient;
-use buttplug::core::connector::ButtplugInProcessClientConnectorBuilder;
+use buttplug::core::connector::{ButtplugInProcessClientConnectorBuilder};
 use buttplug::server::ButtplugServerBuilder;
 use buttplug::server::device::hardware::communication::btleplug::BtlePlugCommunicationManagerBuilder;
 use buttplug::server::device::hardware::communication::lovense_connect_service::LovenseConnectServiceCommunicationManagerBuilder;
+use buttplug::server::device::hardware::communication::lovense_dongle::{
+    LovenseHIDDongleCommunicationManagerBuilder,
+    LovenseSerialDongleCommunicationManagerBuilder,
+};
 use buttplug::server::device::hardware::communication::xinput::XInputDeviceCommunicationManagerBuilder;
 use directories::BaseDirs;
 use image::io::Reader as IReader;
@@ -66,19 +70,12 @@ pub fn get_user_home_dir() -> String {
 
 pub async fn vc_toy_client_server_init(client_name: &str, allow_raw_messages: bool) -> ButtplugClient {
     
-    /*
-    #[cfg(feature = "lovense-dongle-manager")]
-    {
-      use crate::server::device::hardware::communication::lovense_dongle::{
-        LovenseHIDDongleCommunicationManagerBuilder,
-        LovenseSerialDongleCommunicationManagerBuilder,
-      };
-      server_builder.comm_manager(LovenseHIDDongleCommunicationManagerBuilder::default());
-      server_builder.comm_manager(LovenseSerialDongleCommunicationManagerBuilder::default());
-    }
-    */
-
     let mut server_builder = ButtplugServerBuilder::default();
+    server_builder.name("VibeCheck Toy Server");
+
+    server_builder.comm_manager(LovenseHIDDongleCommunicationManagerBuilder::default());
+    server_builder.comm_manager(LovenseSerialDongleCommunicationManagerBuilder::default());
+
     server_builder.comm_manager(BtlePlugCommunicationManagerBuilder::default());
     server_builder.comm_manager(LovenseConnectServiceCommunicationManagerBuilder::default());
     server_builder.comm_manager(XInputDeviceCommunicationManagerBuilder::default());
@@ -87,10 +84,8 @@ pub async fn vc_toy_client_server_init(client_name: &str, allow_raw_messages: bo
       server_builder.allow_raw_messages();
     }
     let server = server_builder.finish().unwrap();
-    let connector = ButtplugInProcessClientConnectorBuilder::default()
-      .server(server)
-      .finish();
+    let connector = ButtplugInProcessClientConnectorBuilder::default().server(server).finish();
     let client = ButtplugClient::new(client_name);
     client.connect(connector).await.unwrap();
     client
-  }
+}
