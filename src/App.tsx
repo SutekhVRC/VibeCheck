@@ -1,5 +1,11 @@
 import { invoke } from "@tauri-apps/api";
 import { useState } from "react";
+import { FeFeatureParamMap } from "./bindings/FeFeatureParamMap";
+import { FeLevelTweaks } from "./bindings/FeLevelTweaks";
+import { FeVCFeatureType } from "./bindings/FeVCFeatureType";
+import { FeVCToy } from "./bindings/FeVCToy";
+import { FeVCToyFeature } from "./bindings/FeVCToyFeature";
+
 import logo from "./assets/logo.png";
 import discordLogo from "./assets/discord-mark-black.svg";
 import githubLogo from "./assets/GitHub-Mark-120px-plus.png";
@@ -84,11 +90,11 @@ export default function App() {
     <>
       <div style={{ display: "flex", justifyContent: "center" }}>
         <img src={logo} style={{ maxHeight: "50px" }} />
-        Beta 0.1.7
+        Beta 0.2.0
         <img src={discordLogo} style={{ maxHeight: "50px" }} />
         <img src={githubLogo} style={{ maxHeight: "50px" }} />
       </div>
-      <h1 className="grad-text">Conneted toys</h1>
+      <h1 className="grad-text">Connected toys</h1>
       <div
         style={{
           display: "flex",

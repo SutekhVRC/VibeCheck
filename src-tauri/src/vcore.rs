@@ -17,7 +17,7 @@ use parking_lot::Mutex;
 use crate::bluetooth;
 use crate::config::save_toy_config;
 use crate::handling::HandlerErr;
-use crate::toyops::{FrontendOutVCToyModel, AlterVCToyModel};
+use crate::frontend_types::{FeVCToy, FeVCToyFeature};
 //use crate::vcupdate::{VibeCheckUpdater, VERSION};
 use crate::{
     util::{
@@ -459,9 +459,9 @@ pub struct FrontendVCToyModel {
 }
  */
 
-pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashMap<u32, FrontendOutVCToyModel>> {
+pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashMap<u32, FeVCToy>> {
     
-    let mut toys_out = HashMap::<u32, FrontendOutVCToyModel>::new();
+    let mut toys_out = HashMap::<u32, FeVCToy>::new();
 
     let toys_store = {
         let vc_lock = vc_state.0.lock();
@@ -470,17 +470,16 @@ pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashM
     println!("Got {} toys from lock", toys_store.len());
     for toy in toys_store {
 
-        let frontend_toy = FrontendOutVCToyModel {
-            toy_id: toy.1.toy_id,
-            toy_name: toy.1.toy_name.clone(),
-            battery_level: toy.1.battery_level,
-            toy_connected: toy.1.toy_connected,
-            //osc_params_list: toy.1.osc_params_list.clone(),
-            param_feature_map: toy.1.param_feature_map.clone(),
-            listening: toy.1.listening,
-        };
-
-        toys_out.insert(toy.0, frontend_toy);   
+        toys_out.insert(toy.0,
+            FeVCToy {
+                toy_id: toy.1.toy_id,
+                toy_name: toy.1.toy_name.clone(),
+                battery_level: toy.1.battery_level,
+                toy_connected: toy.1.toy_connected,
+                param_feature_map: toy.1.param_feature_map.to_fe(),
+                listening: toy.1.listening,
+            }
+        );
     }
 
     println!("Got {} toys!", toys_out.len());
@@ -498,27 +497,13 @@ pub enum ToyAlterError {
     TMESendFailure
 }
 
-pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, altered_feature: AlterVCToyModel) -> Result<(), ToyAlterError> {
+pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, altered_feature: FeVCToyFeature) -> Result<(), ToyAlterError> {
 
     let altered = {
         let mut vc_lock = vc_state.0.lock();
         if let Some(toy) = vc_lock.toys.get_mut(&toy_id) {
-            
-            let mut feature_found = false;
-            
-            toy.param_feature_map.features.iter_mut().for_each(|toy_feature| {
-                
-                if toy_feature.feature_index == altered_feature.feature_index {
-                    
-                    feature_found = true;
 
-                    toy_feature.feature_enabled = altered_feature.feature_enabled;
-                    toy_feature.osc_parameter = altered_feature.osc_parameter.clone();
-                    toy_feature.feature_levels = altered_feature.feature_levels;
-                    toy_feature.smooth_enabled = altered_feature.smooth_enabled;
-                }
-            });
-            if !feature_found {
+            if !toy.param_feature_map.from_fe(altered_feature) {
                 return Err(ToyAlterError::NoFeatureIndex);
             }
             toy.clone()

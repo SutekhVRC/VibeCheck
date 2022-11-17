@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use crate::{vcore::{self, ToyAlterError, ConnectionModes}, toyops::{FrontendOutVCToyModel, AlterVCToyModel}};
+use crate::{vcore::{self, ToyAlterError, ConnectionModes}, frontend_types::{FeVCToy, FeVCToyFeature}};
 
 /*
  * vibecheck_version
@@ -97,7 +97,7 @@ pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, bin
  * Return: Option<Vec<FrontendVCToyModel>>
  */
 #[tauri::command(async)]
-pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashMap<u32, FrontendOutVCToyModel>> {
+pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashMap<u32, FeVCToy>> {
     vcore::native_get_toys(vc_state)
 }
 
@@ -123,7 +123,7 @@ pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashM
  * Return: Result<Ok(()), Err(ToyAlterError)>
  */
 #[tauri::command(async)]
-pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, toy_feature: AlterVCToyModel) -> Result<(), ToyAlterError> {
+pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, toy_feature: FeVCToyFeature) -> Result<(), ToyAlterError> {
     vcore::native_alter_toy(vc_state, toy_id, toy_feature)
 }
 

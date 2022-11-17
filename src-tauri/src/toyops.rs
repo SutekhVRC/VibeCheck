@@ -1,30 +1,10 @@
 use buttplug::{core::message::{ActuatorType, ClientDeviceMessageAttributes}, client::ButtplugClientDevice};
 use serde::{Serialize, Deserialize};
+use ts_rs::TS;
 use core::fmt;
 use std::{collections::HashMap, sync::Arc};
 
-use crate::config::save_toy_config;
-
-#[derive(Serialize)]
-pub struct FrontendOutVCToyModel {
-    pub toy_id: u32,
-    pub toy_name: String,
-    pub battery_level: f64,
-    pub toy_connected: bool,
-    //pub osc_params_list: Vec<String>,
-    pub param_feature_map: FeatureParamMap,
-    pub listening: bool,
-}
-
-// Make type for passing in information to the feature map
-#[derive(Deserialize)]
-pub struct AlterVCToyModel {
-    pub feature_enabled: bool,
-    pub osc_parameter: String,
-    pub feature_index: u32,
-    pub feature_levels: LevelTweaks,
-    pub smooth_enabled: bool,
-}
+use crate::{config::save_toy_config, frontend_types::{FeVCToyFeature, FeVCFeatureType, FeLevelTweaks, FeFeatureParamMap}};
 
 #[derive(Clone, Debug)]
 pub struct VCToy {
@@ -152,7 +132,7 @@ impl VCToy {
  */
 
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct VCToyFeature {
 
     pub feature_enabled: bool,
@@ -175,9 +155,19 @@ impl VCToyFeature {
     fn new(osc_parameter: String, feature_index: u32, feature_type: VCFeatureType) -> Self {
         VCToyFeature { feature_enabled: true, feature_type, osc_parameter, feature_index, feature_levels: LevelTweaks::default(), smooth_enabled: true, smooth_entries: Vec::new() }
     }
+
+    pub fn from_fe(&mut self, fe_feature: FeVCToyFeature) {
+        self.feature_enabled = fe_feature.feature_enabled;
+        // Not including feature type because the feature type is decided by the Server Core not the frontend user
+        // we don't want to allow users to mutate feature types as it could break / make the feature unuseable until restart
+        //self.feature_type.from_fe(fe_feature.feature_type);
+        self.osc_parameter = fe_feature.osc_parameter;
+        self.feature_levels.from_fe(fe_feature.feature_levels);
+        self.smooth_enabled = fe_feature.smooth_enabled;
+    }
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, TS)]
 pub enum VCFeatureType {
     Vibrator,
     Rotator,
@@ -188,6 +178,33 @@ pub enum VCFeatureType {
     Position,
 }
 impl Eq for VCFeatureType {}
+
+impl VCFeatureType {
+    #[allow(unused)]// Until need to mutate feature type which will probably never happen
+    pub fn from_fe(&mut self, fe_feature_type: FeVCFeatureType) {
+        match fe_feature_type {
+            FeVCFeatureType::Constrict => *self = Self::Constrict,
+            FeVCFeatureType::Inflate => *self = Self::Inflate,
+            FeVCFeatureType::Linear => *self = Self::Linear,
+            FeVCFeatureType::Oscillate => *self = Self::Oscillate,
+            FeVCFeatureType::Position => *self = Self::Position,
+            FeVCFeatureType::Rotator => *self = Self::Rotator,
+            FeVCFeatureType::Vibrator => *self = Self::Vibrator,
+        }
+    }
+
+    fn to_fe(&self) -> FeVCFeatureType {
+        match self {
+            VCFeatureType::Constrict => FeVCFeatureType::Constrict,
+            VCFeatureType::Inflate => FeVCFeatureType::Inflate,
+            VCFeatureType::Linear => FeVCFeatureType::Linear,
+            VCFeatureType::Oscillate => FeVCFeatureType::Oscillate,
+            VCFeatureType::Position => FeVCFeatureType::Position,
+            VCFeatureType::Rotator => FeVCFeatureType::Rotator,
+            VCFeatureType::Vibrator => FeVCFeatureType::Vibrator,
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct ToyConfig {
@@ -200,7 +217,7 @@ pub struct ToyConfig {
 */
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Copy)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Copy, TS)]
 pub struct LevelTweaks {
     pub minimum_level: f64,
     pub maximum_level: f64,
@@ -211,6 +228,24 @@ pub struct LevelTweaks {
 impl Default for LevelTweaks {
     fn default() -> Self {
         LevelTweaks { minimum_level: 0., maximum_level: 100., idle_level: 0., smooth_rate: 2.0 }
+    }
+}
+
+impl LevelTweaks {
+    pub fn from_fe(&mut self, fe_lt: FeLevelTweaks) {
+        self.idle_level = fe_lt.idle_level;
+        self.maximum_level = fe_lt.maximum_level;
+        self.minimum_level = fe_lt.minimum_level;
+        self.smooth_rate = fe_lt.smooth_rate;
+    }
+
+    pub fn to_fe(&self) -> FeLevelTweaks {
+        FeLevelTweaks {
+            minimum_level: self.minimum_level,
+            maximum_level: self.maximum_level,
+            idle_level: self.idle_level,
+            smooth_rate: self.smooth_rate,
+        }
     }
 }
 
@@ -235,7 +270,7 @@ pub enum Linears {
     Custom(Vec<(String, u32, LevelTweaks)>),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct FeatureParamMap {
 
     // Vec<(Feature, edit_state_bool)
@@ -276,5 +311,36 @@ impl FeatureParamMap {
         } else {
             return Some(parsed_features);
         }
+    }
+
+    pub fn from_fe(&mut self, fe_feature: FeVCToyFeature) -> bool {
+
+        let mut success = false;
+        self.features.iter_mut().for_each(|f| {
+            if f.feature_index == fe_feature.feature_index {
+                f.from_fe(fe_feature.clone());
+                success = true;
+            }
+        });
+        success
+    }
+
+    pub fn to_fe(&self) -> FeFeatureParamMap {
+
+        let mut fe_features = Vec::new();
+
+        self.features.iter().for_each(|f| {
+            fe_features.push(
+            FeVCToyFeature {
+                feature_enabled: f.feature_enabled,
+                feature_type: f.feature_type.to_fe(),
+                osc_parameter: f.osc_parameter.clone(),
+                feature_index: f.feature_index,
+                feature_levels: f.feature_levels.to_fe(),
+                smooth_enabled: f.smooth_enabled,
+            });
+        });
+
+        FeFeatureParamMap { features: fe_features }
     }
 }

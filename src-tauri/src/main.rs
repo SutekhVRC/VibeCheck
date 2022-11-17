@@ -17,6 +17,7 @@ mod util;
 mod toyops;
 //mod lovense;
 mod bluetooth;
+mod frontend_types;
 
 fn main() {
 
