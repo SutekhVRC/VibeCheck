@@ -4,3 +4,10 @@
   padding: 2rem;
   text-align: center;
 }
+
+.grad-text {
+  background: linear-gradient(rgb(123, 235, 255), rgb(247, 131, 221));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

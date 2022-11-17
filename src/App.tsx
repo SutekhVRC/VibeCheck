@@ -1,5 +1,8 @@
 import { invoke } from "@tauri-apps/api";
 import { useState } from "react";
+import logo from "./assets/logo.png";
+import discordLogo from "./assets/discord-mark-black.svg";
+import githubLogo from "./assets/GitHub-Mark-120px-plus.png";
 import "./App.css";
 
 type FeatureLevels = {
@@ -25,7 +28,7 @@ type ToyFeatureMap = {
 
 type VibeCheckToy = {
   toy_name: string;
-  battery_lvel: number;
+  battery_level: number;
   param_feature_map: ToyFeatureMapWrap;
   toy_connected: boolean;
   toy_id: number;
@@ -35,11 +38,19 @@ type GetToysResponse = null | {
   [key: number]: VibeCheckToy;
 };
 
+const percentFormat = new Intl.NumberFormat("en-US", {
+  style: "percent",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
 export default function App() {
-  const [enabled, setEnabled] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [toys, setToys] = useState<VibeCheckToy[]>([]);
 
   async function getToys() {
+    // Does this automatically enable?
     await invoke<GetToysResponse>("get_toys", {}).then((response) => {
       if (!response) return;
       const toys = Object.values(response).map((toy) => toy);
@@ -47,72 +58,73 @@ export default function App() {
     });
   }
 
-  async function startScan() {
-    await invoke("vibecheck_start_bt_scan", {});
+  async function toggleScan() {
+    // Maybe need catch if frontend state becomes unlinked?
+    if (isScanning) {
+      await invoke("vibecheck_stop_bt_scan", {}).then(() =>
+        setIsScanning(false)
+      );
+    } else {
+      await invoke("vibecheck_start_bt_scan", {}).then(() =>
+        setIsScanning(true)
+      );
+    }
   }
 
-  async function stopScan() {
-    await invoke("vibecheck_stop_bt_scan", {});
-  }
-
-  async function enable() {
-    if (enabled) return;
-    await invoke("vibecheck_enable", {}).then(() => setEnabled(true));
-  }
-
-  async function disable() {
-    if (!enabled) return;
-    await invoke("vibecheck_disable", {}).then(() => setEnabled(false));
+  async function toggleIsEnabled() {
+    // Maybe need catch if frontend state becomes unlinked?
+    if (isEnabled) {
+      await invoke("vibecheck_disable", {}).then(() => setIsEnabled(false));
+    } else {
+      await invoke("vibecheck_enable", {}).then(() => setIsEnabled(true));
+    }
   }
 
   return (
-    <div>
-      <h1> Toys </h1>
-      <div>
+    <>
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <img src={logo} style={{ maxHeight: "50px" }} />
+        Beta 0.1.7
+        <img src={discordLogo} style={{ maxHeight: "50px" }} />
+        <img src={githubLogo} style={{ maxHeight: "50px" }} />
+      </div>
+      <h1 className="grad-text">Conneted toys</h1>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          backgroundColor: "rgb(25,25,25)",
+        }}
+      >
         {toys.map((toy) => (
-          <li key={toy.toy_id}>{toy.toy_name}</li>
+          <div
+            key={toy.toy_id}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              backgroundColor: "rgb(50,50,50)",
+              minWidth: "400px",
+            }}
+          >
+            <div style={{ textDecoration: "underline" }}>{toy.toy_name}</div>
+            <div style={{ color: "rgb(0,255,0)" }}>
+              {percentFormat.format(toy.battery_level)}
+            </div>
+          </div>
         ))}
       </div>
-
       <div>
-        <div>
-          <button type="button" onClick={() => enable()}>
-            Enable VibeCheck
-          </button>
-        </div>
+        <button type="button" onClick={() => getToys()}>
+          Get Toys
+        </button>
+        <button type="button" onClick={() => toggleScan()}>
+          {isEnabled ? "Stop Scanning" : "Start Scanning"}
+        </button>
+        <button type="button" onClick={() => toggleIsEnabled()}>
+          {isEnabled ? "Disable" : "Enable"}
+        </button>
       </div>
-
-      <div>
-        <div>
-          <button type="button" onClick={() => disable()}>
-            Disable VibeCheck
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <div>
-          <button type="button" onClick={() => startScan()}>
-            Start Scanning
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <div>
-          <button type="button" onClick={() => stopScan()}>
-            Stop Scanning
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <div>
-          <button type="button" onClick={() => getToys()}>
-            Get Toys
-          </button>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
