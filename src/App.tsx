@@ -1,50 +1,49 @@
-import { invoke } from '@tauri-apps/api'
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import './App.css'
-
+import { invoke } from "@tauri-apps/api";
+import { useState } from "react";
+import "./App.css";
 
 type FeatureLevels = {
   idle_level: number;
-  maximumLevel: number;
-  minimumLevel: number;
-  smoothRate: number;
-}
+  maximum_level: number;
+  minimum_level: number;
+  smooth_rate: number;
+};
 
 type ToyFeatureMapWrap = {
   features: ToyFeatureMap[];
-}
+};
 
 type ToyFeatureMap = {
-  featureEnabled: boolean;
-  featureIndex: number;
-  featureLevels: FeatureLevels;
-  featureType: string;
-  oscParameter: string;
-  smoothEnabled: boolean;
-  smoothEntries: number[];
-}
+  feature_enabled: boolean;
+  feature_index: number;
+  feature_levels: FeatureLevels;
+  feature_type: string;
+  osc_parameter: string;
+  smooth_enabled: boolean;
+  smooth_entries: number[];
+};
 
 type VibeCheckToy = {
-  toyName: string;
-  batteryLevel: number;
-  featureMap: ToyFeatureMapWrap;
-  toyConnected: boolean;
-  toyId: number;
-}
+  toy_name: string;
+  battery_lvel: number;
+  param_feature_map: ToyFeatureMapWrap;
+  toy_connected: boolean;
+  toy_id: number;
+};
 
-function App() {
-  const [count, setCount] = useState(0)
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+type GetToysResponse = null | {
+  [key: number]: VibeCheckToy;
+};
+
+export default function App() {
+  const [enabled, setEnabled] = useState(false);
   const [toys, setToys] = useState<VibeCheckToy[]>([]);
-  //var toys = [];
 
   async function getToys() {
-
-    await invoke("get_toys", {}).then((response) => {
-      setToys(response);
-      //console.log(response);
+    await invoke<GetToysResponse>("get_toys", {}).then((response) => {
+      if (!response) return;
+      const toys = Object.values(response).map((toy) => toy);
+      setToys(toys);
     });
   }
 
@@ -57,70 +56,57 @@ function App() {
   }
 
   async function enable() {
-    await invoke("vibecheck_enable", {});
+    if (enabled) return;
+    await invoke("vibecheck_enable", {}).then(() => setEnabled(true));
   }
 
   async function disable() {
-    await invoke("vibecheck_disable", {});
+    if (!enabled) return;
+    await invoke("vibecheck_disable", {}).then(() => setEnabled(false));
   }
 
-
-  function listToys() {
-    if (!toys) return;
-    let names = [];
-    for (const [k, v] of Object.entries(toys)) {
-      //console.log(v);
-      names.push(<li key={v.toyId}>{v.toy_name}</li>);
-    }
-    return names;
-  }
   return (
-
-    <div className="container">
-
+    <div>
       <h1> Toys </h1>
-      <div className="row">
-      <ul>
-          {listToys()}
-        </ul>
+      <div>
+        {toys.map((toy) => (
+          <li key={toy.toy_id}>{toy.toy_name}</li>
+        ))}
       </div>
 
-    <div className="row">
       <div>
-        <button type="button" onClick={() => enable()}>
-          Enable VibeCheck
-        </button>
-    </div>
-  </div>
+        <div>
+          <button type="button" onClick={() => enable()}>
+            Enable VibeCheck
+          </button>
+        </div>
+      </div>
 
-  
-      <div className="row">
+      <div>
         <div>
           <button type="button" onClick={() => disable()}>
             Disable VibeCheck
           </button>
+        </div>
       </div>
-    </div>
 
-  
-      <div className="row">
+      <div>
         <div>
           <button type="button" onClick={() => startScan()}>
             Start Scanning
           </button>
+        </div>
       </div>
-    </div>
 
-
-      <div className="row">
+      <div>
         <div>
           <button type="button" onClick={() => stopScan()}>
             Stop Scanning
           </button>
         </div>
       </div>
-      
-      <div className="row">
+
+      <div>
         <div>
           <button type="button" onClick={() => getToys()}>
             Get Toys
@@ -129,29 +115,4 @@ function App() {
       </div>
     </div>
   );
-
-/*
-  return (
-    <div className="App">
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </div>
-  )*/
 }
-
-export default App
