@@ -1,24 +1,22 @@
 {
-  "name": "vc-boilerplate",
+  "name": "vibecheck",
   "private": true,
   "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "dev": "next dev -p 1420",
-    "build": "next build && next export -o dist",
-    "tauri": "tauri"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@tauri-apps/api": "^1.1.0",
-    "next": "^12.2.5",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "yarn": "^1.22.19"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1.1.0",
-    "@types/node": "^18.7.11",
-    "@types/react": "^18.0.17",
-    "@types/react-dom": "^18.0.6",
-    "typescript": "^4.7.4"
+    "@types/react": "^18.0.24",
+    "@types/react-dom": "^18.0.8",
+    "@vitejs/plugin-react": "^2.2.0",
+    "typescript": "^4.6.4",
+    "vite": "^3.2.3"
   }
 }

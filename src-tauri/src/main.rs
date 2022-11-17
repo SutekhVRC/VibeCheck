@@ -16,9 +16,11 @@ mod vcore;
 mod util;
 mod toyops;
 //mod lovense;
-//mod bluetooth;
+mod bluetooth;
 
 fn main() {
+
+    //tracing_subscriber::fmt::init();
 
     let vibecheck_state_pointer = Arc::new(
         Mutex::new(
@@ -87,6 +89,7 @@ fn main() {
             frontend_native::vibecheck_stop_bt_scan,
             frontend_native::get_toys,
             frontend_native::alter_toy,
+            frontend_native::get_connection_modes,
             ]
     )
     .build(tauri::generate_context!())

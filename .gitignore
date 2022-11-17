@@ -7,12 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-/node_modules/
+node_modules
 dist
 dist-ssr
 *.local
-.next
-/target/
 
 # Editor directories and files
 .vscode/*
@@ -24,4 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-package-lock.json

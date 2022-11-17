@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use crate::{vcore::{self, ToyAlterError}, toyops::{FrontendOutVCToyModel, AlterVCToyModel}};
+use crate::{vcore::{self, ToyAlterError, ConnectionModes}, toyops::{FrontendOutVCToyModel, AlterVCToyModel}};
 
 /*
  * vibecheck_version
@@ -125,4 +125,10 @@ pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashM
 #[tauri::command(async)]
 pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, toy_feature: AlterVCToyModel) -> Result<(), ToyAlterError> {
     vcore::native_alter_toy(vc_state, toy_id, toy_feature)
+}
+
+#[tauri::command(async)]
+pub fn get_connection_modes(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> ConnectionModes {
+    let vc_lock = vc_state.0.lock();
+    vc_lock.connection_modes.clone()
 }

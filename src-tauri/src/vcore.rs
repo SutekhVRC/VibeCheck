@@ -10,11 +10,11 @@ use std::fs;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
-use buttplug::util::in_process_client;
 use serde::Serialize;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use parking_lot::Mutex;
+use crate::bluetooth;
 use crate::config::save_toy_config;
 use crate::handling::HandlerErr;
 use crate::toyops::{FrontendOutVCToyModel, AlterVCToyModel};
@@ -45,11 +45,19 @@ fn debug_out(s: &'static str) {
     println!("{}", s);
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct ConnectionModes {
+    btle_enabled: bool,
+    lc_enabled: bool,
+}
+
 pub struct VCStateMutex(pub Arc<Mutex<VibeCheckState>>);
 
 pub struct VibeCheckState {
 
     pub config: VibeCheckConfig,
+
+    pub connection_modes: ConnectionModes,
 
     pub bp_client: ButtplugClient,
 
@@ -95,10 +103,12 @@ impl VibeCheckState {
         // Create async runtime for toy handling routines
         let async_rt = Runtime::new().unwrap();
 
+        let mut connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
+
         let bp_client = async_rt.block_on(async move {
-            in_process_client("VibeCheck", false).await
+            bluetooth::vc_toy_client_server_init("VibeCheck", &mut connection_modes.btle_enabled, false).await
         });
-        println!("[*] Connected to process");
+        println!("[*] Buttplug Client Initialized.");
         let event_stream = bp_client.event_stream();
 
 
@@ -129,6 +139,8 @@ impl VibeCheckState {
 
         Self {
             config,
+
+            connection_modes,
 
             bp_client,
 
