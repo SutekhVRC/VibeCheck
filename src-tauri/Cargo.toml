@@ -9,7 +9,7 @@ rust-version = "1.57"
 tauri-build = { version = "1.2.0", features = [] }
 
 [dependencies]
-buttplug = {path = "../../../../../../../buttplug-6.2.0-sutekhvrc-mod"}
+buttplug = "6.2.0"
 tokio = {version = "1.17.0", features = ["rt-multi-thread", "sync", "macros", "io-std", "time"] }
 futures-util = "0.3.21"
 tracing-subscriber = "0.3.9"
