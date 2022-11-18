@@ -4,8 +4,8 @@ import { FeVCToy } from "../src-tauri/bindings/FeVCToy";
 
 import logo from "./assets/logo.png";
 import discordLogo from "./assets/discord-mark-black.svg";
-import githubLogo from "./assets/GitHub-Mark-120px-plus.png";
 import "./App.css";
+import "font-awesome/css/font-awesome.min.css";
 
 const percentFormat = new Intl.NumberFormat("en-US", {
   style: "percent",
@@ -55,9 +55,8 @@ export default function App() {
         <img src={logo} style={{ maxHeight: "50px" }} />
         Beta 0.2.0
         <img src={discordLogo} style={{ maxHeight: "50px" }} />
-        <img src={githubLogo} style={{ maxHeight: "50px" }} />
+        <i className="fa fa-github grad-icon" />
       </div>
-      <h1 className="grad-text">Connected toys</h1>
       <div
         style={{
           display: "flex",
@@ -66,6 +65,7 @@ export default function App() {
           backgroundColor: "rgb(25,25,25)",
         }}
       >
+        <h1 className="grad-text">Connected toys</h1>
         {toys.map((toy) => (
           <div
             key={toy.toy_id}
@@ -82,17 +82,14 @@ export default function App() {
             </div>
           </div>
         ))}
-      </div>
-      <div>
-        <button type="button" onClick={() => getToys()}>
-          Get Toys
-        </button>
-        <button type="button" onClick={() => toggleScan()}>
-          {isEnabled ? "Stop Scanning" : "Start Scanning"}
-        </button>
-        <button type="button" onClick={() => toggleIsEnabled()}>
-          {isEnabled ? "Disable" : "Enable"}
-        </button>
+        <div style={{ display: "flex", justifyContent: "space-around" }}>
+          <i className="fa fa-gear grad-icon" onClick={() => getToys()} />
+          <i className="fa fa-wifi grad-icon" onClick={() => toggleScan()} />
+          <i
+            className="fa fa-play grad-icon"
+            onClick={() => toggleIsEnabled()}
+          />
+        </div>
       </div>
     </>
   );

@@ -11,3 +11,11 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+.grad-icon {
+  font-size: 3rem !important;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  background-image: linear-gradient(rgb(123, 235, 255), rgb(247, 131, 221));
+}
