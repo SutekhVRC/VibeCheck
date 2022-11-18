@@ -24,7 +24,7 @@ pub fn load_icon(bytes: Vec<u8>) -> eframe::IconData {
         height: icon_height,
     }
 }
-*/
+
 
 pub fn check_valid_port(port: &String) -> bool {
     if let Ok(p) = port.parse::<u16>() {
@@ -42,7 +42,7 @@ pub fn check_valid_port(port: &String) -> bool {
 pub fn check_valid_ipv4(ip: &String) -> bool {
     !ip.parse::<Ipv4Addr>().is_err()
 }
-
+*/
 pub fn path_exists(p: &String) -> bool {
     Path::new(&p).is_dir()
 }

@@ -5,6 +5,8 @@ import { FeLevelTweaks } from "./bindings/FeLevelTweaks";
 import { FeVCFeatureType } from "./bindings/FeVCFeatureType";
 import { FeVCToy } from "./bindings/FeVCToy";
 import { FeVCToyFeature } from "./bindings/FeVCToyFeature";
+import { FeVibeCheckConfig } from "./bindings/FeVibeCheckConfig";
+import { FeOSCNetworking } from "./bindings/FeOSCNetworking";
 
 import logo from "./assets/logo.png";
 import discordLogo from "./assets/discord-mark-black.svg";

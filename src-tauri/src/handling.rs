@@ -494,7 +494,7 @@ pub async fn toy_management_handler(
 */
 fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: Sender<ToyManagementEvent>, vc_config: OSCNetworking) {
 
-    let bind_sock = match UdpSocket::bind(format!("{}:{}", vc_config.bind.0, vc_config.bind.1)) {
+    let bind_sock = match UdpSocket::bind(format!("{}:{}", vc_config.bind.ip(), vc_config.bind.port())) {
         Ok(s) => {
             let _ = tme_send.send(ToyManagementEvent::Sig(TmSig::Listening));
             s

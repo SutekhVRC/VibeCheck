@@ -7,6 +7,8 @@
 
 use std::collections::HashMap;
 use std::fs;
+use std::net::SocketAddrV4;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
@@ -17,14 +19,11 @@ use parking_lot::Mutex;
 use crate::bluetooth;
 use crate::config::save_toy_config;
 use crate::handling::HandlerErr;
-use crate::frontend_types::{FeVCToy, FeVCToyFeature};
+use crate::frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig, FeOSCNetworking};
+use crate::vcerror::{backend, frontend};
 //use crate::vcupdate::{VibeCheckUpdater, VERSION};
 use crate::{
-    util::{
-        check_valid_ipv4,
-        check_valid_port,
-        get_user_home_dir
-    },
+    util::get_user_home_dir,
     handling::{EventSig, client_event_handler, toy_management_handler},
     config::{
         VibeCheckConfig,
@@ -226,11 +225,11 @@ fn update_vibecheck(&mut self) {
     std::process::exit(0);
 }*/
 
-pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), &'static str> {
+pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
 
     let mut vc_lock = vc_state.0.lock();
     if let RunningState::Stopped = vc_lock.running {
-        return Err("Already disabled.");
+        return Err(frontend::VCFeError::DisableFailure);
     }
 
     vc_lock.tme_send
@@ -243,12 +242,12 @@ pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) 
     Ok(())
 }
 
-pub fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), &'static str> {
+pub fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
     // Send Start listening signal
 
     let mut vc_lock = vc_state.0.lock();
     if let RunningState::Running = vc_lock.running {
-        return Err("Already enabled.");
+        return Err(frontend::VCFeError::EnableFailure);
     }
 
     vc_lock.tme_send.send(ToyManagementEvent::Sig(TmSig::StartListening(vc_lock.config.networking.clone()))).unwrap();
@@ -271,28 +270,28 @@ pub fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -> Resu
                             vc_lock.running = RunningState::Error("Bind Error! Set a different bind port in Settings!".to_string());
                             
                             debug_out("Bind Error in TME sig.");
-                            return Err("Bind Error! Set a different bind port in Settings!");
+                            return Err(frontend::VCFeError::EnableFailure);
                         },
                         _ => {//Did not get the correct signal oops
                             debug_out("Got incorrect TME signal.");
-                            Err("Got incorrect TME signal.")
+                            Err(frontend::VCFeError::EnableFailure)
                         }, 
                     }
                 },
                 _ => {
                     debug_out("Got ToyUpdate in vc_enable().");
-                    Err("Got ToyUpdate in vc_enable().")
+                    Err(frontend::VCFeError::EnableFailure)
                 },// Got unexpected Sig
             }
         },
         Err(_e) => {
             debug_out("Failed to recv from TME receiver.");
-            Err("Failed to recv from TME receiver.")
+            Err(frontend::VCFeError::EnableFailure)
         },// Recv failed
     }// tme recv
 }
 
-pub async fn native_vibecheck_start_bt_scan(vc_state: tauri::State<'_, VCStateMutex>) {
+pub async fn native_vibecheck_start_bt_scan(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError>{
     let vc_lock = vc_state.0.lock();
     // Start scanning for toys
     if let Err(e) = vc_lock.bp_client.start_scanning().await {
@@ -301,21 +300,23 @@ pub async fn native_vibecheck_start_bt_scan(vc_state: tauri::State<'_, VCStateMu
             msg: format!("Failed to scan for bluetooth devices. {}", e),
         }));
         println!("Failed to scan.");
-        return;
+        return Err(frontend::VCFeError::StartScanFailure(e.to_string()));
     }
+    Ok(())
 }
 
-pub async fn native_vibecheck_stop_bt_scan(vc_state: tauri::State<'_, VCStateMutex>) {
+pub async fn native_vibecheck_stop_bt_scan(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
     let vc_lock = vc_state.0.lock();
-    // Start scanning for toys
+    // Stop scanning for toys
     if let Err(e) = vc_lock.bp_client.stop_scanning().await {
         let _ = vc_lock.error_tx.send(VCError::HandlingErr(HandlerErr {
             id: -2,
             msg: format!("Failed to stop scan for bluetooth devices. {}", e),
         }));
         println!("Failed to stop scan.");
-        return;
+        return Err(frontend::VCFeError::StopScanFailure(e.to_string()));
     }
+    Ok(())
 }
 
 /*
@@ -356,77 +357,77 @@ fn refresh_lovense_connect(mut vc_lock: MutexGuard<VibeCheckState>) {
 }
 */
 
-fn chk_valid_config_inputs(host: &String, port: &String) -> Result<(), VibeCheckConfigError> {
+/*
+fn chk_valid_config_inputs(host: &String, port: &String) -> Result<(), backend::VibeCheckConfigError> {
     if !check_valid_ipv4(&host) {
-        return Err(VibeCheckConfigError::InvalidHost);
+        return Err(backend::VibeCheckConfigError::InvalidHost);
     }
 
     if !check_valid_port(&port) {
-        return Err(VibeCheckConfigError::InvalidPort);
+        return Err(backend::VibeCheckConfigError::InvalidPort);
     }
 
     Ok(())
 }
+*/
 
-pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> HashMap<&str, String> {
+pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> FeVibeCheckConfig {
 
     let config = {
         let vc_lock = vc_state.0.lock();
         vc_lock.config.clone()
     };
 
-    let mut map = HashMap::new();
-    map.insert("host", config.networking.bind.0);
-    map.insert("port", config.networking.bind.1);
-
-    return map;
+    FeVibeCheckConfig {
+        networking: FeOSCNetworking {
+            bind: config.networking.bind.to_string(),
+            remote: config.networking.remote.to_string(),
+        }
+    }
+    
 }
 
-#[derive(serde::Serialize)]
-pub enum VibeCheckConfigError {
-    InvalidHost,
-    InvalidPort,
-    SerializeFailure,
-    WriteFailure,
-}
 
-pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, bind: HashMap<String, String>) -> Result<(), VibeCheckConfigError> {
 
-    if !bind.contains_key("host") {
-        println!("[!] host key does not exist!");
-        return Err(VibeCheckConfigError::InvalidHost);
-    }
-    if !bind.contains_key("port") {
-        println!("[!] port key does not exist!");
-        return Err(VibeCheckConfigError::InvalidPort);
-    }
+pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_vc_config: FeVibeCheckConfig) -> Result<(), frontend::VCFeError> {
 
-    let host = bind.get("host").unwrap();
-    let port = bind.get("port").unwrap();
+    let bind = match SocketAddrV4::from_str(&fe_vc_config.networking.bind) {
+        Ok(sa) => sa,
+        Err(_e) => return Err(frontend::VCFeError::InvalidBindEndpoint),
+    };
 
-    match chk_valid_config_inputs(&host, &port) {
-        Ok(()) => println!("[+] Config OK!"),
-        Err(e) => return Err(e),
-    }
+    let remote = match SocketAddrV4::from_str(&fe_vc_config.networking.remote) {
+        Ok(sa) => sa,
+        Err(_e) => return Err(frontend::VCFeError::InvalidRemoteEndpoint),
+    };
 
     let config = {
         let mut vc_lock = vc_state.0.lock();
-        vc_lock.config.networking.bind.0 = host.to_owned();
-        vc_lock.config.networking.bind.1 = port.to_owned();
+        vc_lock.config.networking.bind = bind;
+        vc_lock.config.networking.remote = remote;
         vc_lock.config.clone()
     };
 
-    save_config(config)
+    match save_config(config) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            match e {
+                backend::VibeCheckConfigError::SerializeFailure => Err(frontend::VCFeError::SerializeFailure),
+                backend::VibeCheckConfigError::WriteFailure => Err(frontend::VCFeError::WriteFailure),
+                _ => {return Ok(());/* This branch should never be hit */},
+            }
+        }
+    }
 
 }
 
-fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), VibeCheckConfigError> {
+fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::VibeCheckConfigError> {
 
     let json_config_str = match serde_json::to_string(&config) {
         Ok(s) => s,
         Err(_e) => {
             println!("[!] Failed to serialize VibeCheckConfig into a String.");
-            return Err(VibeCheckConfigError::SerializeFailure);
+            return Err(backend::VibeCheckConfigError::SerializeFailure);
         }
     };
 
@@ -440,7 +441,7 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), VibeCheckCo
         Ok(()) => {},
         Err(_e) => {
             println!("[!] Failure writing VibeCheck config.");
-            return Err(VibeCheckConfigError::WriteFailure);
+            return Err(backend::VibeCheckConfigError::WriteFailure);
         }
     }
     Ok(())

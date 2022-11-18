@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use crate::{vcore::{self, ToyAlterError, ConnectionModes}, frontend_types::{FeVCToy, FeVCToyFeature}};
+use crate::{vcore::{self, ToyAlterError, ConnectionModes}, frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig}, vcerror::frontend};
 
 /*
  * vibecheck_version
@@ -15,18 +15,18 @@ use crate::{vcore::{self, ToyAlterError, ConnectionModes}, frontend_types::{FeVC
  * Return: String
  */
 #[tauri::command]
-pub fn vibecheck_version() -> String {
-    "0.2.0-beta-windows".to_string()
+pub fn vibecheck_version() -> &'static str {
+    "0.2.0-beta-windows"
 }
 
 /*
  * vibecheck_enable
  * Enables vibecheck handling runtime
  * Args: VibeCheck State
- * Return: Result<Ok, Err(str)>
+ * Return: Result<Ok, Err(VCFeError)>
  */
 #[tauri::command(async)]
-pub fn vibecheck_enable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), &'static str> {
+pub fn vibecheck_enable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
     vcore::native_vibecheck_enable(vc_state)
 }
 
@@ -34,10 +34,10 @@ pub fn vibecheck_enable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Resu
  * vibecheck_disable
  * Disables vibecheck handling runtime
  * Args: VibeCheck State
- * Return: Result<Ok, Err(str)>
+ * Return: Result<Ok, Err(VCFeError)>
  */
 #[tauri::command]
-pub fn vibecheck_disable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), &'static str> {
+pub fn vibecheck_disable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
     tauri::async_runtime::block_on(async move {vcore::native_vibecheck_disable(vc_state).await})
 }
 
@@ -48,7 +48,7 @@ pub fn vibecheck_disable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Res
  * Return: None
  */
 #[tauri::command]
-pub fn vibecheck_start_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) {
+pub fn vibecheck_start_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
     tauri::async_runtime::block_on(async move {vcore::native_vibecheck_start_bt_scan(vc_state).await})
 }
 
@@ -59,7 +59,7 @@ pub fn vibecheck_start_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) 
  * Return: None
  */
 #[tauri::command]
-pub fn vibecheck_stop_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) {
+pub fn vibecheck_stop_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
     tauri::async_runtime::block_on(async move {vcore::native_vibecheck_stop_bt_scan(vc_state).await})
 }
 
@@ -73,7 +73,7 @@ pub fn vibecheck_stop_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) {
  * port: string
  */
 #[tauri::command(async)]
-pub fn get_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> HashMap<&str, String> {
+pub fn get_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> FeVibeCheckConfig {
     vcore::native_get_vibecheck_config(vc_state)
 }
 
@@ -86,8 +86,8 @@ pub fn get_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> 
  * bind : HashMap<host, port>
  */
 #[tauri::command(async)]
-pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, bind: HashMap<String, String>) -> Result<(), vcore::VibeCheckConfigError>{
-    vcore::native_set_vibecheck_config(vc_state, bind)
+pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, fe_vc_config: FeVibeCheckConfig) -> Result<(), frontend::VCFeError>{
+    vcore::native_set_vibecheck_config(vc_state, fe_vc_config)
 }
 
 /*
@@ -104,10 +104,10 @@ pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashM
 /*
  * alter_toy
  * Alters a toy state
- * Args: toy_id, AlterVCToyModel
+ * Args: toy_id, FeVCToyFeature
  * Javascript input example
  * let altered = {
- * feature_enabled: true,
+ *  feature_enabled: true,
  *  osc_parameter: "/avatar/parameters/vibin",
  *  feature_index: 0,
  *  feature_levels: {

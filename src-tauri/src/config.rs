@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, net::{Ipv4Addr, SocketAddrV4}};
 use serde::{Deserialize, Serialize};
 
 use crate::{util::{
@@ -10,15 +10,15 @@ use crate::{util::{
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct OSCNetworking {
-    pub bind: (String, String),
-    //vrchat: (String, String),
+    pub bind: SocketAddrV4,
+    pub remote: SocketAddrV4,
 }
 
 impl Default for OSCNetworking {
     fn default() -> Self {
         Self {
-            bind: ("127.0.0.1".to_string(), "9001".to_string()),
-            //vrchat: ("127.0.0.1".to_string(), "9000".to_string()),
+            bind: SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 9001),
+            remote: SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 9000),
         }
     }
 }

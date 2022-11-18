@@ -18,6 +18,7 @@ mod toyops;
 //mod lovense;
 mod bluetooth;
 mod frontend_types;
+mod vcerror;
 
 fn main() {
 

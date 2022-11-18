@@ -1,8 +1,23 @@
+
 /*
  * Frontend type binding generation
  */
 use serde::{Serialize, Deserialize};
 use ts_rs::TS;
+
+
+#[derive(Deserialize, Serialize, Debug, Clone, TS)]
+#[ts(export)]
+pub struct FeVibeCheckConfig {
+    pub networking: FeOSCNetworking,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, TS)]
+#[ts(export)]
+pub struct FeOSCNetworking {
+    pub bind: String,
+    pub remote: String,
+}
 
 #[derive(Serialize, TS)]
 #[ts(export)]
@@ -11,7 +26,6 @@ pub struct FeVCToy {
     pub toy_name: String,
     pub battery_level: f64,
     pub toy_connected: bool,
-    //pub osc_params_list: Vec<String>,
     pub param_feature_map: FeFeatureParamMap,
     pub listening: bool,
 }
