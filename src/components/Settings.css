@@ -1,0 +1,6 @@
+.basic-form {
+  display: grid;
+  gap: 1rem 1rem;
+  grid-template-columns: auto auto;
+  justify-items: right;
+}

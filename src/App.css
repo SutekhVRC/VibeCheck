@@ -3,19 +3,126 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  --inner-border-radius: 9px;
+  --outer-border-radius: 12px;
+  --blue: rgb(101, 250, 255);
+  --pink: rgb(243, 116, 215);
+  --background: rgb(49, 49, 49);
+  --toys-container: rgb(44, 44, 44);
+  --toys-container-shadow: rgb(27, 27, 27);
+  --item: rgb(49, 49, 49);
+  --item-shadow: rgb(34, 34, 34);
+}
+
+.main-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 5px;
+  padding: 15px;
+  background-color: var(--background);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  min-width: 300px;
+  padding-bottom: 25px;
+}
+.header div img {
+  height: 50px;
+}
+.header img {
+  height: 30px;
+}
+
+.toys-container {
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
+  font-size: 1rem;
+  min-width: 400px;
+  border-radius: 10px;
+  padding: 10px;
+  background-color: var(--toys-container);
+  box-shadow: 5px 5px 5px var(--toys-container-shadow);
+}
+
+.toy {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  cursor: pointer;
+  font-size: 2rem;
+  min-height: 100px;
+  border-radius: 20px;
+  margin: 10px;
+  background-color: var(--item);
+  box-shadow: 5px 5px 10px var(--item-shadow);
+  animation: enter-ani 250ms ease-out;
 }
 
 .grad-text {
-  background: linear-gradient(rgb(123, 235, 255), rgb(247, 131, 221));
+  padding-bottom: 0.3rem;
+  background: linear-gradient(var(--blue), var(--pink));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-.grad-icon {
-  font-size: 3rem !important;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  background-image: linear-gradient(rgb(123, 235, 255), rgb(247, 131, 221));
+.grad-container {
+  display: flex;
+  background-image: linear-gradient(
+    45deg,
+    var(--blue),
+    var(--pink),
+    var(--blue),
+    var(--pink)
+  );
+  border-radius: var(--outer-border-radius);
+  background-size: 400% 400%;
+  animation: grad-ani 1s linear infinite;
+}
+.grad-btn-container {
+  margin: 6px;
+  padding: 3px 3px;
+  animation-play-state: paused;
+}
+.grad-btn-container:active {
+  transform: scale(98%);
+}
+.grad-btn-container.is-on {
+  animation-play-state: running;
+}
+
+.btn {
+  border: none;
+  border-radius: var(--inner-border-radius);
+  font-size: 2.5rem;
+  mix-blend-mode: darken;
+  color: white;
+  background-color: var(--background);
+  cursor: pointer;
+}
+
+@keyframes grad-ani {
+  0% {
+    background-position: 100% 0%;
+  }
+  100% {
+    background-position: 15% 100%;
+  }
+}
+
+@keyframes enter-ani {
+  from {
+    opacity: 0;
+    transform: translateY(-50%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0%);
+  }
 }
