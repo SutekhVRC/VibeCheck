@@ -49,7 +49,7 @@
   box-shadow: 5px 5px 5px var(--toys-container-shadow);
 }
 
-.item {
+.toy {
   font-size: 2rem;
   min-width: 350px;
   min-height: 100px;
@@ -87,6 +87,7 @@
 .grad-btn-container {
   margin: 6px;
   padding: 4px 4px;
+  white-space: nowrap;
   animation-play-state: paused;
 }
 .grad-btn-container:active {

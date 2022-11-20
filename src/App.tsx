@@ -69,73 +69,79 @@ export default function App() {
   }, [isEnabled]);
 
   return (
-    <div className="main-container">
-      <div className="header">
-        <div className="grad-container">
-          <img src={logo} />
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      <div className="main-container">
+        <div className="header">
+          <div className="grad-container">
+            <img src={logo} />
+          </div>
+          Beta 0.2.0
+          <img src={discordLogo} />
+          <img src={githubLogo} />
         </div>
-        Beta 0.2.0
-        <img src={discordLogo} />
-        <img src={githubLogo} />
-      </div>
-      <div className="toys-container">
-        <h1 className="grad-text">Connected toys</h1>
-        {toys.map((toy) => (
-          <div key={toy.toy_id} className="item">
-            <div style={{ textDecoration: "underline" }}>{toy.toy_name}</div>
-            <div
-              style={{
-                color: `rgb(${(1 - toy.battery_level) * 255},${
-                  toy.battery_level * 255
-                },0)`,
-              }}
-            >
-              {percentFormat.format(toy.battery_level)}
+        <div className="toys-container">
+          <h1 className="grad-text">Connected toys</h1>
+          {toys.map((toy) => (
+            <div key={toy.toy_id} className="toy">
+              <div style={{ textDecoration: "underline" }}>{toy.toy_name}</div>
+              <div
+                style={{
+                  color: `rgb(${(1 - toy.battery_level) * 255},${
+                    toy.battery_level * 255
+                  },0)`,
+                }}
+              >
+                {percentFormat.format(toy.battery_level)}
+              </div>
             </div>
-          </div>
-        ))}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-around",
-          }}
-        >
-          <div className="grad-container grad-btn-container">
-            <button
-              className="btn"
-              type="button"
-              onClick={() => setSettingsIsOpen(true)}
-            >
-              <i className="fa fa-gear" />
-            </button>
-            <Modal
-              isOpen={settingsIsOpen}
-              children={<Settings />}
-              onClose={() => setSettingsIsOpen(false)}
-            />
-          </div>
+          ))}
           <div
-            className={`grad-container grad-btn-container${
-              isScanning ? " is-on" : ""
-            }`}
+            style={{
+              display: "flex",
+              justifyContent: "space-around",
+            }}
           >
-            <button className="btn" type="button" onClick={() => toggleScan()}>
-              <i className="fa fa-wifi"></i>
-            </button>
-          </div>
-          <div
-            className={`grad-container grad-btn-container${
-              isEnabled ? " is-on" : ""
-            }`}
-          >
-            <button
-              className="btn"
-              type="button"
-              onClick={() => toggleIsEnabled()}
+            <div className="grad-container grad-btn-container">
+              <button
+                className="btn"
+                type="button"
+                onClick={() => setSettingsIsOpen(true)}
+              >
+                <i className="fa fa-gear" />
+              </button>
+              <Modal
+                isOpen={settingsIsOpen}
+                children={<Settings />}
+                onClose={() => setSettingsIsOpen(false)}
+              />
+            </div>
+            <div
+              className={`grad-container grad-btn-container${
+                isScanning ? " is-on" : ""
+              }`}
             >
-              Enable
-              <i className="fa fa-play" />
-            </button>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => toggleScan()}
+              >
+                <i className="fa fa-wifi"></i>
+              </button>
+            </div>
+            <div
+              className={`grad-container grad-btn-container${
+                isEnabled ? " is-on" : ""
+              }`}
+            >
+              <button
+                className="btn"
+                type="button"
+                onClick={() => toggleIsEnabled()}
+              >
+                {isEnabled ? "Disable " : "Enable "}
+                <i className="fa fa-play" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
