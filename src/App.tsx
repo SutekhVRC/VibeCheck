@@ -15,11 +15,14 @@ import {
 import { percentFormat } from "./utils";
 
 import "./App.css";
+import Modal from "./components/Modal";
+import Settings from "./components/Settings";
 
 export default function App() {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [toys, setToys] = useState<FeVCToy[]>([]);
+  const [settingsIsOpen, setSettingsIsOpen] = useState(false);
 
   async function getToys() {
     await invoke<null | FeVCToy[]>(GET_TOYS, {}).then((response) => {
@@ -41,8 +44,6 @@ export default function App() {
     );
   }
 
-  function openSettings() {}
-
   useEffect(() => {
     // While scanning, check backend every second
     const intervalId = setInterval(() => {
@@ -61,7 +62,7 @@ export default function App() {
   }, [isScanning]);
 
   useEffect(() => {
-    // Turn off scan if we disable
+    // Turn off scan if we disable Vibecheck
     if (isScanning && !isEnabled) {
       toggleScan();
     }
@@ -100,9 +101,18 @@ export default function App() {
           }}
         >
           <div className="grad-container grad-btn-container">
-            <button className="btn" type="button">
-              <i className="fa fa-gear" onClick={() => openSettings()} />
+            <button
+              className="btn"
+              type="button"
+              onClick={() => setSettingsIsOpen(true)}
+            >
+              <i className="fa fa-gear" />
             </button>
+            <Modal
+              isOpen={settingsIsOpen}
+              children={<Settings />}
+              onClose={() => setSettingsIsOpen(false)}
+            />
           </div>
           <div
             className={`grad-container grad-btn-container${
