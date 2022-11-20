@@ -27,9 +27,11 @@ export default function App() {
 
   async function getToys() {
     await invoke<null | FeVCToy[]>(GET_TOYS, {}).then((response) => {
-      if (!response) return;
-      const toys = Object.values(response).map((toy) => toy);
-      setToys(toys);
+      if (response) {
+        setToys(Object.values(response));
+      } else {
+        setToys([]);
+      }
     });
   }
 
@@ -59,6 +61,10 @@ export default function App() {
     // Enable Vibecheck if we turn on scan
     if (isScanning && !isEnabled) {
       toggleIsEnabled();
+    }
+    // Turn off scan after 10 seconds
+    if (isScanning) {
+      setTimeout(() => toggleScan(), 10000);
     }
   }, [isScanning]);
 
@@ -113,7 +119,7 @@ export default function App() {
             <div
               style={{
                 display: "flex",
-                justifyContent: "space-around",
+                justifyContent: "space-evenly",
               }}
             >
               <div className="grad-container grad-btn-container">
@@ -142,7 +148,11 @@ export default function App() {
                   type="button"
                   onClick={() => toggleScan()}
                 >
-                  <i className="fa fa-wifi"></i>
+                  {isScanning ? (
+                    <i className="fa fa-eye-slash" />
+                  ) : (
+                    <i className="fa fa-eye" />
+                  )}
                 </button>
               </div>
               <div
@@ -154,8 +164,21 @@ export default function App() {
                   className="btn"
                   type="button"
                   onClick={() => toggleIsEnabled()}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    paddingLeft: ".5rem",
+                    paddingRight: ".5rem",
+                  }}
                 >
-                  {isEnabled ? "Disable " : "Enable "}
+                  <div
+                    style={{
+                      fontSize: "1.25rem",
+                      paddingRight: ".5rem",
+                    }}
+                  >
+                    {isEnabled ? "Disable" : "Enable"}
+                  </div>
                   <i className="fa fa-play" />
                 </button>
               </div>

@@ -3,10 +3,10 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
-  --border-radius: 5px;
+  --inner-border-radius: 9px;
+  --outer-border-radius: 12px;
   --blue: rgb(101, 250, 255);
   --pink: rgb(243, 116, 215);
-  --grad: linear-gradient(var(--blue), var(--pink));
   --background: rgb(49, 49, 49);
   --toys-container: rgb(44, 44, 44);
   --toys-container-shadow: rgb(27, 27, 27);
@@ -25,9 +25,9 @@
 
 .header {
   display: flex;
-  min-width: 350px;
   justify-content: space-between;
   align-items: end;
+  min-width: 300px;
   padding-bottom: 25px;
 }
 .header div img {
@@ -38,11 +38,12 @@
 }
 
 .toys-container {
-  font-size: 1rem;
   display: flex;
+  justify-content: space-between;
   flex-direction: column;
-  justify-content: space-around;
-  align-items: center;
+  align-items: stretch;
+  font-size: 1rem;
+  min-width: 400px;
   border-radius: 10px;
   padding: 10px;
   background-color: var(--toys-container);
@@ -50,23 +51,22 @@
 }
 
 .toy {
-  font-size: 2rem;
-  min-width: 350px;
-  min-height: 100px;
-  border-radius: 20px;
-  margin: 10px;
   display: flex;
   justify-content: space-around;
   align-items: center;
-  background-color: var(--item);
   cursor: pointer;
+  font-size: 2rem;
+  min-height: 100px;
+  border-radius: 20px;
+  margin: 10px;
+  background-color: var(--item);
   box-shadow: 5px 5px 10px var(--item-shadow);
   animation: enter-ani 250ms ease-out;
 }
 
 .grad-text {
   padding-bottom: 0.3rem;
-  background: var(--grad);
+  background: linear-gradient(var(--blue), var(--pink));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -81,14 +81,13 @@
     var(--blue),
     var(--pink)
   );
-  border-radius: var(--border-radius);
-  background-size: 500%;
-  animation: grad-ani 4s linear infinite;
+  border-radius: var(--outer-border-radius);
+  background-size: 400% 400%;
+  animation: grad-ani 1s linear infinite;
 }
 .grad-btn-container {
   margin: 6px;
-  padding: 4px 4px;
-  white-space: nowrap;
+  padding: 3px 3px;
   animation-play-state: paused;
 }
 .grad-btn-container:active {
@@ -100,21 +99,20 @@
 
 .btn {
   border: none;
-  border-radius: var(--border-radius);
-  font-size: 3rem;
-  mix-blend-mode: screen;
+  border-radius: var(--inner-border-radius);
+  font-size: 2.5rem;
+  mix-blend-mode: darken;
+  color: white;
+  background-color: var(--background);
   cursor: pointer;
 }
 
 @keyframes grad-ani {
   0% {
-    background-position: 0%;
-  }
-  50% {
-    background-position: 100%;
+    background-position: 100% 0%;
   }
   100% {
-    background-position: 0%;
+    background-position: 15% 100%;
   }
 }
 
