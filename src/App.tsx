@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api";
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { FeVCToy } from "../src-tauri/bindings/FeVCToy";
 
 import logo from "./assets/logo.png";
@@ -22,7 +22,8 @@ export default function App() {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [toys, setToys] = useState<FeVCToy[]>([]);
-  const [settingsIsOpen, setSettingsIsOpen] = useState(false);
+
+  const [modal, setModal] = useState<ReactNode>(null);
 
   async function getToys() {
     await invoke<null | FeVCToy[]>(GET_TOYS, {}).then((response) => {
@@ -69,82 +70,99 @@ export default function App() {
   }, [isEnabled]);
 
   return (
-    <div style={{ display: "flex", justifyContent: "center" }}>
-      <div className="main-container">
-        <div className="header">
-          <div className="grad-container">
-            <img src={logo} />
+    <>
+      {modal}
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <div className="main-container">
+          <div className="header">
+            <div className="grad-container">
+              <img src={logo} />
+            </div>
+            Beta 0.2.0
+            <img src={discordLogo} />
+            <img src={githubLogo} />
           </div>
-          Beta 0.2.0
-          <img src={discordLogo} />
-          <img src={githubLogo} />
-        </div>
-        <div className="toys-container">
-          <h1 className="grad-text">Connected toys</h1>
-          {toys.map((toy) => (
-            <div key={toy.toy_id} className="toy">
-              <div style={{ textDecoration: "underline" }}>{toy.toy_name}</div>
+          <div className="toys-container">
+            <h1 className="grad-text">Connected toys</h1>
+            {toys.map((toy) => (
               <div
-                style={{
-                  color: `rgb(${(1 - toy.battery_level) * 255},${
-                    toy.battery_level * 255
-                  },0)`,
-                }}
+                key={toy.toy_id}
+                className="toy"
+                onClick={() =>
+                  setModal(
+                    <Modal onClose={() => setModal(null)}>
+                      <pre>{JSON.stringify(toy, null, 2)}</pre>
+                    </Modal>
+                  )
+                }
               >
-                {percentFormat.format(toy.battery_level)}
+                <div style={{ textDecoration: "underline" }}>
+                  {toy.toy_name}
+                </div>
+                <div
+                  style={{
+                    color: `rgb(${(1 - toy.battery_level) * 255},${
+                      toy.battery_level * 255
+                    },0)`,
+                  }}
+                >
+                  {percentFormat.format(toy.battery_level)}
+                </div>
               </div>
-            </div>
-          ))}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-around",
-            }}
-          >
-            <div className="grad-container grad-btn-container">
-              <button
-                className="btn"
-                type="button"
-                onClick={() => setSettingsIsOpen(true)}
-              >
-                <i className="fa fa-gear" />
-              </button>
-              <Modal
-                isOpen={settingsIsOpen}
-                children={<Settings />}
-                onClose={() => setSettingsIsOpen(false)}
-              />
-            </div>
+            ))}
             <div
-              className={`grad-container grad-btn-container${
-                isScanning ? " is-on" : ""
-              }`}
+              style={{
+                display: "flex",
+                justifyContent: "space-around",
+              }}
             >
-              <button
-                className="btn"
-                type="button"
-                onClick={() => toggleScan()}
+              <div className="grad-container grad-btn-container">
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() =>
+                    setModal(
+                      <Modal
+                        children={<Settings />}
+                        onClose={() => setModal(null)}
+                      />
+                    )
+                  }
+                >
+                  <i className="fa fa-gear" />
+                </button>
+              </div>
+              <div
+                className={`grad-container grad-btn-container${
+                  isScanning ? " is-on" : ""
+                }`}
               >
-                <i className="fa fa-wifi"></i>
-              </button>
-            </div>
-            <div
-              className={`grad-container grad-btn-container${
-                isEnabled ? " is-on" : ""
-              }`}
-            >
-              <button
-                className="btn"
-                type="button"
-                onClick={() => toggleIsEnabled()}
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() => toggleScan()}
+                >
+                  <i className="fa fa-wifi"></i>
+                </button>
+              </div>
+              <div
+                className={`grad-container grad-btn-container${
+                  isEnabled ? " is-on" : ""
+                }`}
               >
-                {isEnabled ? "Disable " : "Enable "}
-                <i className="fa fa-play" />
-              </button>
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() => toggleIsEnabled()}
+                >
+                  {isEnabled ? "Disable " : "Enable "}
+                  <i className="fa fa-play" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

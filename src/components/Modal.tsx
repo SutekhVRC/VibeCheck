@@ -3,16 +3,11 @@ import ReactDOM from "react-dom";
 import "./Modal.css";
 
 type modalProps = {
-  isOpen: boolean;
   children: ReactNode;
   onClose: () => void;
 };
 
-export default function ({ isOpen, children, onClose }: modalProps) {
-  if (!isOpen) {
-    return null;
-  }
-
+export default function ({ children, onClose }: modalProps) {
   return ReactDOM.createPortal(
     <>
       <div className="modal-overlay" onClick={onClose} />
