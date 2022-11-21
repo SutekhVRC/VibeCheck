@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api";
 import { ReactNode, useEffect, useState } from "react";
 import { FeVCToy } from "../src-tauri/bindings/FeVCToy";
+import { open } from "@tauri-apps/api/shell";
 
 import logo from "./assets/logo.png";
 import githubLogo from "./assets/GitHub-Mark-Light-64px.png";
@@ -89,8 +90,16 @@ export default function App() {
               <img src={logo} />
             </div>
             Beta 0.2.0
-            <img src={discordLogo} />
-            <img src={githubLogo} />
+            <img
+              src={discordLogo}
+              style={{ cursor: "pointer" }}
+              onClick={() => open("https://discord.gg/g6kUFtMtpw")}
+            />
+            <img
+              src={githubLogo}
+              style={{ cursor: "pointer" }}
+              onClick={() => open("https://github.com/SutekhVRC/VibeCheck")}
+            />
           </div>
           <div className="toys-container">
             <h1 className="grad-text">Connected toys</h1>
