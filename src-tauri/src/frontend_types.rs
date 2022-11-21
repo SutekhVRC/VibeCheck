@@ -26,7 +26,7 @@ pub struct FeVCToy {
     pub toy_name: String,
     pub battery_level: f64,
     pub toy_connected: bool,
-    pub param_feature_map: FeFeatureParamMap,
+    pub features: Vec<FeVCToyFeature>,
     pub listening: bool,
 }
 
@@ -37,12 +37,6 @@ pub struct FeLevelTweaks {
     pub maximum_level: f64,
     pub idle_level: f64,
     pub smooth_rate: f64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export)]
-pub struct FeFeatureParamMap {
-    pub features: Vec<FeVCToyFeature>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]

@@ -457,10 +457,7 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
             remote: config.networking.remote.to_string(),
         }
     }
-    
 }
-
-
 
 pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_vc_config: FeVibeCheckConfig) -> Result<(), frontend::VCFeError> {
 
@@ -550,7 +547,7 @@ pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashM
                 toy_name: toy.1.toy_name.clone(),
                 battery_level: toy.1.battery_level,
                 toy_connected: toy.1.toy_connected,
-                param_feature_map: toy.1.param_feature_map.to_fe(),
+                features: toy.1.param_feature_map.to_fe(),
                 listening: toy.1.listening,
             }
         );

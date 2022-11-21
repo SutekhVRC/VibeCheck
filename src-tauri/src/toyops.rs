@@ -4,7 +4,7 @@ use ts_rs::TS;
 use core::fmt;
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{config::save_toy_config, frontend_types::{FeVCToyFeature, FeVCFeatureType, FeLevelTweaks, FeFeatureParamMap}};
+use crate::{config::save_toy_config, frontend_types::{FeVCToyFeature, FeVCFeatureType, FeLevelTweaks}};
 
 #[derive(Clone, Debug)]
 pub struct VCToy {
@@ -216,7 +216,6 @@ pub struct ToyConfig {
     If no config put toy to Auto params
 */
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Copy, TS)]
 pub struct LevelTweaks {
     pub minimum_level: f64,
@@ -256,7 +255,6 @@ pub struct Scalars {
     feature_id: u32,
     osc_parameter: String,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Rotators {
@@ -325,7 +323,7 @@ impl FeatureParamMap {
         success
     }
 
-    pub fn to_fe(&self) -> FeFeatureParamMap {
+    pub fn to_fe(&self) -> Vec<FeVCToyFeature> {
 
         let mut fe_features = Vec::new();
 
@@ -341,6 +339,6 @@ impl FeatureParamMap {
             });
         });
 
-        FeFeatureParamMap { features: fe_features }
+        fe_features
     }
 }
