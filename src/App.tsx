@@ -35,45 +35,49 @@ export default function App() {
     });
   }
 
-  async function toggleScan() {
-    await invoke(isScanning ? STOP_SCAN : START_SCAN, {}).then(() =>
-      setIsScanning(!isScanning)
-    );
+  async function toggleIsScanning() {
+    if (isScanning) {
+      await invoke(STOP_SCAN, {}).then(() => setIsScanning(false));
+    } else {
+      if (!isEnabled) {
+        // Enable Vibecheck if we turn on scan
+        toggleIsEnabled();
+      }
+      await invoke(START_SCAN, {}).then(() => setIsScanning(true));
+    }
   }
 
   async function toggleIsEnabled() {
-    await invoke(isEnabled ? DISABLE : ENABLE, {}).then(() =>
-      setIsEnabled(!isEnabled)
-    );
+    if (isEnabled) {
+      if (isScanning) {
+        // Turn off scan if we disable Vibecheck
+        toggleIsScanning();
+      }
+      await invoke(DISABLE, {}).then(() => setIsEnabled(false));
+      getToys(); // Clear toy list after we disable
+    } else {
+      await invoke(ENABLE, {}).then(() => setIsEnabled(true));
+    }
   }
 
   useEffect(() => {
-    // While scanning, check backend every second
-    const intervalId = setInterval(() => {
-      if (isScanning) {
-        getToys();
-      }
-    }, 1000);
-    return () => clearInterval(intervalId);
-  });
-
-  useEffect(() => {
-    // Enable Vibecheck if we turn on scan
-    if (isScanning && !isEnabled) {
-      toggleIsEnabled();
-    }
-    // Turn off scan after 10 seconds
     if (isScanning) {
-      setTimeout(() => toggleScan(), 10000);
+      // While scanning, check backend every second
+      const interval = setInterval(() => {
+        getToys();
+      }, 1000);
+
+      // Turn off scan after 10 seconds
+      const timeout = setTimeout(() => {
+        toggleIsScanning();
+      }, 10000);
+
+      return () => {
+        clearTimeout(timeout);
+        clearInterval(interval);
+      };
     }
   }, [isScanning]);
-
-  useEffect(() => {
-    // Turn off scan if we disable Vibecheck
-    if (isScanning && !isEnabled) {
-      toggleScan();
-    }
-  }, [isEnabled]);
 
   return (
     <>
@@ -146,7 +150,7 @@ export default function App() {
                 <button
                   className="btn"
                   type="button"
-                  onClick={() => toggleScan()}
+                  onClick={() => toggleIsScanning()}
                 >
                   {isScanning ? (
                     <i className="fa fa-eye-slash" />
