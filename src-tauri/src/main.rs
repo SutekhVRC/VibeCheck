@@ -7,6 +7,8 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 use tauri::{Manager, SystemTrayMenu};
+use log::{info, warn, error, trace};
+use env_logger;
 
 mod config;
 //mod vcupdate;
@@ -23,11 +25,16 @@ mod vcerror;
 fn main() {
 
     //tracing_subscriber::fmt::init();
+    
+    let mut log_builder = env_logger::builder();
+    log_builder.filter(Some("vibecheck"), log::LevelFilter::Trace);
+    log_builder.init();
 
     let vibecheck_state_pointer = Arc::new(
         Mutex::new(
             vcore::VibeCheckState::new(
                 config::config_load())));
+    trace!("VibeCheckState created");
 
     let quit = tauri::CustomMenuItem::new("quit".to_string(), "Quit");
     let restart = tauri::CustomMenuItem::new("restart".to_string(), "Restart");
@@ -76,6 +83,11 @@ fn main() {
                 _ => {},
             }
         },
+        tauri::SystemTrayEvent::LeftClick { .. } => {
+            let window = app.get_window("main").unwrap();
+            trace!("Opening window: {}", window.label());
+            window.show().unwrap();
+        }
         _ => {}
     })
     .manage(
@@ -96,15 +108,25 @@ fn main() {
     )
     .build(tauri::generate_context!())
     .expect("Failed to generate Tauri context");
+    trace!("Tauri app built");
 
     let identifier = app.config().tauri.bundle.identifier.clone();
+    info!("Got bundle id: {}", identifier);
+
+    /*
     let handling_pointer = vibecheck_state_pointer.clone();
     {
-        let lock = vibecheck_state_pointer.lock();
-        lock.async_rt.spawn(handling::message_handling(handling_pointer, identifier));
+        let mut lock = vibecheck_state_pointer.lock();
+        lock.message_handler_thread = Some(lock.async_rt.spawn(handling::message_handling(handling_pointer, identifier)));
     }
-
-
+    trace!("Spawned message_handling()");
+*/
+    let vc_state_pointer = vibecheck_state_pointer.clone();
+    {
+        let mut vc_state = vibecheck_state_pointer.lock();
+        vc_state.set_state_pointer(vc_state_pointer);
+        vc_state.identifier = identifier;
+    }
 
     app.run(|_app_handle, event| {
 
@@ -112,7 +134,9 @@ fn main() {
         tauri::RunEvent::WindowEvent { label, event, .. } => {
             match event {
                 tauri::WindowEvent::CloseRequested { api, .. } => {
+                    
                     let window = _app_handle.get_window(&label).unwrap();
+                    trace!("Closing window: {}", window.label());
                     window.hide().unwrap();
                     api.prevent_close();
                 }, _ => {}
@@ -133,7 +157,7 @@ fn main() {
             //println!("[+] State MainEventsCleared.");
         },
         tauri::RunEvent::Ready => {
-            println!("[+] App Ready");
+            info!("App Ready");
         }
         _ => {}
     }});

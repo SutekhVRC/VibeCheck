@@ -6,6 +6,8 @@
 
 use std::collections::HashMap;
 
+use log::trace;
+
 use crate::{vcore::{self, ToyAlterError, ConnectionModes}, frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig}, vcerror::frontend};
 
 /*
@@ -25,9 +27,10 @@ pub fn vibecheck_version() -> &'static str {
  * Args: VibeCheck State
  * Return: Result<Ok, Err(VCFeError)>
  */
-#[tauri::command(async)]
+#[tauri::command]
 pub fn vibecheck_enable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
-    vcore::native_vibecheck_enable(vc_state)
+    trace!("vibecheck_enable");
+    tauri::async_runtime::block_on(async move {vcore::native_vibecheck_enable(vc_state).await})
 }
 
 /*
@@ -38,6 +41,7 @@ pub fn vibecheck_enable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Resu
  */
 #[tauri::command]
 pub fn vibecheck_disable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
+    trace!("vibecheck_disable");
     tauri::async_runtime::block_on(async move {vcore::native_vibecheck_disable(vc_state).await})
 }
 

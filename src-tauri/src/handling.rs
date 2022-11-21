@@ -7,6 +7,7 @@ use futures::StreamExt;
 use futures_timer::Delay;
 use parking_lot::Mutex;
 use rosc::{self, OscMessage, OscPacket};
+use tokio::sync::mpsc::UnboundedReceiver;
 use std::collections::HashMap;
 use std::net::UdpSocket;
 use std::sync::mpsc::{Receiver, Sender};
@@ -30,6 +31,7 @@ use crate::vcore::VibeCheckState;
 use crate::{vcore::TmSig, vcore::ToyUpdate, vcore::VCError};
 use tokio::sync::mpsc::UnboundedSender;
 use tauri::api::notification::Notification;
+use log::{error as logerr, warn, info, trace};
 
 pub struct HandlerErr {
     pub id: i32,
@@ -50,10 +52,15 @@ pub enum ToySig {
     OSCMsg(rosc::OscMessage),
 }
 
-pub async fn message_handling(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, identifier: String) {
+// Uses TME send channel and CEH recv channel
+/*
+pub async fn message_handling(
+    vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>,
+    tme_send: UnboundedSender<ToyManagementEvent>,
+    identifier: String) {
 
     loop {
-        let event = {
+        let ceh_ = {
             let mut lock = vibecheck_state_pointer.lock();
             //println!("[+] Got event recv lock!");
             // Can optimize this by Arc<> around the receiver and cloning pointer from lock and receiving from it
@@ -111,13 +118,14 @@ pub async fn message_handling(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>
                     }
                     EventSig::Shutdown => {}
                 }
-            }
+            },
             Err(_e) => {
-                Delay::new(Duration::from_secs(1)).await;}
+                Delay::new(Duration::from_secs(1)).await;
+            }
         }
     }
 }
-
+*/
 
 /*
     This handler will handle the adding and removal of toys
@@ -125,65 +133,97 @@ pub async fn message_handling(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>
     - communicate errors and handler state (Errors to tell main thread its shutting down && State to receive shutdown from main thread) RECV/SEND
     - communicate toy events (add/remove) ONLY SEND?
 */
-pub async fn client_event_handler(mut event_stream: impl futures::Stream<Item = ButtplugClientEvent> + std::marker::Unpin, _error_tx: Sender<VCError>, event_tx: UnboundedSender<EventSig>) {
+// Uses CEH send channel 
+pub async fn client_event_handler(
+    mut event_stream: impl futures::Stream<Item = ButtplugClientEvent> + std::marker::Unpin,
+    vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>,
+    identifier: String,
+    tme_send: UnboundedSender<ToyManagementEvent>,
+    _error_tx: Sender<VCError>
+) {
     // Listen for toys and add them if it connects send add update
     // If a toy disconnects send remove update
 
 
-    println!("[*] BP Client Event Handler Handling Events..");
+    trace!("BP Client Event Handler Handling Events..");
     loop {
 
         if let Some(event) = event_stream.next().await {
             match event {
                 ButtplugClientEvent::DeviceAdded(dev) => {
-                    Delay::new(Duration::from_secs(3)).await;
+
                     let battery_level = match dev.battery_level().await {
                         Ok(battery_lvl) => battery_lvl,
                         Err(_e) => 0.0,
                     };
-                
-                    let _ = event_tx.send(EventSig::ToyAdd(VCToy {
+                    Delay::new(Duration::from_secs(1)).await;
+
+                    // Load toy config for name of toy if it exists otherwise create the config for the toy name
+                    let mut toy = VCToy {
                         toy_id: dev.index(),
                         toy_name: dev.name().clone(),
                         battery_level,
                         toy_connected: dev.connected(),
                         toy_features: dev.message_attributes().clone(),
-                        //osc_params_list: vec![],
                         param_feature_map: FeatureParamMap::new(),
                         listening: false,
                         device_handle: dev.clone(),
-                    }));
+                    };
 
-                    println!("[+] Device connected!!!!");
+                    // Load config with toy name
+                    let toy_config = load_toy_config(&toy.toy_name);
+                    
+                    if toy_config.is_some() {
+                        info!("Toy config loaded: {}", toy.toy_name);
+                        toy.populate_toy_feature_param_map(toy_config);
+                    } else {
+                        info!("No config found: {}", toy.toy_name);
+                        toy.populate_toy_feature_param_map(None);
+                    }
+                    
+                    {
+                        let mut vc_lock = vibecheck_state_pointer.lock();
+                        vc_lock.toys.insert(toy.toy_id, toy.clone());
+                    }
+                    trace!("Toy inserted into VibeCheckState toys");
+
+                    tme_send.send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone()))).unwrap();
+                    
+                    let _ = Notification::new(identifier.clone())
+                    .title("Toy Connected")
+                    .body(format!("{} ({}%)", toy.toy_name, (100.0 * toy.battery_level)).as_str())
+                    .show();
+
+                    info!("Toy Connected: {} | {}", toy.toy_name, toy.toy_id);
                 }
                 ButtplugClientEvent::DeviceRemoved(dev) => {
-                    let _ = event_tx.send(EventSig::ToyRemove(dev.index(), dev.name().clone()));
-                    println!("[*] Sent dev discon message.");
+
+
+                    if let Some(toy) = {
+                        let mut vc_lock = vibecheck_state_pointer.lock();
+                        vc_lock.toys.remove(&dev.index())
+                    } {
+                        trace!("Removed toy from VibeCheckState toys");
+                        tme_send.send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(dev.index()))).unwrap();
+
+                        let _ = Notification::new(identifier.clone())
+                        .title("Toy Disconnected")
+                        .body(format!("{}", toy.toy_name).as_str())
+                        .show();
+                    }
                 }
                 ButtplugClientEvent::ScanningFinished => println!("[!] Scanning finished!"),
-                ButtplugClientEvent::ServerDisconnect => {
-                    let _ = event_tx.send(EventSig::Shutdown);
-                    println!("[!] Server disconnected!");
-                    //let _ = client.stop_scanning().await;
-                    //let _ = client.disconnect().await;
-                    break;
-                }
-                ButtplugClientEvent::PingTimeout => {
-                    let _ = event_tx.send(EventSig::Shutdown);
-                    println!("[!] Server timeout!");
-                    //let _ = client.stop_scanning().await;
-                    //let _ = client.disconnect().await;
-                    break;
-                }
+                ButtplugClientEvent::ServerDisconnect => break,
+                ButtplugClientEvent::PingTimeout => break,
                 ButtplugClientEvent::Error(e) => {
-                    println!("Client Event Error: {:?}", e);
+                    logerr!("Client Event Error: {:?}", e);
                 },
                 ButtplugClientEvent::ServerConnect => {
-                    println!("Server Connect");
+                    info!("Server Connect");
                 }
             }
         } else {
-            println!("GOT NONE IN EVENT HANDLER");
+            warn!("GOT NONE IN EVENT HANDLER: THIS SHOULD NEVER HAPPEN LOL");
         }
     }
     println!("[!] Event handler returning!");
@@ -213,9 +253,10 @@ pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, s
         + Keep a thread count of connected toys. Add/remove as recvs ToyUpdates from main thread
         + Send toy updates like (battery updates)
 */
+// Uses TME send and recv channel
 pub async fn toy_management_handler(
-    _tme_send: Sender<ToyManagementEvent>,
-    tme_recv: Receiver<ToyManagementEvent>,
+    tme_send: UnboundedSender<ToyManagementEvent>,
+    mut tme_recv: UnboundedReceiver<ToyManagementEvent>,
     mut toys: HashMap<u32, VCToy>,
     mut vc_config: OSCNetworking,
 ) {
@@ -363,6 +404,9 @@ pub async fn toy_management_handler(
                             TmSig::StopListening => {
                                 // Already not listening
                             },
+                            TmSig::TMHReset => {
+                                info!("TMHReset but not listening");
+                            }
                             _ => {},
                         }
                     }
@@ -375,7 +419,7 @@ pub async fn toy_management_handler(
             // This is a nested runtime maybe remove
             // Would need to pass toy thread handles to VibeCheckState
             let toy_async_rt = Runtime::new().unwrap();
-            println!("[*] Started listening!");
+            info!("Started listening!");
             // Recv events (listening)
             // Create toy bcst channel
 
@@ -399,21 +443,21 @@ pub async fn toy_management_handler(
                         f_run.await;
                     }),
                 );
-                println!("[**] Toy: {} started listening..", *toy.0);
+                info!("Toy: {} started listening..", *toy.0);
             }
 
             // Create OSC listener thread
             let toy_bcst_tx_osc = toy_bcst_tx.clone();
-            println!("[+] Spawning OSC listener..");
+            info!("Spawning OSC listener..");
             let vc_conf_clone = vc_config.clone();
-            let tme_send_clone = _tme_send.clone();
+            let tme_send_clone = tme_send.clone();
             thread::spawn(move || toy_input_routine(toy_bcst_tx_osc, tme_send_clone, vc_conf_clone));
 
             loop {
                 // Recv event (listening)
-                let event = tme_recv.try_recv();
+                let event = tme_recv.recv().await;
                 match event {
-                    Ok(event) => {
+                    Some(event) => {
                         match event {
                             // Handle Toy Update Signals
                             ToyManagementEvent::Tu(tu) => {
@@ -431,22 +475,25 @@ pub async fn toy_management_handler(
                                                 f_run.await;
                                             }),
                                         );
-                                        println!("[**] Toy: {} started listening..", toy.toy_id);
+                                        info!("Toy: {} started listening..", toy.toy_id);
                                     }
                                     ToyUpdate::RemoveToy(id) => {
                                         // OSC Listener thread will only die on StopListening event
                                         if let Some(toy) = running_toy_ths.remove(&id) {
                                             toy.abort();
                                             let _ = toy.await;
-                                            println!("[TOY ID: {}] Stopped listening. (ToyUpdate::RemoveToy)", id);
+                                            info!("[TOY ID: {}] Stopped listening. (ToyUpdate::RemoveToy)", id);
                                             running_toy_ths.remove(&id);
                                             toys.remove(&id);
                                         }
                                     }
                                     ToyUpdate::AlterToy(toy) => {
-                                        let _ = toy_bcst_tx.send(ToySig::UpdateToy(
+                                        match toy_bcst_tx.send(ToySig::UpdateToy(
                                             ToyUpdate::AlterToy(toy.clone()),
-                                        ));
+                                        )) {
+                                            Ok(receivers) => info!("Sent UpdateToy to {} toys", receivers),
+                                            Err(e) => logerr!("Failed to send UpdateToy: {}", e),
+                                        }
                                         toys.insert(toy.toy_id, toy);
                                     }
                                 }
@@ -460,10 +507,12 @@ pub async fn toy_management_handler(
                                     }
                                     TmSig::StopListening => {
                                         // Stop listening on every device and clean running thread hashmap
+
+
                                         for toy in &mut running_toy_ths {
                                             toy.1.abort();
                                             let _ = toy.1.await;
-                                            println!(
+                                            info!(
                                                 "[TOY ID: {}] Stopped listening. (TMSIG)",
                                                 toy.0
                                             );
@@ -472,14 +521,32 @@ pub async fn toy_management_handler(
                                         drop(_toy_bcst_rx); // Causes OSC listener to die
                                         toy_async_rt.shutdown_background();
                                         listening = false;
-                                        break;
+                                        break;//Stop Listening
                                     },
+                                    TmSig::TMHReset => {
+                                        // Stop listening on every device and clean running thread hashmap
+                                        info!("TMHReset");
+                                        toys.clear();
+                                        for toy in &mut running_toy_ths {
+                                            toy.1.abort();
+                                            let _ = toy.1.await;
+                                            info!(
+                                                "[TOY ID: {}] Stopped listening. (TMSIG)",
+                                                toy.0
+                                            );
+                                        }
+                                        running_toy_ths.clear();
+                                        drop(_toy_bcst_rx); // Causes OSC listener to die
+                                        toy_async_rt.shutdown_background();
+                                        listening = false;
+                                        break;//Stop Listening
+                                    }
                                     _ => {},
                                 }
                             }
                         } // Event handled
                     }
-                    Err(_e) => {}
+                    None => {}
                 }
             }
         } //if listening
@@ -492,7 +559,7 @@ pub async fn toy_management_handler(
     receives OSC messages
     broadcasts the OSC messages to each toy
 */
-fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: Sender<ToyManagementEvent>, vc_config: OSCNetworking) {
+fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: UnboundedSender<ToyManagementEvent>, vc_config: OSCNetworking) {
 
     let bind_sock = match UdpSocket::bind(format!("{}:{}", vc_config.bind.ip(), vc_config.bind.port())) {
         Ok(s) => {
@@ -504,7 +571,7 @@ fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: Sender<ToyManagemen
             return;
         }
     };
-    println!("[+] Listen sock is bound");
+    info!("Listen sock is bound");
     bind_sock.set_nonblocking(false).unwrap();
     let _ = bind_sock.set_read_timeout(Some(Duration::from_secs(1)));
     //bind_sock.set_read_timeout(Some(Duration::from_millis(20)));
@@ -517,14 +584,14 @@ fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: Sender<ToyManagemen
         match recv_osc_cmd(&bind_sock) {
             Some(msg) => {
                 if let Err(_) = toy_bcst_tx.send(ToySig::OSCMsg(msg)) {
-                    println!("[*] BCST TX is disconnected. Shutting down toy input routine!");
+                    info!("BCST TX is disconnected. Shutting down toy input routine!");
                     return; // Shutting down handler_routine
                 }
             }
             None => {
                 if toy_bcst_tx.receiver_count() == 0 {
-                    println!(
-                        "[*] BCST TX is disconnected (RECV C=0). Shutting down toy input routine!"
+                    info!(
+                        "BCST TX is disconnected (RECV C=0). Shutting down toy input routine!"
                     );
                     return;
                 }

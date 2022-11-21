@@ -1,4 +1,3 @@
-use std::net::Ipv4Addr;
 use std::path::Path;
 //use std::io::Cursor;
 use directories::BaseDirs;

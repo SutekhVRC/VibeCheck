@@ -1,5 +1,6 @@
 use std::{fs, net::{Ipv4Addr, SocketAddrV4}};
 use serde::{Deserialize, Serialize};
+use log::{info, trace, error as logerr, warn};
 
 use crate::{util::{
     file_exists,
@@ -38,16 +39,16 @@ pub fn config_load() -> VibeCheckConfig {
 
     if !path_exists(&vc_root_dir) {
         fs::create_dir_all(&vc_root_dir).expect("[-] Cannot create VibeCheck root directory.");
-        println!("[+] Created VibeCheck root directory.");
+        info!("Created VibeCheck root directory.");
     } else {
-        println!("[*] VibeCheck root directory exists.");
+        info!("VibeCheck root directory exists.");
     }
 
     if !path_exists(&vc_toy_config_dir) {
         fs::create_dir(&vc_toy_config_dir).expect("[-] Cannot create VibeCheck toy directory.");
-        println!("[+] Created VibeCheck toy config directory.");
+        info!("Created VibeCheck toy config directory.");
     } else {
-        println!("[*] VibeCheck toy config directory.");
+        info!("VibeCheck toy config directory.");
     }
 
     if !file_exists(&vc_config_file) {
@@ -59,23 +60,23 @@ pub fn config_load() -> VibeCheckConfig {
             .unwrap(),
         )
         .unwrap();
-        println!("[+] Created VibeCheck config.");
+        info!("Created VibeCheck config.");
     } else {
-        println!("[*] VibeCheck config exists.");
+        info!("VibeCheck config exists.");
     }
 
     match fs::read_to_string(&vc_config_file) {
         Ok(fc) => match serde_json::from_str(&fc) {
             Ok(o) => {
-                println!("[*] Config Loaded Successfully!");
+                info!("Config Loaded Successfully!");
                 return o;
             },
             Err(_e) => {
-                println!(
-                    "[-] Failed to parse json from file: {} [{}]",
+                logerr!(
+                    "Failed to parse json from file: {} [{}]",
                     vc_config_file, _e
                 );
-                println!("[*] Resetting to default config.");
+                warn!("Resetting to default config.");
 
                 let def_conf = VibeCheckConfig {
                     networking: OSCNetworking::default(),
@@ -91,11 +92,11 @@ pub fn config_load() -> VibeCheckConfig {
             }
         },
         Err(_e) => {
-            println!(
-                "[-] Could not parse bytes from file: {} [{}].. Skipping..",
+            logerr!(
+                "Could not parse bytes from file: {} [{}].. Skipping..",
                 vc_config_file, _e
             );
-            println!("[*] Resetting to default config.");
+            warn!("[*] Resetting to default config.");
             let def_conf = VibeCheckConfig {
                 networking: OSCNetworking::default(),
             };
