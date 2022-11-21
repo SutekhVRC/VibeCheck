@@ -10,7 +10,7 @@ use rosc::{self, OscMessage, OscPacket};
 use tokio::sync::mpsc::UnboundedReceiver;
 use std::collections::HashMap;
 use std::net::UdpSocket;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -36,13 +36,6 @@ use log::{error as logerr, warn, info, trace};
 pub struct HandlerErr {
     pub id: i32,
     pub msg: String,
-}
-
-#[derive(Debug)]
-pub enum EventSig {
-    ToyAdd(VCToy),
-    ToyRemove(u32, String),
-    Shutdown,
 }
 
 #[derive(Clone, Debug)]
@@ -574,7 +567,7 @@ fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: UnboundedSender<Toy
     info!("Listen sock is bound");
     bind_sock.set_nonblocking(false).unwrap();
     let _ = bind_sock.set_read_timeout(Some(Duration::from_secs(1)));
-    //bind_sock.set_read_timeout(Some(Duration::from_millis(20)));
+
     loop {
         // try recv OSC packet
         // parse OSC packet

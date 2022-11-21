@@ -25,7 +25,7 @@ use crate::vcerror::{backend, frontend};
 //use crate::vcupdate::{VibeCheckUpdater, VERSION};
 use crate::{
     util::get_user_home_dir,
-    handling::{EventSig, client_event_handler, toy_management_handler},
+    handling::{client_event_handler, toy_management_handler},
     config::{
         VibeCheckConfig,
         OSCNetworking,
@@ -107,20 +107,7 @@ impl VibeCheckState {
         let async_rt = Runtime::new().unwrap();
 
 
-        let mut connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
-/*
-        let bp_client = async_rt.block_on(async move {
-            bluetooth::vc_toy_client_server_init("VibeCheck", &mut connection_modes.btle_enabled, false).await
-        });
-        info!("Buttplug Client Initialized.");
-        let event_stream = bp_client.event_stream();
-        */
-
-        // Client Event Handler Channels
-        // MAKING THESE ASYNC
-        //let (client_eh_event_tx, client_eh_event_rx): (Sender<EventSig>, Receiver<EventSig>) = mpsc::channel();
-        //let (client_eh_event_tx, client_eh_event_rx): (UnboundedSender<EventSig>, UnboundedReceiver<EventSig>) = unbounded_channel();
-        
+        let connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
 
         // Setup channels
         let (tme_recv_tx, tme_recv_rx): (UnboundedSender<ToyManagementEvent>, UnboundedReceiver<ToyManagementEvent>) = unbounded_channel();
@@ -178,14 +165,6 @@ impl VibeCheckState {
         }
     }
 
-    pub fn init_tmh(&mut self) {
-
-    }
-
-    pub fn destroy_tmh(&mut self) {
-
-    }
-
     pub fn set_state_pointer(&mut self, vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>) {
         self.vibecheck_state_pointer = Some(vibecheck_state_pointer);
     }
@@ -233,7 +212,7 @@ impl VibeCheckState {
         ceh_thread.abort();
         match ceh_thread.await {
             Ok(()) => info!("CEH thread finished"),
-            Err(e) => logerr!("CEH thread failed to reach completion"),
+            Err(e) => logerr!("CEH thread failed to reach completion: {}", e),
         }
     }
 }
