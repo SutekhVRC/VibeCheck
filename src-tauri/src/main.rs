@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 use tauri::{Manager, SystemTrayMenu};
-use log::{info, warn, error, trace};
+use log::{info, trace};
 use env_logger;
 
 mod config;
@@ -54,6 +54,9 @@ fn main() {
     .add_item(quit);
 
     let app = tauri::Builder::default()
+    .setup(|_app| {
+        Ok(())
+    })
     .system_tray(tauri::SystemTray::new().with_menu(tray_menu))
     .on_system_tray_event(|app, event| match event {
         tauri::SystemTrayEvent::MenuItemClick { id, .. } => {
@@ -125,6 +128,7 @@ fn main() {
     {
         let mut vc_state = vibecheck_state_pointer.lock();
         vc_state.set_state_pointer(vc_state_pointer);
+        vc_state.set_app_handle(app.app_handle());
         vc_state.identifier = identifier;
     }
 
