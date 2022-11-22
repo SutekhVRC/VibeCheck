@@ -87,6 +87,7 @@ pub fn config_load() -> VibeCheckConfig {
                     serde_json::to_string(&def_conf).unwrap(),
                 )
                 .unwrap();
+                trace!("Wrote VibeCheck config file");
                 // If fail to parse config overwrite with new default
                 return def_conf;
             }
@@ -105,6 +106,7 @@ pub fn config_load() -> VibeCheckConfig {
                 serde_json::to_string(&def_conf).unwrap(),
             )
             .unwrap();
+            trace!("Wrote VibeCheck config file");
             return def_conf;
         }
     }
