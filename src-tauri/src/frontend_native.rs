@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use log::trace;
 
-use crate::{vcore::{self, ToyAlterError, ConnectionModes}, frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig}, vcerror::frontend};
+use crate::{vcore::{self, ConnectionModes}, frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig}, vcerror::frontend};
 
 /*
  * vibecheck_version
@@ -127,7 +127,7 @@ pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashM
  * Return: Result<Ok(()), Err(ToyAlterError)>
  */
 #[tauri::command(async)]
-pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, toy_feature: FeVCToyFeature) -> Result<(), ToyAlterError> {
+pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, toy_feature: FeVCToyFeature) -> Result<(), frontend::VCFeError> {
     vcore::native_alter_toy(vc_state, toy_id, toy_feature)
 }
 
