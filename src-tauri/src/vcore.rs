@@ -14,6 +14,7 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
 use log::{warn, error as logerr, info, trace};
 use serde::Serialize;
+use tauri::AppHandle;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use parking_lot::Mutex;
@@ -51,6 +52,7 @@ pub struct VCStateMutex(pub Arc<Mutex<VibeCheckState>>);
 
 pub struct VibeCheckState {
 
+    pub app_handle: Option<AppHandle>,
     pub identifier: String,
 
     pub config: VibeCheckConfig,
@@ -130,6 +132,7 @@ impl VibeCheckState {
 
         Self {
 
+            app_handle: None,
             identifier: String::new(),
             config,
             connection_modes,
@@ -168,6 +171,9 @@ impl VibeCheckState {
     pub fn set_state_pointer(&mut self, vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>) {
         self.vibecheck_state_pointer = Some(vibecheck_state_pointer);
     }
+    pub fn set_app_handle(&mut self, app_handle: AppHandle) {
+        self.app_handle = Some(app_handle);
+    }
 
     async fn init_ceh(&mut self) {
 
@@ -197,6 +203,7 @@ impl VibeCheckState {
                 event_stream,
                 self.vibecheck_state_pointer.as_ref().unwrap().clone(),
                 self.identifier.clone(),
+                self.app_handle.as_ref().unwrap().clone(),
                 self.tme_send.clone(),
                 self.error_tx.clone()
             )));
@@ -484,7 +491,6 @@ pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_
             match e {
                 backend::VibeCheckConfigError::SerializeFailure => Err(frontend::VCFeError::SerializeFailure),
                 backend::VibeCheckConfigError::WriteFailure => Err(frontend::VCFeError::WriteFailure),
-                _ => {return Ok(());/* This branch should never be hit */},
             }
         }
     }
@@ -563,25 +569,20 @@ pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashM
     None
 }
 
-#[derive(Serialize)]
-pub enum ToyAlterError {
-    NoFeatureIndex,
-    NoToyIndex,
-    TMESendFailure
-}
 
-pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, altered_feature: FeVCToyFeature) -> Result<(), ToyAlterError> {
+
+pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, altered_feature: FeVCToyFeature) -> Result<(), frontend::VCFeError> {
 
     let altered = {
         let mut vc_lock = vc_state.0.lock();
         if let Some(toy) = vc_lock.toys.get_mut(&toy_id) {
 
             if !toy.param_feature_map.from_fe(altered_feature) {
-                return Err(ToyAlterError::NoFeatureIndex);
+                return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
             }
             toy.clone()
         } else {
-            return Err(ToyAlterError::NoToyIndex);
+            return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoToyIndex));
         }
     };
 
@@ -594,7 +595,7 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, a
 
     match send_res {
         Ok(()) => Ok(()),
-        Err(_e) => Err(ToyAlterError::TMESendFailure),
+        Err(_e) => Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::TMESendFailure)),
     }
 }
 
