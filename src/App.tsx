@@ -13,11 +13,12 @@ import {
   ENABLE,
   DISABLE,
 } from "./data/constants";
-import { percentFormat } from "./utils";
+import { percent } from "./utils";
 
 import "./App.css";
 import Modal from "./components/Modal";
 import Settings from "./components/Settings";
+import ToySettings from "./components/ToySettings";
 
 export default function App() {
   const [isEnabled, setIsEnabled] = useState(false);
@@ -110,7 +111,7 @@ export default function App() {
                 onClick={() =>
                   setModal(
                     <Modal onClose={() => setModal(null)}>
-                      <pre>{JSON.stringify(toy, null, 2)}</pre>
+                      <ToySettings />
                     </Modal>
                   )
                 }
@@ -125,7 +126,7 @@ export default function App() {
                     },0)`,
                   }}
                 >
-                  {percentFormat.format(toy.battery_level)}
+                  {percent.format(toy.battery_level)}
                 </div>
               </div>
             ))}
@@ -137,12 +138,17 @@ export default function App() {
             >
               <div className="grad-container grad-btn-container">
                 <button
-                  className="btn"
+                  className="btn-custom"
                   type="button"
                   onClick={() =>
                     setModal(
                       <Modal
-                        children={<Settings />}
+                        children={
+                          <Settings
+                            defaultHost="127.0.0.1"
+                            defaultPort="9001"
+                          />
+                        }
                         onClose={() => setModal(null)}
                       />
                     )
@@ -157,7 +163,7 @@ export default function App() {
                 }`}
               >
                 <button
-                  className="btn"
+                  className="btn-custom"
                   type="button"
                   onClick={() => toggleIsScanning()}
                 >
@@ -174,7 +180,7 @@ export default function App() {
                 }`}
               >
                 <button
-                  className="btn"
+                  className="btn-custom"
                   type="button"
                   onClick={() => toggleIsEnabled()}
                   style={{

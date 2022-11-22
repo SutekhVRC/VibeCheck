@@ -97,7 +97,7 @@
   animation-play-state: running;
 }
 
-.btn {
+.btn-custom {
   border: none;
   border-radius: var(--inner-border-radius);
   font-size: 2.5rem;

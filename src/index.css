@@ -14,3 +14,10 @@
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
 }
+
+body {
+  /* unset bootstrap light theme */
+  color: unset !important;
+  color-scheme: dark !important;
+  background-color: unset !important;
+}

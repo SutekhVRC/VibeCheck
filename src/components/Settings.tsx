@@ -1,21 +1,38 @@
+import { useRef } from "react";
+import Form from "react-bootstrap/Form";
 import "./Settings.css";
 
-export default function () {
+export type settingsProps = {
+  defaultHost: string;
+  defaultPort: string;
+};
+
+export default function ({ defaultHost, defaultPort }: settingsProps) {
+  const host = useRef(null);
+  const port = useRef(null);
+
   return (
     <>
       <h2>Settings</h2>
-      <div className="basic-form">
-        <label>thing 1</label>
-        <input></input>
-        <label>thing 2</label>
-        <input type={"checkbox"}></input>
-        <label>thing 3</label>
-        <select>
-          <option>1</option>
-          <option>2</option>
-          <option>3</option>
-        </select>
-      </div>
+      <Form>
+        <Form.Group className="setting">
+          <Form.Label>OSC Bind Host</Form.Label>
+          <Form.Control
+            autoFocus
+            defaultValue={defaultHost}
+            ref={host}
+            pattern={`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$`}
+          />
+        </Form.Group>
+        <Form.Group className="setting">
+          <Form.Label>OSC Bind Port</Form.Label>
+          <Form.Control
+            defaultValue={defaultPort}
+            ref={port}
+            pattern={`\d{1,5}`}
+          />
+        </Form.Group>
+      </Form>
     </>
   );
 }
