@@ -3,10 +3,13 @@
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
+  overflow: hidden;
 
+  --text-color: rgba(255, 255, 255, 0.87);
+  --background-color: #242424;
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color: var(--text-color);
+  background-color: var(--background-color);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -15,9 +18,28 @@
   -webkit-text-size-adjust: 100%;
 }
 
+/* Modify bootstrap css for dark/minimal style */
 body {
-  /* unset bootstrap light theme */
   color: unset !important;
   color-scheme: dark !important;
   background-color: unset !important;
+}
+.accordion-body {
+  background-color: unset !important;
+}
+.accordion-button {
+  color: var(--text-color) !important;
+  background-color: var(--toys-container) !important;
+  box-shadow: unset !important;
+}
+.accordion-button::after {
+  background-image: unset !important;
+}
+.accordion-item {
+  color: var(--text-color) !important;
+  border: unset !important;
+  background-color: unset !important;
+}
+.accordion-item .accordion-button {
+  border-radius: 0 !important;
 }

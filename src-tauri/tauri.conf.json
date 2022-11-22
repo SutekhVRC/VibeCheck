@@ -26,10 +26,7 @@
         "depends": []
       },
       "externalBin": [],
-      "icon": [
-        "icons/vibecheck-ico32x32.ico",
-        "icons/vibecheck.ico"
-      ],
+      "icon": ["icons/vibecheck-ico32x32.ico", "icons/vibecheck.ico"],
       "identifier": "com.vibecheck.dev",
       "longDescription": "",
       "macOS": {
@@ -61,10 +58,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "height": 800,
         "resizable": true,
         "title": "VibeCheck",
-        "width": 800
+        "width": 600
       }
     ]
   }

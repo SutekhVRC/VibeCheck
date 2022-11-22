@@ -20,6 +20,7 @@ import "./App.css";
 import Modal from "./components/Modal";
 import Settings from "./components/Settings";
 import ToySettings from "./components/ToySettings";
+import { Accordion } from "react-bootstrap";
 
 const version = await invoke<string>(VERSION).then((r) => {
   return r.replace(/-/g, " ");
@@ -93,44 +94,49 @@ export default function App() {
         <div className="main-container">
           <div className="header">
             <div className="grad-container">
-              <img src={logo} />
+              <img className="logo" src={logo} />
             </div>
             {version}
             <img
+              className="extern-logo"
               src={discordLogo}
-              style={{ cursor: "pointer" }}
               onClick={() => open("https://discord.gg/g6kUFtMtpw")}
             />
             <img
+              className="extern-logo"
               src={githubLogo}
-              style={{ cursor: "pointer" }}
               onClick={() => open("https://github.com/SutekhVRC/VibeCheck")}
             />
           </div>
           <div className="toys-container">
             <h1 className="grad-text">Connected toys</h1>
             {toys.map((toy) => (
-              <div
-                key={toy.toy_id}
-                className="toy"
-                onClick={() =>
-                  setModal(
-                    <Modal onClose={() => setModal(null)}>
-                      <ToySettings />
-                    </Modal>
-                  )
-                }
-              >
-                <div style={{ textDecoration: "underline" }}>
-                  {toy.toy_name}
+              <div key={toy.toy_id} className="toy-container">
+                <div className="toy">
+                  <div>{toy.toy_name}</div>
+                  <div
+                    style={{
+                      color: `hsl(${toy.battery_level * 120}, 100%, 50%)`,
+                    }}
+                  >
+                    {percent.format(toy.battery_level)}
+                  </div>
                 </div>
-                <div
-                  style={{
-                    color: `hsl(${toy.battery_level * 120}, 100%, 50%)`,
-                  }}
-                >
-                  {percent.format(toy.battery_level)}
-                </div>
+                <Accordion>
+                  {toy.features.map((feature) => (
+                    <Accordion.Item
+                      eventKey={feature.feature_index.toString()}
+                      key={feature.feature_index}
+                    >
+                      <Accordion.Header>
+                        {`${feature.feature_type} ${feature.feature_index}`}
+                      </Accordion.Header>
+                      <Accordion.Body>
+                        <ToySettings />
+                      </Accordion.Body>
+                    </Accordion.Item>
+                  ))}
+                </Accordion>
               </div>
             ))}
             <div

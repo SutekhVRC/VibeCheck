@@ -12,12 +12,12 @@
   --toys-container-shadow: rgb(27, 27, 27);
   --item: rgb(49, 49, 49);
   --item-shadow: rgb(34, 34, 34);
+  --container-border-radius: 10px;
 }
 
 .main-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
   border-radius: 5px;
   padding: 15px;
   background-color: var(--background);
@@ -30,11 +30,12 @@
   min-width: 400px;
   padding-bottom: 25px;
 }
-.header div img {
+.header .logo {
   height: 50px;
 }
-.header img {
+.header .extern-logo {
   height: 30px;
+  cursor: pointer;
 }
 
 .toys-container {
@@ -44,24 +45,31 @@
   align-items: stretch;
   font-size: 1rem;
   min-width: 400px;
-  border-radius: 10px;
+  border-radius: var(--container-border-radius);
   padding: 10px;
   background-color: var(--toys-container);
   box-shadow: 5px 5px 5px var(--toys-container-shadow);
 }
 
-.toy {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  cursor: pointer;
+.toy-container {
   font-size: 2rem;
   min-height: 100px;
-  border-radius: 20px;
+  border-radius: var(--container-border-radius);
   margin: 10px;
   background-color: var(--item);
   box-shadow: 5px 5px 10px var(--item-shadow);
   animation: enter-ani 250ms ease-out;
+}
+.toy {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+.toy-container .accordion {
+  padding-bottom: var(--container-border-radius);
+}
+.toy-container .accordion-body {
+  max-width: 360px;
 }
 
 .grad-text {
