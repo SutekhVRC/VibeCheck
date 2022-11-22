@@ -19,7 +19,14 @@ pub struct FeOSCNetworking {
     pub remote: String,
 }
 
-#[derive(Serialize, TS)]
+#[derive(Serialize, Clone, TS)]
+#[ts(export)]
+pub enum FeToyEvent {
+    FeToyAdd(FeVCToy),
+    FeToyRemove(u32),
+}
+
+#[derive(Serialize, Clone, TS)]
 #[ts(export)]
 pub struct FeVCToy {
     pub toy_id: u32,
