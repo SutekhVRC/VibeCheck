@@ -12,6 +12,7 @@ import {
   STOP_SCAN,
   ENABLE,
   DISABLE,
+  VERSION,
 } from "./data/constants";
 import { percent } from "./utils";
 
@@ -19,6 +20,10 @@ import "./App.css";
 import Modal from "./components/Modal";
 import Settings from "./components/Settings";
 import ToySettings from "./components/ToySettings";
+
+const version = await invoke<string>(VERSION).then((r) => {
+  return r.replace(/-/g, " ");
+});
 
 export default function App() {
   const [isEnabled, setIsEnabled] = useState(false);
@@ -28,7 +33,7 @@ export default function App() {
   const [modal, setModal] = useState<ReactNode>(null);
 
   async function getToys() {
-    await invoke<null | FeVCToy[]>(GET_TOYS, {}).then((response) => {
+    await invoke<null | FeVCToy[]>(GET_TOYS).then((response) => {
       if (response) {
         setToys(Object.values(response));
       } else {
@@ -39,13 +44,13 @@ export default function App() {
 
   async function toggleIsScanning() {
     if (isScanning) {
-      await invoke(STOP_SCAN, {}).then(() => setIsScanning(false));
+      await invoke(STOP_SCAN).then(() => setIsScanning(false));
     } else {
       if (!isEnabled) {
         // Enable Vibecheck if we turn on scan
         toggleIsEnabled();
       }
-      await invoke(START_SCAN, {}).then(() => setIsScanning(true));
+      await invoke(START_SCAN).then(() => setIsScanning(true));
     }
   }
 
@@ -55,10 +60,10 @@ export default function App() {
         // Turn off scan if we disable Vibecheck
         toggleIsScanning();
       }
-      await invoke(DISABLE, {}).then(() => setIsEnabled(false));
+      await invoke(DISABLE).then(() => setIsEnabled(false));
       getToys(); // Clear toy list after we disable
     } else {
-      await invoke(ENABLE, {}).then(() => setIsEnabled(true));
+      await invoke(ENABLE).then(() => setIsEnabled(true));
     }
   }
 
@@ -90,7 +95,7 @@ export default function App() {
             <div className="grad-container">
               <img src={logo} />
             </div>
-            Beta 0.2.0
+            {version}
             <img
               src={discordLogo}
               style={{ cursor: "pointer" }}
