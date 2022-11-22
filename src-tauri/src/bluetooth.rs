@@ -2,7 +2,7 @@ use btleplug::api::{Central, Manager as _};
 use btleplug::platform::Manager;
 use buttplug::client::ButtplugClient;
 use buttplug::core::connector::ButtplugInProcessClientConnectorBuilder;
-use buttplug::server::{ButtplugServerBuilder, ButtplugServer};
+use buttplug::server::ButtplugServerBuilder;
 use buttplug::server::device::hardware::communication::btleplug::BtlePlugCommunicationManagerBuilder;
 use buttplug::server::device::hardware::communication::lovense_connect_service::LovenseConnectServiceCommunicationManagerBuilder;
 use log::{error as logerr, info, warn, trace};
@@ -20,6 +20,7 @@ pub async fn detect_btle_adapter() -> bool {
             return !adapters.is_empty();
 
         } else {
+            warn!("No btle adapters detected");
             return false;
         }
     } else {
@@ -34,11 +35,11 @@ pub async fn vc_toy_client_server_init(client_name: &str, btle_enabled: &mut boo
 
     server_builder.comm_manager(BtlePlugCommunicationManagerBuilder::default());
     *btle_enabled = true;
-    info!("Adding BtlePlug comm manager");
+    trace!("Added BtlePlug comm manager");
     //info!("Bluetooth LE interface detected.. Enabling btle.");
     
     server_builder.comm_manager(LovenseConnectServiceCommunicationManagerBuilder::default());
-
+    trace!("Added Lovense Connect comm manager");
     if allow_raw_messages {
       server_builder.allow_raw_messages();
     }
