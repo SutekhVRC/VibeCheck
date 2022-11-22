@@ -166,7 +166,7 @@ export default function App() {
                   settings={settings}
                   show={settingsIsOpen}
                   onHide={() => setSettingsIsOpen(false)}
-                  onSave={() => null}
+                  onSave={() => getConfig()} // Refresh settings from backend
                 />
               </div>
               <div
