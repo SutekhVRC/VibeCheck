@@ -7,6 +7,8 @@ use futures::StreamExt;
 use futures_timer::Delay;
 use parking_lot::Mutex;
 use rosc::{self, OscMessage, OscPacket};
+use tauri::AppHandle;
+use tauri::Manager;
 use tokio::sync::mpsc::UnboundedReceiver;
 use std::collections::HashMap;
 use std::net::UdpSocket;
@@ -23,6 +25,8 @@ use tokio::task::JoinHandle;
 
 use crate::config::OSCNetworking;
 use crate::config::load_toy_config;
+use crate::frontend_types::FeToyEvent;
+use crate::frontend_types::FeVCToy;
 use crate::toyops::LevelTweaks;
 use crate::toyops::VCFeatureType;
 use crate::toyops::{VCToy, FeatureParamMap};
@@ -131,6 +135,7 @@ pub async fn client_event_handler(
     mut event_stream: impl futures::Stream<Item = ButtplugClientEvent> + std::marker::Unpin,
     vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>,
     identifier: String,
+    app_handle: AppHandle,
     tme_send: UnboundedSender<ToyManagementEvent>,
     _error_tx: Sender<VCError>
 ) {
@@ -145,11 +150,11 @@ pub async fn client_event_handler(
             match event {
                 ButtplugClientEvent::DeviceAdded(dev) => {
 
+                    Delay::new(Duration::from_secs(3)).await;
                     let battery_level = match dev.battery_level().await {
                         Ok(battery_lvl) => battery_lvl,
                         Err(_e) => 0.0,
                     };
-                    Delay::new(Duration::from_secs(1)).await;
 
                     // Load toy config for name of toy if it exists otherwise create the config for the toy name
                     let mut toy = VCToy {
@@ -182,6 +187,18 @@ pub async fn client_event_handler(
 
                     tme_send.send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone()))).unwrap();
                     
+                    let _ = app_handle.emit_all("fe_toy_event",
+                        FeToyEvent::FeToyAdd(FeVCToy {
+                            toy_id: toy.toy_id,
+                            toy_name: toy.toy_name.clone(),
+                            battery_level: toy.battery_level,
+                            toy_connected: toy.toy_connected,
+                            features: toy.param_feature_map.to_fe(),
+                            listening: toy.listening,
+                        }
+                    ));
+
+
                     let _ = Notification::new(identifier.clone())
                     .title("Toy Connected")
                     .body(format!("{} ({}%)", toy.toy_name, (100.0 * toy.battery_level)).as_str())
@@ -199,13 +216,15 @@ pub async fn client_event_handler(
                         trace!("Removed toy from VibeCheckState toys");
                         tme_send.send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(dev.index()))).unwrap();
 
+                        let _ = app_handle.emit_all("fe_toy_event", FeToyEvent::FeToyRemove(dev.index()));
+
                         let _ = Notification::new(identifier.clone())
                         .title("Toy Disconnected")
                         .body(format!("{}", toy.toy_name).as_str())
                         .show();
                     }
                 }
-                ButtplugClientEvent::ScanningFinished => println!("[!] Scanning finished!"),
+                ButtplugClientEvent::ScanningFinished => info!("Scanning finished!"),
                 ButtplugClientEvent::ServerDisconnect => break,
                 ButtplugClientEvent::PingTimeout => break,
                 ButtplugClientEvent::Error(e) => {
@@ -219,7 +238,7 @@ pub async fn client_event_handler(
             warn!("GOT NONE IN EVENT HANDLER: THIS SHOULD NEVER HAPPEN LOL");
         }
     }
-    println!("[!] Event handler returning!");
+    info!("[!] Event handler returning!");
 }
 
 // Parse scalar levels and logic for level tweaks
