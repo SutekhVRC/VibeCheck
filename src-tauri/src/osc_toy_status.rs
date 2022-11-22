@@ -9,4 +9,6 @@
  * 
  */
 
-pub fn osc_update_toy() {}
+pub fn osc_update_toy(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>) {
+
+}
