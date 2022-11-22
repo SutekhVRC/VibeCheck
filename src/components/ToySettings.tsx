@@ -1,40 +1,21 @@
 import { useState } from "react";
 import Form from "react-bootstrap/Form";
+import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import { round2 } from "../utils";
 import "./ToySettings.css";
 
-type FeatureData = {
-  enabled: boolean;
-  oscParameter: string;
-  smoothing: boolean;
-  smoothingRate: number;
-  idle: number;
-  minimum: number;
-  maximum: number;
-};
-
-const INITIAL_DATA: FeatureData = {
-  enabled: true,
-  oscParameter: "/avatar/parameters/vib",
-  smoothing: true,
-  smoothingRate: 2,
-  idle: 0,
-  minimum: 0,
-  maximum: 1,
-};
-
-export default function () {
-  const [state, setState] = useState<FeatureData>(INITIAL_DATA);
+export default function (props: FeVCToyFeature) {
+  const [state, setState] = useState<FeVCToyFeature>(props);
 
   return (
     <>
       <div className="item">
         <Form.Label>Enabled</Form.Label>
         <Form.Check
-          checked={state.enabled}
+          checked={state.feature_enabled}
           onChange={(e) =>
             setState((s) => {
-              return { ...s, enabled: e.target.checked };
+              return { ...s, feature_enabled: e.target.checked };
             })
           }
         />
@@ -45,10 +26,10 @@ export default function () {
         <Form.Label>OSC Parameter</Form.Label>
         <div />
         <Form.Control
-          value={state.oscParameter}
+          value={state.osc_parameter}
           onChange={(e) =>
             setState((s) => {
-              return { ...s, oscParameter: e.target.value };
+              return { ...s, osc_parameter: e.target.value };
             })
           }
         />
@@ -57,26 +38,32 @@ export default function () {
       <div className="item">
         <Form.Label>Smoothing</Form.Label>
         <Form.Check
-          checked={state.smoothing}
+          checked={state.smooth_enabled}
           onChange={(e) =>
             setState((s) => {
-              return { ...s, smoothing: e.target.checked };
+              return { ...s, smooth_enabled: e.target.checked };
             })
           }
         />
         <Form.Range
-          disabled={!state.smoothing}
+          disabled={!state.smooth_enabled}
           min={1}
           max={20}
           step={1}
-          value={state.smoothingRate}
+          value={state.feature_levels.smooth_rate}
           onChange={(e) =>
             setState((s) => {
-              return { ...s, smoothingRate: Number(e.target.value) };
+              return {
+                ...s,
+                feature_levels: {
+                  ...state.feature_levels,
+                  smooth_rate: Number(e.target.value),
+                },
+              };
             })
           }
         />
-        {state.smoothingRate}
+        {state.feature_levels.smooth_rate}
       </div>
       <div className="item">
         <Form.Label>Idle</Form.Label>
@@ -85,14 +72,20 @@ export default function () {
           min={0}
           max={1}
           step={0.01}
-          value={state.idle}
+          value={state.feature_levels.idle_level}
           onChange={(e) =>
             setState((s) => {
-              return { ...s, idle: Number(e.target.value) };
+              return {
+                ...s,
+                feature_levels: {
+                  ...state.feature_levels,
+                  idle_level: Number(e.target.value),
+                },
+              };
             })
           }
         />
-        {round2.format(state.idle)}
+        {round2.format(state.feature_levels.idle_level)}
       </div>
       <div className="item">
         <Form.Label>Minimum</Form.Label>
@@ -101,14 +94,20 @@ export default function () {
           min={0}
           max={1}
           step={0.01}
-          value={state.minimum}
+          value={state.feature_levels.minimum_level}
           onChange={(e) =>
             setState((s) => {
-              return { ...s, minimum: Number(e.target.value) };
+              return {
+                ...s,
+                feature_levels: {
+                  ...state.feature_levels,
+                  minimum_level: Number(e.target.value),
+                },
+              };
             })
           }
         />
-        {round2.format(state.minimum)}
+        {round2.format(state.feature_levels.minimum_level)}
       </div>
       <div className="item">
         <Form.Label>Maximum</Form.Label>
@@ -117,14 +116,20 @@ export default function () {
           min={0}
           max={1}
           step={0.01}
-          value={state.maximum}
+          value={state.feature_levels.maximum_level}
           onChange={(e) =>
             setState((s) => {
-              return { ...s, maximum: Number(e.target.value) };
+              return {
+                ...s,
+                feature_levels: {
+                  ...state.feature_levels,
+                  maximum_level: Number(e.target.value),
+                },
+              };
             })
           }
         />
-        {round2.format(state.maximum)}
+        {round2.format(state.feature_levels.maximum_level)}
       </div>
     </>
   );

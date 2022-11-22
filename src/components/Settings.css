@@ -1,6 +1,7 @@
 .setting {
   display: grid;
-  align-items: center;
-  grid-template-columns: auto 8rem;
+  align-items: flex-end;
+  grid-template-columns: auto auto;
   column-gap: 1rem;
+  padding-bottom: 1rem;
 }

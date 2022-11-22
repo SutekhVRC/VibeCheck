@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api";
-import { ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { FeVCToy } from "../src-tauri/bindings/FeVCToy";
+import { FeVibeCheckConfig } from "../src-tauri/bindings/FeVibeCheckConfig";
 import { open } from "@tauri-apps/api/shell";
 
 import logo from "./assets/logo.png";
@@ -13,14 +14,14 @@ import {
   ENABLE,
   DISABLE,
   VERSION,
+  GET_CONFIG,
 } from "./data/constants";
 import { percent } from "./utils";
 
 import "./App.css";
-import Modal from "./components/Modal";
 import Settings from "./components/Settings";
 import ToySettings from "./components/ToySettings";
-import { Accordion } from "react-bootstrap";
+import Accordion from "react-bootstrap/Accordion";
 
 const version = await invoke<string>(VERSION).then((r) => {
   return r.replace(/-/g, " ");
@@ -31,16 +32,25 @@ export default function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [toys, setToys] = useState<FeVCToy[]>([]);
 
-  const [modal, setModal] = useState<ReactNode>(null);
+  const [settingsIsOpen, setSettingsIsOpen] = useState(false);
+  const [settings, setSettings] = useState<null | FeVibeCheckConfig>(null);
+  async function getConfig() {
+    setSettings(await invoke<FeVibeCheckConfig>(GET_CONFIG));
+  }
+  useEffect(() => {
+    getConfig();
+  }, []);
 
   async function getToys() {
-    await invoke<null | FeVCToy[]>(GET_TOYS).then((response) => {
-      if (response) {
-        setToys(Object.values(response));
-      } else {
-        setToys([]);
+    await invoke<null | { [key: number]: FeVCToy }>(GET_TOYS).then(
+      (response) => {
+        if (response) {
+          setToys(Object.values(response));
+        } else {
+          setToys([]);
+        }
       }
-    });
+    );
   }
 
   async function toggleIsScanning() {
@@ -89,7 +99,6 @@ export default function App() {
 
   return (
     <>
-      {modal}
       <div style={{ display: "flex", justifyContent: "center" }}>
         <div className="main-container">
           <div className="header">
@@ -132,7 +141,7 @@ export default function App() {
                         {`${feature.feature_type} ${feature.feature_index}`}
                       </Accordion.Header>
                       <Accordion.Body>
-                        <ToySettings />
+                        <ToySettings {...feature} />
                       </Accordion.Body>
                     </Accordion.Item>
                   ))}
@@ -149,22 +158,16 @@ export default function App() {
                 <button
                   className="btn-custom"
                   type="button"
-                  onClick={() =>
-                    setModal(
-                      <Modal
-                        children={
-                          <Settings
-                            defaultHost="127.0.0.1"
-                            defaultPort="9001"
-                          />
-                        }
-                        onClose={() => setModal(null)}
-                      />
-                    )
-                  }
+                  onClick={() => setSettingsIsOpen(true)}
                 >
                   <i className="fa fa-gear" />
                 </button>
+                <Settings
+                  settings={settings}
+                  show={settingsIsOpen}
+                  onHide={() => setSettingsIsOpen(false)}
+                  onSave={() => null}
+                />
               </div>
               <div
                 className={`grad-container grad-btn-container${

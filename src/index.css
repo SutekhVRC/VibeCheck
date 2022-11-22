@@ -24,6 +24,11 @@ body {
   color-scheme: dark !important;
   background-color: unset !important;
 }
+
+.modal-content {
+  background-color: var(--background-color) !important;
+}
+
 .accordion-body {
   background-color: unset !important;
 }
