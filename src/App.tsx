@@ -121,9 +121,7 @@ export default function App() {
                 </div>
                 <div
                   style={{
-                    color: `rgb(${(1 - toy.battery_level) * 255},${
-                      toy.battery_level * 255
-                    },0)`,
+                    color: `hsl(${toy.battery_level * 120}, 100%, 50%)`,
                   }}
                 >
                   {percent.format(toy.battery_level)}
