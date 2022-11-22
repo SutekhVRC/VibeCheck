@@ -9,10 +9,8 @@ pub mod frontend {
 
     #[derive(Serialize)]
     pub enum VCFeError {
-        
-        // Toy Errors
-        AlterToyFailure,
 
+        AlterToyFailure(ToyAlterError),
         // App State Errors
         EnableFailure,
         DisableFailure,
@@ -25,15 +23,23 @@ pub mod frontend {
         SerializeFailure,
         WriteFailure,
     }
+
+    #[derive(Serialize)]
+    pub enum ToyAlterError {
+        NoFeatureIndex,
+        NoToyIndex,
+        TMESendFailure
+    }
+
+    
 }
 
 pub mod backend {
-    #[derive(serde::Serialize)]
+    use serde::Serialize;
+
+    #[derive(Serialize)]
     pub enum VibeCheckConfigError {
-        InvalidHost,
-        InvalidPort,
         SerializeFailure,
         WriteFailure,
     }
-
 }
