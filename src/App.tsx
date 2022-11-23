@@ -12,14 +12,8 @@ export default function App() {
   const [toys, setToys] = useState<FeVCToy[]>([]);
 
   async function getToys() {
-    await invoke<null | { [key: number]: FeVCToy }>(GET_TOYS).then(
-      (response) => {
-        if (response) {
-          setToys(Object.values(response));
-        } else {
-          setToys([]);
-        }
-      }
+    await invoke<null | { [key: number]: FeVCToy }>(GET_TOYS).then((response) =>
+      setToys(response ? Object.values(response) : [])
     );
   }
 

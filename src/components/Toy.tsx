@@ -5,9 +5,7 @@ import { percent } from "../utils";
 import NameBadge from "./NameBadge";
 import ToyFeatureForm from "./ToyFeatureForm";
 
-export default function (props: { toy: FeVCToy }) {
-  const toy = props.toy;
-
+export default function ({ toy }: { toy: FeVCToy }) {
   return (
     <div className="toy-container">
       <div className="toy">
