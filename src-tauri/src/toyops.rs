@@ -226,7 +226,7 @@ pub struct LevelTweaks {
 
 impl Default for LevelTweaks {
     fn default() -> Self {
-        LevelTweaks { minimum_level: 0., maximum_level: 100., idle_level: 0., smooth_rate: 2.0 }
+        LevelTweaks { minimum_level: 0., maximum_level: 1., idle_level: 0., smooth_rate: 2.0 }
     }
 }
 
