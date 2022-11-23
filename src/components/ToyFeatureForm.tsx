@@ -1,8 +1,8 @@
 import { useState } from "react";
 import Form from "react-bootstrap/Form";
 import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
-import { round2 } from "../utils";
-import "./ToySettings.css";
+import { round0 } from "../utils";
+import "./ToyFeatureForm.css";
 
 export default function (props: FeVCToyFeature) {
   const [state, setState] = useState<FeVCToyFeature>(props);
@@ -19,12 +19,10 @@ export default function (props: FeVCToyFeature) {
             })
           }
         />
-        <div />
-        <div />
       </div>
       <div className="item">
-        <Form.Label>OSC Parameter</Form.Label>
-        <div />
+        <Form.Label>OSC Paraometer</Form.Label>
+        <div></div>
         <Form.Control
           value={state.osc_parameter}
           onChange={(e) =>
@@ -33,7 +31,6 @@ export default function (props: FeVCToyFeature) {
             })
           }
         />
-        <div />
       </div>
       <div className="item">
         <Form.Label>Smoothing</Form.Label>
@@ -67,7 +64,7 @@ export default function (props: FeVCToyFeature) {
       </div>
       <div className="item">
         <Form.Label>Idle</Form.Label>
-        <div />
+        <div></div>
         <Form.Range
           min={0}
           max={1}
@@ -85,11 +82,11 @@ export default function (props: FeVCToyFeature) {
             })
           }
         />
-        {round2.format(state.feature_levels.idle_level)}
+        {round0.format(state.feature_levels.idle_level * 100)}
       </div>
       <div className="item">
         <Form.Label>Minimum</Form.Label>
-        <div />
+        <div></div>
         <Form.Range
           min={0}
           max={1}
@@ -107,11 +104,11 @@ export default function (props: FeVCToyFeature) {
             })
           }
         />
-        {round2.format(state.feature_levels.minimum_level)}
+        {round0.format(state.feature_levels.minimum_level * 100)}
       </div>
       <div className="item">
         <Form.Label>Maximum</Form.Label>
-        <div />
+        <div></div>
         <Form.Range
           min={0}
           max={1}
@@ -129,7 +126,7 @@ export default function (props: FeVCToyFeature) {
             })
           }
         />
-        {round2.format(state.feature_levels.maximum_level)}
+        {round0.format(state.feature_levels.maximum_level * 100)}
       </div>
     </>
   );

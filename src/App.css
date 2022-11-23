@@ -27,8 +27,6 @@
   display: flex;
   justify-content: space-between;
   align-items: end;
-  min-width: 400px;
-  padding-bottom: 25px;
 }
 .header .logo {
   height: 50px;
@@ -36,6 +34,11 @@
 .header .extern-logo {
   height: 30px;
   cursor: pointer;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-evenly;
 }
 
 .toys-container {
@@ -47,6 +50,7 @@
   min-width: 400px;
   border-radius: var(--container-border-radius);
   padding: 10px;
+  margin: 20px;
   background-color: var(--toys-container);
   box-shadow: 5px 5px 5px var(--toys-container-shadow);
 }
