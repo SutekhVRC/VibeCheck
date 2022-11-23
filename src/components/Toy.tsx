@@ -1,3 +1,4 @@
+import { Badge } from "react-bootstrap";
 import Accordion from "react-bootstrap/esm/Accordion";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import { percent } from "../utils";
@@ -26,7 +27,9 @@ export default function (props: { toy: FeVCToy }) {
             key={feature.feature_index}
           >
             <Accordion.Header>
-              {`${feature.feature_type} ${feature.feature_index}`}
+              <Badge
+                bg={feature.feature_enabled ? "success" : "danger"}
+              >{`${feature.feature_type} ${feature.feature_index}`}</Badge>
             </Accordion.Header>
             <Accordion.Body>
               <ToyFeatureForm {...feature} />

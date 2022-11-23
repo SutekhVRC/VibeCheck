@@ -3,16 +3,16 @@ import Badge from "react-bootstrap/esm/Badge";
 import lovenseLogo from "../assets/Lovense.png";
 import lovenseConnectLogo from "../assets/Lovense_Connect.png";
 
-export default function (props: { name: string }) {
+export default function ({ name }: { name: string }) {
   let badge: ReactElement;
-  if (props.name.startsWith("Lovense Connect")) {
+  if (name.startsWith("Lovense Connect")) {
     badge = (
       <img
         src={lovenseConnectLogo}
         style={{ maxHeight: "1.5rem", borderRadius: ".5rem" }}
       />
     );
-  } else if (props.name.startsWith("Lovense")) {
+  } else if (name.startsWith("Lovense")) {
     badge = (
       <img
         src={lovenseLogo}
@@ -35,7 +35,7 @@ export default function (props: { name: string }) {
         alignItems: "center",
       }}
     >
-      {props.name.replace("Lovense Connect ", "").replace("Lovense ", "")}
+      {name.replace("Lovense Connect ", "").replace("Lovense ", "")}
       {badge}
     </div>
   );

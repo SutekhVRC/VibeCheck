@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import InputGroup from "react-bootstrap/InputGroup";
 import { invoke } from "@tauri-apps/api";
@@ -6,54 +6,54 @@ import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
 
 import { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
-import { SET_CONFIG } from "../data/constants";
+import { GET_CONFIG, SET_CONFIG } from "../data/constants";
 import "./SettingsModal.css";
 
 type settingsModalProps = {
-  settings: FeVibeCheckConfig | null; // Nullable because backend sets default, don't want to overwrite if no response
   show: boolean;
   onHide: () => void;
-  onSave: () => void;
 };
 
 export default function (props: settingsModalProps) {
+  const [config, setConfig] = useState<null | FeVibeCheckConfig>(null);
   const oscBind = useRef<HTMLInputElement>(null);
 
-  async function setConfig() {
-    if (oscBind.current?.value == null || props.settings == null) {
+  useEffect(() => {
+    async function getConfig() {
+      return await invoke<FeVibeCheckConfig>(GET_CONFIG);
+    }
+    getConfig()
+      .then((r) => setConfig(r))
+      .catch(() => setConfig(null));
+  });
+
+  async function updateConfig() {
+    if (oscBind.current?.value == null || config == null) {
       return;
     }
     const newConfig: FeVibeCheckConfig = {
-      ...props.settings,
+      ...config,
       networking: {
-        ...props.settings.networking,
+        ...config.networking,
         bind: oscBind.current.value,
       },
     };
     await invoke(SET_CONFIG, { feVcConfig: newConfig });
   }
 
-  if (props.settings == null) {
-    return (
-      <Modal show={props.show} onHide={props.onHide} centered>
-        <Modal.Header closeButton>
-          <Modal.Title id="contained-modal-title-vcenter">Settings</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>Settings could not be loaded!</Modal.Body>
-      </Modal>
-    );
-  } else {
-    return (
-      <Modal show={props.show} onHide={props.onHide} centered>
-        <Modal.Header closeButton>
-          <Modal.Title id="contained-modal-title-vcenter">Settings</Modal.Title>
-        </Modal.Header>
+  return (
+    <Modal {...props} centered>
+      <Modal.Header closeButton>
+        <Modal.Title id="contained-modal-title-vcenter">Settings</Modal.Title>
+      </Modal.Header>
+      {config == null ? (
+        <Modal.Body>Could not load settings</Modal.Body>
+      ) : (
         <Modal.Body>
           <Form
             onSubmit={(e) => {
               e.preventDefault();
-              setConfig();
-              props.onSave();
+              updateConfig();
               props.onHide();
             }}
           >
@@ -63,7 +63,7 @@ export default function (props: settingsModalProps) {
                 <InputGroup.Text>IP:Port</InputGroup.Text>
                 <Form.Control
                   autoFocus
-                  defaultValue={props.settings.networking.bind}
+                  defaultValue={config.networking.bind}
                   ref={oscBind}
                   pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}
                 />
@@ -72,7 +72,7 @@ export default function (props: settingsModalProps) {
             <Button type="submit">Save</Button>
           </Form>
         </Modal.Body>
-      </Modal>
-    );
-  }
+      )}
+    </Modal>
+  );
 }

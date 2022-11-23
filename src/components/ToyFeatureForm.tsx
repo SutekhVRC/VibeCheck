@@ -21,7 +21,7 @@ export default function (props: FeVCToyFeature) {
         />
       </div>
       <div className="item">
-        <Form.Label>OSC Paraometer</Form.Label>
+        <Form.Label>OSC Parameter</Form.Label>
         <div></div>
         <Form.Control
           value={state.osc_parameter}

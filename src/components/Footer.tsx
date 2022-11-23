@@ -1,28 +1,13 @@
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
 
-import { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
-import {
-  DISABLE,
-  ENABLE,
-  GET_CONFIG,
-  START_SCAN,
-  STOP_SCAN,
-} from "../data/constants";
+import { DISABLE, ENABLE, START_SCAN, STOP_SCAN } from "../data/constants";
 import SettingsModal from "./SettingsModal";
 
 export default function (props: { getToys: () => void }) {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [settingsIsOpen, setSettingsIsOpen] = useState(false);
-  const [settings, setSettings] = useState<null | FeVibeCheckConfig>(null);
-
-  async function getConfig() {
-    setSettings(await invoke<FeVibeCheckConfig>(GET_CONFIG));
-  }
-  useEffect(() => {
-    getConfig();
-  }, []);
 
   async function toggleIsScanning() {
     if (isScanning) {
@@ -79,16 +64,16 @@ export default function (props: { getToys: () => void }) {
           <i className="fa fa-gear" />
         </button>
         <SettingsModal
-          settings={settings}
           show={settingsIsOpen}
           onHide={() => setSettingsIsOpen(false)}
-          onSave={() => getConfig()} // Refresh settings from backend
         />
       </div>
       <div
-        className={`grad-container grad-btn-container${
-          isScanning ? " is-on" : ""
-        }`}
+        className={
+          isScanning
+            ? "grad-container grad-btn-container is-on"
+            : "grad-container grad-btn-container"
+        }
       >
         <button
           className="btn-custom"
@@ -103,9 +88,11 @@ export default function (props: { getToys: () => void }) {
         </button>
       </div>
       <div
-        className={`grad-container grad-btn-container${
-          isEnabled ? " is-on" : ""
-        }`}
+        className={
+          isEnabled
+            ? "grad-container grad-btn-container is-on"
+            : "grad-container grad-btn-container"
+        }
       >
         <button
           className="btn-custom"
