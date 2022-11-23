@@ -11,7 +11,7 @@ import "./App.css";
 export default function App() {
   const [toys, setToys] = useState<FeVCToy[]>([]);
 
-  async function getToys() {
+  async function refetchToys() {
     await invoke<null | { [key: number]: FeVCToy }>(GET_TOYS).then((response) =>
       setToys(response ? Object.values(response) : [])
     );
@@ -24,12 +24,14 @@ export default function App() {
         <div className="toys-container">
           <h1 className="grad-text">Connected toys</h1>
           {toys.length > 0 ? (
-            toys.map((toy) => <Toy toy={toy} key={toy.toy_id} />)
+            toys.map((toy) => (
+              <Toy key={toy.toy_id} toy={toy} refetchToys={refetchToys} />
+            ))
           ) : (
             <div>None</div>
           )}
         </div>
-        <Footer getToys={getToys} />
+        <Footer refetchToys={refetchToys} />
       </div>
     </div>
   );

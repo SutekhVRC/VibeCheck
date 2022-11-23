@@ -1,10 +1,17 @@
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
 
-import { DISABLE, ENABLE, START_SCAN, STOP_SCAN } from "../data/constants";
+import {
+  DISABLE,
+  ENABLE,
+  SCAN_CHECK_INTERVAL,
+  SCAN_LENGTH,
+  START_SCAN,
+  STOP_SCAN,
+} from "../data/constants";
 import SettingsModal from "./SettingsModal";
 
-export default function (props: { getToys: () => void }) {
+export default function ({ refetchToys }: { refetchToys: () => void }) {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [settingsIsOpen, setSettingsIsOpen] = useState(false);
@@ -28,7 +35,7 @@ export default function (props: { getToys: () => void }) {
         toggleIsScanning();
       }
       await invoke(DISABLE).then(() => setIsEnabled(false));
-      props.getToys(); // Clear toy list after we disable
+      refetchToys(); // Clear toy list after we disable
     } else {
       await invoke(ENABLE).then(() => setIsEnabled(true));
     }
@@ -36,15 +43,15 @@ export default function (props: { getToys: () => void }) {
 
   useEffect(() => {
     if (isScanning) {
-      // While scanning, check backend every second
+      // While scanning, check backend every x ms
       const interval = setInterval(() => {
-        props.getToys();
-      }, 1000);
+        refetchToys();
+      }, SCAN_CHECK_INTERVAL);
 
-      // Turn off scan after 10 seconds
+      // Turn off scan after y ms
       const timeout = setTimeout(() => {
         toggleIsScanning();
-      }, 10000);
+      }, SCAN_LENGTH);
 
       return () => {
         clearTimeout(timeout);

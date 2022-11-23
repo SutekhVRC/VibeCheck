@@ -25,7 +25,7 @@ export default function (props: settingsModalProps) {
     getConfig()
       .then((r) => setConfig(r))
       .catch(() => setConfig(null));
-  });
+  }, []);
 
   async function updateConfig() {
     if (oscBind.current?.value == null || config == null) {
