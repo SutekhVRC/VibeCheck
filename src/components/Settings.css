@@ -1,6 +1,7 @@
-.basic-form {
+.setting {
   display: grid;
-  gap: 1rem 1rem;
+  align-items: flex-end;
   grid-template-columns: auto auto;
-  justify-items: right;
+  column-gap: 1rem;
+  padding-bottom: 1rem;
 }
