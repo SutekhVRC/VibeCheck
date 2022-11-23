@@ -5,7 +5,13 @@ import { percent } from "../utils";
 import NameBadge from "./NameBadge";
 import ToyFeatureForm from "./ToyFeatureForm";
 
-export default function ({ toy }: { toy: FeVCToy }) {
+export default function ({
+  toy,
+  refetchToys,
+}: {
+  toy: FeVCToy;
+  refetchToys: () => void;
+}) {
   return (
     <div className="toy-container">
       <div className="toy">
@@ -30,7 +36,11 @@ export default function ({ toy }: { toy: FeVCToy }) {
               >{`${feature.feature_type} ${feature.feature_index}`}</Badge>
             </Accordion.Header>
             <Accordion.Body>
-              <ToyFeatureForm {...feature} />
+              <ToyFeatureForm
+                toyId={toy.toy_id}
+                feature={feature}
+                refetchToys={refetchToys}
+              />
             </Accordion.Body>
           </Accordion.Item>
         ))}
