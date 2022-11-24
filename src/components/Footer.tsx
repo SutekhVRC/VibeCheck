@@ -1,20 +1,22 @@
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
+import { useToys } from "../context/ToysContext";
 
 import {
   DISABLE,
   ENABLE,
-  SCAN_CHECK_INTERVAL,
   SCAN_LENGTH,
   START_SCAN,
   STOP_SCAN,
 } from "../data/constants";
 import SettingsModal from "./SettingsModal";
 
-export default function ({ refetchToys }: { refetchToys: () => void }) {
+export default function () {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [settingsIsOpen, setSettingsIsOpen] = useState(false);
+
+  const { refetchToys } = useToys();
 
   async function toggleIsScanning() {
     if (isScanning) {
@@ -43,19 +45,13 @@ export default function ({ refetchToys }: { refetchToys: () => void }) {
 
   useEffect(() => {
     if (isScanning) {
-      // While scanning, check backend every x ms
-      const interval = setInterval(() => {
-        refetchToys();
-      }, SCAN_CHECK_INTERVAL);
-
-      // Turn off scan after y ms
+      // Turn off scan after x ms
       const timeout = setTimeout(() => {
         toggleIsScanning();
       }, SCAN_LENGTH);
 
       return () => {
         clearTimeout(timeout);
-        clearInterval(interval);
       };
     }
   }, [isScanning]);
