@@ -5,7 +5,6 @@ import { useToys } from "../context/ToysContext";
 import {
   DISABLE,
   ENABLE,
-  SCAN_CHECK_INTERVAL,
   SCAN_LENGTH,
   START_SCAN,
   STOP_SCAN,
@@ -46,19 +45,13 @@ export default function () {
 
   useEffect(() => {
     if (isScanning) {
-      // While scanning, check backend every x ms
-      const interval = setInterval(() => {
-        refetchToys();
-      }, SCAN_CHECK_INTERVAL);
-
-      // Turn off scan after y ms
+      // Turn off scan after x ms
       const timeout = setTimeout(() => {
         toggleIsScanning();
       }, SCAN_LENGTH);
 
       return () => {
         clearTimeout(timeout);
-        clearInterval(interval);
       };
     }
   }, [isScanning]);

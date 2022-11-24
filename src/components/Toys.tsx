@@ -11,10 +11,10 @@ export default function () {
   return (
     <div className="toys-container">
       <h1 className="grad-text">Connected toys</h1>
-      {toys.length == 0 ? (
+      {Object.keys(toys).length == 0 ? (
         <div>None</div>
       ) : (
-        toys.map((toy) => (
+        Object.values(toys).map((toy) => (
           <div className="toy-container" key={toy.toy_id}>
             <div className="toy">
               <NameBadge name={toy.toy_name} />
