@@ -20,10 +20,10 @@ type ToyContext = {
   refetchToys: () => void;
 };
 
-const INITIAL_TOY_MAP = {} as ToyMap;
+const EMPTY_TOY_MAP = {} as ToyMap;
 
 const ToysContext = createContext<ToyContext>({
-  toys: INITIAL_TOY_MAP,
+  toys: EMPTY_TOY_MAP,
   refetchToys: () => null,
 });
 
@@ -32,11 +32,11 @@ export function useToys() {
 }
 
 export function ToysProvider({ children }: { children: ReactNode }) {
-  const [toys, setToys] = useState<ToyMap>({} as ToyMap);
+  const [toys, setToys] = useState<ToyMap>(EMPTY_TOY_MAP);
 
   async function refetchToys() {
-    await invoke<null | { [key: number]: FeVCToy }>(GET_TOYS).then((response) =>
-      setToys(response ? Object.values(response) : [])
+    await invoke<null | ToyMap>(GET_TOYS).then((response) =>
+      setToys(response ? response : EMPTY_TOY_MAP)
     );
   }
 
