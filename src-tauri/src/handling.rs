@@ -5,6 +5,7 @@ use buttplug::client::ScalarCommand::ScalarMap;
 use buttplug::client::RotateCommand::RotateMap;
 use futures::StreamExt;
 use futures_timer::Delay;
+use log::debug;
 use parking_lot::Mutex;
 use rosc::{self, OscMessage, OscPacket};
 use tauri::AppHandle;
@@ -369,6 +370,7 @@ pub async fn toy_management_handler(
                                     ToyUpdate::AlterToy(new_toy) => {
                                         if new_toy.toy_id == dev.index() {
                                             feature_map = new_toy.param_feature_map;
+                                            info!("Altered toy: {}", new_toy.toy_id);
                                         }
                                     }
                                     _ => {} // Remove and Add are handled internally from device connected state and management loop (listening)
@@ -503,7 +505,7 @@ pub async fn toy_management_handler(
                                         match toy_bcst_tx.send(ToySig::UpdateToy(
                                             ToyUpdate::AlterToy(toy.clone()),
                                         )) {
-                                            Ok(receivers) => info!("Sent UpdateToy to {} toys", receivers),
+                                            Ok(receivers) => info!("Sent ToyUpdate broadcast to {} toys", receivers-1),
                                             Err(e) => logerr!("Failed to send UpdateToy: {}", e),
                                         }
                                         toys.insert(toy.toy_id, toy);

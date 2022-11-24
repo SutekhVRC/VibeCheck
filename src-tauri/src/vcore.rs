@@ -12,7 +12,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
-use log::{warn, error as logerr, info, trace};
+use log::{warn, error as logerr, info, trace, debug};
 use serde::Serialize;
 use tauri::AppHandle;
 use tokio::runtime::Runtime;
@@ -468,6 +468,7 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
 
 pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_vc_config: FeVibeCheckConfig) -> Result<(), frontend::VCFeError> {
 
+    debug!("Got fe_vc_config: {:?}", fe_vc_config);
     let bind = match SocketAddrV4::from_str(&fe_vc_config.networking.bind) {
         Ok(sa) => sa,
         Err(_e) => return Err(frontend::VCFeError::InvalidBindEndpoint),
