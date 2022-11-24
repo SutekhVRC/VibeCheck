@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
+import { useToys } from "../context/ToysContext";
 
 import {
   DISABLE,
@@ -11,10 +12,12 @@ import {
 } from "../data/constants";
 import SettingsModal from "./SettingsModal";
 
-export default function ({ refetchToys }: { refetchToys: () => void }) {
+export default function () {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [settingsIsOpen, setSettingsIsOpen] = useState(false);
+
+  const { refetchToys } = useToys();
 
   async function toggleIsScanning() {
     if (isScanning) {

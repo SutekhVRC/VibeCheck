@@ -10,4 +10,4 @@ export const SET_CONFIG = "set_vibecheck_config";
 
 export const SCAN_LENGTH = 10000;
 export const SCAN_CHECK_INTERVAL = 1000;
-export const ALTER_TOY_DEBOUNCE = 100;
+export const ALTER_TOY_DEBOUNCE = 50;
