@@ -41,31 +41,33 @@ export function ToysProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    let unlisten: () => void = () => null;
-    (async () => {
-      unlisten = await listen<FeToyEvent>(TOY_EVENT, (event) => {
-        // TODO figure out a less dumb way to do this
-        const { FeToyAdd: addPayload } = event.payload as { FeToyAdd: FeVCToy };
-        const { FeToyRemove: removePayload } = event.payload as {
-          FeToyRemove: number;
-        };
-        if (addPayload != undefined) {
-          setToys((t) => {
-            return {
-              ...t,
-              [addPayload.toy_id]: addPayload,
-            };
-          });
-        }
-        if (removePayload != undefined) {
-          setToys((t) => {
-            const { [removePayload]: _, ...newToys } = t;
-            return newToys;
-          });
-        }
+    const unlistenPromise = listen<FeToyEvent>(TOY_EVENT, (event) => {
+      // TODO figure out a less dumb way to do this
+      const { FeToyAdd: addPayload } = event.payload as { FeToyAdd: FeVCToy };
+      const { FeToyRemove: removePayload } = event.payload as {
+        FeToyRemove: number;
+      };
+      if (addPayload != undefined) {
+        setToys((t) => {
+          return {
+            ...t,
+            [addPayload.toy_id]: addPayload,
+          };
+        });
+      }
+      if (removePayload != undefined) {
+        setToys((t) => {
+          const { [removePayload]: _, ...newToys } = t;
+          return newToys;
+        });
+      }
+    });
+
+    return () => {
+      unlistenPromise.then((unlisten) => {
+        unlisten();
       });
-    })();
-    return unlisten;
+    };
   }, []);
 
   return (
