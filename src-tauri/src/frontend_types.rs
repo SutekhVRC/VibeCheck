@@ -1,4 +1,5 @@
 
+use futures::stream::Scan;
 /*
  * Frontend type binding generation
  */
@@ -30,8 +31,16 @@ pub enum FeToyEvent {
 
 #[derive(Serialize, Clone, TS)]
 #[ts(export)]
-pub struct FeScanEvent {
-    pub state: &'static str,
+pub enum FeScanEvent {
+    Start,
+    Stop
+}
+
+#[derive(Serialize, Clone, TS)]
+#[ts(export)]
+#[serde(tag="kind", content="data")]
+pub enum FeCoreEvent {
+    Scan(FeScanEvent)
 }
 
 #[derive(Serialize, Clone, TS)]

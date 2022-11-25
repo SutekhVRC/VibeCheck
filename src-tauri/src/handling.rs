@@ -28,9 +28,10 @@ use tokio::sync::{
 use tokio::task::JoinHandle;
 
 use crate::config::OSCNetworking;
+use crate::frontend_types::FeCoreEvent;
 use crate::frontend_types::FeToyEvent;
-use crate::frontend_types::FeScanEvent;
 use crate::frontend_types::FeVCToy;
+use crate::frontend_types::FeScanEvent;
 use crate::toyops::LevelTweaks;
 use crate::toyops::VCFeatureType;
 use crate::toyops::{VCToy, FeatureParamMap};
@@ -237,7 +238,7 @@ pub async fn client_event_handler(
                             if vc_lock.bp_client.is_some() {
                                 let _ = vc_lock.async_rt.spawn(vc_lock.bp_client.as_ref().unwrap().start_scanning());
                             }
-                            let _ = app_handle.emit_all("fe_core_event", FeScanEvent{state: "start",});
+                            let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::Scan(FeScanEvent::Start));
                         }
                     }
 
