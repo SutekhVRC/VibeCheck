@@ -19,9 +19,9 @@ use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use parking_lot::Mutex;
 use crate::bluetooth;
-use crate::config::save_toy_config;
+//use crate::config::save_toy_config;
 use crate::handling::HandlerErr;
-use crate::frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig, FeOSCNetworking};
+use crate::frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter};
 use crate::vcerror::{backend, frontend};
 //use crate::vcupdate::{VibeCheckUpdater, VERSION};
 use crate::{
@@ -462,7 +462,8 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
         networking: FeOSCNetworking {
             bind: config.networking.bind.to_string(),
             remote: config.networking.remote.to_string(),
-        }
+        },
+        scan_on_disconnect: config.scan_on_disconnect,
     }
 }
 
@@ -483,6 +484,7 @@ pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_
         let mut vc_lock = vc_state.0.lock();
         vc_lock.config.networking.bind = bind;
         vc_lock.config.networking.remote = remote;
+        vc_lock.config.scan_on_disconnect = fe_vc_config.scan_on_disconnect;
         vc_lock.config.clone()
     };
 
@@ -490,7 +492,7 @@ pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_
         Ok(()) => Ok(()),
         Err(e) => {
             match e {
-                backend::VibeCheckConfigError::SerializeFailure => Err(frontend::VCFeError::SerializeFailure),
+                backend::VibeCheckConfigError::SerializeError => Err(frontend::VCFeError::SerializeFailure),
                 backend::VibeCheckConfigError::WriteFailure => Err(frontend::VCFeError::WriteFailure),
             }
         }
@@ -504,7 +506,7 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::Vi
         Ok(s) => s,
         Err(_e) => {
             println!("[!] Failed to serialize VibeCheckConfig into a String.");
-            return Err(backend::VibeCheckConfigError::SerializeFailure);
+            return Err(backend::VibeCheckConfigError::SerializeError);
         }
     };
 
@@ -556,6 +558,7 @@ pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashM
                 toy_connected: toy.1.toy_connected,
                 features: toy.1.param_feature_map.to_fe(),
                 listening: toy.1.listening,
+                osc_data: toy.1.osc_data,
             }
         );
     }
@@ -572,22 +575,31 @@ pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashM
 
 
 
-pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, altered_feature: FeVCToyFeature) -> Result<(), frontend::VCFeError> {
+pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
 
     let altered = {
         let mut vc_lock = vc_state.0.lock();
         if let Some(toy) = vc_lock.toys.get_mut(&toy_id) {
 
-            if !toy.param_feature_map.from_fe(altered_feature) {
-                return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
+            match mutate {
+                FeToyAlter::Feature(f) => {
+                    if !toy.param_feature_map.from_fe(f) {
+                        return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
+                    }
+                },
+                FeToyAlter::OSCData(osc_data) => {
+                    toy.osc_data = osc_data;
+                }
             }
+            // Return altered toy
             toy.clone()
         } else {
             return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoToyIndex));
         }
     };
 
-    save_toy_config(&altered.toy_name, altered.param_feature_map.clone());
+    //save_toy_config(&altered.toy_name, altered.param_feature_map.clone());
+    altered.save_toy_config();
 
     let send_res = {
         let vc_lock = vc_state.0.lock();

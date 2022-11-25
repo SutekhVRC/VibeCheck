@@ -10,6 +10,7 @@ use ts_rs::TS;
 #[ts(export)]
 pub struct FeVibeCheckConfig {
     pub networking: FeOSCNetworking,
+    pub scan_on_disconnect: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]
@@ -21,9 +22,22 @@ pub struct FeOSCNetworking {
 
 #[derive(Serialize, Clone, TS)]
 #[ts(export)]
-pub enum FeToyEvent {
-    FeToyAdd(FeVCToy),
-    FeToyRemove(u32),
+pub struct FeToyAddEvent {
+    pub kind: &'static str,
+    pub toy: FeVCToy,
+}
+
+#[derive(Serialize, Clone, TS)]
+#[ts(export)]
+pub struct FeToyRemoveEvent {
+    pub kind: &'static str,
+    pub index: u32,
+}
+
+#[derive(Serialize, Clone, TS)]
+#[ts(export)]
+pub struct FeScanEvent {
+    pub state: &'static str,
 }
 
 #[derive(Serialize, Clone, TS)]
@@ -35,6 +49,7 @@ pub struct FeVCToy {
     pub toy_connected: bool,
     pub features: Vec<FeVCToyFeature>,
     pub listening: bool,
+    pub osc_data: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Copy, TS)]
@@ -56,6 +71,12 @@ pub struct FeVCToyFeature {
     pub feature_index: u32,
     pub feature_levels: FeLevelTweaks,
     pub smooth_enabled: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub enum FeToyAlter {
+    Feature(FeVCToyFeature),
+    OSCData(bool),
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, TS)]

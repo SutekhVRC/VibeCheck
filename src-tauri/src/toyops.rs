@@ -1,10 +1,11 @@
 use buttplug::{core::message::{ActuatorType, ClientDeviceMessageAttributes}, client::ButtplugClientDevice};
 use serde::{Serialize, Deserialize};
+use tracing::info;
 use ts_rs::TS;
 use core::fmt;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, fs};
 
-use crate::{config::save_toy_config, frontend_types::{FeVCToyFeature, FeVCFeatureType, FeLevelTweaks}};
+use crate::{config::toy::{VCToyConfig}, frontend_types::{FeVCToyFeature, FeVCFeatureType, FeLevelTweaks}, util::{get_user_home_dir, file_exists}, vcerror};
 
 #[derive(Clone, Debug)]
 pub struct VCToy {
@@ -13,18 +14,20 @@ pub struct VCToy {
     pub battery_level: f64,
     pub toy_connected: bool,
     pub toy_features: ClientDeviceMessageAttributes,
-    //pub osc_params_list: Vec<String>,
     pub param_feature_map: FeatureParamMap,
+    pub osc_data: bool,
     pub listening: bool,
     pub device_handle: Arc<ButtplugClientDevice>,
+    pub config: Option<VCToyConfig>,
 }
 
 impl VCToy {
 
+    // Populate if no config can be read for toy
     fn populate_routine(&mut self) {
 
         let features = self.toy_features.clone();
-        println!(
+        info!(
             "Populating toy: {}",
             self.toy_id,
             //toy.toy_features.len()
@@ -43,8 +46,10 @@ impl VCToy {
                 self.param_feature_map.features.push(VCToyFeature::new(format!("/avatar/parameters/{:?}_{}", VCFeatureType::Linear, indexer), indexer, VCFeatureType::Linear));
                 indexer += 1;
             });
+            info!("Populated {} linears", indexer);
         }
 
+        // Populate rotators
         if features.rotate_cmd().is_some() {
             let mut indexer = 0;
             features.rotate_cmd().as_ref().unwrap().iter().for_each(|_rotate_feature| {
@@ -52,8 +57,10 @@ impl VCToy {
                 self.param_feature_map.features.push(VCToyFeature::new(format!("/avatar/parameters/{:?}_{}", VCFeatureType::Rotator, indexer), indexer, VCFeatureType::Rotator));
                 indexer += 1;
             });
+            info!("Populated {} rotators", indexer);
         }
 
+        // Populate scalars
         if features.scalar_cmd().is_some() {
             let mut indexer = 0;
             
@@ -70,30 +77,80 @@ impl VCToy {
                 }
                 indexer += 1;
             });
+            info!("Populated {} scalars", indexer);
         }
         // Save toy on first time add
-        save_toy_config(&self.toy_name, self.param_feature_map.clone());
+        //save_toy_config(&self.toy_name, self.param_feature_map.clone());
+        self.config = Some(VCToyConfig { toy_name: self.toy_name.clone(), features: self.param_feature_map.clone(), toy_data: false });
+        self.save_toy_config();
     }
 
-    pub fn populate_toy_feature_param_map(&mut self, param_feature_map: Option<FeatureParamMap>) {
-        // If a param feature map is passed, configure the toy
-        // If None is passed, set toy to loaded map
-        match param_feature_map {
-            Some(map) => {
+    pub fn populate_toy_feature_param_map(&mut self) {
+
+        match self.config {
+            // If config is loaded check that its feature count matches the toy that loaded it. Then set the feature map to the one from the config.
+            Some(ref conf) => {
+
                 // If feature count differs the user probably swapped between connection types
                 let conn_toy_feature_len = self.toy_features.scalar_cmd().as_ref().unwrap().iter().len() + self.toy_features.rotate_cmd().as_ref().iter().len() + self.toy_features.linear_cmd().as_ref().iter().len();
-                if conn_toy_feature_len != map.features.len() {
+                if conn_toy_feature_len != conf.features.features.len() {
                     self.populate_routine();
                     return;
                 }
+                
                 // Feature count is the same so its probably safe to assume the toy config is intact
-                self.param_feature_map = map;
+                self.param_feature_map = conf.features.clone();
             },
+            // If config is not loaded populate the toy
             None => {
                 self.populate_routine();
             }
         }
     }
+
+    pub fn load_toy_config(&mut self) -> Result<(), vcerror::backend::VibeCheckToyConfigError> {
+        let config_path = format!(
+            "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}.json",
+            get_user_home_dir(),
+            self.toy_name
+        );
+    
+        if !file_exists(&config_path) {
+            self.config = None;
+            return Ok(());
+        } else {
+            let con = fs::read_to_string(config_path).unwrap();
+    
+            let config: VCToyConfig = match serde_json::from_str(&con) {
+                Ok(vc_toy_config) => vc_toy_config,
+                Err(_) => {
+                    self.config = None;
+                    return Err(vcerror::backend::VibeCheckToyConfigError::DeserializeError);
+                }
+            };
+            self.config = Some(config);
+            return Ok(());
+        }
+    }
+    
+    // Save Toy config by name
+    pub fn save_toy_config(&self) {
+        let config_path = format!(
+            "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}.json",
+            get_user_home_dir(),
+            self.toy_name
+        );
+    
+        if let Some(conf) = &self.config {
+            if let Ok(json_string) = serde_json::to_string(conf) {
+                let _ = fs::write(
+                    &config_path,
+                    json_string,
+                );
+                info!("Saved toy config: {}", self.toy_name);
+            }
+        }
+    }        
 }
 
 /*
@@ -268,7 +325,7 @@ pub enum Linears {
     Custom(Vec<(String, u32, LevelTweaks)>),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS, Default)]
 pub struct FeatureParamMap {
 
     // Vec<(Feature, edit_state_bool)

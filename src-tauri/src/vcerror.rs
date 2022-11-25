@@ -39,7 +39,17 @@ pub mod backend {
 
     #[derive(Serialize)]
     pub enum VibeCheckConfigError {
-        SerializeFailure,
+        //ReadFailure,
+        //DeserializeError,
+        SerializeError,
+        WriteFailure,
+    }
+
+    #[derive(Serialize, Debug)]
+    pub enum VibeCheckToyConfigError {
+        ReadFailure,
+        DeserializeError,
+        SerializeError,
         WriteFailure,
     }
 }

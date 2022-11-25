@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use log::trace;
 
-use crate::{vcore::{self, ConnectionModes}, frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig}, vcerror::frontend};
+use crate::{vcore::{self, ConnectionModes}, frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig, FeToyAlter}, vcerror::frontend};
 
 /*
  * vibecheck_version
@@ -91,6 +91,7 @@ pub fn get_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> 
  */
 #[tauri::command(async)]
 pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, fe_vc_config: FeVibeCheckConfig) -> Result<(), frontend::VCFeError>{
+    trace!("set_vibecheck_config({:?})", fe_vc_config);
     vcore::native_set_vibecheck_config(vc_state, fe_vc_config)
 }
 
@@ -108,7 +109,7 @@ pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashM
 /*
  * alter_toy
  * Alters a toy state
- * Args: toy_id, FeVCToyFeature
+ * Args: toy_id, FeToyAlter
  * Javascript input example
  * let altered = {
  *  feature_enabled: true,
@@ -127,8 +128,8 @@ pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashM
  * Return: Result<Ok(()), Err(ToyAlterError)>
  */
 #[tauri::command(async)]
-pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, toy_feature: FeVCToyFeature) -> Result<(), frontend::VCFeError> {
-    vcore::native_alter_toy(vc_state, toy_id, toy_feature)
+pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
+    vcore::native_alter_toy(vc_state, toy_id, mutate)
 }
 
 #[tauri::command(async)]

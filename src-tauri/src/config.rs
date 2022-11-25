@@ -26,7 +26,9 @@ impl Default for OSCNetworking {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct VibeCheckConfig {
+    // Change networking to an enum between OSCQuery and setting bind and remote.
     pub networking: OSCNetworking,
+    pub scan_on_disconnect: bool,
 }
 
 pub fn config_load() -> VibeCheckConfig {
@@ -56,6 +58,7 @@ pub fn config_load() -> VibeCheckConfig {
             &vc_config_file,
             serde_json::to_string(&VibeCheckConfig {
                 networking: OSCNetworking::default(),
+                scan_on_disconnect: false,
             })
             .unwrap(),
         )
@@ -80,6 +83,7 @@ pub fn config_load() -> VibeCheckConfig {
 
                 let def_conf = VibeCheckConfig {
                     networking: OSCNetworking::default(),
+                    scan_on_disconnect: false,
                 };
 
                 fs::write(
@@ -100,6 +104,7 @@ pub fn config_load() -> VibeCheckConfig {
             warn!("[*] Resetting to default config.");
             let def_conf = VibeCheckConfig {
                 networking: OSCNetworking::default(),
+                scan_on_disconnect: false,
             };
             fs::write(
                 &vc_config_file,
@@ -112,40 +117,19 @@ pub fn config_load() -> VibeCheckConfig {
     }
 }
 
-pub fn load_toy_config(toy_name: &String) -> Option<FeatureParamMap> {
-    let config_path = format!(
-        "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}.json",
-        get_user_home_dir(),
-        toy_name
-    );
 
-    if !file_exists(&config_path) {
-        return None;
-    } else {
-        let con = fs::read_to_string(config_path).unwrap();
+pub mod toy {
+    use std::fs;
 
-        let feature_param_map: FeatureParamMap = match serde_json::from_str(&con) {
-            Ok(fpm) => fpm,
-            Err(_) => {
-                return None;
-            }
-        };
-        return Some(feature_param_map);
-    }
-}
+    use serde::{Serialize, Deserialize};
 
-// Save Toy config by name
-pub fn save_toy_config(toy_name: &String, feature_param_map: FeatureParamMap) {
-    let config_path = format!(
-        "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}.json",
-        get_user_home_dir(),
-        toy_name
-    );
+    use crate::{util::{get_user_home_dir, file_exists}, toyops::FeatureParamMap};
 
-    if let Ok(json_string) = serde_json::to_string(&feature_param_map) {
-        let _ = fs::write(
-            &config_path,
-            json_string,
-        );
+
+    #[derive(Debug, Serialize, Deserialize, Clone, Default)]
+    pub struct VCToyConfig {
+        pub toy_name: String,
+        pub features: FeatureParamMap,
+        pub toy_data: bool,
     }
 }
