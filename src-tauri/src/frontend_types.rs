@@ -22,16 +22,10 @@ pub struct FeOSCNetworking {
 
 #[derive(Serialize, Clone, TS)]
 #[ts(export)]
-pub struct FeToyAddEvent {
-    pub kind: &'static str,
-    pub toy: FeVCToy,
-}
-
-#[derive(Serialize, Clone, TS)]
-#[ts(export)]
-pub struct FeToyRemoveEvent {
-    pub kind: &'static str,
-    pub index: u32,
+#[serde(tag="kind", content="data")]
+pub enum FeToyEvent {
+    Add(FeVCToy),
+    Remove(u32)
 }
 
 #[derive(Serialize, Clone, TS)]

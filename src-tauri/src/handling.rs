@@ -5,7 +5,6 @@ use buttplug::client::ScalarCommand::ScalarMap;
 use buttplug::client::RotateCommand::RotateMap;
 use futures::StreamExt;
 use futures_timer::Delay;
-use log::debug;
 use parking_lot::Mutex;
 use rosc::OscType;
 use rosc::encoder;
@@ -29,10 +28,8 @@ use tokio::sync::{
 use tokio::task::JoinHandle;
 
 use crate::config::OSCNetworking;
-//use crate::config::load_toy_config;
-use crate::config::toy::VCToyConfig;
+use crate::frontend_types::FeToyEvent;
 use crate::frontend_types::FeScanEvent;
-use crate::frontend_types::{FeToyAddEvent, FeToyRemoveEvent};
 use crate::frontend_types::FeVCToy;
 use crate::toyops::LevelTweaks;
 use crate::toyops::VCFeatureType;
@@ -193,9 +190,8 @@ pub async fn client_event_handler(
                     tme_send.send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone()))).unwrap();
                     
                     let _ = app_handle.emit_all("fe_toy_event",
-                        FeToyAddEvent {
-                            kind: "add",
-                            toy: FeVCToy {
+                        FeToyEvent::Add ({
+                            FeVCToy {
                                 toy_id: toy.toy_id,
                                 toy_name: toy.toy_name.clone(),
                                 battery_level: toy.battery_level,
@@ -204,7 +200,7 @@ pub async fn client_event_handler(
                                 listening: toy.listening,
                                 osc_data: toy.osc_data,
                             }
-                        }
+                        }),
                     );
 
 
@@ -228,7 +224,7 @@ pub async fn client_event_handler(
                         trace!("Removed toy from VibeCheckState toys");
                         tme_send.send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(dev.index()))).unwrap();
 
-                        let _ = app_handle.emit_all("fe_toy_event", FeToyRemoveEvent{kind: "remove", index: dev.index()});
+                        let _ = app_handle.emit_all("fe_toy_event", FeToyEvent::Remove(dev.index()));
 
                         let _ = Notification::new(identifier.clone())
                         .title("Toy Disconnected")

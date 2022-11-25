@@ -10,6 +10,7 @@ import {
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import { FeToyEvent } from "../../src-tauri/bindings/FeToyEvent";
 import { GET_TOYS, TOY_EVENT } from "../data/constants";
+import { assertExhaustive } from "../utils";
 
 export type ToyMap = {
   [id: number]: FeVCToy;
@@ -42,31 +43,30 @@ export function ToysProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unlistenPromise = listen<FeToyEvent>(TOY_EVENT, (event) => {
-      // TODO figure out a less dumb way to do this
-      const { FeToyAdd: addPayload } = event.payload as { FeToyAdd: FeVCToy };
-      const { FeToyRemove: removePayload } = event.payload as {
-        FeToyRemove: number;
-      };
-      if (addPayload != undefined) {
-        setToys((t) => {
-          return {
-            ...t,
-            [addPayload.toy_id]: addPayload,
-          };
-        });
-      }
-      if (removePayload != undefined) {
-        setToys((t) => {
-          const { [removePayload]: _, ...newToys } = t;
-          return newToys;
-        });
+      switch (event.payload.kind) {
+        case "Add":
+          const add = event.payload.data;
+          setToys((t) => {
+            return {
+              ...t,
+              [add.toy_id]: add,
+            };
+          });
+          break;
+        case "Remove":
+          const remove = event.payload.data;
+          setToys((t) => {
+            const { [remove]: _, ...newToys } = t;
+            return newToys;
+          });
+          break;
+        default:
+          assertExhaustive(event.payload);
       }
     });
 
     return () => {
-      unlistenPromise.then((unlisten) => {
-        unlisten();
-      });
+      unlistenPromise.then((unlisten) => unlisten());
     };
   }, []);
 
