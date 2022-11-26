@@ -60,6 +60,15 @@ export function ToysProvider({ children }: { children: ReactNode }) {
             return newToys;
           });
           break;
+        case "Update":
+          const update = event.payload.data;
+          setToys((t) => {
+            return {
+              ...t,
+              [update.toy_id]: update,
+            };
+          });
+          break;
         default:
           assertExhaustive(event.payload);
       }
@@ -69,6 +78,18 @@ export function ToysProvider({ children }: { children: ReactNode }) {
       unlistenPromise.then((unlisten) => unlisten());
     };
   }, []);
+
+  useEffect(() => {
+    // If any toy has batery_level == 0, keep re-requesting every second
+    const some_toy_has_zero_battery = Object.values(toys).reduce((acc, e) => {
+      return acc || e.battery_level == 0.0;
+    }, false);
+    if (!some_toy_has_zero_battery || Object.keys(toys).length == 0) return;
+    const t = setInterval(() => {
+      refetchToys();
+    }, 1000);
+    return () => clearInterval(t);
+  }, [toys]);
 
   return (
     <ToysContext.Provider value={{ toys, refetchToys }}>

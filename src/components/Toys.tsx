@@ -1,4 +1,4 @@
-import { Accordion, Badge } from "react-bootstrap";
+import { Accordion, Badge, Spinner } from "react-bootstrap";
 import { useToys } from "../context/ToysContext";
 import { percent } from "../utils";
 import NameBadge from "./NameBadge";
@@ -18,13 +18,17 @@ export default function () {
           <div className="toy-container" key={toy.toy_id}>
             <div className="toy">
               <NameBadge name={toy.toy_name} />
-              <div
-                style={{
-                  color: `hsl(${toy.battery_level * 120}, 100%, 50%)`,
-                }}
-              >
-                {percent.format(toy.battery_level)}
-              </div>
+              {toy.battery_level == 0 ? (
+                <Spinner />
+              ) : (
+                <div
+                  style={{
+                    color: `hsl(${toy.battery_level * 120}, 100%, 50%)`,
+                  }}
+                >
+                  {percent.format(toy.battery_level)}
+                </div>
+              )}
             </div>
             <Accordion>
               {toy.features.map((feature) => (
