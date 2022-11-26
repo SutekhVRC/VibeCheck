@@ -132,9 +132,9 @@ pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashM
  * Return: Result<Ok(()), Err(ToyAlterError)>
  */
 #[tauri::command(async)]
-pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
+pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: tauri::AppHandle, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
     trace!("alter_toy({}, {:?})", toy_id, mutate);
-    vcore::native_alter_toy(vc_state, toy_id, mutate)
+    vcore::native_alter_toy(vc_state, app_handle, toy_id, mutate)
 }
 
 #[tauri::command(async)]
