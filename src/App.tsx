@@ -9,13 +9,13 @@ export default function App() {
   return (
     <div style={{ display: "flex", justifyContent: "center" }}>
       <div className="main-container">
+        <Header />
         <ToysProvider>
-          <Header />
           <Toys />
-          <CoreEventProvider>
-            <Footer />
-          </CoreEventProvider>
         </ToysProvider>
+        <CoreEventProvider>
+          <Footer />
+        </CoreEventProvider>
       </div>
     </div>
   );
