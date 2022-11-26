@@ -154,8 +154,7 @@ pub async fn client_event_handler(
         if let Some(event) = event_stream.next().await {
             match event {
                 ButtplugClientEvent::DeviceAdded(dev) => {
-                    // Rid of delay put spinner on frontend if battery is 0
-                    //Delay::new(Duration::from_secs(3)).await;
+                    Delay::new(Duration::from_secs(1)).await;
                     let battery_level = match dev.battery_level().await {
                         Ok(battery_lvl) => battery_lvl,
                         Err(_e) => 0.0,

@@ -16,16 +16,16 @@ export default function ({ toyId, feature }: ToyFeatureFormProps) {
   const [modifiedFeature, setModifiedFeature] =
     useState<FeVCToyFeature>(feature);
 
-  const { refetchToys } = useToys();
-
   useEffect(() => {
     if (modifiedFeature == feature) return;
     async function setFeature() {
-      await invoke(ALTER_TOY, { toyId: toyId, toyFeature: modifiedFeature });
+      await invoke(ALTER_TOY, {
+        toyId: toyId,
+        mutate: { Feature: modifiedFeature },
+      });
     }
     const t = setTimeout(() => {
       setFeature();
-      refetchToys();
     }, ALTER_TOY_DEBOUNCE);
     return () => clearTimeout(t);
   }, [modifiedFeature]);

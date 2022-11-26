@@ -3,6 +3,7 @@ import Header from "./components/Header";
 import Toys from "./components/Toys";
 import Footer from "./components/Footer";
 import "./App.css";
+import { CoreEventProvider } from "./context/CoreEventContext";
 
 export default function App() {
   return (
@@ -11,7 +12,9 @@ export default function App() {
         <ToysProvider>
           <Header />
           <Toys />
-          <Footer />
+          <CoreEventProvider>
+            <Footer />
+          </CoreEventProvider>
         </ToysProvider>
       </div>
     </div>
