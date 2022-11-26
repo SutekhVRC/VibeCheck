@@ -12,7 +12,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
-use log::{warn, error as logerr, info, trace, debug};
+use log::{warn, error as logerr, info, trace};
 use serde::Serialize;
 use tauri::AppHandle;
 use tokio::runtime::Runtime;
@@ -21,7 +21,7 @@ use parking_lot::Mutex;
 use crate::bluetooth;
 //use crate::config::save_toy_config;
 use crate::handling::{HandlerErr, toy_refresh};
-use crate::frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter};
+use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter};
 use crate::vcerror::{backend, frontend};
 //use crate::vcupdate::{VibeCheckUpdater, VERSION};
 use crate::{

@@ -692,7 +692,7 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
         let sock = tUdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await.unwrap();
         info!("Bound toy_refresh sender sock to {}", sock.local_addr().unwrap());
         sock.connect(remote).await.unwrap();
-        for (toy_id, mut toy) in toys {
+        for (.., mut toy) in toys {
 
             let b_level = match toy.device_handle.battery_level().await {
                 Ok(battery_lvl) => battery_lvl,

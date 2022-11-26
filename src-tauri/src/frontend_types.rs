@@ -1,5 +1,5 @@
 
-use futures::stream::Scan;
+
 /*
  * Frontend type binding generation
  */
@@ -34,7 +34,7 @@ pub enum FeToyEvent {
 #[ts(export)]
 pub enum FeScanEvent {
     Start,
-    Stop
+    //Stop
 }
 
 #[derive(Serialize, Clone, TS)]

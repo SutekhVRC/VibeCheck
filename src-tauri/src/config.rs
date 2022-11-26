@@ -6,7 +6,7 @@ use crate::{util::{
     file_exists,
     path_exists,
     get_user_home_dir,
-}, toyops::FeatureParamMap};
+}};
 
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -119,12 +119,8 @@ pub fn config_load() -> VibeCheckConfig {
 
 
 pub mod toy {
-    use std::fs;
-
     use serde::{Serialize, Deserialize};
-
-    use crate::{util::{get_user_home_dir, file_exists}, toyops::FeatureParamMap};
-
+    use crate::toyops::FeatureParamMap;
 
     #[derive(Debug, Serialize, Deserialize, Clone, Default)]
     pub struct VCToyConfig {

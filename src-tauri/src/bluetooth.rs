@@ -7,7 +7,7 @@ use buttplug::server::device::hardware::communication::btleplug::BtlePlugCommuni
 use buttplug::server::device::hardware::communication::lovense_connect_service::LovenseConnectServiceCommunicationManagerBuilder;
 use log::{error as logerr, info, warn, trace};
 
-
+#[allow(unused)]
 pub async fn detect_btle_adapter() -> bool {
     if let Ok(manager) = Manager::new().await {
         if let Ok(adapters) = manager.adapters().await {

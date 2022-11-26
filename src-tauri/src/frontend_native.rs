@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use log::trace;
 
-use crate::{vcore::{self, ConnectionModes}, frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig, FeToyAlter}, vcerror::frontend};
+use crate::{vcore::{self, ConnectionModes}, frontend_types::{FeVCToy, FeVibeCheckConfig, FeToyAlter}, vcerror::frontend};
 
 /*
  * vibecheck_version
