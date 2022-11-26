@@ -22,7 +22,7 @@ export default function () {
         <div>None</div>
       ) : (
         Object.values(toys).map((toy) => (
-          <div className="toy-container" key={toy.toy_id}>
+          <div className="toy-container" key={`${toy.toy_name} ${toy.toy_id}`}>
             <div className="toy">
               <NameBadge name={toy.toy_name} />
               <OverlayTrigger overlay={<Tooltip>OSC Data</Tooltip>}>
@@ -47,8 +47,8 @@ export default function () {
             <Accordion>
               {toy.features.map((feature) => (
                 <Accordion.Item
-                  eventKey={feature.feature_index.toString()}
-                  key={feature.feature_index}
+                  eventKey={`${feature.feature_type} ${feature.feature_index}`}
+                  key={`${feature.feature_type} ${feature.feature_index}`}
                 >
                   <Accordion.Header>
                     <Badge
