@@ -14,14 +14,14 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
 use log::{warn, error as logerr, info, trace};
 use serde::Serialize;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use parking_lot::Mutex;
 use crate::bluetooth;
 //use crate::config::save_toy_config;
 use crate::handling::{HandlerErr, toy_refresh};
-use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter};
+use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter, FeToyEvent};
 use crate::vcerror::{backend, frontend};
 //use crate::vcupdate::{VibeCheckUpdater, VERSION};
 use crate::{
@@ -624,7 +624,7 @@ pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashM
 
 
 
-pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
+pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: tauri::AppHandle, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
 
     let altered = {
         let mut vc_lock = vc_state.0.lock();
@@ -648,12 +648,27 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, m
     };
 
     //save_toy_config(&altered.toy_name, altered.param_feature_map.clone());
+    let alter_clone = altered.clone();
     altered.save_toy_config();
 
     let send_res = {
         let vc_lock = vc_state.0.lock();
         vc_lock.tme_send.send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)))
     };
+
+    let _ = app_handle.emit_all("fe_toy_event",
+        FeToyEvent::Update ({
+            FeVCToy {
+                toy_id: alter_clone.toy_id,
+                toy_name: alter_clone.toy_name,
+                battery_level: alter_clone.battery_level,
+                toy_connected: alter_clone.toy_connected,
+                features: alter_clone.param_feature_map.to_fe(),
+                listening: alter_clone.listening,
+                osc_data: alter_clone.osc_data,
+            }
+        }),
+    );
 
     match send_res {
         Ok(()) => Ok(()),
