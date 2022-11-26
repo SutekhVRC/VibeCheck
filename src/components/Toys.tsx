@@ -1,4 +1,11 @@
-import { Accordion, Badge, Spinner } from "react-bootstrap";
+import {
+  Accordion,
+  Badge,
+  Form,
+  OverlayTrigger,
+  Spinner,
+  Tooltip,
+} from "react-bootstrap";
 import { useToys } from "../context/ToysContext";
 import { percent } from "../utils";
 import NameBadge from "./NameBadge";
@@ -18,6 +25,13 @@ export default function () {
           <div className="toy-container" key={toy.toy_id}>
             <div className="toy">
               <NameBadge name={toy.toy_name} />
+              <OverlayTrigger overlay={<Tooltip>OSC Data</Tooltip>}>
+                <Form.Check
+                  type="switch"
+                  style={{ fontSize: "1rem" }}
+                  defaultChecked={toy.osc_data}
+                />
+              </OverlayTrigger>
               {toy.battery_level == 0 ? (
                 <Spinner />
               ) : (
