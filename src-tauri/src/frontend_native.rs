@@ -53,6 +53,7 @@ pub fn vibecheck_disable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Res
  */
 #[tauri::command]
 pub fn vibecheck_start_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
+    trace!("vibecheck_start_bt_scan");
     tauri::async_runtime::block_on(async move {vcore::native_vibecheck_start_bt_scan(vc_state).await})
 }
 
@@ -64,6 +65,7 @@ pub fn vibecheck_start_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) 
  */
 #[tauri::command]
 pub fn vibecheck_stop_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
+    trace!("vibecheck_stop_bt_scan");
     tauri::async_runtime::block_on(async move {vcore::native_vibecheck_stop_bt_scan(vc_state).await})
 }
 
@@ -78,6 +80,7 @@ pub fn vibecheck_stop_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) -
  */
 #[tauri::command(async)]
 pub fn get_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> FeVibeCheckConfig {
+    trace!("get_vibecheck_config");
     vcore::native_get_vibecheck_config(vc_state)
 }
 
@@ -103,6 +106,7 @@ pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, fe_
  */
 #[tauri::command(async)]
 pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashMap<u32, FeVCToy>> {
+    trace!("get_toys");
     vcore::native_get_toys(vc_state)
 }
 
@@ -129,6 +133,7 @@ pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashM
  */
 #[tauri::command(async)]
 pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
+    trace!("alter_toy({}, {:?})", toy_id, mutate);
     vcore::native_alter_toy(vc_state, toy_id, mutate)
 }
 

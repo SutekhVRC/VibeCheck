@@ -24,11 +24,11 @@ mod vcerror;
 
 fn main() {
 
-    tracing_subscriber::fmt::init();
+    //tracing_subscriber::fmt::init();
     
     let mut log_builder = env_logger::builder();
-    log_builder.filter(None, log::LevelFilter::Trace);
-    //log_builder.init();
+    log_builder.filter(Some("vibecheck"), log::LevelFilter::Trace);
+    log_builder.init();
 
     let vibecheck_state_pointer = Arc::new(
         Mutex::new(
@@ -55,6 +55,7 @@ fn main() {
 
     let app = tauri::Builder::default()
     .setup(|_app| {
+
         Ok(())
     })
     .system_tray(tauri::SystemTray::new().with_menu(tray_menu))

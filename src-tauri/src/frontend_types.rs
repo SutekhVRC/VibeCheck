@@ -26,7 +26,8 @@ pub struct FeOSCNetworking {
 #[serde(tag="kind", content="data")]
 pub enum FeToyEvent {
     Add(FeVCToy),
-    Remove(u32)
+    Remove(u32),
+    Update(FeVCToy),
 }
 
 #[derive(Serialize, Clone, TS)]
@@ -76,7 +77,8 @@ pub struct FeVCToyFeature {
     pub smooth_enabled: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, TS)]
+#[ts(export)]
 pub enum FeToyAlter {
     Feature(FeVCToyFeature),
     OSCData(bool),

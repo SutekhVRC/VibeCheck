@@ -154,8 +154,8 @@ pub async fn client_event_handler(
         if let Some(event) = event_stream.next().await {
             match event {
                 ButtplugClientEvent::DeviceAdded(dev) => {
-
-                    Delay::new(Duration::from_secs(3)).await;
+                    // Rid of delay put spinner on frontend if battery is 0
+                    //Delay::new(Duration::from_secs(3)).await;
                     let battery_level = match dev.battery_level().await {
                         Ok(battery_lvl) => battery_lvl,
                         Err(_e) => 0.0,
@@ -180,7 +180,7 @@ pub async fn client_event_handler(
                         Ok(()) => info!("Toy config loaded successfully."),
                         Err(e) => warn!("Toy config failed to load: {:?}", e),
                     }
-                    toy.populate_toy_feature_param_map();
+                    toy.populate_toy_config();
                     
                     {
                         let mut vc_lock = vibecheck_state_pointer.lock();
@@ -241,7 +241,6 @@ pub async fn client_event_handler(
                             let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::Scan(FeScanEvent::Start));
                         }
                     }
-
                 }
                 ButtplugClientEvent::ScanningFinished => info!("Scanning finished!"),
                 ButtplugClientEvent::ServerDisconnect => break,
@@ -675,7 +674,7 @@ fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
  * 
  */
 
-pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>) {
+pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, app_handle: AppHandle) {
 
     loop {
         Delay::new(Duration::from_secs(60)).await;
@@ -693,24 +692,43 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>) {
         let sock = tUdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await.unwrap();
         info!("Bound toy_refresh sender sock to {}", sock.local_addr().unwrap());
         sock.connect(remote).await.unwrap();
-        for (.., mut toy) in toys {
+        for (toy_id, mut toy) in toys {
 
-            toy.battery_level = match toy.device_handle.battery_level().await {
+            let b_level = match toy.device_handle.battery_level().await {
                 Ok(battery_lvl) => battery_lvl,
                 Err(_e) => 0.0,
             };
+
+            toy.battery_level = b_level;
+
+            let _ = app_handle.emit_all("fe_toy_event",
+                        FeToyEvent::Update ({
+                            FeVCToy {
+                                toy_id: toy.toy_id,
+                                toy_name: toy.toy_name.clone(),
+                                battery_level: toy.battery_level,
+                                toy_connected: toy.toy_connected,
+                                features: toy.param_feature_map.to_fe(),
+                                listening: toy.listening,
+                                osc_data: toy.osc_data,
+                            }
+                        }),
+                    );
             
             if toy.osc_data {
 
+                trace!("Sending OSC data for toy: {}", toy.toy_name);
+
                 let battery_level_msg = encoder::encode(&OscPacket::Message(OscMessage {
-                    addr: format!("/avatar/parameters/{}", toy.toy_name.to_lowercase().replace(" ", "_")),
-                    args: vec![OscType::Int(toy.battery_level as i32 * 100)]
+                    addr: format!("/avatar/parameters/{}/battery", toy.toy_name),
+                    args: vec![OscType::Float(b_level as f32)]
                 })).unwrap();
 
                 let batt_send_err = sock.send(&battery_level_msg).await;
                 if batt_send_err.is_err(){warn!("Failed to send battery_level to {}", remote.to_string());}
-                else{info!("Sent battery_level: {} to {}", toy.battery_level, toy.toy_name);}
-
+                else{info!("Sent battery_level: {} to {}", b_level, toy.toy_name);}
+            } else {
+                trace!("OSC data disabled for toy {}", toy.toy_name);
             }
         }
     }

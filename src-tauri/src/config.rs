@@ -130,6 +130,6 @@ pub mod toy {
     pub struct VCToyConfig {
         pub toy_name: String,
         pub features: FeatureParamMap,
-        pub toy_data: bool,
+        pub osc_data: bool,
     }
 }

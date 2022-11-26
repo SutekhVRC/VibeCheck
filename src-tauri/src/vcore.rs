@@ -20,7 +20,7 @@ use tokio::task::JoinHandle;
 use parking_lot::Mutex;
 use crate::bluetooth;
 //use crate::config::save_toy_config;
-use crate::handling::HandlerErr;
+use crate::handling::{HandlerErr, toy_refresh};
 use crate::frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter};
 use crate::vcerror::{backend, frontend};
 //use crate::vcupdate::{VibeCheckUpdater, VERSION};
@@ -76,6 +76,8 @@ pub struct VibeCheckState {
     //pub client_eh_event_rx: Arc<Mutex<UnboundedReceiver<EventSig>>>,
     //pub client_eh_event_tx: UnboundedSender<EventSig>,
     //================================================
+    //Toy update handler
+    pub toy_update_h_thread: Option<JoinHandle<()>>,
     // Toy Management Handler
     pub toy_management_h_thread: Option<JoinHandle<()>>,
     pub tme_recv: UnboundedReceiver<ToyManagementEvent>,
@@ -152,6 +154,10 @@ impl VibeCheckState {
             //client_eh_event_tx,
 
             //======================================
+            // Toy update handler
+            toy_update_h_thread: None,
+
+            //======================================
             // Toy Management Handler
             toy_management_h_thread: Some(toy_management_h_thread),
             tme_recv,
@@ -219,7 +225,41 @@ impl VibeCheckState {
         ceh_thread.abort();
         match ceh_thread.await {
             Ok(()) => info!("CEH thread finished"),
-            Err(e) => logerr!("CEH thread failed to reach completion: {}", e),
+            Err(e) => warn!("CEH thread failed to reach completion: {}", e),
+        }
+    }
+
+    pub async fn init_toy_update_handler(&mut self) {
+
+        // Is there a supplied state pointer?
+        if self.vibecheck_state_pointer.is_none() {
+            return;
+        }
+
+        // Is CEH running?
+        if self.client_eh_thread.is_none() {
+            return;
+        }
+
+        if self.app_handle.is_none() {
+            return;
+        }
+
+        self.toy_update_h_thread = Some(self.async_rt.spawn(toy_refresh(self.vibecheck_state_pointer.as_ref().unwrap().clone(), self.app_handle.as_ref().unwrap().clone())));
+        info!("TUH thread started");
+    }
+
+    pub async fn destroy_toy_update_handler(&mut self) {
+        
+        if self.toy_update_h_thread.is_none() {
+            return;
+        }
+
+        let tuh_thread = self.toy_update_h_thread.take().unwrap();
+        tuh_thread.abort();
+        match tuh_thread.await {
+            Ok(()) => info!("TUH thread finished"),
+            Err(e) => warn!("TUH thread failed to reach completion: {}", e),
         }
     }
 }
@@ -288,6 +328,10 @@ pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) 
         return Err(frontend::VCFeError::DisableFailure);
     }
 
+    trace!("Calling destroy_toy_update_handler()");
+    vc_lock.destroy_toy_update_handler().await;
+    trace!("TUH destroyed");
+
     trace!("Calling destroy_ceh()");
     vc_lock.destroy_ceh().await;
     info!("CEH destroyed");
@@ -337,6 +381,11 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
                     match sig {
                         TmSig::Listening => {
                             vc_lock.running = RunningState::Running;
+                            
+                            // Enable successful
+                            // Start TUH thread
+                            vc_lock.init_toy_update_handler().await;
+
                             Ok(())
                         },
                         TmSig::BindError => {
@@ -469,7 +518,7 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
 
 pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_vc_config: FeVibeCheckConfig) -> Result<(), frontend::VCFeError> {
 
-    debug!("Got fe_vc_config: {:?}", fe_vc_config);
+    info!("Got fe_vc_config: {:?}", fe_vc_config);
     let bind = match SocketAddrV4::from_str(&fe_vc_config.networking.bind) {
         Ok(sa) => sa,
         Err(_e) => return Err(frontend::VCFeError::InvalidBindEndpoint),
@@ -505,7 +554,7 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::Vi
     let json_config_str = match serde_json::to_string(&config) {
         Ok(s) => s,
         Err(_e) => {
-            println!("[!] Failed to serialize VibeCheckConfig into a String.");
+            logerr!("[!] Failed to serialize VibeCheckConfig into a String.");
             return Err(backend::VibeCheckConfigError::SerializeError);
         }
     };
@@ -519,7 +568,7 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::Vi
     ) {
         Ok(()) => {},
         Err(_e) => {
-            println!("[!] Failure writing VibeCheck config.");
+            logerr!("[!] Failure writing VibeCheck config.");
             return Err(backend::VibeCheckConfigError::WriteFailure);
         }
     }

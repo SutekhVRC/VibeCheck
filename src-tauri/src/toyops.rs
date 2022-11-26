@@ -5,7 +5,7 @@ use ts_rs::TS;
 use core::fmt;
 use std::{collections::HashMap, sync::Arc, fs};
 
-use crate::{config::toy::{VCToyConfig}, frontend_types::{FeVCToyFeature, FeVCFeatureType, FeLevelTweaks}, util::{get_user_home_dir, file_exists}, vcerror};
+use crate::{config::toy::VCToyConfig, frontend_types::{FeVCToyFeature, FeVCFeatureType, FeLevelTweaks}, util::{get_user_home_dir, file_exists}, vcerror};
 
 #[derive(Clone, Debug)]
 pub struct VCToy {
@@ -81,11 +81,12 @@ impl VCToy {
         }
         // Save toy on first time add
         //save_toy_config(&self.toy_name, self.param_feature_map.clone());
-        self.config = Some(VCToyConfig { toy_name: self.toy_name.clone(), features: self.param_feature_map.clone(), toy_data: false });
+        self.config = Some(VCToyConfig { toy_name: self.toy_name.clone(), features: self.param_feature_map.clone(), osc_data: false, });
+        info!("Set toy config populate defaults");
         self.save_toy_config();
     }
 
-    pub fn populate_toy_feature_param_map(&mut self) {
+    pub fn populate_toy_config(&mut self) {
 
         match self.config {
             // If config is loaded check that its feature count matches the toy that loaded it. Then set the feature map to the one from the config.
@@ -100,6 +101,8 @@ impl VCToy {
                 
                 // Feature count is the same so its probably safe to assume the toy config is intact
                 self.param_feature_map = conf.features.clone();
+                self.osc_data = conf.osc_data;
+                info!("Populated toy with loaded config");
             },
             // If config is not loaded populate the toy
             None => {
@@ -110,9 +113,10 @@ impl VCToy {
 
     pub fn load_toy_config(&mut self) -> Result<(), vcerror::backend::VibeCheckToyConfigError> {
         let config_path = format!(
-            "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}.json",
+            "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}_{}.json",
             get_user_home_dir(),
-            self.toy_name
+            self.toy_name,
+            self.toy_id,
         );
     
         if !file_exists(&config_path) {
@@ -136,9 +140,10 @@ impl VCToy {
     // Save Toy config by name
     pub fn save_toy_config(&self) {
         let config_path = format!(
-            "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}.json",
+            "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}_{}.json",
             get_user_home_dir(),
-            self.toy_name
+            self.toy_name,
+            self.toy_id,
         );
     
         if let Some(conf) = &self.config {
