@@ -617,8 +617,10 @@ fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: UnboundedSender<Toy
                 if msg.addr == "/avatar/parameters/vibecheck/state" {
                     if let Some(state_bool) = msg.args.pop().unwrap().bool() {
                         if state_bool {
+                            info!("Sending EnableAndScan event");
                             let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::EnableAndScan));
                         } else {
+                            info!("Sending Disable event");
                             let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::Disable));
                         }
                     }
