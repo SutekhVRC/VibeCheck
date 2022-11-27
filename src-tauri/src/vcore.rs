@@ -1,10 +1,3 @@
-
-//use buttplug::client::device::ClientDeviceMessageAttributesMap;
-//use buttplug::client::ButtplugClientDevice;
-//use buttplug::core::message::ClientDeviceMessageAttributes;
-//use buttplug::core::messages::ButtplugCurrentSpecDeviceMessageType;
-
-
 use std::collections::HashMap;
 use std::fs;
 use std::net::SocketAddrV4;
@@ -633,11 +626,17 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
             match mutate {
                 FeToyAlter::Feature(f) => {
                     if !toy.param_feature_map.from_fe(f) {
+                        logerr!("Failed to convert FeVCToyFeature to VCToyFeature");
                         return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
+                    } else {
+                        // If altering feature map suceeds write the data to the config
+                        toy.config.as_mut().unwrap().features = toy.param_feature_map.clone();
                     }
                 },
                 FeToyAlter::OSCData(osc_data) => {
                     toy.osc_data = osc_data;
+                    // Write the data to config
+                    toy.config.as_mut().unwrap().osc_data = osc_data;
                 }
             }
             // Return altered toy
@@ -649,6 +648,7 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
 
     //save_toy_config(&altered.toy_name, altered.param_feature_map.clone());
     let alter_clone = altered.clone();
+    info!("Altered toy: {:?}", altered);
     altered.save_toy_config();
 
     let send_res = {
