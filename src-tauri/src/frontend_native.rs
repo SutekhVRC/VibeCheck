@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use log::trace;
+use log::{trace, error as logerr};
 
 use crate::{vcore, frontend_types::{FeVCToy, FeVibeCheckConfig, FeToyAlter}, vcerror::frontend};
 
@@ -104,10 +104,11 @@ pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, fe_
  * Args: None
  * Return: Option<Vec<FrontendVCToyModel>>
  */
+#[allow(unused)]
 #[tauri::command(async)]
-pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashMap<u32, FeVCToy>> {
-    trace!("get_toys");
-    vcore::native_get_toys(vc_state)
+pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) {//Option<HashMap<u32, FeVCToy>> {
+    logerr!("get_toys deprecated");
+    //vcore::native_get_toys(vc_state)
 }
 
 /*

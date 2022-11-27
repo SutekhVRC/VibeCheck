@@ -579,7 +579,7 @@ pub struct FrontendVCToyModel {
     pub param_feature_map: FeatureParamMap,
     pub listening: bool,
 }
- */
+
 
 pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashMap<u32, FeVCToy>> {
     
@@ -614,7 +614,7 @@ pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashM
 
     None
 }
-
+*/
 
 
 pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: tauri::AppHandle, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
