@@ -41,9 +41,17 @@ pub enum FeScanEvent {
 
 #[derive(Serialize, Clone, TS)]
 #[ts(export)]
+pub enum FeStateEvent {
+    EnableAndScan,
+    Disable,
+}
+
+#[derive(Serialize, Clone, TS)]
+#[ts(export)]
 #[serde(tag="kind", content="data")]
 pub enum FeCoreEvent {
-    Scan(FeScanEvent)
+    Scan(FeScanEvent),
+    State(FeStateEvent),
 }
 
 #[derive(Serialize, Clone, TS)]
