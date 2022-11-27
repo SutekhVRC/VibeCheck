@@ -3,7 +3,6 @@ export const TOY_EVENT = "fe_toy_event";
 export const ALTER_TOY = "alter_toy";
 
 export const VERSION = "vibecheck_version";
-export const GET_TOYS = "get_toys";
 export const START_SCAN = "vibecheck_start_bt_scan";
 export const STOP_SCAN = "vibecheck_stop_bt_scan";
 export const ENABLE = "vibecheck_enable";
