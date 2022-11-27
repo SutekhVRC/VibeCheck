@@ -37,7 +37,7 @@ pub mod frontend {
 pub mod backend {
     use serde::Serialize;
 
-    #[derive(Serialize)]
+    #[derive(Serialize, Debug)]
     pub enum VibeCheckConfigError {
         //ReadFailure,
         //DeserializeError,
@@ -47,9 +47,9 @@ pub mod backend {
 
     #[derive(Serialize, Debug)]
     pub enum VibeCheckToyConfigError {
-        ReadFailure,
+        //ReadFailure,
         DeserializeError,
-        SerializeError,
-        WriteFailure,
+        //SerializeError,
+        //WriteFailure,
     }
 }
