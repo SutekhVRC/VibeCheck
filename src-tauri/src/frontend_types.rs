@@ -6,6 +6,8 @@
 use serde::{Serialize, Deserialize};
 use ts_rs::TS;
 
+use crate::toyops::VCFeatureType;
+
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]
 #[ts(export)]
@@ -94,4 +96,14 @@ pub enum FeVCFeatureType {
     Constrict,
     Inflate,
     Position,
+}
+
+impl PartialEq<VCFeatureType> for FeVCFeatureType {
+    fn eq(&self, other: &VCFeatureType) -> bool {
+        *self as u32 == *other as u32
+    }
+
+    fn ne(&self, other: &VCFeatureType) -> bool {
+        !self.eq(other)
+    }
 }
