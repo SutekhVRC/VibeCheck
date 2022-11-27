@@ -6,7 +6,6 @@ use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
 use log::{warn, error as logerr, info, trace};
-use serde::Serialize;
 use tauri::{AppHandle, Manager};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
@@ -35,11 +34,12 @@ use tokio::sync::{
     mpsc::UnboundedSender,
 };
 
+/*
 #[derive(Debug, Clone, Serialize)]
 pub struct ConnectionModes {
     btle_enabled: bool,
     lc_enabled: bool,
-}
+}*/
 
 pub struct VCStateMutex(pub Arc<Mutex<VibeCheckState>>);
 
@@ -50,7 +50,7 @@ pub struct VibeCheckState {
 
     pub config: VibeCheckConfig,
 
-    pub connection_modes: ConnectionModes,
+    //pub connection_modes: ConnectionModes,
 
     pub bp_client: Option<ButtplugClient>,
 
@@ -104,7 +104,7 @@ impl VibeCheckState {
         let async_rt = Runtime::new().unwrap();
 
 
-        let connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
+        //let connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
 
         // Setup channels
         let (tme_recv_tx, tme_recv_rx): (UnboundedSender<ToyManagementEvent>, UnboundedReceiver<ToyManagementEvent>) = unbounded_channel();
@@ -130,7 +130,7 @@ impl VibeCheckState {
             app_handle: None,
             identifier: String::new(),
             config,
-            connection_modes,
+            //connection_modes,
             bp_client: None,
             running: RunningState::Stopped,
             toys,
@@ -187,10 +187,10 @@ impl VibeCheckState {
         }
 
         // Create connection mode defaults
-        let mut connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
+        //let mut connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
 
         // Get ButtPlugClient with modified connection modes
-        self.bp_client = Some(bluetooth::vc_toy_client_server_init("VibeCheck", &mut connection_modes.btle_enabled, false).await);
+        self.bp_client = Some(bluetooth::vc_toy_client_server_init("VibeCheck", false).await);
         info!("Buttplug Client Initialized.");
 
         // Get event stream

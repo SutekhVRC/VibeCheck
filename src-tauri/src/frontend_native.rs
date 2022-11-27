@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use log::trace;
 
-use crate::{vcore::{self, ConnectionModes}, frontend_types::{FeVCToy, FeVibeCheckConfig, FeToyAlter}, vcerror::frontend};
+use crate::{vcore, frontend_types::{FeVCToy, FeVibeCheckConfig, FeToyAlter}, vcerror::frontend};
 
 /*
  * vibecheck_version
@@ -136,9 +136,9 @@ pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: ta
     trace!("alter_toy({}, {:?})", toy_id, mutate);
     vcore::native_alter_toy(vc_state, app_handle, toy_id, mutate)
 }
-
+/*
 #[tauri::command(async)]
 pub fn get_connection_modes(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> ConnectionModes {
     let vc_lock = vc_state.0.lock();
     vc_lock.connection_modes.clone()
-}
+}*/
