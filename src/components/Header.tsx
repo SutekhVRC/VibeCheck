@@ -3,12 +3,20 @@ import githubLogo from "../assets/GitHub-Mark-Light-64px.png";
 import discordLogo from "../assets/discord-mark-white.svg";
 import { invoke } from "@tauri-apps/api";
 import { VERSION } from "../data/constants";
-
-const version = await invoke<string>(VERSION).then((r) => {
-  return r.replaceAll("-", " ");
-});
+import { useEffect, useState } from "react";
 
 export default function () {
+  const [version, setVersion] = useState("");
+
+  useEffect(() => {
+    async function getVersion() {
+      await invoke<string>(VERSION).then((r) => {
+        setVersion(r.replaceAll("-", " "));
+      });
+    }
+    getVersion();
+  }, []);
+
   return (
     <div className="header">
       <div className="grad-container">
