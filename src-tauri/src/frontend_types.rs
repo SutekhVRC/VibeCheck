@@ -1,15 +1,19 @@
 
+
 /*
  * Frontend type binding generation
  */
 use serde::{Serialize, Deserialize};
 use ts_rs::TS;
 
+use crate::toyops::VCFeatureType;
+
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]
 #[ts(export)]
 pub struct FeVibeCheckConfig {
     pub networking: FeOSCNetworking,
+    pub scan_on_disconnect: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]
@@ -21,9 +25,25 @@ pub struct FeOSCNetworking {
 
 #[derive(Serialize, Clone, TS)]
 #[ts(export)]
+#[serde(tag="kind", content="data")]
 pub enum FeToyEvent {
-    FeToyAdd(FeVCToy),
-    FeToyRemove(u32),
+    Add(FeVCToy),
+    Remove(u32),
+    Update(FeVCToy),
+}
+
+#[derive(Serialize, Clone, TS)]
+#[ts(export)]
+pub enum FeScanEvent {
+    Start,
+    //Stop
+}
+
+#[derive(Serialize, Clone, TS)]
+#[ts(export)]
+#[serde(tag="kind", content="data")]
+pub enum FeCoreEvent {
+    Scan(FeScanEvent)
 }
 
 #[derive(Serialize, Clone, TS)]
@@ -35,6 +55,7 @@ pub struct FeVCToy {
     pub toy_connected: bool,
     pub features: Vec<FeVCToyFeature>,
     pub listening: bool,
+    pub osc_data: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Copy, TS)]
@@ -58,6 +79,13 @@ pub struct FeVCToyFeature {
     pub smooth_enabled: bool,
 }
 
+#[derive(Debug, Deserialize, TS)]
+#[ts(export)]
+pub enum FeToyAlter {
+    Feature(FeVCToyFeature),
+    OSCData(bool),
+}
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, TS)]
 #[ts(export)]
 pub enum FeVCFeatureType {
@@ -68,4 +96,14 @@ pub enum FeVCFeatureType {
     Constrict,
     Inflate,
     Position,
+}
+
+impl PartialEq<VCFeatureType> for FeVCFeatureType {
+    fn eq(&self, other: &VCFeatureType) -> bool {
+        *self as u32 == *other as u32
+    }
+
+    fn ne(&self, other: &VCFeatureType) -> bool {
+        !self.eq(other)
+    }
 }

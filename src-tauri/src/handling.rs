@@ -5,13 +5,16 @@ use buttplug::client::ScalarCommand::ScalarMap;
 use buttplug::client::RotateCommand::RotateMap;
 use futures::StreamExt;
 use futures_timer::Delay;
-use log::debug;
 use parking_lot::Mutex;
+use rosc::OscType;
+use rosc::encoder;
 use rosc::{self, OscMessage, OscPacket};
 use tauri::AppHandle;
 use tauri::Manager;
+use tokio::net::UdpSocket as tUdpSocket;
 use tokio::sync::mpsc::UnboundedReceiver;
 use std::collections::HashMap;
+use std::net::Ipv4Addr;
 use std::net::UdpSocket;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
@@ -25,9 +28,10 @@ use tokio::sync::{
 use tokio::task::JoinHandle;
 
 use crate::config::OSCNetworking;
-use crate::config::load_toy_config;
+use crate::frontend_types::FeCoreEvent;
 use crate::frontend_types::FeToyEvent;
 use crate::frontend_types::FeVCToy;
+use crate::frontend_types::FeScanEvent;
 use crate::toyops::LevelTweaks;
 use crate::toyops::VCFeatureType;
 use crate::toyops::{VCToy, FeatureParamMap};
@@ -150,7 +154,6 @@ pub async fn client_event_handler(
         if let Some(event) = event_stream.next().await {
             match event {
                 ButtplugClientEvent::DeviceAdded(dev) => {
-
                     Delay::new(Duration::from_secs(3)).await;
                     let battery_level = match dev.battery_level().await {
                         Ok(battery_lvl) => battery_lvl,
@@ -165,20 +168,18 @@ pub async fn client_event_handler(
                         toy_connected: dev.connected(),
                         toy_features: dev.message_attributes().clone(),
                         param_feature_map: FeatureParamMap::new(),
+                        osc_data: false,
                         listening: false,
                         device_handle: dev.clone(),
+                        config: None,
                     };
 
                     // Load config with toy name
-                    let toy_config = load_toy_config(&toy.toy_name);
-                    
-                    if toy_config.is_some() {
-                        info!("Toy config loaded: {}", toy.toy_name);
-                        toy.populate_toy_feature_param_map(toy_config);
-                    } else {
-                        info!("No config found: {}", toy.toy_name);
-                        toy.populate_toy_feature_param_map(None);
+                    match toy.load_toy_config() {
+                        Ok(()) => info!("Toy config loaded successfully."),
+                        Err(e) => warn!("Toy config failed to load: {:?}", e),
                     }
+                    toy.populate_toy_config();
                     
                     {
                         let mut vc_lock = vibecheck_state_pointer.lock();
@@ -189,16 +190,18 @@ pub async fn client_event_handler(
                     tme_send.send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone()))).unwrap();
                     
                     let _ = app_handle.emit_all("fe_toy_event",
-                        FeToyEvent::FeToyAdd(FeVCToy {
-                            toy_id: toy.toy_id,
-                            toy_name: toy.toy_name.clone(),
-                            battery_level: toy.battery_level,
-                            toy_connected: toy.toy_connected,
-                            features: toy.param_feature_map.to_fe(),
-                            listening: toy.listening,
-                        }
-                    ));
-
+                        FeToyEvent::Add ({
+                            FeVCToy {
+                                toy_id: toy.toy_id,
+                                toy_name: toy.toy_name.clone(),
+                                battery_level: toy.battery_level,
+                                toy_connected: toy.toy_connected,
+                                features: toy.param_feature_map.to_fe(),
+                                listening: toy.listening,
+                                osc_data: toy.osc_data,
+                            }
+                        }),
+                    );
 
                     let _ = Notification::new(identifier.clone())
                     .title("Toy Connected")
@@ -209,20 +212,32 @@ pub async fn client_event_handler(
                 }
                 ButtplugClientEvent::DeviceRemoved(dev) => {
 
-
-                    if let Some(toy) = {
+                    // Get scan on disconnect and toy
+                    let (sod, toy) = {
                         let mut vc_lock = vibecheck_state_pointer.lock();
-                        vc_lock.toys.remove(&dev.index())
-                    } {
+                        (vc_lock.config.scan_on_disconnect, vc_lock.toys.remove(&dev.index()))
+                    };
+                    
+                    // Check is toy is valid
+                    if let Some(toy) = toy {
                         trace!("Removed toy from VibeCheckState toys");
                         tme_send.send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(dev.index()))).unwrap();
 
-                        let _ = app_handle.emit_all("fe_toy_event", FeToyEvent::FeToyRemove(dev.index()));
+                        let _ = app_handle.emit_all("fe_toy_event", FeToyEvent::Remove(dev.index()));
 
                         let _ = Notification::new(identifier.clone())
                         .title("Toy Disconnected")
                         .body(format!("{}", toy.toy_name).as_str())
                         .show();
+
+                        if sod {
+                            info!("Scan on disconnect is enabled.. Starting scan.");
+                            let vc_lock = vibecheck_state_pointer.lock();
+                            if vc_lock.bp_client.is_some() {
+                                let _ = vc_lock.async_rt.spawn(vc_lock.bp_client.as_ref().unwrap().start_scanning());
+                            }
+                            let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::Scan(FeScanEvent::Start));
+                        }
                     }
                 }
                 ButtplugClientEvent::ScanningFinished => info!("Scanning finished!"),
@@ -233,7 +248,7 @@ pub async fn client_event_handler(
                 },
                 ButtplugClientEvent::ServerConnect => {
                     info!("Server Connect");
-                }
+                },
             }
         } else {
             warn!("GOT NONE IN EVENT HANDLER: THIS SHOULD NEVER HAPPEN LOL");
@@ -640,6 +655,78 @@ fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
             }
             _ => {
                 return None;
+            }
+        }
+    }
+}
+
+
+/*
+ * Toy update loop every 1 sec maybe 5
+ * How to do parameter structure
+ * /avatar/parameters/toy_name
+ * INT SIGS:
+ * 0 - 100: toy.battery_level
+ * -1: connected
+ * -2: disconnected
+ * 
+ */
+
+pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, app_handle: AppHandle) {
+
+    loop {
+        Delay::new(Duration::from_secs(60)).await;
+
+
+        let (toys, remote) = {
+            let vc_lock = vibecheck_state_pointer.lock();
+            if !vc_lock.toys.is_empty() {
+                (vc_lock.toys.clone(), vc_lock.config.networking.remote)
+            } else {
+                continue;
+            }
+        };
+
+        let sock = tUdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await.unwrap();
+        info!("Bound toy_refresh sender sock to {}", sock.local_addr().unwrap());
+        sock.connect(remote).await.unwrap();
+        for (.., mut toy) in toys {
+
+            let b_level = match toy.device_handle.battery_level().await {
+                Ok(battery_lvl) => battery_lvl,
+                Err(_e) => 0.0,
+            };
+
+            toy.battery_level = b_level;
+
+            let _ = app_handle.emit_all("fe_toy_event",
+                        FeToyEvent::Update ({
+                            FeVCToy {
+                                toy_id: toy.toy_id,
+                                toy_name: toy.toy_name.clone(),
+                                battery_level: toy.battery_level,
+                                toy_connected: toy.toy_connected,
+                                features: toy.param_feature_map.to_fe(),
+                                listening: toy.listening,
+                                osc_data: toy.osc_data,
+                            }
+                        }),
+                    );
+            
+            if toy.osc_data {
+
+                trace!("Sending OSC data for toy: {}", toy.toy_name);
+
+                let battery_level_msg = encoder::encode(&OscPacket::Message(OscMessage {
+                    addr: format!("/avatar/parameters/{}/battery", toy.toy_name),
+                    args: vec![OscType::Float(b_level as f32)]
+                })).unwrap();
+
+                let batt_send_err = sock.send(&battery_level_msg).await;
+                if batt_send_err.is_err(){warn!("Failed to send battery_level to {}", remote.to_string());}
+                else{info!("Sent battery_level: {} to {}", b_level, toy.toy_name);}
+            } else {
+                trace!("OSC data disabled for toy {}", toy.toy_name);
             }
         }
     }

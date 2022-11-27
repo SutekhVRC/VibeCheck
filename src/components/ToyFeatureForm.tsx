@@ -2,7 +2,6 @@ import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
 import Form from "react-bootstrap/Form";
 import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
-import { useToys } from "../context/ToysContext";
 import { ALTER_TOY, ALTER_TOY_DEBOUNCE } from "../data/constants";
 import { round0 } from "../utils";
 import "./ToyFeatureForm.css";
@@ -16,16 +15,16 @@ export default function ({ toyId, feature }: ToyFeatureFormProps) {
   const [modifiedFeature, setModifiedFeature] =
     useState<FeVCToyFeature>(feature);
 
-  const { refetchToys } = useToys();
-
   useEffect(() => {
     if (modifiedFeature == feature) return;
     async function setFeature() {
-      await invoke(ALTER_TOY, { toyId: toyId, toyFeature: modifiedFeature });
+      await invoke(ALTER_TOY, {
+        toyId: toyId,
+        mutate: { Feature: modifiedFeature },
+      });
     }
     const t = setTimeout(() => {
       setFeature();
-      refetchToys();
     }, ALTER_TOY_DEBOUNCE);
     return () => clearTimeout(t);
   }, [modifiedFeature]);

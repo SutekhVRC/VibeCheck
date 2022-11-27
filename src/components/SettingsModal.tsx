@@ -18,13 +18,12 @@ export default function (props: settingsModalProps) {
   const [config, setConfig] = useState<null | FeVibeCheckConfig>(null);
   const oscBind = useRef<HTMLInputElement>(null);
 
+  async function getConfig() {
+    await invoke<FeVibeCheckConfig>(GET_CONFIG).then((r) => setConfig(r));
+  }
+
   useEffect(() => {
-    async function getConfig() {
-      return await invoke<FeVibeCheckConfig>(GET_CONFIG);
-    }
-    getConfig()
-      .then((r) => setConfig(r))
-      .catch(() => setConfig(null));
+    getConfig();
   }, []);
 
   async function updateConfig() {
@@ -39,6 +38,7 @@ export default function (props: settingsModalProps) {
       },
     };
     await invoke(SET_CONFIG, { feVcConfig: newConfig });
+    getConfig();
   }
 
   return (

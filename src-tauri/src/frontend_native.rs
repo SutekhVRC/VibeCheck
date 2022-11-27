@@ -4,11 +4,8 @@
  * 
  */
 
-use std::collections::HashMap;
-
 use log::trace;
-
-use crate::{vcore::{self, ConnectionModes}, frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig}, vcerror::frontend};
+use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter}, vcerror::frontend};
 
 /*
  * vibecheck_version
@@ -53,6 +50,7 @@ pub fn vibecheck_disable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Res
  */
 #[tauri::command]
 pub fn vibecheck_start_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
+    trace!("vibecheck_start_bt_scan");
     tauri::async_runtime::block_on(async move {vcore::native_vibecheck_start_bt_scan(vc_state).await})
 }
 
@@ -64,6 +62,7 @@ pub fn vibecheck_start_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) 
  */
 #[tauri::command]
 pub fn vibecheck_stop_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
+    trace!("vibecheck_stop_bt_scan");
     tauri::async_runtime::block_on(async move {vcore::native_vibecheck_stop_bt_scan(vc_state).await})
 }
 
@@ -78,6 +77,7 @@ pub fn vibecheck_stop_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) -
  */
 #[tauri::command(async)]
 pub fn get_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> FeVibeCheckConfig {
+    trace!("get_vibecheck_config");
     vcore::native_get_vibecheck_config(vc_state)
 }
 
@@ -91,24 +91,14 @@ pub fn get_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> 
  */
 #[tauri::command(async)]
 pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, fe_vc_config: FeVibeCheckConfig) -> Result<(), frontend::VCFeError>{
+    trace!("set_vibecheck_config({:?})", fe_vc_config);
     vcore::native_set_vibecheck_config(vc_state, fe_vc_config)
-}
-
-/*
- * get_toys
- * Gets toy states
- * Args: None
- * Return: Option<Vec<FrontendVCToyModel>>
- */
-#[tauri::command(async)]
-pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashMap<u32, FeVCToy>> {
-    vcore::native_get_toys(vc_state)
 }
 
 /*
  * alter_toy
  * Alters a toy state
- * Args: toy_id, FeVCToyFeature
+ * Args: toy_id, FeToyAlter
  * Javascript input example
  * let altered = {
  *  feature_enabled: true,
@@ -127,12 +117,13 @@ pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Option<HashM
  * Return: Result<Ok(()), Err(ToyAlterError)>
  */
 #[tauri::command(async)]
-pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, toy_feature: FeVCToyFeature) -> Result<(), frontend::VCFeError> {
-    vcore::native_alter_toy(vc_state, toy_id, toy_feature)
+pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: tauri::AppHandle, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
+    trace!("alter_toy({}, {:?})", toy_id, mutate);
+    vcore::native_alter_toy(vc_state, app_handle, toy_id, mutate)
 }
-
+/*
 #[tauri::command(async)]
 pub fn get_connection_modes(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> ConnectionModes {
     let vc_lock = vc_state.0.lock();
     vc_lock.connection_modes.clone()
-}
+}*/

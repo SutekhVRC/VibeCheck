@@ -1,10 +1,3 @@
-
-//use buttplug::client::device::ClientDeviceMessageAttributesMap;
-//use buttplug::client::ButtplugClientDevice;
-//use buttplug::core::message::ClientDeviceMessageAttributes;
-//use buttplug::core::messages::ButtplugCurrentSpecDeviceMessageType;
-
-
 use std::collections::HashMap;
 use std::fs;
 use std::net::SocketAddrV4;
@@ -12,16 +5,15 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
-use log::{warn, error as logerr, info, trace, debug};
-use serde::Serialize;
-use tauri::AppHandle;
+use log::{warn, error as logerr, info, trace};
+use tauri::{AppHandle, Manager};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use parking_lot::Mutex;
 use crate::bluetooth;
-use crate::config::save_toy_config;
-use crate::handling::HandlerErr;
-use crate::frontend_types::{FeVCToy, FeVCToyFeature, FeVibeCheckConfig, FeOSCNetworking};
+//use crate::config::save_toy_config;
+use crate::handling::{HandlerErr, toy_refresh};
+use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter, FeToyEvent};
 use crate::vcerror::{backend, frontend};
 //use crate::vcupdate::{VibeCheckUpdater, VERSION};
 use crate::{
@@ -42,11 +34,12 @@ use tokio::sync::{
     mpsc::UnboundedSender,
 };
 
+/*
 #[derive(Debug, Clone, Serialize)]
 pub struct ConnectionModes {
     btle_enabled: bool,
     lc_enabled: bool,
-}
+}*/
 
 pub struct VCStateMutex(pub Arc<Mutex<VibeCheckState>>);
 
@@ -57,7 +50,7 @@ pub struct VibeCheckState {
 
     pub config: VibeCheckConfig,
 
-    pub connection_modes: ConnectionModes,
+    //pub connection_modes: ConnectionModes,
 
     pub bp_client: Option<ButtplugClient>,
 
@@ -76,6 +69,8 @@ pub struct VibeCheckState {
     //pub client_eh_event_rx: Arc<Mutex<UnboundedReceiver<EventSig>>>,
     //pub client_eh_event_tx: UnboundedSender<EventSig>,
     //================================================
+    //Toy update handler
+    pub toy_update_h_thread: Option<JoinHandle<()>>,
     // Toy Management Handler
     pub toy_management_h_thread: Option<JoinHandle<()>>,
     pub tme_recv: UnboundedReceiver<ToyManagementEvent>,
@@ -109,7 +104,7 @@ impl VibeCheckState {
         let async_rt = Runtime::new().unwrap();
 
 
-        let connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
+        //let connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
 
         // Setup channels
         let (tme_recv_tx, tme_recv_rx): (UnboundedSender<ToyManagementEvent>, UnboundedReceiver<ToyManagementEvent>) = unbounded_channel();
@@ -135,7 +130,7 @@ impl VibeCheckState {
             app_handle: None,
             identifier: String::new(),
             config,
-            connection_modes,
+            //connection_modes,
             bp_client: None,
             running: RunningState::Stopped,
             toys,
@@ -150,6 +145,10 @@ impl VibeCheckState {
             client_eh_thread: None,
             //client_eh_event_rx,
             //client_eh_event_tx,
+
+            //======================================
+            // Toy update handler
+            toy_update_h_thread: None,
 
             //======================================
             // Toy Management Handler
@@ -188,10 +187,10 @@ impl VibeCheckState {
         }
 
         // Create connection mode defaults
-        let mut connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
+        //let mut connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
 
         // Get ButtPlugClient with modified connection modes
-        self.bp_client = Some(bluetooth::vc_toy_client_server_init("VibeCheck", &mut connection_modes.btle_enabled, false).await);
+        self.bp_client = Some(bluetooth::vc_toy_client_server_init("VibeCheck", false).await);
         info!("Buttplug Client Initialized.");
 
         // Get event stream
@@ -219,7 +218,41 @@ impl VibeCheckState {
         ceh_thread.abort();
         match ceh_thread.await {
             Ok(()) => info!("CEH thread finished"),
-            Err(e) => logerr!("CEH thread failed to reach completion: {}", e),
+            Err(e) => warn!("CEH thread failed to reach completion: {}", e),
+        }
+    }
+
+    pub async fn init_toy_update_handler(&mut self) {
+
+        // Is there a supplied state pointer?
+        if self.vibecheck_state_pointer.is_none() {
+            return;
+        }
+
+        // Is CEH running?
+        if self.client_eh_thread.is_none() {
+            return;
+        }
+
+        if self.app_handle.is_none() {
+            return;
+        }
+
+        self.toy_update_h_thread = Some(self.async_rt.spawn(toy_refresh(self.vibecheck_state_pointer.as_ref().unwrap().clone(), self.app_handle.as_ref().unwrap().clone())));
+        info!("TUH thread started");
+    }
+
+    pub async fn destroy_toy_update_handler(&mut self) {
+        
+        if self.toy_update_h_thread.is_none() {
+            return;
+        }
+
+        let tuh_thread = self.toy_update_h_thread.take().unwrap();
+        tuh_thread.abort();
+        match tuh_thread.await {
+            Ok(()) => info!("TUH thread finished"),
+            Err(e) => warn!("TUH thread failed to reach completion: {}", e),
         }
     }
 }
@@ -288,6 +321,10 @@ pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) 
         return Err(frontend::VCFeError::DisableFailure);
     }
 
+    trace!("Calling destroy_toy_update_handler()");
+    vc_lock.destroy_toy_update_handler().await;
+    trace!("TUH destroyed");
+
     trace!("Calling destroy_ceh()");
     vc_lock.destroy_ceh().await;
     info!("CEH destroyed");
@@ -337,6 +374,11 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
                     match sig {
                         TmSig::Listening => {
                             vc_lock.running = RunningState::Running;
+                            
+                            // Enable successful
+                            // Start TUH thread
+                            vc_lock.init_toy_update_handler().await;
+
                             Ok(())
                         },
                         TmSig::BindError => {
@@ -462,13 +504,14 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
         networking: FeOSCNetworking {
             bind: config.networking.bind.to_string(),
             remote: config.networking.remote.to_string(),
-        }
+        },
+        scan_on_disconnect: config.scan_on_disconnect,
     }
 }
 
 pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_vc_config: FeVibeCheckConfig) -> Result<(), frontend::VCFeError> {
 
-    debug!("Got fe_vc_config: {:?}", fe_vc_config);
+    info!("Got fe_vc_config: {:?}", fe_vc_config);
     let bind = match SocketAddrV4::from_str(&fe_vc_config.networking.bind) {
         Ok(sa) => sa,
         Err(_e) => return Err(frontend::VCFeError::InvalidBindEndpoint),
@@ -483,6 +526,7 @@ pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_
         let mut vc_lock = vc_state.0.lock();
         vc_lock.config.networking.bind = bind;
         vc_lock.config.networking.remote = remote;
+        vc_lock.config.scan_on_disconnect = fe_vc_config.scan_on_disconnect;
         vc_lock.config.clone()
     };
 
@@ -490,7 +534,7 @@ pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_
         Ok(()) => Ok(()),
         Err(e) => {
             match e {
-                backend::VibeCheckConfigError::SerializeFailure => Err(frontend::VCFeError::SerializeFailure),
+                backend::VibeCheckConfigError::SerializeError => Err(frontend::VCFeError::SerializeFailure),
                 backend::VibeCheckConfigError::WriteFailure => Err(frontend::VCFeError::WriteFailure),
             }
         }
@@ -503,8 +547,8 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::Vi
     let json_config_str = match serde_json::to_string(&config) {
         Ok(s) => s,
         Err(_e) => {
-            println!("[!] Failed to serialize VibeCheckConfig into a String.");
-            return Err(backend::VibeCheckConfigError::SerializeFailure);
+            logerr!("[!] Failed to serialize VibeCheckConfig into a String.");
+            return Err(backend::VibeCheckConfigError::SerializeError);
         }
     };
 
@@ -517,13 +561,12 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::Vi
     ) {
         Ok(()) => {},
         Err(_e) => {
-            println!("[!] Failure writing VibeCheck config.");
+            logerr!("[!] Failure writing VibeCheck config.");
             return Err(backend::VibeCheckConfigError::WriteFailure);
         }
     }
     Ok(())
 }
-
 
 /*
 pub struct FrontendVCToyModel {
@@ -535,64 +578,60 @@ pub struct FrontendVCToyModel {
     pub param_feature_map: FeatureParamMap,
     pub listening: bool,
 }
- */
+*/
 
-pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashMap<u32, FeVCToy>> {
-    
-    let mut toys_out = HashMap::<u32, FeVCToy>::new();
-
-    let toys_store = {
-        let vc_lock = vc_state.0.lock();
-        vc_lock.toys.clone()
-    };
-    info!("Got {} toys from lock", toys_store.len());
-    for toy in toys_store {
-
-        toys_out.insert(toy.0,
-            FeVCToy {
-                toy_id: toy.1.toy_id,
-                toy_name: toy.1.toy_name.clone(),
-                battery_level: toy.1.battery_level,
-                toy_connected: toy.1.toy_connected,
-                features: toy.1.param_feature_map.to_fe(),
-                listening: toy.1.listening,
-            }
-        );
-    }
-
-
-    if !toys_out.is_empty() {
-        info!("Returning {} toys!", toys_out.len());
-        return Some(toys_out);
-    }
-    info!("Returning None toys");
-
-    None
-}
-
-
-
-pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, altered_feature: FeVCToyFeature) -> Result<(), frontend::VCFeError> {
+pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: tauri::AppHandle, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
 
     let altered = {
         let mut vc_lock = vc_state.0.lock();
         if let Some(toy) = vc_lock.toys.get_mut(&toy_id) {
 
-            if !toy.param_feature_map.from_fe(altered_feature) {
-                return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
+            match mutate {
+                FeToyAlter::Feature(f) => {
+                    if !toy.param_feature_map.from_fe(f) {
+                        logerr!("Failed to convert FeVCToyFeature to VCToyFeature");
+                        return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
+                    } else {
+                        // If altering feature map suceeds write the data to the config
+                        toy.config.as_mut().unwrap().features = toy.param_feature_map.clone();
+                    }
+                },
+                FeToyAlter::OSCData(osc_data) => {
+                    toy.osc_data = osc_data;
+                    // Write the data to config
+                    toy.config.as_mut().unwrap().osc_data = osc_data;
+                }
             }
+            // Return altered toy
             toy.clone()
         } else {
             return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoToyIndex));
         }
     };
 
-    save_toy_config(&altered.toy_name, altered.param_feature_map.clone());
+    //save_toy_config(&altered.toy_name, altered.param_feature_map.clone());
+    let alter_clone = altered.clone();
+    info!("Altered toy: {:?}", altered);
+    altered.save_toy_config();
 
     let send_res = {
         let vc_lock = vc_state.0.lock();
         vc_lock.tme_send.send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)))
     };
+
+    let _ = app_handle.emit_all("fe_toy_event",
+        FeToyEvent::Update ({
+            FeVCToy {
+                toy_id: alter_clone.toy_id,
+                toy_name: alter_clone.toy_name,
+                battery_level: alter_clone.battery_level,
+                toy_connected: alter_clone.toy_connected,
+                features: alter_clone.param_feature_map.to_fe(),
+                listening: alter_clone.listening,
+                osc_data: alter_clone.osc_data,
+            }
+        }),
+    );
 
     match send_res {
         Ok(()) => Ok(()),

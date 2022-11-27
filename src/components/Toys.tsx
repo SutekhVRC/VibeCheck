@@ -1,5 +1,14 @@
-import { Accordion, Badge } from "react-bootstrap";
+import { invoke } from "@tauri-apps/api";
+import {
+  Accordion,
+  Badge,
+  Form,
+  OverlayTrigger,
+  Spinner,
+  Tooltip,
+} from "react-bootstrap";
 import { useToys } from "../context/ToysContext";
+import { ALTER_TOY } from "../data/constants";
 import { percent } from "../utils";
 import NameBadge from "./NameBadge";
 import ToyFeatureForm from "./ToyFeatureForm";
@@ -8,6 +17,13 @@ import "./Toys.css";
 export default function () {
   const { toys } = useToys();
 
+  async function updateOSCData(toyId: number, newState: boolean) {
+    await invoke(ALTER_TOY, {
+      toyId: toyId,
+      mutate: { OSCData: newState },
+    });
+  }
+
   return (
     <div className="toys-container">
       <h1 className="grad-text">Connected toys</h1>
@@ -15,22 +31,34 @@ export default function () {
         <div>None</div>
       ) : (
         Object.values(toys).map((toy) => (
-          <div className="toy-container" key={toy.toy_id}>
+          <div className="toy-container" key={`${toy.toy_name} ${toy.toy_id}`}>
             <div className="toy">
               <NameBadge name={toy.toy_name} />
-              <div
-                style={{
-                  color: `hsl(${toy.battery_level * 120}, 100%, 50%)`,
-                }}
-              >
-                {percent.format(toy.battery_level)}
-              </div>
+              <OverlayTrigger overlay={<Tooltip>OSC Data</Tooltip>}>
+                <Form.Check
+                  type="switch"
+                  style={{ fontSize: "1rem" }}
+                  defaultChecked={toy.osc_data}
+                  onChange={() => updateOSCData(toy.toy_id, !toy.osc_data)}
+                />
+              </OverlayTrigger>
+              {toy.battery_level == 0 ? (
+                <Spinner />
+              ) : (
+                <div
+                  style={{
+                    color: `hsl(${toy.battery_level * 120}, 100%, 50%)`,
+                  }}
+                >
+                  {percent.format(toy.battery_level)}
+                </div>
+              )}
             </div>
             <Accordion>
               {toy.features.map((feature) => (
                 <Accordion.Item
-                  eventKey={feature.feature_index.toString()}
-                  key={feature.feature_index}
+                  eventKey={`${feature.feature_type} ${feature.feature_index}`}
+                  key={`${feature.feature_type} ${feature.feature_index}`}
                 >
                   <Accordion.Header>
                     <Badge

@@ -7,7 +7,7 @@ use buttplug::server::device::hardware::communication::btleplug::BtlePlugCommuni
 use buttplug::server::device::hardware::communication::lovense_connect_service::LovenseConnectServiceCommunicationManagerBuilder;
 use log::{error as logerr, info, warn, trace};
 
-
+#[allow(unused)]
 pub async fn detect_btle_adapter() -> bool {
     if let Ok(manager) = Manager::new().await {
         if let Ok(adapters) = manager.adapters().await {
@@ -29,12 +29,11 @@ pub async fn detect_btle_adapter() -> bool {
     }
 }
 
-pub async fn vc_toy_client_server_init(client_name: &str, btle_enabled: &mut bool, allow_raw_messages: bool) -> ButtplugClient {
+pub async fn vc_toy_client_server_init(client_name: &str, allow_raw_messages: bool) -> ButtplugClient {
     
     let mut server_builder = ButtplugServerBuilder::default();
 
     server_builder.comm_manager(BtlePlugCommunicationManagerBuilder::default());
-    *btle_enabled = true;
     trace!("Added BtlePlug comm manager");
     //info!("Bluetooth LE interface detected.. Enabling btle.");
     
