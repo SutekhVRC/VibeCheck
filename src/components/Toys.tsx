@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api";
 import {
   Accordion,
   Badge,
@@ -7,6 +8,7 @@ import {
   Tooltip,
 } from "react-bootstrap";
 import { useToys } from "../context/ToysContext";
+import { ALTER_TOY } from "../data/constants";
 import { percent } from "../utils";
 import NameBadge from "./NameBadge";
 import ToyFeatureForm from "./ToyFeatureForm";
@@ -14,6 +16,13 @@ import "./Toys.css";
 
 export default function () {
   const { toys } = useToys();
+
+  async function updateOSCData(toyId: number, newState: boolean) {
+    await invoke(ALTER_TOY, {
+      toyId: toyId,
+      mutate: { OSCData: newState },
+    });
+  }
 
   return (
     <div className="toys-container">
@@ -30,6 +39,7 @@ export default function () {
                   type="switch"
                   style={{ fontSize: "1rem" }}
                   defaultChecked={toy.osc_data}
+                  onChange={() => updateOSCData(toy.toy_id, !toy.osc_data)}
                 />
               </OverlayTrigger>
               {toy.battery_level == 0 ? (
