@@ -287,6 +287,7 @@ pub async fn toy_management_handler(
     mut tme_recv: UnboundedReceiver<ToyManagementEvent>,
     mut toys: HashMap<u32, VCToy>,
     mut vc_config: OSCNetworking,
+    app_handle: AppHandle,
 ) {
     let f = |dev: Arc<ButtplugClientDevice>,
              mut toy_bcst_rx: BReceiver<ToySig>,
@@ -480,7 +481,8 @@ pub async fn toy_management_handler(
             info!("Spawning OSC listener..");
             let vc_conf_clone = vc_config.clone();
             let tme_send_clone = tme_send.clone();
-            thread::spawn(move || toy_input_routine(toy_bcst_tx_osc, tme_send_clone, vc_conf_clone));
+            let app_handle_clone = app_handle.clone();
+            thread::spawn(move || toy_input_routine(toy_bcst_tx_osc, tme_send_clone, app_handle_clone, vc_conf_clone));
 
             loop {
                 // Recv event (listening)
@@ -588,7 +590,7 @@ pub async fn toy_management_handler(
     receives OSC messages
     broadcasts the OSC messages to each toy
 */
-fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: UnboundedSender<ToyManagementEvent>, vc_config: OSCNetworking) {
+fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: UnboundedSender<ToyManagementEvent>, app_handle: AppHandle, vc_config: OSCNetworking) {
 
     let bind_sock = match UdpSocket::bind(format!("{}:{}", vc_config.bind.ip(), vc_config.bind.port())) {
         Ok(s) => {
@@ -611,10 +613,20 @@ fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: UnboundedSender<Toy
         // Die when channel disconnects
 
         match recv_osc_cmd(&bind_sock) {
-            Some(msg) => {
-                if let Err(_) = toy_bcst_tx.send(ToySig::OSCMsg(msg)) {
-                    info!("BCST TX is disconnected. Shutting down toy input routine!");
-                    return; // Shutting down handler_routine
+            Some(mut msg) => {
+                if msg.addr == "/avatar/parameters/vibecheck/state" {
+                    if let Some(state_bool) = msg.args.pop().unwrap().bool() {
+                        if state_bool {
+                            let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::EnableAndScan));
+                        } else {
+                            let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::Disable));
+                        }
+                    }
+                } else {// Not a vibecheck OSC command, broadcast to toys
+                    if let Err(_) = toy_bcst_tx.send(ToySig::OSCMsg(msg)) {
+                        info!("BCST TX is disconnected. Shutting down toy input routine!");
+                        return; // Shutting down handler_routine
+                    }
                 }
             }
             None => {

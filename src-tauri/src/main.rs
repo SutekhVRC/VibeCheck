@@ -129,6 +129,7 @@ fn main() {
         vc_state.set_state_pointer(vc_state_pointer);
         vc_state.set_app_handle(app.app_handle());
         vc_state.identifier = identifier;
+        vc_state.start_tmh();
     }
 
     app.run(|_app_handle, event| {

@@ -73,8 +73,12 @@ pub struct VibeCheckState {
     pub toy_update_h_thread: Option<JoinHandle<()>>,
     // Toy Management Handler
     pub toy_management_h_thread: Option<JoinHandle<()>>,
-    pub tme_recv: UnboundedReceiver<ToyManagementEvent>,
-    pub tme_send: UnboundedSender<ToyManagementEvent>,
+    // These stay in VibeCheckState
+    pub tme_recv_rx: UnboundedReceiver<ToyManagementEvent>,
+    pub tme_send_tx: UnboundedSender<ToyManagementEvent>,
+    // These go in TMH. Wrapped in Option so they can be moved into TMH.
+    pub tme_recv_tx: Option<UnboundedSender<ToyManagementEvent>>,
+    pub tme_send_rx: Option<UnboundedReceiver<ToyManagementEvent>>,
     //================================================
     // Message handler
     pub message_handler_thread: Option<JoinHandle<()>>,
@@ -111,16 +115,20 @@ impl VibeCheckState {
         let (tme_send_tx, tme_send_rx): (UnboundedSender<ToyManagementEvent>, UnboundedReceiver<ToyManagementEvent>) = unbounded_channel();
 
         // Main thread toy management event bidirectional channels
+        /*
         let tme_recv = tme_recv_rx;
         let tme_send = tme_send_tx;
-
+        */
         // Start toy management thread
+        /*
         let toy_management_h_thread = async_rt.spawn(toy_management_handler(
             tme_recv_tx,
             tme_send_rx,
             toys.clone(),
             config.networking.clone(),
+            app_handle.clone(),
         ));
+        */
 
         // Timer prob remove idrc
         //let minute_sync = Instant::now();
@@ -152,9 +160,13 @@ impl VibeCheckState {
 
             //======================================
             // Toy Management Handler
-            toy_management_h_thread: Some(toy_management_h_thread),
-            tme_recv,
-            tme_send,
+            toy_management_h_thread: None,
+            tme_recv_rx,
+            tme_send_tx,
+
+            tme_recv_tx: Some(tme_recv_tx),
+            tme_send_rx: Some(tme_send_rx),
+            
 
             //================================================
             // Message handler
@@ -165,6 +177,21 @@ impl VibeCheckState {
             // Async runtime
             async_rt,
         }
+    }
+
+    pub fn start_tmh(&mut self) {
+        if self.app_handle.is_none() {
+            logerr!("start_tmh() called but no app_handle was set");
+            return;
+        }
+        self.toy_management_h_thread = Some(self.async_rt.spawn(toy_management_handler(
+            self.tme_recv_tx.take().unwrap(),
+            self.tme_send_rx.take().unwrap(),
+            self.toys.clone(),
+            self.config.networking.clone(),
+            self.app_handle.as_ref().unwrap().clone(),
+        )));
+        info!("TMH started");
     }
 
     pub fn set_state_pointer(&mut self, vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>) {
@@ -203,7 +230,7 @@ impl VibeCheckState {
                 self.vibecheck_state_pointer.as_ref().unwrap().clone(),
                 self.identifier.clone(),
                 self.app_handle.as_ref().unwrap().clone(),
-                self.tme_send.clone(),
+                self.tme_send_tx.clone(),
                 self.error_tx.clone()
             )));
     }
@@ -336,7 +363,7 @@ pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) 
     drop(bpc);
     info!("ButtPlugClient stopped");
 
-    vc_lock.tme_send
+    vc_lock.tme_send_tx
     .send(ToyManagementEvent::Sig(TmSig::TMHReset))
     .unwrap();
 
@@ -364,10 +391,10 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
     vc_lock.init_ceh().await;
     info!("CEH initialized");
 
-    vc_lock.tme_send.send(ToyManagementEvent::Sig(TmSig::StartListening(vc_lock.config.networking.clone()))).unwrap();
+    vc_lock.tme_send_tx.send(ToyManagementEvent::Sig(TmSig::StartListening(vc_lock.config.networking.clone()))).unwrap();
     
     // Check if listening succeded or not
-    match vc_lock.tme_recv.recv().await {
+    match vc_lock.tme_recv_rx.recv().await {
         Some(tme) => {
             match tme {
                 ToyManagementEvent::Sig(sig) => {
@@ -385,7 +412,7 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
 
                             logerr!("[!] Bind Error in TME sig: Sending shutdown signal!");
 
-                            vc_lock.tme_send.send(ToyManagementEvent::Sig(TmSig::StopListening)).unwrap();
+                            vc_lock.tme_send_tx.send(ToyManagementEvent::Sig(TmSig::StopListening)).unwrap();
                             vc_lock.running = RunningState::Error("Bind Error! Set a different bind port in Settings!".to_string());
 
                             return Err(frontend::VCFeError::EnableFailure);
@@ -616,7 +643,7 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
 
     let send_res = {
         let vc_lock = vc_state.0.lock();
-        vc_lock.tme_send.send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)))
+        vc_lock.tme_send_tx.send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)))
     };
 
     let _ = app_handle.emit_all("fe_toy_event",
