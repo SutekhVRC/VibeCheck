@@ -40,21 +40,23 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
   const [isEnabled, setIsEnabled] = useState(INITIAL_CORE_STATE.isEnabled);
   const [isScanning, setIsScanning] = useState(INITIAL_CORE_STATE.isScanning);
 
-  async function toggleIsEnabled() {
-    if (isEnabled) {
-      stopScan();
-      await invoke(DISABLE);
-      setIsEnabled(false);
-    } else {
-      await invoke(ENABLE);
-      setIsEnabled(true);
-    }
+  async function enable() {
+    await invoke(ENABLE);
+    setIsEnabled(true);
   }
 
-  async function startScan() {
-    if (!isEnabled) {
-      toggleIsEnabled();
-    }
+  async function stopScanAndDisable() {
+    stopScan();
+    await invoke(DISABLE);
+    setIsEnabled(false);
+  }
+
+  async function toggleIsEnabled() {
+    isEnabled ? stopScanAndDisable() : enable();
+  }
+
+  async function enableAndStartScan() {
+    enable();
     await invoke(START_SCAN);
     setIsScanning(true);
   }
@@ -65,7 +67,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
   }
 
   function toggleScan() {
-    isScanning ? stopScan() : startScan();
+    isScanning ? stopScan() : enableAndStartScan();
   }
 
   useEffect(() => {
@@ -80,9 +82,21 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
         case "Scan":
           setIsScanning(event.payload.data == "Start");
           break;
+        case "State":
+          const data = event.payload.data;
+          switch (data) {
+            case "Disable":
+              stopScanAndDisable();
+              break;
+            case "EnableAndScan":
+              enableAndStartScan();
+              break;
+            default:
+              assertExhaustive(data);
+          }
+          break;
         default:
-        // TODO add assert when > 1 objects unioned in FeCoreEvent
-        // assertExhaustive(event.payload);
+          assertExhaustive(event.payload);
       }
     });
 
