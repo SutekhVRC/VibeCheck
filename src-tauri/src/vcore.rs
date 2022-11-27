@@ -568,7 +568,6 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::Vi
     Ok(())
 }
 
-
 /*
 pub struct FrontendVCToyModel {
     pub toy_id: u32,
@@ -579,43 +578,7 @@ pub struct FrontendVCToyModel {
     pub param_feature_map: FeatureParamMap,
     pub listening: bool,
 }
-
-
-pub fn native_get_toys(vc_state: tauri::State<'_, VCStateMutex>) -> Option<HashMap<u32, FeVCToy>> {
-    
-    let mut toys_out = HashMap::<u32, FeVCToy>::new();
-
-    let toys_store = {
-        let vc_lock = vc_state.0.lock();
-        vc_lock.toys.clone()
-    };
-    info!("Got {} toys from lock", toys_store.len());
-    for toy in toys_store {
-
-        toys_out.insert(toy.0,
-            FeVCToy {
-                toy_id: toy.1.toy_id,
-                toy_name: toy.1.toy_name.clone(),
-                battery_level: toy.1.battery_level,
-                toy_connected: toy.1.toy_connected,
-                features: toy.1.param_feature_map.to_fe(),
-                listening: toy.1.listening,
-                osc_data: toy.1.osc_data,
-            }
-        );
-    }
-
-
-    if !toys_out.is_empty() {
-        info!("Returning {} toys!", toys_out.len());
-        return Some(toys_out);
-    }
-    info!("Returning None toys");
-
-    None
-}
 */
-
 
 pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: tauri::AppHandle, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
 

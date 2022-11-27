@@ -4,11 +4,8 @@
  * 
  */
 
-use std::collections::HashMap;
-
-use log::{trace, error as logerr};
-
-use crate::{vcore, frontend_types::{FeVCToy, FeVibeCheckConfig, FeToyAlter}, vcerror::frontend};
+use log::trace;
+use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter}, vcerror::frontend};
 
 /*
  * vibecheck_version
@@ -96,19 +93,6 @@ pub fn get_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> 
 pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, fe_vc_config: FeVibeCheckConfig) -> Result<(), frontend::VCFeError>{
     trace!("set_vibecheck_config({:?})", fe_vc_config);
     vcore::native_set_vibecheck_config(vc_state, fe_vc_config)
-}
-
-/*
- * get_toys
- * Gets toy states
- * Args: None
- * Return: Option<Vec<FrontendVCToyModel>>
- */
-#[allow(unused)]
-#[tauri::command(async)]
-pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) {//Option<HashMap<u32, FeVCToy>> {
-    logerr!("get_toys deprecated: no longer in use.");
-    //vcore::native_get_toys(vc_state)
 }
 
 /*

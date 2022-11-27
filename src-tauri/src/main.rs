@@ -105,9 +105,7 @@ fn main() {
             frontend_native::set_vibecheck_config,
             frontend_native::vibecheck_start_bt_scan,
             frontend_native::vibecheck_stop_bt_scan,
-            frontend_native::get_toys,
             frontend_native::alter_toy,
-            //frontend_native::get_connection_modes,
             ]
     )
     .build(tauri::generate_context!())
