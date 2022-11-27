@@ -1,6 +1,6 @@
 use buttplug::{core::message::{ActuatorType, ClientDeviceMessageAttributes}, client::ButtplugClientDevice};
+use log::{warn, info, error as logerr};
 use serde::{Serialize, Deserialize};
-use tracing::info;
 use ts_rs::TS;
 use core::fmt;
 use std::{collections::HashMap, sync::Arc, fs};
@@ -115,7 +115,7 @@ impl VCToy {
         let config_path = format!(
             "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}_{}.json",
             get_user_home_dir(),
-            self.toy_name,
+            self.toy_name.replace(" ", "_"),
             self.toy_id,
         );
     
@@ -142,18 +142,31 @@ impl VCToy {
         let config_path = format!(
             "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}_{}.json",
             get_user_home_dir(),
-            self.toy_name,
+            self.toy_name.replace(" ", "_"),
             self.toy_id,
         );
+        info!("Saving toy config to: {}", config_path);
     
         if let Some(conf) = &self.config {
             if let Ok(json_string) = serde_json::to_string(conf) {
-                let _ = fs::write(
+                match fs::write(
                     &config_path,
                     json_string,
-                );
-                info!("Saved toy config: {}", self.toy_name);
+                ) {
+                    Ok(()) => {
+                        info!("Saved toy config: {}", self.toy_name);
+                        return;
+                    },
+                    Err(e) => {
+                        logerr!("Failed to write to file: {}", e);
+                        return;
+                    },
+                }
+            } else {
+                warn!("Failed to serialize config to json");
             }
+        } else {
+            warn!("save_toy_config() called while toy config is None");
         }
     }        
 }
@@ -240,6 +253,16 @@ pub enum VCFeatureType {
     Position,
 }
 impl Eq for VCFeatureType {}
+
+impl PartialEq<FeVCFeatureType> for VCFeatureType {
+    fn eq(&self, other: &FeVCFeatureType) -> bool {
+        *self as u32 == *other as u32
+    }
+
+    fn ne(&self, other: &FeVCFeatureType) -> bool {
+        !self.eq(other)
+    }
+}
 
 impl VCFeatureType {
     #[allow(unused)]// Until need to mutate feature type which will probably never happen
@@ -377,7 +400,9 @@ impl FeatureParamMap {
 
         let mut success = false;
         self.features.iter_mut().for_each(|f| {
-            if f.feature_index == fe_feature.feature_index {
+            
+            if f.feature_index == fe_feature.feature_index
+            && f.feature_type == fe_feature.feature_type {
                 f.from_fe(fe_feature.clone());
                 success = true;
             }
