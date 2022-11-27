@@ -107,7 +107,7 @@ pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, fe_
 #[allow(unused)]
 #[tauri::command(async)]
 pub fn get_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) {//Option<HashMap<u32, FeVCToy>> {
-    logerr!("get_toys deprecated");
+    logerr!("get_toys deprecated: no longer in use.");
     //vcore::native_get_toys(vc_state)
 }
 
