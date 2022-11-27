@@ -42,6 +42,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
 
   async function toggleIsEnabled() {
     if (isEnabled) {
+      stopScan();
       await invoke(DISABLE);
       setIsEnabled(false);
     } else {
