@@ -5,7 +5,7 @@ import SettingsModal from "./SettingsModal";
 export default function () {
   const [settingsIsOpen, setSettingsIsOpen] = useState(false);
 
-  const { isScanning, isEnabled, toggleIsEnabled, startScan } =
+  const { isScanning, isEnabled, toggleIsEnabled, toggleScan } =
     useCoreEventContext();
 
   return (
@@ -33,7 +33,7 @@ export default function () {
         <button
           className="btn-custom"
           type="button"
-          onClick={() => startScan()}
+          onClick={() => toggleScan()}
         >
           {isScanning ? (
             <i className="fa fa-eye-slash" />

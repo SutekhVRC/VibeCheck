@@ -22,13 +22,13 @@ type CoreContextProps = {
   isScanning: boolean;
   isEnabled: boolean;
   toggleIsEnabled: () => void;
-  startScan: () => void;
+  toggleScan: () => void;
 };
 const INITIAL_CORE_STATE: CoreContextProps = {
   isScanning: false,
   isEnabled: false,
   toggleIsEnabled: () => null,
-  startScan: () => null,
+  toggleScan: () => null,
 };
 const CoreEventContext = createContext<CoreContextProps>(INITIAL_CORE_STATE);
 
@@ -42,13 +42,11 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
 
   async function toggleIsEnabled() {
     if (isEnabled) {
-      await invoke(DISABLE)
-        .then(() => setIsEnabled(false))
-        .catch(() => setIsEnabled(false) /* Failed, already disabled */);
+      await invoke(DISABLE);
+      setIsEnabled(false);
     } else {
-      await invoke(ENABLE)
-        .then(() => setIsEnabled(true))
-        .catch(() => setIsEnabled(true) /* Failed, already enabled */);
+      await invoke(ENABLE);
+      setIsEnabled(true);
     }
   }
 
@@ -63,6 +61,10 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
   async function stopScan() {
     await invoke(STOP_SCAN);
     setIsScanning(false);
+  }
+
+  function toggleScan() {
+    isScanning ? stopScan() : startScan();
   }
 
   useEffect(() => {
@@ -90,7 +92,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
 
   return (
     <CoreEventContext.Provider
-      value={{ isScanning, isEnabled, toggleIsEnabled, startScan }}
+      value={{ isScanning, isEnabled, toggleIsEnabled, toggleScan }}
     >
       {children}
     </CoreEventContext.Provider>
