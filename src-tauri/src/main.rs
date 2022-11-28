@@ -127,9 +127,15 @@ fn main() {
     {
         let mut vc_state = vibecheck_state_pointer.lock();
         vc_state.set_state_pointer(vc_state_pointer);
+        trace!("State pointer set");
         vc_state.set_app_handle(app.app_handle());
+        trace!("App handle set");
         vc_state.identifier = identifier;
+        trace!("App Identifier set");
         vc_state.start_tmh();
+        trace!("Started TMH");
+        vc_state.start_disabled_listener();
+        trace!("Started DOL");
     }
 
     app.run(|_app_handle, event| {
