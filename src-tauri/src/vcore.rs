@@ -12,7 +12,7 @@ use tokio::task::JoinHandle;
 use parking_lot::Mutex;
 use crate::bluetooth;
 //use crate::config::save_toy_config;
-use crate::handling::{HandlerErr, toy_refresh};
+use crate::handling::{HandlerErr, toy_refresh, vc_disabled_osc_command_listen};
 use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter, FeToyEvent};
 use crate::vcerror::{backend, frontend};
 //use crate::vcupdate::{VibeCheckUpdater, VERSION};
@@ -62,7 +62,8 @@ pub struct VibeCheckState {
     pub error_rx: Receiver<VCError>,
     pub error_tx: Sender<VCError>,
     //================================================
-    //
+    // Disabled listener thread handle
+    pub disabled_osc_listener_h_thread: Option<JoinHandle<()>>,
     //================================================
     // Client Event Handler
     pub client_eh_thread: Option<JoinHandle<()>>,
@@ -149,6 +150,9 @@ impl VibeCheckState {
             error_tx,
 
             //======================================
+            // Disabled listener thread
+            disabled_osc_listener_h_thread: None,
+            //======================================
             // Client Event Handler
             client_eh_thread: None,
             //client_eh_event_rx,
@@ -192,6 +196,33 @@ impl VibeCheckState {
             self.app_handle.as_ref().unwrap().clone(),
         )));
         info!("TMH started");
+    }
+
+    pub fn start_disabled_listener(&mut self) {
+
+        if self.disabled_osc_listener_h_thread.is_some() {
+            return;
+        }
+
+        self.disabled_osc_listener_h_thread = Some(self.async_rt.spawn(
+            vc_disabled_osc_command_listen(            
+                self.app_handle.as_ref().unwrap().clone(),
+                self.config.networking.clone(),
+            )));
+    }
+
+    pub async fn stop_disabled_listener(&mut self) {
+
+        if self.disabled_osc_listener_h_thread.is_none() {
+            return;
+        }
+
+        let dol_thread = self.disabled_osc_listener_h_thread.take().unwrap();
+        dol_thread.abort();
+        match dol_thread.await {
+            Ok(()) => info!("DOL thread finished"),
+            Err(e) => warn!("DOL thread failed to reach completion: {}", e),
+        }
     }
 
     pub fn set_state_pointer(&mut self, vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>) {
@@ -372,6 +403,9 @@ pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) 
     //let _ = vc_lock.bp_client.as_ref().unwrap().stop_all_devices().await;
     vc_lock.running = RunningState::Stopped;
 
+    info!("Starting disabled state OSC cmd listener");
+    vc_lock.start_disabled_listener();
+
     Ok(())
 }
 
@@ -387,6 +421,9 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
 
         return Err(frontend::VCFeError::DisableFailure);
     }
+
+    info!("Stopping DOL");
+    vc_lock.stop_disabled_listener().await;
 
     vc_lock.init_ceh().await;
     info!("CEH initialized");
