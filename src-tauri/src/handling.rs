@@ -616,10 +616,7 @@ fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: UnboundedSender<Toy
             Some(mut msg) => {
                 if msg.addr == "/avatar/parameters/vibecheck/state" {
                     if let Some(state_bool) = msg.args.pop().unwrap().bool() {
-                        if state_bool {
-                            info!("Sending EnableAndScan event");
-                            let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::EnableAndScan));
-                        } else {
+                        if !state_bool {
                             info!("Sending Disable event");
                             let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::Disable));
                         }
@@ -637,6 +634,70 @@ fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: UnboundedSender<Toy
                         "BCST TX is disconnected (RECV C=0). Shutting down toy input routine!"
                     );
                     return;
+                }
+            }
+        }
+    }
+}
+
+pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OSCNetworking) {
+    info!("Listening for OSC commands while disabled");
+    let mut retries = 3;
+    let sock;
+    loop {
+    Delay::new(Duration::from_secs(1)).await;
+    match tUdpSocket::bind(format!("{}:{}", vc_config.bind.ip(), vc_config.bind.port())).await {
+        Ok(s) => {
+            info!("Listening while disabled");
+            sock = s;
+            break;
+        },
+        Err(_e) => {
+            logerr!("Failed to bind UDP socket for disabled cmd listening.. Retries remaining: {}", retries);
+            if retries == 0 {
+                return;
+            }
+            retries -= 1;
+            continue;
+        }
+    };
+    }
+
+    loop {
+        let mut buf = [0u8; rosc::decoder::MTU];
+
+        let (br, _a) = match sock.recv_from(&mut buf).await {
+            Ok((br, a)) => (br, a),
+            Err(_e) => {
+                logerr!("Failed to receive data");
+                continue;
+            }
+        };
+
+        if br <= 0 {
+            continue;
+        } else {
+            let pkt = match rosc::decoder::decode_udp(&buf) {
+                Ok(pkt) => pkt,
+                Err(_e) => {
+                    logerr!("Failed to parse OSC packet");
+                    continue;
+                }
+            };
+
+            match pkt.1 {
+                OscPacket::Message(mut msg) => {
+                    if msg.addr == "/avatar/parameters/vibecheck/state" {
+                        if let Some(state_bool) = msg.args.pop().unwrap().bool() {
+                            if state_bool {
+                                info!("Sending EnableAndScan event");
+                                let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::EnableAndScan));
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    info!("Didn't get OscPacket::Message, skipping..");
                 }
             }
         }
