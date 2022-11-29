@@ -203,10 +203,15 @@ pub async fn client_event_handler(
                         }),
                     );
 
-                    let _ = Notification::new(identifier.clone())
-                    .title("Toy Connected")
-                    .body(format!("{} ({}%)", toy.toy_name, (100.0 * toy.battery_level)).as_str())
-                    .show();
+                    {
+                        let vc_lock = vibecheck_state_pointer.lock();
+                        if vc_lock.config.desktop_notifications {
+                            let _ = Notification::new(identifier.clone())
+                            .title("Toy Connected")
+                            .body(format!("{} ({}%)", toy.toy_name, (100.0 * toy.battery_level)).as_str())
+                            .show();
+                        }
+                    }
 
                     info!("Toy Connected: {} | {}", toy.toy_name, toy.toy_id);
                 }
@@ -225,15 +230,20 @@ pub async fn client_event_handler(
 
                         let _ = app_handle.emit_all("fe_toy_event", FeToyEvent::Remove(dev.index()));
 
-                        let _ = Notification::new(identifier.clone())
-                        .title("Toy Disconnected")
-                        .body(format!("{}", toy.toy_name).as_str())
-                        .show();
+                        {
+                            let vc_lock = vibecheck_state_pointer.lock();
+                            if vc_lock.config.desktop_notifications {
+                                let _ = Notification::new(identifier.clone())
+                                .title("Toy Disconnected")
+                                .body(format!("{}", toy.toy_name).as_str())
+                                .show();
+                            }
+                        }
 
                         if sod {
                             info!("Scan on disconnect is enabled.. Starting scan.");
                             let vc_lock = vibecheck_state_pointer.lock();
-                            if vc_lock.bp_client.is_some() {
+                            if vc_lock.bp_client.is_some() && vc_lock.config.scan_on_disconnect {
                                 let _ = vc_lock.async_rt.spawn(vc_lock.bp_client.as_ref().unwrap().start_scanning());
                             }
                             let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::Scan(FeScanEvent::Start));

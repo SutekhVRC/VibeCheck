@@ -612,6 +612,8 @@ pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_
         vc_lock.config.networking.bind = bind;
         vc_lock.config.networking.remote = remote;
         vc_lock.config.scan_on_disconnect = fe_vc_config.scan_on_disconnect;
+        vc_lock.config.minimize_on_exit = fe_vc_config.minimize_on_exit;
+        vc_lock.config.desktop_notifications = fe_vc_config.desktop_notifications;
         vc_lock.config.clone()
     };
 
