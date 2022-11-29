@@ -29,6 +29,8 @@ pub struct VibeCheckConfig {
     // Change networking to an enum between OSCQuery and setting bind and remote.
     pub networking: OSCNetworking,
     pub scan_on_disconnect: bool,
+    pub minimize_on_exit: bool,
+    pub desktop_notifications: bool,
 }
 
 pub fn config_load() -> VibeCheckConfig {
@@ -59,6 +61,8 @@ pub fn config_load() -> VibeCheckConfig {
             serde_json::to_string(&VibeCheckConfig {
                 networking: OSCNetworking::default(),
                 scan_on_disconnect: false,
+                minimize_on_exit: false,
+                desktop_notifications: true,
             })
             .unwrap(),
         )
@@ -84,6 +88,8 @@ pub fn config_load() -> VibeCheckConfig {
                 let def_conf = VibeCheckConfig {
                     networking: OSCNetworking::default(),
                     scan_on_disconnect: false,
+                    minimize_on_exit: false,
+                    desktop_notifications: true,
                 };
 
                 fs::write(
@@ -105,6 +111,8 @@ pub fn config_load() -> VibeCheckConfig {
             let def_conf = VibeCheckConfig {
                 networking: OSCNetworking::default(),
                 scan_on_disconnect: false,
+                minimize_on_exit: false,
+                desktop_notifications: true,
             };
             fs::write(
                 &vc_config_file,
