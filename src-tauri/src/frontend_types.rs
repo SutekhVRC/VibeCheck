@@ -14,6 +14,8 @@ use crate::toyops::VCFeatureType;
 pub struct FeVibeCheckConfig {
     pub networking: FeOSCNetworking,
     pub scan_on_disconnect: bool,
+    pub minimize_on_exit: bool,
+    pub desktop_notifications: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]
@@ -78,7 +80,6 @@ pub struct FeLevelTweaks {
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct FeVCToyFeature {
-
     pub feature_enabled: bool,
     pub feature_type: FeVCFeatureType,
     pub osc_parameter: String,

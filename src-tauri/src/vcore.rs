@@ -570,6 +570,8 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
             remote: config.networking.remote.to_string(),
         },
         scan_on_disconnect: config.scan_on_disconnect,
+        minimize_on_exit: config.minimize_on_exit,
+        desktop_notifications: config.desktop_notifications,
     }
 }
 
