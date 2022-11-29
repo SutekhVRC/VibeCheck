@@ -134,6 +134,8 @@ fn main() {
         trace!("App Identifier set");
         vc_state.start_tmh();
         trace!("Started TMH");
+        vc_state.init_ceh();
+        trace!("Started CEH");
         vc_state.start_disabled_listener();
         trace!("Started DOL");
     }

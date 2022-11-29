@@ -254,7 +254,7 @@ pub async fn client_event_handler(
             warn!("GOT NONE IN EVENT HANDLER: THIS SHOULD NEVER HAPPEN LOL");
         }
     }
-    info!("[!] Event handler returning!");
+    info!("Event handler returning!");
 }
 
 // Parse scalar levels and logic for level tweaks
@@ -296,6 +296,7 @@ pub async fn toy_management_handler(
         async move {
             
             while dev.connected() {
+                //trace!("Toy recv loop start");
                 match toy_bcst_rx.recv().await {
                     Ok(ts) => {
                         match ts {
@@ -397,8 +398,8 @@ pub async fn toy_management_handler(
                     Err(_e) => {}
                 }
             }
-            println!(
-                "[*] Device {} disconnected! Leaving listening routine!",
+            info!(
+                "Device {} disconnected! Leaving listening routine!",
                 dev.index()
             );
         }
@@ -409,8 +410,8 @@ pub async fn toy_management_handler(
     // Management loop
     loop {
         // Recv event (not listening)
-        match tme_recv.try_recv() {
-            Ok(event) => {
+        match tme_recv.recv().await {
+            Some(event) => {
                 match event {
                     // Handle Toy Update Signals
                     ToyManagementEvent::Tu(tu) => match tu {
@@ -442,7 +443,7 @@ pub async fn toy_management_handler(
                     }
                 } // Event handled
             }
-            Err(_e) => {}
+            None => {}
         }
 
         if listening {
@@ -512,7 +513,10 @@ pub async fn toy_management_handler(
                                         // OSC Listener thread will only die on StopListening event
                                         if let Some(toy) = running_toy_ths.remove(&id) {
                                             toy.abort();
-                                            let _ = toy.await;
+                                            match toy.await {
+                                                Ok(()) => info!("Toy {} thread finished", id),
+                                                Err(e) => warn!("Toy {} thread failed to reach completion: {}", id, e),
+                                            }
                                             info!("[TOY ID: {}] Stopped listening. (ToyUpdate::RemoveToy)", id);
                                             running_toy_ths.remove(&id);
                                             toys.remove(&id);
@@ -542,7 +546,10 @@ pub async fn toy_management_handler(
 
                                         for toy in &mut running_toy_ths {
                                             toy.1.abort();
-                                            let _ = toy.1.await;
+                                            match toy.1.await {
+                                                Ok(()) => info!("Toy {} thread finished", toy.0),
+                                                Err(e) => warn!("Toy {} thread failed to reach completion: {}", toy.0, e),
+                                            }
                                             info!(
                                                 "[TOY ID: {}] Stopped listening. (TMSIG)",
                                                 toy.0
@@ -552,6 +559,7 @@ pub async fn toy_management_handler(
                                         drop(_toy_bcst_rx); // Causes OSC listener to die
                                         toy_async_rt.shutdown_background();
                                         listening = false;
+                                        info!("Toys: {}", toys.len());
                                         break;//Stop Listening
                                     },
                                     TmSig::TMHReset => {
@@ -560,7 +568,10 @@ pub async fn toy_management_handler(
                                         toys.clear();
                                         for toy in &mut running_toy_ths {
                                             toy.1.abort();
-                                            let _ = toy.1.await;
+                                            match toy.1.await {
+                                                Ok(()) => info!("Toy {} thread finished", toy.0),
+                                                Err(e) => warn!("Toy {} thread failed to reach completion: {}", toy.0, e),
+                                            }
                                             info!(
                                                 "[TOY ID: {}] Stopped listening. (TMSIG)",
                                                 toy.0
@@ -570,6 +581,7 @@ pub async fn toy_management_handler(
                                         drop(_toy_bcst_rx); // Causes OSC listener to die
                                         toy_async_rt.shutdown_background();
                                         listening = false;
+                                        info!("Toys: {}", toys.len());
                                         break;//Stop Listening
                                     }
                                     _ => {},

@@ -4,7 +4,9 @@ use std::net::SocketAddrV4;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
+//use std::time::Duration;
 use buttplug::client::ButtplugClient;
+//use futures_timer::Delay;
 use log::{warn, error as logerr, info, trace};
 use tauri::{AppHandle, Manager};
 use tokio::runtime::Runtime;
@@ -133,6 +135,7 @@ impl VibeCheckState {
 
         // Timer prob remove idrc
         //let minute_sync = Instant::now();
+        
 
         Self {
 
@@ -232,7 +235,7 @@ impl VibeCheckState {
         self.app_handle = Some(app_handle);
     }
 
-    async fn init_ceh(&mut self) {
+    pub fn init_ceh(&mut self) {
 
         // Is there a supplied state pointer?
         if self.vibecheck_state_pointer.is_none() {
@@ -240,6 +243,7 @@ impl VibeCheckState {
         }
 
         // Is CEH already running?
+        
         if self.client_eh_thread.is_some() {
             return;
         }
@@ -248,7 +252,7 @@ impl VibeCheckState {
         //let mut connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
 
         // Get ButtPlugClient with modified connection modes
-        self.bp_client = Some(bluetooth::vc_toy_client_server_init("VibeCheck", false).await);
+        self.bp_client = Some(self.async_rt.block_on(bluetooth::vc_toy_client_server_init("VibeCheck", false)));
         info!("Buttplug Client Initialized.");
 
         // Get event stream
@@ -266,6 +270,7 @@ impl VibeCheckState {
             )));
     }
 
+    /*
     pub async fn destroy_ceh(&mut self) {
 
         if self.client_eh_thread.is_none() {
@@ -279,7 +284,7 @@ impl VibeCheckState {
             Err(e) => warn!("CEH thread failed to reach completion: {}", e),
         }
     }
-
+    */
     pub async fn init_toy_update_handler(&mut self) {
 
         // Is there a supplied state pointer?
@@ -378,28 +383,37 @@ pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) 
         info!("ButtPlugClient is None");
         return Err(frontend::VCFeError::DisableFailure);
     }
+    
 
+    //Delay::new(Duration::from_secs(10)).await;
     trace!("Calling destroy_toy_update_handler()");
     vc_lock.destroy_toy_update_handler().await;
     trace!("TUH destroyed");
 
-    trace!("Calling destroy_ceh()");
-    vc_lock.destroy_ceh().await;
-    info!("CEH destroyed");
-
-    let bpc = vc_lock.bp_client.take().unwrap();
+    
+    let bpc = vc_lock.bp_client.as_ref().unwrap();
     let _ = bpc.stop_scanning().await;
     let _ = bpc.stop_all_devices().await;
-    let _ = bpc.disconnect().await;
-    drop(bpc);
-    info!("ButtPlugClient stopped");
+    //let _ = bpc.disconnect().await;
+    //Delay::new(Duration::from_secs(10)).await;
+    //drop(bpc);
+    info!("ButtplugClient stopped operations");
 
+    // CEH no longer gets destroyed
+    //trace!("Calling destroy_ceh()");
+    //vc_lock.destroy_ceh().await;
+    //info!("CEH destroyed");
+
+
+    //Delay::new(Duration::from_secs(10)).await;
     vc_lock.tme_send_tx
     .send(ToyManagementEvent::Sig(TmSig::TMHReset))
     .unwrap();
+    info!("Sent TMHReset signal");
 
-    vc_lock.toys.clear();
-    info!("Cleared toys in VibeCheckState");
+    // Dont clear toys anymore
+    //vc_lock.toys.clear();
+    //info!("Cleared toys in VibeCheckState");
     //let _ = vc_lock.bp_client.as_ref().unwrap().stop_all_devices().await;
     vc_lock.running = RunningState::Stopped;
 
@@ -417,17 +431,22 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
         return Err(frontend::VCFeError::EnableFailure);
     }
 
-    if vc_lock.bp_client.is_some() {
-
-        return Err(frontend::VCFeError::DisableFailure);
+    /*
+    if vc_lock.bp_client.is_none() {
+        vc_lock.init_ceh().await;
+        //return Err(frontend::VCFeError::DisableFailure);
     }
+    */
+
 
     info!("Stopping DOL");
     vc_lock.stop_disabled_listener().await;
 
+    /* No longer disabling CEH
     vc_lock.init_ceh().await;
     info!("CEH initialized");
-
+    */
+    
     vc_lock.tme_send_tx.send(ToyManagementEvent::Sig(TmSig::StartListening(vc_lock.config.networking.clone()))).unwrap();
     
     // Check if listening succeded or not
@@ -447,7 +466,7 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
                         },
                         TmSig::BindError => {
 
-                            logerr!("[!] Bind Error in TME sig: Sending shutdown signal!");
+                            logerr!("Bind Error in TME sig: Sending shutdown signal!");
 
                             vc_lock.tme_send_tx.send(ToyManagementEvent::Sig(TmSig::StopListening)).unwrap();
                             vc_lock.running = RunningState::Error("Bind Error! Set a different bind port in Settings!".to_string());
