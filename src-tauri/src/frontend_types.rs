@@ -80,7 +80,6 @@ pub struct FeLevelTweaks {
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct FeVCToyFeature {
-
     pub feature_enabled: bool,
     pub feature_type: FeVCFeatureType,
     pub osc_parameter: String,

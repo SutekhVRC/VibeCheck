@@ -62,7 +62,7 @@ pub fn config_load() -> VibeCheckConfig {
                 networking: OSCNetworking::default(),
                 scan_on_disconnect: false,
                 minimize_on_exit: false,
-                desktop_notifications: true,
+                desktop_notifications: false,
             })
             .unwrap(),
         )
@@ -89,7 +89,7 @@ pub fn config_load() -> VibeCheckConfig {
                     networking: OSCNetworking::default(),
                     scan_on_disconnect: false,
                     minimize_on_exit: false,
-                    desktop_notifications: true,
+                    desktop_notifications: false,
                 };
 
                 fs::write(
@@ -112,7 +112,7 @@ pub fn config_load() -> VibeCheckConfig {
                 networking: OSCNetworking::default(),
                 scan_on_disconnect: false,
                 minimize_on_exit: false,
-                desktop_notifications: true,
+                desktop_notifications: false
             };
             fs::write(
                 &vc_config_file,

@@ -17,6 +17,9 @@ type settingsModalProps = {
 export default function (props: settingsModalProps) {
   const [config, setConfig] = useState<null | FeVibeCheckConfig>(null);
   const oscBind = useRef<HTMLInputElement>(null);
+  const scanOnDisconnect = useRef<HTMLInputElement>(null);
+  const minimizeOnExit = useRef<HTMLInputElement>(null);
+  const desktopNotifications = useRef<HTMLInputElement>(null);
 
   async function getConfig() {
     await invoke<FeVibeCheckConfig>(GET_CONFIG).then((r) => setConfig(r));
@@ -27,16 +30,26 @@ export default function (props: settingsModalProps) {
   }, []);
 
   async function updateConfig() {
-    if (oscBind.current?.value == null || config == null) {
+    if (
+      !config ||
+      !oscBind.current ||
+      !scanOnDisconnect.current ||
+      !minimizeOnExit.current ||
+      !desktopNotifications.current
+    ) {
       return;
     }
     const newConfig: FeVibeCheckConfig = {
       ...config,
+      scan_on_disconnect: scanOnDisconnect.current.checked,
+      minimize_on_exit: minimizeOnExit.current.checked,
+      desktop_notifications: desktopNotifications.current.checked,
       networking: {
         ...config.networking,
         bind: oscBind.current.value,
       },
     };
+    console.log(newConfig);
     await invoke(SET_CONFIG, { feVcConfig: newConfig });
     getConfig();
   }
@@ -57,7 +70,7 @@ export default function (props: settingsModalProps) {
               props.onHide();
             }}
           >
-            <Form.Group className="setting">
+            <div className="setting">
               <Form.Label>OSC Bind</Form.Label>
               <InputGroup>
                 <InputGroup.Text>IP:Port</InputGroup.Text>
@@ -68,7 +81,25 @@ export default function (props: settingsModalProps) {
                   pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}
                 />
               </InputGroup>
-            </Form.Group>
+              <Form.Label>Scan on Disconnect</Form.Label>
+              <Form.Check
+                type="switch"
+                defaultChecked={config.scan_on_disconnect}
+                ref={scanOnDisconnect}
+              />
+              <Form.Label>Minimize on Exit</Form.Label>
+              <Form.Check
+                type="switch"
+                defaultChecked={config.minimize_on_exit}
+                ref={minimizeOnExit}
+              />
+              <Form.Label>Desktop Notifications</Form.Label>
+              <Form.Check
+                type="switch"
+                defaultChecked={config.desktop_notifications}
+                ref={desktopNotifications}
+              />
+            </div>
             <Button type="submit">Save</Button>
           </Form>
         </Modal.Body>
