@@ -6,11 +6,6 @@ use buttplug::core::connector::{ButtplugInProcessClientConnectorBuilder};
 use buttplug::server::ButtplugServerBuilder;
 use buttplug::server::device::hardware::communication::btleplug::BtlePlugCommunicationManagerBuilder;
 use buttplug::server::device::hardware::communication::lovense_connect_service::LovenseConnectServiceCommunicationManagerBuilder;
-use buttplug::server::device::hardware::communication::lovense_dongle::{
-    LovenseHIDDongleCommunicationManagerBuilder,
-    LovenseSerialDongleCommunicationManagerBuilder,
-};
-use buttplug::server::device::hardware::communication::xinput::XInputDeviceCommunicationManagerBuilder;
 use directories::BaseDirs;
 use image::io::Reader as IReader;
 use image::ImageFormat;
@@ -73,12 +68,8 @@ pub async fn vc_toy_client_server_init(client_name: &str, allow_raw_messages: bo
     let mut server_builder = ButtplugServerBuilder::default();
     server_builder.name("VibeCheck Toy Server");
 
-    server_builder.comm_manager(LovenseHIDDongleCommunicationManagerBuilder::default());
-    server_builder.comm_manager(LovenseSerialDongleCommunicationManagerBuilder::default());
-
     server_builder.comm_manager(BtlePlugCommunicationManagerBuilder::default());
     server_builder.comm_manager(LovenseConnectServiceCommunicationManagerBuilder::default());
-    server_builder.comm_manager(XInputDeviceCommunicationManagerBuilder::default());
 
     if allow_raw_messages {
       server_builder.allow_raw_messages();
