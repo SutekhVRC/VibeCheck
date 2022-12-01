@@ -444,6 +444,7 @@ pub async fn toy_management_handler(
                             }
                             TmSig::StopListening => {
                                 // Already not listening
+                                info!("StopListening but not listening");
                             },
                             TmSig::TMHReset => {
                                 info!("TMHReset but not listening");
@@ -553,7 +554,6 @@ pub async fn toy_management_handler(
                                     TmSig::StopListening => {
                                         // Stop listening on every device and clean running thread hashmap
 
-
                                         for toy in &mut running_toy_ths {
                                             toy.1.abort();
                                             match toy.1.await {
@@ -575,7 +575,7 @@ pub async fn toy_management_handler(
                                     TmSig::TMHReset => {
                                         // Stop listening on every device and clean running thread hashmap
                                         info!("TMHReset");
-                                        toys.clear();
+
                                         for toy in &mut running_toy_ths {
                                             toy.1.abort();
                                             match toy.1.await {
