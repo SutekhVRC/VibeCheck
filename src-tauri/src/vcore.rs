@@ -431,12 +431,9 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
         return Err(frontend::VCFeError::EnableFailure);
     }
 
-    /*
     if vc_lock.bp_client.is_none() {
-        vc_lock.init_ceh().await;
-        //return Err(frontend::VCFeError::DisableFailure);
+        return Err(frontend::VCFeError::EnableFailure);
     }
-    */
 
 
     info!("Stopping DOL");
