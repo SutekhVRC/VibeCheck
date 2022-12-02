@@ -11,13 +11,11 @@ use log::{info, trace};
 use env_logger;
 
 mod config;
-//mod vcupdate;
 mod handling;
 mod frontend_native;
 mod vcore;
 mod util;
 mod toyops;
-//mod lovense;
 mod bluetooth;
 mod frontend_types;
 mod vcerror;
@@ -173,7 +171,7 @@ fn main() {
             // Handle inter-thread data
             // Problem: This does not continuously execute (When app is hidden does not execute)
             handling::message_handling(vc_lock);*/
-            //println!("[+] State MainEventsCleared.");
+            //info!("[+] State MainEventsCleared.");
         },
         tauri::RunEvent::Ready => {
             info!("App Ready");

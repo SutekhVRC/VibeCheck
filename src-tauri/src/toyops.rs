@@ -112,11 +112,14 @@ impl VCToy {
     }
 
     pub fn load_toy_config(&mut self) -> Result<(), vcerror::backend::VibeCheckToyConfigError> {
+
+        // Generate config path
+        // - Transform Lovense Connect toys to load lovense configs
+
         let config_path = format!(
-            "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}_{}.json",
+            "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}.json",
             get_user_home_dir(),
-            self.toy_name.replace(" ", "_"),
-            self.toy_id,
+            self.toy_name.replace("Lovense Connect ", "Lovense "),
         );
     
         if !file_exists(&config_path) {
@@ -140,10 +143,9 @@ impl VCToy {
     // Save Toy config by name
     pub fn save_toy_config(&self) {
         let config_path = format!(
-            "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}_{}.json",
+            "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}.json",
             get_user_home_dir(),
-            self.toy_name.replace(" ", "_"),
-            self.toy_id,
+            self.toy_name.replace("Lovense Connect ", "Lovense "),
         );
         info!("Saving toy config to: {}", config_path);
     

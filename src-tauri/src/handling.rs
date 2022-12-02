@@ -54,81 +54,6 @@ pub enum ToySig {
     OSCMsg(rosc::OscMessage),
 }
 
-// Uses TME send channel and CEH recv channel
-/*
-pub async fn message_handling(
-    vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>,
-    tme_send: UnboundedSender<ToyManagementEvent>,
-    identifier: String) {
-
-    loop {
-        let ceh_ = {
-            let mut lock = vibecheck_state_pointer.lock();
-            //println!("[+] Got event recv lock!");
-            // Can optimize this by Arc<> around the receiver and cloning pointer from lock and receiving from it
-            // that way can release lock and wait for packets
-            lock.client_eh_event_rx.try_recv()
-        };
-        //println!("Event: {:?}", event);
-        // Update Toys States
-        match event {
-            Ok(tu) => {
-                match tu {
-                    EventSig::ToyAdd(mut toy) => {
-                        // Load toy config for name of toy if it exists otherwise create the config for the toy name
-
-                        // Load config with toy name
-                        let toy_config = load_toy_config(&toy.toy_name);
-                        if toy_config.is_some() {
-                            toy.populate_toy_feature_param_map(toy_config);
-                        } else {
-                            toy.populate_toy_feature_param_map(None);
-                        }
-                        //println!("[TOY FEATURES]\n{:?}", toy.param_feature_map);
-                        {
-                            let mut vc_lock = vibecheck_state_pointer.lock();
-                            //println!("[+] Got toy add lock!");
-                            vc_lock.tme_send
-                            .send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone())))
-                            .unwrap();
-                        // Load toy config for name of toy if it exists otherwise create the config for the toy name
-                            vc_lock.toys.insert(toy.toy_id, toy.clone());
-                        }
-
-                        let _ = Notification::new(identifier.clone())
-                        .title("Toy Connected")
-                        .body(format!("{} ({}%)", toy.toy_name, (100.0 * toy.battery_level)).as_str())
-                        .show();
-
-                        println!("[+] Toy added: {} | {}", toy.toy_name, toy.toy_id);
-                    }
-                    EventSig::ToyRemove(id, toy_name) => {
-                        let mut vc_lock = vibecheck_state_pointer.lock();
-                        //println!("[+] Got toy remove recv lock!");
-                        vc_lock.tme_send
-                            .send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(id)))
-                            .unwrap();
-                        vc_lock.toys.remove(&id);
-
-                        
-                        let _ = Notification::new(identifier.clone())
-                        .title("Toy Disconnected")
-                        .body(format!("{}", toy_name).as_str())
-                        .show();
-                        
-                        //println!("[!] Removed toy: {}", id);
-                    }
-                    EventSig::Shutdown => {}
-                }
-            },
-            Err(_e) => {
-                Delay::new(Duration::from_secs(1)).await;
-            }
-        }
-    }
-}
-*/
-
 /*
     This handler will handle the adding and removal of toys
     Needs Signals in and out to communicate with main thread
@@ -278,7 +203,7 @@ pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, s
         }
     } dont need*/
     if scalar_level != 0.0 && scalar_level >= feature_levels.minimum_level && scalar_level <= feature_levels.maximum_level {
-        //println!("{} {} {}", feature_index, actuator_type, scalar_level);
+        //info!("{} {} {}", feature_index, actuator_type, scalar_level);
         let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (scalar_level, actuator_type))]))).await;
     } else if scalar_level == 0.0 {// if level is 0 put at idle
         let _e = dev.scalar(&buttplug::client::ScalarCommand::ScalarMap(HashMap::from([(feature_index, (feature_levels.idle_level, actuator_type))]))).await;
@@ -791,7 +716,10 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
 
             let b_level = match toy.device_handle.battery_level().await {
                 Ok(battery_lvl) => battery_lvl,
-                Err(_e) => 0.0,
+                Err(_e) => {
+                    warn!("Failed to get battery for toy: {}", toy.toy_name);
+                    0.0
+                },
             };
 
             toy.battery_level = b_level;
