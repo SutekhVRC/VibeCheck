@@ -1,5 +1,3 @@
-
-
 /*
  * Frontend type binding generation
  */
@@ -16,6 +14,7 @@ pub struct FeVibeCheckConfig {
     pub scan_on_disconnect: bool,
     pub minimize_on_exit: bool,
     pub desktop_notifications: bool,
+    pub lc_override: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]
@@ -94,6 +93,14 @@ pub enum FeToyAlter {
     Feature(FeVCToyFeature),
     OSCData(bool),
 }
+
+/*
+#[derive(Debug, Deserialize, TS)]
+#[ts(export)]
+pub enum FeLCOverride {
+    Host(String),
+    Clear,
+}*/
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, TS)]
 #[ts(export)]

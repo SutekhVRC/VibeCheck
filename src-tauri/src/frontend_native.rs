@@ -127,3 +127,16 @@ pub fn get_connection_modes(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> 
     let vc_lock = vc_state.0.lock();
     vc_lock.connection_modes.clone()
 }*/
+
+/*
+#[tauri::command(async)]
+pub fn set_lc_override(vc_state: tauri::State<'_, vcore::VCStateMutex>, host: FeLCOverride) -> Result<(), frontend::VCFeError> {
+    trace!("set_lc_override({:?})", host);
+    vcore::native_set_lc_override(vc_state, host)
+}
+
+#[tauri::command(async)]
+pub fn get_lc_override(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<String, frontend::VCFeError> {
+    trace!("get_lc_override()");
+    vcore::native_get_lc_override(vc_state)
+}*/

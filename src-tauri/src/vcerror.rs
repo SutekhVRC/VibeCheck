@@ -22,6 +22,10 @@ pub mod frontend {
         InvalidRemoteEndpoint,
         SerializeFailure,
         WriteFailure,
+        //InvalidIpv4Host,
+        UnsetLCOverrideFailure,
+        SetLCOverrideFailure,
+        InvalidLCHost,
     }
 
     #[derive(Serialize)]

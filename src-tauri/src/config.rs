@@ -31,6 +31,7 @@ pub struct VibeCheckConfig {
     pub scan_on_disconnect: bool,
     pub minimize_on_exit: bool,
     pub desktop_notifications: bool,
+    pub lc_override: Option<Ipv4Addr>,
 }
 
 pub fn config_load() -> VibeCheckConfig {
@@ -63,6 +64,7 @@ pub fn config_load() -> VibeCheckConfig {
                 scan_on_disconnect: false,
                 minimize_on_exit: false,
                 desktop_notifications: false,
+                lc_override: None,
             })
             .unwrap(),
         )
@@ -73,9 +75,13 @@ pub fn config_load() -> VibeCheckConfig {
     }
 
     match fs::read_to_string(&vc_config_file) {
-        Ok(fc) => match serde_json::from_str(&fc) {
+        Ok(fc) => match serde_json::from_str::<VibeCheckConfig>(&fc) {
             Ok(o) => {
                 info!("Config Loaded Successfully!");
+                if let Some(h) = o.lc_override {
+                    std::env::set_var("VCLC_HOST_PORT", format!("{}:20010", h.to_string()).as_str());
+                    info!("Setting VCLC_HOST_PORT: {}", format!("{}:20010", h.to_string()));
+                }
                 return o;
             },
             Err(_e) => {
@@ -90,6 +96,7 @@ pub fn config_load() -> VibeCheckConfig {
                     scan_on_disconnect: false,
                     minimize_on_exit: false,
                     desktop_notifications: false,
+                    lc_override: None,
                 };
 
                 fs::write(
@@ -112,7 +119,8 @@ pub fn config_load() -> VibeCheckConfig {
                 networking: OSCNetworking::default(),
                 scan_on_disconnect: false,
                 minimize_on_exit: false,
-                desktop_notifications: false
+                desktop_notifications: false,
+                lc_override: None,
             };
             fs::write(
                 &vc_config_file,

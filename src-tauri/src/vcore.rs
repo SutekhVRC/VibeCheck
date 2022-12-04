@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::net::SocketAddrV4;
+use std::net::{SocketAddrV4, Ipv4Addr};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -92,9 +92,6 @@ pub struct VibeCheckState {
     // Async Runtime for toy event handlers
     pub async_rt: Runtime,
     //================================================
-    //pub update_engine: VibeCheckUpdater,
-
-    //pub lovense_connect_toys: HashMap<String, crate::lovense::LovenseConnectToy>,
 }
 
 impl VibeCheckState {
@@ -539,6 +536,14 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
         vc_lock.config.clone()
     };
 
+    let lc_or = {
+        if let Some(host) = config.lc_override {
+            Some(host.to_string())
+        } else {
+            None
+        }
+    };
+
     FeVibeCheckConfig {
         networking: FeOSCNetworking {
             bind: config.networking.bind.to_string(),
@@ -547,6 +552,7 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
         scan_on_disconnect: config.scan_on_disconnect,
         minimize_on_exit: config.minimize_on_exit,
         desktop_notifications: config.desktop_notifications,
+        lc_override: lc_or,
     }
 }
 
@@ -570,6 +576,41 @@ pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_
         vc_lock.config.scan_on_disconnect = fe_vc_config.scan_on_disconnect;
         vc_lock.config.minimize_on_exit = fe_vc_config.minimize_on_exit;
         vc_lock.config.desktop_notifications = fe_vc_config.desktop_notifications;
+
+        if let Some(host) = fe_vc_config.lc_override {
+            // Is valid IPv4?
+            match Ipv4Addr::from_str(&host) {
+                Ok(sa) => {
+                    // Force port because buttplug forces non http atm
+                    std::env::set_var("VCLC_HOST_PORT", format!("{}:20010", sa.to_string()).as_str());
+                    match std::env::var("VCLC_HOST_PORT") {
+                        Ok(_) => {
+                            vc_lock.config.lc_override = Some(sa);
+                        },
+                        Err(_) => return Err(frontend::VCFeError::SetLCOverrideFailure),
+                    }
+                },
+                Err(_e) => return Err(frontend::VCFeError::InvalidLCHost),
+            };
+
+        } else {
+            std::env::remove_var("VCLC_HOST_PORT");
+            match std::env::var("VCLC_HOST_PORT") {
+                Ok(_) => return Err(frontend::VCFeError::UnsetLCOverrideFailure),
+                Err(e) => {
+                    match e {
+                        std::env::VarError::NotPresent => {
+                            vc_lock.config.lc_override = None;
+                        },
+                        _ => {
+                            logerr!("Got Non unicode var during unset routine");
+                            return Err(frontend::VCFeError::UnsetLCOverrideFailure);
+                        },
+                    }
+                }
+            }
+        }
+
         vc_lock.config.clone()
     };
 
@@ -681,3 +722,64 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
         Err(_e) => Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::TMESendFailure)),
     }
 }
+
+/*
+pub fn native_set_lc_override(vc_state: tauri::State<'_, VCStateMutex>, host: FeLCOverride) -> Result<(), frontend::VCFeError> {
+
+    if let FeLCOverride::Host(h) = host {
+        let valid = match Ipv4Addr::from_str(&h) {
+            Ok(sa) => sa,
+            Err(_e) => return Err(frontend::VCFeError::InvalidIpv4Host),
+        };
+    
+        // Force port because buttplug forces non http atm
+        std::env::set_var("VCLC_HOST_PORT", format!("{}:20010", valid.to_string()).as_str());
+        match std::env::var("VCLC_HOST_PORT") {
+            Ok(_) => {
+                {
+                    let mut vc_lock = vc_state.0.lock();
+                    vc_lock.config.lc_override = Some(valid);
+                }
+                Ok(())
+            },
+            Err(_) => return Err(frontend::VCFeError::SetLCOverrideFailure),
+        }
+    } else {
+
+        std::env::remove_var("VCLC_HOST_PORT");
+        match std::env::var("VCLC_HOST_PORT") {
+            Ok(_) => return Err(frontend::VCFeError::UnsetLCOverrideFailure),
+            Err(e) => {
+                match e {
+                    std::env::VarError::NotPresent => {
+                        {
+                            let mut vc_lock = vc_state.0.lock();
+                            vc_lock.config.lc_override = None;
+                        }
+                        Ok(())
+                    },
+                    _ => {
+                        logerr!("Got Non unicode var during unset routine");
+                        return Err(frontend::VCFeError::UnsetLCOverrideFailure);
+                    },
+                }
+            }
+        }
+    }
+}
+
+pub fn native_get_lc_override(vc_state: tauri::State<'_, VCStateMutex>) -> Result<String, frontend::VCFeError> {
+
+    let lc_or = {
+        let vc_lock = vc_state.0.lock();
+        match vc_lock.config.lc_override {
+            Some(host) => {
+                host.to_string()
+            },
+            None => "Clear".to_string()
+        }
+    };
+    Ok(lc_or)
+
+}
+*/
