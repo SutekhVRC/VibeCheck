@@ -1,34 +1,35 @@
 import { invoke } from "@tauri-apps/api";
 import { listen } from "@tauri-apps/api/event";
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
-import { FeCoreEvent } from "../../src-tauri/bindings/FeCoreEvent";
+import { createContext, useContext, useEffect, useState } from "react";
 import {
   CORE_EVENT,
   DISABLE,
   ENABLE,
+  GET_CONFIG,
   SCAN_LENGTH,
   START_SCAN,
   STOP_SCAN,
 } from "../data/constants";
 import { assertExhaustive } from "../utils";
+import type { ReactNode } from "react";
+import type { FeCoreEvent } from "../../src-tauri/bindings/FeCoreEvent";
+import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 
 type CoreContextProps = {
   isScanning: boolean;
   isEnabled: boolean;
   toggleIsEnabled: () => void;
   toggleScan: () => void;
+  config: FeVibeCheckConfig | null;
+  refreshConfig: () => void;
 };
 const INITIAL_CORE_STATE: CoreContextProps = {
   isScanning: false,
   isEnabled: false,
   toggleIsEnabled: () => null,
   toggleScan: () => null,
+  config: null,
+  refreshConfig: () => null,
 };
 const CoreEventContext = createContext<CoreContextProps>(INITIAL_CORE_STATE);
 
@@ -40,8 +41,12 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
   const [isEnabled, setIsEnabled] = useState(INITIAL_CORE_STATE.isEnabled);
   const [isScanning, setIsScanning] = useState(INITIAL_CORE_STATE.isScanning);
 
+  const [config, setConfig] = useState<FeVibeCheckConfig | null>(null);
+
   async function enable() {
-    await invoke(ENABLE);
+    await invoke(ENABLE).catch(() => {
+      return; // Enable Failure: already on, don't need to do anything
+    });
     setIsEnabled(true);
   }
 
@@ -105,9 +110,27 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Config here because I don't want the async refresh inside the Settings Dialog
+  // Not sure where else to put it
+  async function refreshConfig() {
+    await invoke<FeVibeCheckConfig>(GET_CONFIG)
+      .then((r) => setConfig(r))
+      .catch(() => setConfig(null));
+  }
+  useEffect(() => {
+    refreshConfig();
+  }, []);
+
   return (
     <CoreEventContext.Provider
-      value={{ isScanning, isEnabled, toggleIsEnabled, toggleScan }}
+      value={{
+        isScanning,
+        isEnabled,
+        toggleIsEnabled,
+        toggleScan,
+        config,
+        refreshConfig,
+      }}
     >
       {children}
     </CoreEventContext.Provider>

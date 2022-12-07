@@ -1,7 +1,0 @@
-.setting {
-  display: grid;
-  align-items: center;
-  grid-template-columns: auto auto;
-  gap: 0.5rem;
-  padding-bottom: 1rem;
-}

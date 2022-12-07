@@ -1,50 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  font-family: "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS", sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-  overflow: hidden;
+  overflow-y: hidden;
 
   --text-color: rgba(255, 255, 255, 0.87);
-  --background-color: #242424;
-  color-scheme: light dark;
+  --background-color: #18181b;
   color: var(--text-color);
   background-color: var(--background-color);
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
 }
 
-/* Modify bootstrap css for dark/minimal style */
 body {
-  color: unset !important;
-  color-scheme: dark !important;
-  background-color: unset !important;
-}
-
-.modal-content {
-  background-color: var(--background-color) !important;
-}
-
-.accordion-body {
-  background-color: unset !important;
-}
-.accordion-button {
-  color: var(--text-color) !important;
-  background-color: var(--toys-container) !important;
-  box-shadow: unset !important;
-}
-.accordion-button::after {
-  background-image: unset !important;
-}
-.accordion-item {
-  color: var(--text-color) !important;
-  border: unset !important;
-  background-color: unset !important;
-}
-.accordion-item .accordion-button {
-  border-radius: 0 !important;
+  font-family: "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS", sans-serif !important;
 }
