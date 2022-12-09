@@ -9,7 +9,7 @@ export default function () {
   return (
     <div>
       <button
-        className="text-6xl font-bold m-4 p-4 border-gray-500 border-solid border-2 rounded-md hover:border-gray-300"
+        className="text-6xl font-bold p-2 w-1/2 border-gray-500 border-solid border-2 rounded-md hover:border-gray-300"
         onClick={() => setSettingsIsOpen(true)}
       >
         Settings
@@ -19,7 +19,7 @@ export default function () {
         onClose={() => setSettingsIsOpen(false)}
       />
       <button
-        className={`text-6xl font-bold m-4 p-4 border-gray-500 border-solid border-2 rounded-md hover:border-gray-300 transition-all
+        className={`text-6xl font-bold p-2 w-1/2 border-gray-500 border-solid border-2 rounded-md hover:border-gray-300 transition-all
           ${isEnabled ? " grad-forewards" : ""}`}
         onClick={() => toggleIsEnabled()}
       >

@@ -8,15 +8,13 @@ import "./App.css";
 export default function App() {
   return (
     <CoreEventProvider>
+      <h1>
+        <div className="grad-forewards text-clip text-8xl">VibeCheck</div>
+      </h1>
       <div className="flex-col gap-4">
-        <div className="flex-col bg-zinc-800 rounded-md p-4">
-          <h1>
-            <div className="grad-text grad-forewards text-8xl">VibeCheck</div>
-          </h1>
-          <ToysProvider>
-            <Toys />
-          </ToysProvider>
-        </div>
+        <ToysProvider>
+          <Toys />
+        </ToysProvider>
         <BottomButtons />
       </div>
       <Footer />

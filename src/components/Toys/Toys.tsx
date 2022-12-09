@@ -5,6 +5,7 @@ import { percent } from "../../utils";
 import NameBadge from "./NameBadge";
 import ToySettingsModal from "./ToySettingsModal";
 import { Feature } from "../Feature";
+import Loading from "./Loading";
 
 export default function () {
   const [toySettingsModalIsOpen, setToySettingsModalIsOpen] = useState(false);
@@ -12,14 +13,14 @@ export default function () {
   const { isScanning, toggleScan } = useCoreEventContext();
 
   return (
-    <div className="flex-col justify-between items-stretch text-lg rounded-lg p-8 m-1 bg-zinc-700 shadow-xl">
+    <div className="flex-col justify-between items-stretch text-lg rounded-lg p-8 m-1 bg-zinc-800">
       <h1>
-        <div className="grad-text grad-backwards text-4xl">Connected toys</div>
+        <div className="grad-backwards text-clip text-4xl">Connected toys</div>
       </h1>
       <div className="overflow-y-auto">
         {Object.values(toys).map((toy) => (
           <div
-            className="rounded-md bg-zinc-600 shadow-lg p-6"
+            className="rounded-md p-6 bg-zinc-700"
             key={`${toy.toy_name} ${toy.toy_id}`}
           >
             <div
@@ -28,7 +29,7 @@ export default function () {
             >
               <NameBadge name={toy.toy_name} />
               {toy.battery_level == 0 ? (
-                <div>...</div>
+                <Loading />
               ) : (
                 <div
                   style={{
@@ -56,13 +57,22 @@ export default function () {
           </div>
         ))}
       </div>
-      <div className="flex justify-center">
+      <div>
         <button
-          className="btn-custom-2"
           type="button"
           onClick={() => toggleScan()}
+          className={
+            "text-lg font-bold p-1 pl-4 pr-4 m-2  border-gray-500 border-solid border-2 rounded-sm shadow-zinc-900 shadow-md hover:border-gray-300"
+          }
         >
-          {isScanning ? "Scanning..." : "Search for toys"}
+          {isScanning ? (
+            <div className="flex">
+              <div>Scanning</div>
+              <Loading />
+            </div>
+          ) : (
+            <div>Search for toys</div>
+          )}
         </button>
       </div>
     </div>

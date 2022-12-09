@@ -14,51 +14,17 @@
   --pink: rgb(230, 37, 144);
 }
 
-.btn-custom {
-  background-color: var(--toys-container);
-  font-size: 10vw;
-  font-weight: bolder;
-  width: 100vw;
-  height: 10vh;
-  border-radius: 0.25rem;
-}
-.btn-custom-2 {
-  background-color: var(--background);
-  font-size: 1rem;
-  margin: 1rem;
-  border-radius: 0.25rem;
-  font-weight: bolder;
-}
-
-.grad-text {
-  display: inline-block;
-  font-weight: bolder;
-}
-
 .grad-forewards {
   background: linear-gradient(90deg, var(--pink), var(--purple), var(--blue));
 }
 .grad-backwards {
   background: linear-gradient(90deg, var(--blue), var(--purple), var(--pink));
 }
-.grad-text.grad-forewards {
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.grad-text.grad-backwards {
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
 
-@keyframes enter-ani {
-  from {
-    opacity: 0;
-    transform: translateY(-50%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0%);
-  }
+.text-clip {
+  display: inline-block;
+  font-weight: bolder;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent;
 }
