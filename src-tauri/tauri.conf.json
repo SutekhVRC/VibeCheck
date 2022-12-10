@@ -54,7 +54,8 @@
     },
     "updater": {
       "active": true,
-      "dialog": true
+      "dialog": true,
+      "pubkey": "../VibeCheckKeys/vibecheck.key.pub"
     },
     "windows": [
       {
