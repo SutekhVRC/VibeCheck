@@ -19,6 +19,7 @@ pub struct VCToy {
     pub listening: bool,
     pub device_handle: Arc<ButtplugClientDevice>,
     pub config: Option<VCToyConfig>,
+    pub sub_id: u8,
 }
 
 impl VCToy {

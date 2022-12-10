@@ -85,6 +85,17 @@ pub async fn client_event_handler(
                         Err(_e) => 0.0,
                     };
 
+                    let sub_id = {
+                        let vc_lock = vibecheck_state_pointer.lock();
+                        let mut toy_dup_count = 0;
+                        vc_lock.toys.iter().for_each(|toy| {
+                            if &toy.1.toy_name == dev.name() {
+                                toy_dup_count += 1;
+                            }
+                        });
+                        toy_dup_count
+                    };
+
                     // Load toy config for name of toy if it exists otherwise create the config for the toy name
                     let mut toy = VCToy {
                         toy_id: dev.index(),
@@ -97,6 +108,7 @@ pub async fn client_event_handler(
                         listening: false,
                         device_handle: dev.clone(),
                         config: None,
+                        sub_id,
                     };
 
                     // Load config with toy name
@@ -743,7 +755,7 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
                 trace!("Sending OSC data for toy: {}", toy.toy_name);
 
                 let battery_level_msg = encoder::encode(&OscPacket::Message(OscMessage {
-                    addr: format!("/avatar/parameters/{}/battery", toy.toy_name),
+                    addr: format!("/avatar/parameters/{}/{}/battery", toy.toy_name.replace("Lovense Connect", "lovense").replace(" ", "_").to_lowercase(), toy.sub_id),
                     args: vec![OscType::Float(b_level as f32)]
                 })).unwrap();
 
