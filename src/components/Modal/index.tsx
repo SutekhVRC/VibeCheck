@@ -45,7 +45,7 @@ export default function MyModal({
                     {title}
                   </Dialog.Title>
                   <div className="mt-2">
-                    <p className="text-zinc-300">{children}</p>
+                    <div className="text-zinc-300">{children}</div>
                   </div>
                 </Dialog.Panel>
               </Transition.Child>

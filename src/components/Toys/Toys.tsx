@@ -13,14 +13,17 @@ export default function () {
   const { isScanning, toggleScan } = useCoreEventContext();
 
   return (
-    <div className="flex-col justify-between items-stretch text-lg rounded-lg p-8 m-1 bg-zinc-800">
+    <div className="flex-col justify-between items-stretch text-lg rounded-lg p-4 bg-zinc-800">
       <h1>
         <div className="grad-backwards text-clip text-4xl">Connected toys</div>
       </h1>
-      <div className="overflow-y-auto">
+      <div
+        className="overflow-y-scroll pl-2 scrollbar pt-2 pb-2"
+        style={{ maxHeight: "calc(100vh - 420px)" }}
+      >
         {Object.values(toys).map((toy) => (
           <div
-            className="rounded-md p-6 bg-zinc-700"
+            className="rounded-md bg-zinc-700 p-4 m-2"
             key={`${toy.toy_name} ${toy.toy_id}`}
           >
             <div
@@ -29,7 +32,9 @@ export default function () {
             >
               <NameBadge name={toy.toy_name} />
               {toy.battery_level == 0 ? (
-                <Loading />
+                <div className="flex">
+                  <Loading />%
+                </div>
               ) : (
                 <div
                   style={{
@@ -47,11 +52,14 @@ export default function () {
             />
             <div className="grid">
               {toy.features.map((feature) => (
-                <Feature
-                  toyId={toy.toy_id}
-                  feature={feature}
-                  key={`${toy.toy_id} ${feature.feature_index}`}
-                />
+                <>
+                  <hr className="border-1 border-zinc-800 m-1 border-opacity-75" />
+                  <Feature
+                    toyId={toy.toy_id}
+                    feature={feature}
+                    key={`${toy.toy_id} ${feature.feature_type} ${feature.feature_index}`}
+                  />
+                </>
               ))}
             </div>
           </div>
@@ -62,7 +70,7 @@ export default function () {
           type="button"
           onClick={() => toggleScan()}
           className={
-            "text-lg font-bold p-1 pl-4 pr-4 m-2  border-gray-500 border-solid border-2 rounded-sm shadow-zinc-900 shadow-md hover:border-gray-300"
+            "text-lg font-bold pl-4 pr-4 m-4 border-gray-500 border-solid border-2 rounded-sm shadow-zinc-900 shadow-md hover:border-gray-300"
           }
         >
           {isScanning ? (

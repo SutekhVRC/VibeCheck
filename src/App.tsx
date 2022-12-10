@@ -11,12 +11,10 @@ export default function App() {
       <h1>
         <div className="grad-forewards text-clip text-8xl">VibeCheck</div>
       </h1>
-      <div className="flex-col gap-4">
-        <ToysProvider>
-          <Toys />
-        </ToysProvider>
-        <BottomButtons />
-      </div>
+      <ToysProvider>
+        <Toys />
+      </ToysProvider>
+      <BottomButtons />
       <Footer />
     </CoreEventProvider>
   );

@@ -55,7 +55,7 @@ export default function ({ toyId, feature }: ToyFeatureFormProps) {
   }, [oscParameter, smoothValue, idle, min, max]);
 
   return (
-    <div className="grid grid-cols-[4fr_1fr_4fr_1fr] text-sm text-justify gap-x-2 gap-y-1 p-4">
+    <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(3rem,_10fr)_1fr] text-sm text-justify gap-x-2 gap-y-1 p-4">
       <label>Enabled</label>
       <input
         type="checkbox"
@@ -86,7 +86,7 @@ export default function ({ toyId, feature }: ToyFeatureFormProps) {
         value={[smoothValue]}
         onValueChange={(e) => setSmoothValue(e[0])}
       />
-      {smoothValue}
+      <div className="text-right">{smoothValue}</div>
       <label>Idle</label>
       <div></div>
       <Slider
@@ -96,7 +96,7 @@ export default function ({ toyId, feature }: ToyFeatureFormProps) {
         value={[idle]}
         onValueChange={(e) => setIdle(e[0])}
       />
-      <div>{round0.format(idle * 100)}</div>
+      <div className="text-right">{round0.format(idle * 100)}</div>
       <label>Minimum</label>
       <div></div>
       <Slider
@@ -106,7 +106,7 @@ export default function ({ toyId, feature }: ToyFeatureFormProps) {
         value={[min]}
         onValueChange={(e) => setMin(e[0])}
       />
-      <div>{round0.format(min * 100)}</div>
+      <div className="text-right">{round0.format(min * 100)}</div>
       <label>Maximum</label>
       <div></div>
       <Slider
@@ -116,7 +116,7 @@ export default function ({ toyId, feature }: ToyFeatureFormProps) {
         value={[max]}
         onValueChange={(e) => setMax(e[0])}
       />
-      <div>{round0.format(max * 100)}</div>
+      <div className="text-right">{round0.format(max * 100)}</div>
     </div>
   );
 }
