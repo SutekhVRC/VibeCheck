@@ -1,22 +1,21 @@
 import { ToysProvider } from "./context/ToysContext";
-import Header from "./components/Header";
-import Toys from "./components/Toys";
-import Footer from "./components/Footer";
-import "./App.css";
+import Toys from "./components/Toys/Toys";
+import BottomButtons from "./components/BottomButtons";
 import { CoreEventProvider } from "./context/CoreEventContext";
+import { Footer } from "./components/Footer";
+import "./App.css";
 
 export default function App() {
   return (
-    <div style={{ display: "flex", justifyContent: "center" }}>
-      <div className="main-container">
-        <Header />
-        <ToysProvider>
-          <Toys />
-        </ToysProvider>
-        <CoreEventProvider>
-          <Footer />
-        </CoreEventProvider>
-      </div>
-    </div>
+    <CoreEventProvider>
+      <h1>
+        <div className="grad-forewards text-clip text-8xl">VibeCheck</div>
+      </h1>
+      <ToysProvider>
+        <Toys />
+      </ToysProvider>
+      <BottomButtons />
+      <Footer />
+    </CoreEventProvider>
   );
 }

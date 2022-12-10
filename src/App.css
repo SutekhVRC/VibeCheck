@@ -1,105 +1,37 @@
 #root {
-  max-width: 1280px;
+  max-width: 800px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
-  --inner-border-radius: 9px;
-  --outer-border-radius: 12px;
-  --blue: rgb(101, 250, 255);
-  --pink: rgb(243, 116, 215);
-  --background: rgb(49, 49, 49);
-  --toys-container: rgb(44, 44, 44);
-  --toys-container-shadow: rgb(27, 27, 27);
-  --item: rgb(49, 49, 49);
-  --item-shadow: rgb(34, 34, 34);
-  --container-border-radius: 10px;
+  --blue: rgb(86, 205, 255);
+  --purple: rgb(167, 164, 217);
+  --pink: rgb(230, 37, 144);
 }
 
-.main-container {
-  display: flex;
-  flex-direction: column;
-  border-radius: 5px;
-  padding: 15px;
-  background-color: var(--background);
+.grad-forewards {
+  background: linear-gradient(90deg, var(--pink), var(--purple), var(--blue));
+}
+.grad-backwards {
+  background: linear-gradient(90deg, var(--blue), var(--purple), var(--pink));
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-}
-.header .logo {
-  height: 50px;
-}
-.header .extern-logo {
-  height: 30px;
-  cursor: pointer;
-}
-
-.footer {
-  display: flex;
-  justify-content: space-evenly;
-}
-
-.grad-text {
-  padding-bottom: 0.3rem;
-  background: linear-gradient(var(--blue), var(--pink));
-  -webkit-background-clip: text;
-  background-clip: text;
+.text-clip {
+  display: inline-block;
+  font-weight: bolder;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
   -webkit-text-fill-color: transparent;
 }
 
-.grad-container {
-  display: flex;
-  background-image: linear-gradient(
-    45deg,
-    var(--blue),
-    var(--pink),
-    var(--blue),
-    var(--pink)
-  );
-  border-radius: var(--outer-border-radius);
-  background-size: 400% 400%;
-  animation: grad-ani 1s linear infinite;
-}
-.grad-btn-container {
-  margin: 6px;
-  padding: 3px 3px;
-  animation-play-state: paused;
-}
-.grad-btn-container:active {
-  transform: scale(98%);
-}
-.grad-btn-container.is-on {
-  animation-play-state: running;
+.scrollbar::-webkit-scrollbar {
+  width: 0.5rem;
 }
 
-.btn-custom {
-  border: none;
-  border-radius: var(--inner-border-radius);
-  font-size: 2.5rem;
-  mix-blend-mode: darken;
-  color: white;
-  background-color: var(--background);
-  cursor: pointer;
+.scrollbar::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 100vh;
 }
 
-@keyframes grad-ani {
-  0% {
-    background-position: 100% 0%;
-  }
-  100% {
-    background-position: 15% 100%;
-  }
-}
-
-@keyframes enter-ani {
-  from {
-    opacity: 0;
-    transform: translateY(-50%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0%);
-  }
+.scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
 }

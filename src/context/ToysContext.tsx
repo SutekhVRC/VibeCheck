@@ -1,15 +1,10 @@
 import { listen } from "@tauri-apps/api/event";
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
-import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
-import { FeToyEvent } from "../../src-tauri/bindings/FeToyEvent";
+import { createContext, useContext, useEffect, useState } from "react";
 import { assertExhaustive } from "../utils";
 import { TOY_EVENT } from "../data/constants";
+import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
+import type { FeToyEvent } from "../../src-tauri/bindings/FeToyEvent";
+import type { ReactNode } from "react";
 
 export type ToyMap = {
   [id: number]: FeVCToy;

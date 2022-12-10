@@ -10,5 +10,5 @@ export const round0 = new Intl.NumberFormat("en-US", {
 });
 
 export function assertExhaustive(e: never): never {
-  throw new Error("Non-Exhaustive switch statement");
+  throw new Error("Non-Exhaustive switch statement", e);
 }
