@@ -38,12 +38,12 @@ fn main() {
     let restart = tauri::CustomMenuItem::new("restart".to_string(), "Restart");
     let hide_app = tauri::CustomMenuItem::new("hide".to_string(), "Hide");
     let show_app = tauri::CustomMenuItem::new("show".to_string(), "Show");
-    let enable_osc = tauri::CustomMenuItem::new("enable_osc".to_string(), "Enable");
-    let disable_osc = tauri::CustomMenuItem::new("disable_osc".to_string(), "Disable");
+    //let enable_osc = tauri::CustomMenuItem::new("enable_osc".to_string(), "Enable");
+    //let disable_osc = tauri::CustomMenuItem::new("disable_osc".to_string(), "Disable");
 
     let tray_menu = SystemTrayMenu::new()
-    .add_item(enable_osc)
-    .add_item(disable_osc)
+    //.add_item(enable_osc)
+    //.add_item(disable_osc)
     .add_native_item(tauri::SystemTrayMenuItem::Separator)
     .add_item(hide_app)
     .add_item(show_app)
@@ -73,7 +73,7 @@ fn main() {
                 "show" => {
                     let window = app.get_window("main").unwrap();
                     window.show().unwrap();
-                },
+                },/*
                 "enable_osc" => {
                     let vc_lock = app.state::<vcore::VCStateMutex>();
                     let _ = vcore::native_vibecheck_enable(vc_lock);
@@ -81,7 +81,7 @@ fn main() {
                 "disable_osc" => {
                     let vc_lock = app.state::<vcore::VCStateMutex>();
                     let _ = tauri::async_runtime::block_on(async move {vcore::native_vibecheck_disable(vc_lock).await});
-                }
+                }*/
                 _ => {},
             }
         },
