@@ -19,7 +19,7 @@ export default function () {
         onClose={() => setSettingsIsOpen(false)}
       />
       <button
-        className={`text-6xl font-bold p-2 w-1/2 border-gray-500 border-solid border-2 rounded-md hover:border-gray-300 transition-all
+        className={`text-6xl font-bold p-2 w-1/2 border-gray-500 border-solid border-2 rounded-md hover:border-gray-300
           ${isEnabled ? " grad-forewards" : ""}`}
         onClick={() => toggleIsEnabled()}
       >

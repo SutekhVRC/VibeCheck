@@ -2,27 +2,24 @@ export default function () {
   return (
     <>
       <div
-        className="animate-bounce"
+        className="animate-bounce transform -translate-y-1/4"
         style={{
-          transform: "translateY(-25%)",
           animationDelay: "250ms",
         }}
       >
         .
       </div>
       <div
-        className="animate-bounce"
+        className="animate-bounce transform -translate-y-1/4"
         style={{
-          transform: "translateY(-25%)",
           animationDelay: "500ms",
         }}
       >
         .
       </div>
       <div
-        className="animate-bounce"
+        className="animate-bounce transform -translate-y-1/4"
         style={{
-          transform: "translateY(-25%)",
           animationDelay: "750ms",
         }}
       >
