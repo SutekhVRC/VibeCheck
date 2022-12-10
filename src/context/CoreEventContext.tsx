@@ -41,7 +41,9 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
   const [isEnabled, setIsEnabled] = useState(INITIAL_CORE_STATE.isEnabled);
   const [isScanning, setIsScanning] = useState(INITIAL_CORE_STATE.isScanning);
 
-  const [config, setConfig] = useState<FeVibeCheckConfig | null>(null);
+  const [config, setConfig] = useState<FeVibeCheckConfig | null>(
+    INITIAL_CORE_STATE.config
+  );
 
   async function enable() {
     await invoke(ENABLE).catch(() => {
