@@ -175,6 +175,17 @@ fn main() {
         },
         tauri::RunEvent::Ready => {
             info!("App Ready");
+        },
+        tauri::RunEvent::Updater(updater_event) => {
+            match updater_event {
+                tauri::UpdaterEvent::Error(err) => {
+                    log::error!("Update error: {}", err);
+                }
+                tauri::UpdaterEvent::UpdateAvailable { body: _, date: _, version } => {
+                    info!("Update available: {}", version);
+                },
+                _ => {},
+            }
         }
         _ => {}
     }});
