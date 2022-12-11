@@ -1,0 +1,22 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "tauri" ]
+  pull_request:
+    branches: [ "tauri" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: windows
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo tauri build
+    - name: Run tests
+      run: cargo test
