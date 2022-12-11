@@ -14,7 +14,7 @@ export default function (props: SliderProps) {
     <Slider.Root
       className="relative flex items-center"
       {...props}
-      aria-label="Volume"
+      aria-label="Slider"
     >
       <Slider.Track className="relative bg-gray-800 flex-grow rounded-full h-1">
         <Slider.Range className="absolute bg-gray-100 rounded-full h-full data-[disabled]:bg-gray-600" />

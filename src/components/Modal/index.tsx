@@ -40,7 +40,7 @@ export default function MyModal({
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-xl transition-all p-6 bg-zinc-800">
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-xl transition-all p-10 bg-zinc-800">
                   <Dialog.Title as="h3" className="text-xl font-bold">
                     {title}
                   </Dialog.Title>

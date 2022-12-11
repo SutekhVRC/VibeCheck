@@ -18,6 +18,8 @@ async function setFeature(toyId: number, newFeature: FeVCToyFeature) {
 }
 
 export default function ({ toyId, feature }: ToyFeatureFormProps) {
+  // Would like to make this one state, but radix-ui slider uses onValueChange(e: number[])
+  // Not sure how to dispatch handlers w/o name, and debounce inside handler?
   const [enabled, setEnabled] = useState(feature.feature_enabled);
   const [oscParameter, setOscParameter] = useState(feature.osc_parameter);
   const [smoothing, setSmoothing] = useState(feature.smooth_enabled);

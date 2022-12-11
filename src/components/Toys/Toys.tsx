@@ -6,6 +6,7 @@ import NameBadge from "./NameBadge";
 import ToySettingsModal from "./ToySettingsModal";
 import { Feature } from "../Feature";
 import Loading from "./Loading";
+import { Cog6ToothIcon } from "@heroicons/react/20/solid";
 
 export default function () {
   const [toySettingsModalIsOpen, setToySettingsModalIsOpen] = useState(false);
@@ -26,10 +27,7 @@ export default function () {
             className="rounded-md bg-zinc-700 p-4 m-2"
             key={`${toy.toy_name} ${toy.toy_id}`}
           >
-            <div
-              className="text-4xl flex justify-between items-center cursor-pointer"
-              onClick={() => setToySettingsModalIsOpen(true)}
-            >
+            <div className="text-4xl flex justify-between items-center">
               <NameBadge name={toy.toy_name} />
               {toy.battery_level == 0 ? (
                 <div className="flex">
@@ -44,6 +42,10 @@ export default function () {
                   {percent.format(toy.battery_level)}
                 </div>
               )}
+              <Cog6ToothIcon
+                className="h-6 cursor-pointer"
+                onClick={() => setToySettingsModalIsOpen(true)}
+              />
             </div>
             <ToySettingsModal
               isOpen={toySettingsModalIsOpen}
@@ -52,14 +54,13 @@ export default function () {
             />
             <div className="grid">
               {toy.features.map((feature) => (
-                <>
+                <div
+                  className="flex flex-col"
+                  key={`${toy.toy_id} ${feature.feature_type} ${feature.feature_index}`}
+                >
                   <hr className="border-1 border-zinc-800 m-1 border-opacity-75" />
-                  <Feature
-                    toyId={toy.toy_id}
-                    feature={feature}
-                    key={`${toy.toy_id} ${feature.feature_type} ${feature.feature_index}`}
-                  />
-                </>
+                  <Feature toyId={toy.toy_id} feature={feature} />
+                </div>
               ))}
             </div>
           </div>
