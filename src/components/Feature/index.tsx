@@ -16,8 +16,8 @@ export function Feature({
       {({ open }) => (
         <>
           <Disclosure.Button>
-            <div className="flex justify-between items-center">
-              <div className="flex justify-between items-center w-1/2">
+            <div className="flex justify-between items-center pl-1 pr-1">
+              <div className="flex items-center">
                 <div>{`${feature.feature_type} ${feature.feature_index}`}</div>
                 <EnabledBadge enabled={feature.feature_enabled} />
               </div>

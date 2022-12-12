@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { FeVCToy } from "../../../src-tauri/bindings/FeVCToy";
 import { ALTER_TOY } from "../../data/constants";
 import Modal from "../Modal";
@@ -13,7 +13,6 @@ export default function ({
   onClose: () => void;
   toy: FeVCToy;
 }) {
-  const profileRef = useRef<HTMLSelectElement>(null);
   const [oscData, setOscData] = useState(toy.osc_data);
 
   async function onSave(newOSCDataState: boolean) {
@@ -32,10 +31,8 @@ export default function ({
 
   return (
     <Modal isOpen={isOpen} onClose={handleOnClose} title={toy.toy_name}>
-      <div className="grid grid-cols-2 gap-y-2 pb-4 justify-items-start">
-        <label>Profile</label>
-        <select disabled defaultValue={""} ref={profileRef} />
-        <label>OSC Data</label>
+      <div className="grid grid-cols-2 gap-y-2 pb-4 justify-items-end">
+        <label className="justify-self-start">OSC Data</label>
         <input
           type="checkbox"
           checked={oscData}
