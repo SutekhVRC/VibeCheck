@@ -104,6 +104,7 @@ fn main() {
             frontend_native::vibecheck_start_bt_scan,
             frontend_native::vibecheck_stop_bt_scan,
             frontend_native::alter_toy,
+            frontend_native::open_default_browser,
             ]
     )
     .build(tauri::generate_context!())

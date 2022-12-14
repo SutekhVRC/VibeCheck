@@ -55,6 +55,14 @@ pub enum FeCoreEvent {
     State(FeStateEvent),
 }
 
+#[derive(Deserialize, Clone, TS)]
+#[ts(export)]
+pub enum FeSocialLink {
+    Github,
+    VRChatGroup,
+    Discord,
+}
+
 #[derive(Serialize, Clone, TS)]
 #[ts(export)]
 pub struct FeVCToy {

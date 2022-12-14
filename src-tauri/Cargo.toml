@@ -28,6 +28,7 @@ btleplug = "0.10.3"
 ts-rs = {version = "6.2.1", features = ["serde-compat"] }
 log = "0.4.17"
 env_logger = "0.9.3"
+open = "3.2.0"
 
 # Tauri dependencies
 tauri = { version = "1.1.1", features = ["api-all", "system-tray", "updater"] }

@@ -5,7 +5,7 @@
  */
 
 use log::trace;
-use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter}, vcerror::frontend};
+use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink}, vcerror::frontend};
 
 /*
  * vibecheck_version
@@ -121,6 +121,19 @@ pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: ta
     trace!("alter_toy({}, {:?})", toy_id, mutate);
     vcore::native_alter_toy(vc_state, app_handle, toy_id, mutate)
 }
+
+/*
+ * Opens the social link specified
+ */
+#[tauri::command(async)]
+pub fn open_default_browser(link: FeSocialLink) {
+    match link {
+        FeSocialLink::Discord => {let _ = open::that("https://discord.gg/g6kUFtMtpw");},
+        FeSocialLink::Github => {let _ = open::that("https://github.com/SutekhVRC/VibeCheck");},
+        FeSocialLink::VRChatGroup => {let _ = open::that("https://vrc.group/VIBE.9503");},
+    };
+}
+
 /*
 #[tauri::command(async)]
 pub fn get_connection_modes(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> ConnectionModes {

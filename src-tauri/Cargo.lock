@@ -4421,6 +4421,7 @@ dependencies = [
  "futures-timer",
  "futures-util",
  "log",
+ "open",
  "parking_lot",
  "reqwest",
  "rosc",
