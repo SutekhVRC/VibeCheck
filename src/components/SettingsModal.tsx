@@ -58,8 +58,8 @@ export default function ({
   }, [isOpen]);
 
   return (
-    <Modal title="Settings" isOpen={isOpen} onClose={onClose}>
-      <form onSubmit={handleSubmit}>
+    <Modal title="Config" isOpen={isOpen} onClose={onClose}>
+      <form id="config" onSubmit={handleSubmit}>
         <div className="grid grid-cols-2 gap-y-2 justify-items-end">
           <label className="justify-self-start">OSC Bind</label>
           <input
@@ -147,16 +147,17 @@ export default function ({
             onChange={onCheck}
           />
         </div>
-        <div className="mt-4">
-          <button
-            type="submit"
-            className="inline-flex justify-center rounded-md bg-zinc-100 px-4 py-2  text-zinc-900 hover:bg-zinc-200"
-          >
-            Save
-          </button>
-        </div>
       </form>
-      {canUpdate && <UpdateButton />}
+      <div className="mt-4 flex justify-around">
+        <button
+          type="submit"
+          form="config"
+          className="rounded-md bg-zinc-100 px-4 text-zinc-900 hover:bg-zinc-200"
+        >
+          Save
+        </button>
+        <UpdateButton enabled={canUpdate} />
+      </div>
     </Modal>
   );
 }

@@ -9,6 +9,7 @@ export const ENABLE = "vibecheck_enable";
 export const DISABLE = "vibecheck_disable";
 export const GET_CONFIG = "get_vibecheck_config";
 export const SET_CONFIG = "set_vibecheck_config";
+export const OPEN_BROWSER = "open_default_browser";
 
 export const SCAN_LENGTH = 10000;
 export const ALTER_TOY_DEBOUNCE = 250;
