@@ -136,6 +136,7 @@ pub async fn client_event_handler(
                                 features: toy.param_feature_map.to_fe(),
                                 listening: toy.listening,
                                 osc_data: toy.osc_data,
+                                sub_id: toy.sub_id,
                             }
                         }),
                     );
@@ -749,6 +750,7 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
                                 features: toy.param_feature_map.to_fe(),
                                 listening: toy.listening,
                                 osc_data: toy.osc_data,
+                                sub_id: toy.sub_id,
                             }
                         }),
                     );

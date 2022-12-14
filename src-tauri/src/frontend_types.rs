@@ -65,6 +65,7 @@ pub struct FeVCToy {
     pub features: Vec<FeVCToyFeature>,
     pub listening: bool,
     pub osc_data: bool,
+    pub sub_id: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Copy, TS)]

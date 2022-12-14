@@ -713,6 +713,7 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
                 features: alter_clone.param_feature_map.to_fe(),
                 listening: alter_clone.listening,
                 osc_data: alter_clone.osc_data,
+                sub_id: alter_clone.sub_id,
             }
         }),
     );
