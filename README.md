@@ -1,18 +1,18 @@
-### VibeCheck 2.0 is in Beta Testing and will be getting updates frequently.
-**Please report bugs/issues or feature requests if you have them!**
-
 # VibeCheck
 An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC implementation.
 
+### VibeCheck 2.0 is in Beta Testing and will be getting updates frequently.
+**Please report bugs/issues or feature requests if you have them!**
+
 ## Socials
-[VRChat Group](https://vrc.group/VIBE.9503)
-[SutekhVRC Discord](https://discord.gg/g6kUFtMtpw)
+- [VRChat Group](https://vrc.group/VIBE.9503)
+- [SutekhVRC Discord](https://discord.gg/g6kUFtMtpw)
 
 ## VibeCheck 2.0 Developers
 - Sutekh: Lead developer and backend dev.
 - TutiDore: Frontend developer.
 - DigiGhost: Commissioned Artist (Icons and Banners).
-- Tini: Helped with frontend UI mockups.
+- Tini: Helped with frontend UI mockups and testing.
 
 ## Thanks
 Thanks to the people below for testing and suggestions!
