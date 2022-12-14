@@ -105,8 +105,6 @@ Thanks to the people below for testing and suggestions!
 - Make sure the VibeCheck PC and your phone or computer running Lovense Connect are on the same network/subnet
 - Connect your toys to Lovense Connect
 - It may take like 30 seconds for Lovense Connect to update their NAT punchtrough API
-- You can check if your toys and lovense connect app is detected by lovense servers by going to the LC Debug tab and clicking refresh or visit [here](https://api.lovense.com/api/lan/getToys).
-- Start VibeCheck: VibeCheck should find your Lovense Connect toys from the Lovense API. (Check the LC Debug tab. Click "Refresh" to see if Lovense has detected your toys.) If not wait a bit longer.
 - Press Enable!
 
 #### Lovense Connect Pros/Cons
@@ -167,11 +165,11 @@ VibeCheck functions by receiving OSC input from VRChat.
 ### Bluetooth Mode
 
 #### Pros
-    - Generally has a faster response time
-    - Supports many different toys.
+ - Generally has a faster response time
+ - Supports many different toys.
 
 #### Cons
-    - Can be less stable than Lovense Connect if the Bluetooth LE adapter in use isn't very strong.
+- Can be less stable than Lovense Connect if the Bluetooth LE adapter in use isn't very strong.
 
 ### Lovense Connect Mode
 
