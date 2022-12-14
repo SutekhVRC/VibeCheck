@@ -576,10 +576,13 @@ fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: UnboundedSender<Toy
                 if msg.addr == "/avatar/parameters/vibecheck/state" {
                     if let Some(state_bool) = msg.args.pop().unwrap().bool() {
                         if !state_bool {
-                            info!("Sending Disable event");
+                            info!("State false: Sending Disable event");
                             let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::Disable));
                         }
                     }
+                } else if msg.addr.starts_with("/avatar/change") {
+                    info!("Avatar Changed: Sending Disable event");
+                    let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::Disable));
                 } else {// Not a vibecheck OSC command, broadcast to toys
                     if let Err(_) = toy_bcst_tx.send(ToySig::OSCMsg(msg)) {
                         info!("BCST TX is disconnected. Shutting down toy input routine!");
