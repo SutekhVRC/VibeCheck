@@ -582,8 +582,13 @@ fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: UnboundedSender<Toy
                         }
                     }
                 } else if msg.addr.starts_with("/avatar/change") {
-                    info!("Avatar Changed: Sending Disable event");
-                    let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::Disable));
+                    info!("Avatar Changed: Halting toy actions");
+                    {
+                        let vc_pointer = app_handle.state::<super::vcore::VCStateMutex>().0.clone();
+                        let vc_lock = vc_pointer.lock();
+                        let _ = vc_lock.async_rt.block_on(async {vc_lock.bp_client.as_ref().unwrap().stop_all_devices().await}).unwrap();
+                    }
+                    //let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::Disable));
                 } else {// Not a vibecheck OSC command, broadcast to toys
                     if let Err(_) = toy_bcst_tx.send(ToySig::OSCMsg(msg)) {
                         info!("BCST TX is disconnected. Shutting down toy input routine!");
