@@ -2,7 +2,7 @@ import { installUpdate } from "@tauri-apps/api/updater";
 import { relaunch } from "@tauri-apps/api/process";
 import UpdatePing from "./UpdatePing";
 
-export default function () {
+export default function ({ enabled }: { enabled: boolean }) {
   async function handleUpdate() {
     try {
       await installUpdate();
@@ -12,15 +12,16 @@ export default function () {
     }
   }
   return (
-    <div className="flex justify-center">
-      <UpdatePing canUpdate={true}>
-        <button
-          onClick={handleUpdate}
-          className="bg-gray-700 border-solid border-gray-400 border-2 rounded-md p-1 pl-5 pr-5 m-2 hover:bg-gray-800"
-        >
-          Upgrade
-        </button>
-      </UpdatePing>
-    </div>
+    <UpdatePing canUpdate={enabled}>
+      <button
+        disabled={!enabled}
+        onClick={handleUpdate}
+        className={`bg-zinc-100 rounded-md p-1 px-5 ${
+          enabled && "text-zinc-900 hover:bg-zinc-200"
+        }`}
+      >
+        Upgrade
+      </button>
+    </UpdatePing>
   );
 }
