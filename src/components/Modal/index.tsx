@@ -1,6 +1,6 @@
 import { Dialog, Transition } from "@headlessui/react";
+import type { ReactNode } from "react";
 import { Fragment } from "react";
-import type { ReactElement } from "react";
 
 export default function MyModal({
   title,
@@ -9,7 +9,7 @@ export default function MyModal({
   onClose,
 }: {
   title: string;
-  children: ReactElement;
+  children: ReactNode;
   isOpen: boolean;
   onClose: () => void;
 }) {

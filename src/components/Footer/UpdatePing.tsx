@@ -1,0 +1,21 @@
+import type { ReactNode } from "react";
+
+export default function ({
+  children,
+  canUpdate,
+}: {
+  children: ReactNode;
+  canUpdate: boolean;
+}) {
+  return (
+    <div className={`relative select-none ${canUpdate && "cursor-pointer"}`}>
+      {children}
+      {canUpdate && (
+        <>
+          <div className="absolute top-0.5 right-1 w-2 h-2 rounded-full bg-green-300 animate-ping" />
+          <div className="absolute top-0.5 right-1 w-2 h-2 rounded-full bg-green-300" />
+        </>
+      )}
+    </div>
+  );
+}

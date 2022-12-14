@@ -4,12 +4,14 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 export default function ({
   children,
   text,
+  delay = 150,
 }: {
   children: ReactNode;
   text: string;
+  delay?: number;
 }) {
   return (
-    <Tooltip.Provider delayDuration={100}>
+    <Tooltip.Provider delayDuration={delay}>
       <Tooltip.Root>
         <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
         <Tooltip.Portal>

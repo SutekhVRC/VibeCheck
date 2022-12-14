@@ -1,7 +1,6 @@
 import type { FeVCToyFeature } from "../../../src-tauri/bindings/FeVCToyFeature";
 import ToyFeatureForm from "./ToyFeatureForm";
 import { ChevronUpIcon } from "@heroicons/react/20/solid";
-import EnabledBadge from "../Toys/EnabledBadge";
 import { Disclosure } from "@headlessui/react";
 
 export function Feature({
@@ -16,10 +15,13 @@ export function Feature({
       {({ open }) => (
         <>
           <Disclosure.Button>
-            <div className="flex justify-between items-center pl-1 pr-1">
+            <div className="flex justify-between items-center pl-2 pr-2">
               <div className="flex items-center">
-                <div>{`${feature.feature_type} ${feature.feature_index}`}</div>
-                <EnabledBadge enabled={feature.feature_enabled} />
+                <div
+                  className={
+                    feature.feature_enabled ? "text-gray-200" : "text-gray-500"
+                  }
+                >{`${feature.feature_type} ${feature.feature_index}`}</div>
               </div>
               <ChevronUpIcon
                 className={`${
