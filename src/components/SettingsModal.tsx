@@ -1,4 +1,4 @@
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useEffect } from "react";
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api";
@@ -6,14 +6,21 @@ import { invoke } from "@tauri-apps/api";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 import { SET_CONFIG } from "../data/constants";
 import Modal from "./Modal";
+import UpdateButton from "./Footer/UpdateButton";
 
 type settingsDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   config: FeVibeCheckConfig;
+  canUpdate: boolean;
 };
 
-export default function ({ isOpen, onClose, config }: settingsDialogProps) {
+export default function ({
+  isOpen,
+  onClose,
+  config,
+  canUpdate,
+}: settingsDialogProps) {
   const [newConfig, setNewConfig] = useState<FeVibeCheckConfig>(config);
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -38,6 +45,12 @@ export default function ({ isOpen, onClose, config }: settingsDialogProps) {
     await invoke(SET_CONFIG, { feVcConfig: newConfig });
   }
 
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    saveConfig();
+    onClose();
+  }
+
   useEffect(() => {
     // onOpen refresh to backend config
     if (!isOpen) return;
@@ -46,13 +59,7 @@ export default function ({ isOpen, onClose, config }: settingsDialogProps) {
 
   return (
     <Modal title="Settings" isOpen={isOpen} onClose={onClose}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          saveConfig();
-          onClose();
-        }}
-      >
+      <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-2 gap-y-2 justify-items-end">
           <label className="justify-self-start">OSC Bind</label>
           <input
@@ -149,6 +156,7 @@ export default function ({ isOpen, onClose, config }: settingsDialogProps) {
           </button>
         </div>
       </form>
+      {canUpdate && <UpdateButton />}
     </Modal>
   );
 }
