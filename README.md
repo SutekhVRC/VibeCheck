@@ -8,7 +8,7 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - [VRChat Group](https://vrc.group/VIBE.9503)
 - [SutekhVRC Discord](https://discord.gg/g6kUFtMtpw)
 
-## VibeCheck 2.0 Developers
+## VibeCheck 2.0 Credits
 - Sutekh: Lead developer and backend dev.
 - TutiDore: Frontend developer.
 - DigiGhost: Commissioned Artist (Icons and Banners).
@@ -25,20 +25,6 @@ Thanks to the people below for testing and suggestions!
 ## Buttplug IO Supported Toys
 - [Supported Toys (All)](https://iostindex.com/?filter0ButtplugSupport=4)
 - [Supported Toys (Lovense)](https://iostindex.com/?filter0ButtplugSupport=4&filter1Brand=Lovense)
-
-## Common Windows OS Bluetooth radio issues
-- [Windows OS only supports the use of 1 Bluetooth radio](https://docs.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-faq#how-many-bluetooth-radios-can-windows-support)
-- Motherboard integrated bluetooth radios commonly have connection issues without an antenna, as well as can only handle one connected device.
-- Motherboard integrated bluetooth radios will interfere with external bluetooth adapters (USB adapters / etc.).
-- [Motherboard integrated bluetooth radios interfering](https://kb.plugable.com/bluetooth-adapter/your-computer-has-had-a-different-bluetooth-adapter-previously-or-has-a-built-in-adapter)
-
-## Common Lovense Connect issues
-- I recommend using VibeCheck's Lovense Connect Host Override setting. Enter the LAN IP address for the device running Lovense Connect. If you are using desktop Lovense Connect you can use 127.0.0.1 as the IP address.
-- Toys not showing up in VibeCheck: Sometimes Lovense Connect can be slow updating their NAT punchthrough API and you just have to wait for it to populate. (If you have waited for a good amount of time restarting vibecheck will force check the NAT punchthrough API for Lovense to detect your toy)
-- Another reason a toy may not show up on the Lovense Connect NAT punchthrough API is that you have multiple subnets in your network. (Make sure that the computer or phone using the Lovense Connect app is on the same network/subnet as the computer with VibeCheck running.)
-- Using a VPN can cause issues.
-- Having virtual network interfaces can cause the Lovense Connect app to become confused.
-- You can check if your toys and lovense connect app is detected by lovense servers by going to the LC Debug tab and clicking refresh or visit [here](https://api.lovense.com/api/lan/getToys).
 
 ## Dependencies
 - (Lovense Connect Only) Lovense Connect app on phone / Lovense Connect adapter for PC Lovense Connect app.
@@ -141,3 +127,67 @@ Thanks to the people below for testing and suggestions!
 ## General
 
 VibeCheck functions by receiving OSC input from VRChat.
+
+# FAQ
+
+## Connection issues
+
+### Common Lovense Connect Issues
+  - I recommend using VibeCheck's Lovense Connect Host Override setting. Enter the LAN IP address for the device running Lovense Connect. If you are using desktop Lovense Connect you can use 127.0.0.1 as the IP address.
+  - Start Lovense Connect **before** starting VibeCheck (If you are using VibeCheck 0.1.x).
+  - Sometimes Lovense API servers are slow or are down, this can cause Lovense Connect to not function correctly. I have added to my fork of the buttplug library to allow Lovense Connect host overriding. This will bypass relying on the Lovense API to discover LAN devices.
+  - The device running Lovense Connect is on a different subnet than the computer running VibeCheck. Make sure your phone or computer running Lovense Connect are on the same network as the computer running VibeCheck.
+  - Lovense Connect Desktop app failing to register the correct interface can be caused by VPN / VM network interfaces and others alike. Remove virtual networks and disable VPN's.
+
+### Common Bluetooth Issues
+  - Your Bluetooth adapter may just be really weak (Feel free to ask for Bluetooth adapter recommendations)
+  - Make sure your Bluetooth adapter/dongle supports LE
+  - If your computer has an onboard bluetooth interface, make sure it is disabled if you are using another bluetooth interface (USB Bluetooth dongle).
+  - [Motherboard integrated bluetooth radios interfering](https://kb.plugable.com/bluetooth-adapter/your-computer-has-had-a-different-bluetooth-adapter-previously-or-has-a-built-in-adapter)
+  - Windows only supports the use of 1 generic bluetooth interface at a time.
+  - [Windows OS only supports the use of 1 Bluetooth radio](https://docs.microsoft.com/en-us/windows-hardware/drivers/bluetooth/bluetooth-faq#how-many-bluetooth-radios-can-windows-support)
+  - If you are using VibeCheck before version 0.1.9 make sure to plug in the bluetooth adapter before starting VibeCheck.
+
+## How to connect
+
+### Lovense Connect
+  - Download Lovense Connect for phone or desktop.
+  - If using Lovense Connect on desktop you will need the Lovense USB dongle.
+  - Connect toys to Lovense Connect
+  - Start VibeCheck (Sometimes you may need to wait like 10 - 20 seconds if the Lovense API is being slow)
+
+### Bluetooth
+  - You need a Bluetooth LE adapter.
+    - Note on Bluetooth LE adapters: I recommend using an adapter that can handle more than one device and has a **strong/long-range** connection.
+  - Make sure any onboard generic bluetooth interfaces are disabled.
+  - Plug in the Bluetooth LE adapter
+
+## Pros, Cons, Lovense Connect or Bluetooth?
+
+### Bluetooth Mode
+
+#### Pros
+    - Generally has a faster response time
+    - Supports many different toys.
+
+#### Cons
+    - Can be less stable than Lovense Connect if the Bluetooth LE adapter in use isn't very strong.
+
+### Lovense Connect Mode
+
+#### Pros
+  - Can be a more stable alternative if you dont have a very good bluetooth LE adapter
+  - Don't need to buy any adapters if you have a smart phone and WiFi.
+  - Can use Lovense Connect on phone to take advantage of your WiFi's range.
+
+#### Cons
+  - Can only be used with Lovense Toys.
+  - If Lovense API is down you cannot use it.
+
+## Avatar Configuration
+
+### OSC
+
+  - VibeCheck can be configured so that each feature/motor of a toy is assigned to different OSC addresses.
+  - VibeCheck only reads Float parameters.
+  - If you add a parameter to an avatar remember to refresh the OSC config. I do this by deleting the OSC configuration files for my avatars and then changing out and back in to my avatar. The button in game never works for me.
