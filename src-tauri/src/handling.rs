@@ -216,9 +216,10 @@ pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, s
         }
     } dont need*/
     if scalar_level != 0.0 && scalar_level >= feature_levels.minimum_level && scalar_level <= feature_levels.maximum_level {
-        //info!("{} {} {}", feature_index, actuator_type, scalar_level);
+        info!("SENDING FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, scalar_level);
         let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (scalar_level, actuator_type))]))).await;
     } else if scalar_level == 0.0 {// if level is 0 put at idle
+        info!("IDLE FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, scalar_level);
         let _e = dev.scalar(&buttplug::client::ScalarCommand::ScalarMap(HashMap::from([(feature_index, (feature_levels.idle_level, actuator_type))]))).await;
     }
 }
@@ -266,6 +267,7 @@ pub async fn toy_management_handler(
 
                                         // Clamp float accuracy to hundredths and cast as 64 bit float
                                         let mut float_level = ((lvl * 100.0).round() / 100.0) as f64;
+                                        info!("Received and cast float lvl: {}", float_level);
 
                                         // Iterate through features enumerated from OSC param
                                         for (feature_type, feature_index, feature_levels, smooth_enabled, smooth_entries) in features {
