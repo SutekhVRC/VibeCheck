@@ -31,7 +31,7 @@ export default function ({
   }
 
   const parsed_toy_name = toy.toy_name
-    .replace("Lovense Connect ", "")
+    .replace("Lovense Connect", "Lovense")
     .replaceAll(" ", "_")
     .toLowerCase();
   const osc_data_addr = `/avatar/parameters/${parsed_toy_name}/${toy.sub_id}/battery`;
