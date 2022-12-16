@@ -22,6 +22,7 @@ export default function ({ toyId, feature }: ToyFeatureFormProps) {
   // Not sure how to dispatch handlers w/o name, and debounce inside handler?
   const [enabled, setEnabled] = useState(feature.feature_enabled);
   const [oscParameter, setOscParameter] = useState(feature.osc_parameter);
+  const [flipInput, setFlipInput] = useState(feature.flip_input_float);
   const [smoothing, setSmoothing] = useState(feature.smooth_enabled);
   const levels = feature.feature_levels;
   const [smoothValue, setSmoothValue] = useState(levels.smooth_rate);
@@ -34,8 +35,9 @@ export default function ({ toyId, feature }: ToyFeatureFormProps) {
     feature_enabled: enabled,
     osc_parameter: oscParameter,
     smooth_enabled: smoothing,
+    flip_input_float: flipInput,
     feature_levels: {
-      ...feature.feature_levels,
+      ...levels,
       smooth_rate: smoothValue,
       idle_level: idle,
       minimum_level: min,
@@ -46,7 +48,7 @@ export default function ({ toyId, feature }: ToyFeatureFormProps) {
   useEffect(() => {
     if (JSON.stringify(feature) == JSON.stringify(newFeature)) return;
     setFeature(toyId, newFeature);
-  }, [enabled, smoothing]);
+  }, [enabled, smoothing, flipInput]);
 
   useEffect(() => {
     if (JSON.stringify(feature) == JSON.stringify(newFeature)) return;
@@ -73,6 +75,14 @@ export default function ({ toyId, feature }: ToyFeatureFormProps) {
         value={oscParameter}
         onChange={(e) => setOscParameter(e.target.value)}
       />
+      <div></div>
+      <label>Flip Input</label>
+      <input
+        type="checkbox"
+        checked={flipInput}
+        onChange={() => setFlipInput((e) => !e)}
+      />
+      <div></div>
       <div></div>
       <label>Smoothing</label>
       <input
