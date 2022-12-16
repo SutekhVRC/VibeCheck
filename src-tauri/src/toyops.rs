@@ -221,6 +221,8 @@ pub struct VCToyFeature {
 
     pub feature_index: u32,
 
+    pub flip_input_float: bool,
+
     pub feature_levels: LevelTweaks,
 
     pub smooth_enabled: bool,
@@ -231,7 +233,7 @@ pub struct VCToyFeature {
 
 impl VCToyFeature {
     fn new(osc_parameter: String, feature_index: u32, feature_type: VCFeatureType) -> Self {
-        VCToyFeature { feature_enabled: true, feature_type, osc_parameter, feature_index, feature_levels: LevelTweaks::default(), smooth_enabled: true, smooth_entries: Vec::new() }
+        VCToyFeature { feature_enabled: true, feature_type, osc_parameter, feature_index, flip_input_float: false, feature_levels: LevelTweaks::default(), smooth_enabled: true, smooth_entries: Vec::new() }
     }
 
     pub fn from_fe(&mut self, fe_feature: FeVCToyFeature) {
@@ -239,6 +241,7 @@ impl VCToyFeature {
         // Not including feature type because the feature type is decided by the Server Core not the frontend user
         // we don't want to allow users to mutate feature types as it could break / make the feature unuseable until restart
         //self.feature_type.from_fe(fe_feature.feature_type);
+        self.flip_input_float = fe_feature.flip_input_float;
         self.osc_parameter = fe_feature.osc_parameter;
         self.feature_levels.from_fe(fe_feature.feature_levels);
         self.smooth_enabled = fe_feature.smooth_enabled;
@@ -379,7 +382,7 @@ impl FeatureParamMap {
         }
     }
 
-    pub fn get_features_from_param(&mut self, param: &String) -> Option<Vec<(VCFeatureType, u32, LevelTweaks, bool, &mut Vec<f64>)>> {
+    pub fn get_features_from_param(&mut self, param: &String) -> Option<Vec<(VCFeatureType, u32, bool, LevelTweaks, bool, &mut Vec<f64>)>> {
         
         let mut parsed_features = vec![];
 
@@ -387,7 +390,7 @@ impl FeatureParamMap {
         for f in &mut self.features {
             if f.feature_enabled {
                 if f.osc_parameter == *param {
-                    parsed_features.push((f.feature_type, f.feature_index, f.feature_levels, f.smooth_enabled, &mut f.smooth_entries));
+                    parsed_features.push((f.feature_type, f.feature_index, f.flip_input_float, f.feature_levels, f.smooth_enabled, &mut f.smooth_entries));
                 }
             }
         }
@@ -424,6 +427,7 @@ impl FeatureParamMap {
                 feature_type: f.feature_type.to_fe(),
                 osc_parameter: f.osc_parameter.clone(),
                 feature_index: f.feature_index,
+                flip_input_float: f.flip_input_float,
                 feature_levels: f.feature_levels.to_fe(),
                 smooth_enabled: f.smooth_enabled,
             });

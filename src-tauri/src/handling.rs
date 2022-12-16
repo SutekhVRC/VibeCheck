@@ -5,6 +5,7 @@ use buttplug::client::ScalarCommand::ScalarMap;
 use buttplug::client::RotateCommand::RotateMap;
 use futures::StreamExt;
 use futures_timer::Delay;
+use log::debug;
 use parking_lot::Mutex;
 use rosc::OscType;
 use rosc::encoder;
@@ -206,7 +207,7 @@ pub async fn client_event_handler(
 }
 
 // Parse scalar levels and logic for level tweaks
-pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, scalar_level: f64, feature_index: u32, actuator_type: ActuatorType, feature_levels: LevelTweaks) {
+pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, scalar_level: f64, feature_index: u32, actuator_type: ActuatorType, flip_float: bool, feature_levels: LevelTweaks) {
     // Floor or Ceiling a float if actuator type is Constrict
     /*if actuator_type == ActuatorType::Constrict {
         if scalar_level < 0.50 {
@@ -216,12 +217,26 @@ pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, s
         }
     } dont need*/
     if scalar_level != 0.0 && scalar_level >= feature_levels.minimum_level && scalar_level <= feature_levels.maximum_level {
-        info!("SENDING FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, scalar_level);
-        let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (scalar_level, actuator_type))]))).await;
+        if !flip_float {
+            info!("SENDING FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, scalar_level);
+            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (scalar_level, actuator_type))]))).await;
+        } else {
+            info!("SENDING FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, flip_float64(scalar_level));
+            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (flip_float64(scalar_level), actuator_type))]))).await;
+        }
     } else if scalar_level == 0.0 {// if level is 0 put at idle
-        info!("IDLE FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, scalar_level);
-        let _e = dev.scalar(&buttplug::client::ScalarCommand::ScalarMap(HashMap::from([(feature_index, (feature_levels.idle_level, actuator_type))]))).await;
+        if !flip_float {
+            info!("IDLE FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, scalar_level);
+            let _e = dev.scalar(&buttplug::client::ScalarCommand::ScalarMap(HashMap::from([(feature_index, (feature_levels.idle_level, actuator_type))]))).await;
+        } else {
+            info!("IDLE FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, flip_float64(feature_levels.idle_level));
+            let _e = dev.scalar(&buttplug::client::ScalarCommand::ScalarMap(HashMap::from([(feature_index, (flip_float64(feature_levels.idle_level), actuator_type))]))).await;
+        }
     }
+}
+
+pub fn flip_float64(orig: f64) -> f64 {
+    (1.0 - orig).round()
 }
 
 /*
@@ -267,10 +282,10 @@ pub async fn toy_management_handler(
 
                                         // Clamp float accuracy to hundredths and cast as 64 bit float
                                         let mut float_level = ((lvl * 100.0).round() / 100.0) as f64;
-                                        info!("Received and cast float lvl: {}", float_level);
+                                        debug!("Received and cast float lvl: {}", float_level);
 
                                         // Iterate through features enumerated from OSC param
-                                        for (feature_type, feature_index, feature_levels, smooth_enabled, smooth_entries) in features {
+                                        for (feature_type, feature_index, flip_float, feature_levels, smooth_enabled, smooth_entries) in features {
                                             
                                             // Smoothing enabled
                                             if smooth_enabled {
@@ -296,34 +311,53 @@ pub async fn toy_management_handler(
 
                                             match feature_type {
                                                 VCFeatureType::Vibrator => {
-                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Vibrate, feature_levels).await;
+                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Vibrate, flip_float, feature_levels).await;
                                                 },
                                                 // We handle Rotator differently because it is not included in the Scalar feature set
                                                 VCFeatureType::Rotator => {
                                                     if float_level != 0.0 && float_level >= feature_levels.minimum_level && float_level <= feature_levels.maximum_level {
-                                                        let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (float_level, true))]))).await;
+                                                        if !flip_float {
+                                                            let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (float_level, true))]))).await;
+                                                        } else {
+                                                            // FLIP FLOAT
+                                                            let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flip_float64(float_level), true))]))).await;
+                                                        }
+                                                        
                                                     } else if float_level == 0.0 {
-                                                        let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (feature_levels.idle_level, true))]))).await;
+                                                        if !flip_float {
+                                                            let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (feature_levels.idle_level, true))]))).await;    
+                                                        } else {
+                                                            // FLIP FLOAT
+                                                            let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flip_float64(feature_levels.idle_level), true))]))).await;
+                                                        }
                                                     }
                                                 },
                                                 VCFeatureType::Constrict => {
-                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Constrict, feature_levels).await;
+                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Constrict, flip_float, feature_levels).await;
                                                 },
                                                 VCFeatureType::Oscillate => {
-                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Oscillate, feature_levels).await;
+                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Oscillate, flip_float, feature_levels).await;
                                                 },
                                                 VCFeatureType::Position => {
-                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Position, feature_levels).await;
+                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Position, flip_float, feature_levels).await;
                                                 },
                                                 VCFeatureType::Inflate => {
-                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Inflate, feature_levels).await;
+                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Inflate, flip_float, feature_levels).await;
                                                 },
                                                 // We handle Linear differently because it is not included in the Scalar feature set
                                                 VCFeatureType::Linear => {
                                                     if float_level != 0.0 && float_level >= feature_levels.minimum_level && float_level <= feature_levels.maximum_level {
-                                                        let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, float_level))]))).await;
+                                                        if !flip_float {
+                                                            let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, float_level))]))).await;
+                                                        } else {
+                                                            let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(float_level)))]))).await;
+                                                        }
                                                     } else if float_level == 0.0 {
-                                                        let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, feature_levels.idle_level))]))).await;
+                                                        if !flip_float {
+                                                            let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, feature_levels.idle_level))]))).await;
+                                                        } else {
+                                                            let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(feature_levels.idle_level)))]))).await;
+                                                        }
                                                     }
                                                 }
                                             }
