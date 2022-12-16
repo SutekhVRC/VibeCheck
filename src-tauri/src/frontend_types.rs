@@ -92,6 +92,7 @@ pub struct FeVCToyFeature {
     pub feature_type: FeVCFeatureType,
     pub osc_parameter: String,
     pub feature_index: u32,
+    pub flip_input_float: bool,
     pub feature_levels: FeLevelTweaks,
     pub smooth_enabled: bool,
 }
