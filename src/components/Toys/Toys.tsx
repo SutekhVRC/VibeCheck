@@ -15,9 +15,7 @@ export default function () {
 
   return (
     <div className="flex-col justify-between items-stretch text-lg rounded-lg p-4 bg-zinc-800 h-[600px]">
-      <h1>
-        <div className="grad-backwards text-clip text-4xl">Connected toys</div>
-      </h1>
+
       {Object.keys(toys).length == 0 ? (
         <div className="flex justify-center items-center">
           No Toys
