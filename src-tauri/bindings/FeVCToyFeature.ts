@@ -2,4 +2,4 @@
 import type { FeLevelTweaks } from "./FeLevelTweaks";
 import type { FeVCFeatureType } from "./FeVCFeatureType";
 
-export interface FeVCToyFeature { feature_enabled: boolean, feature_type: FeVCFeatureType, osc_parameter: string, feature_index: number, feature_levels: FeLevelTweaks, smooth_enabled: boolean, }
+export interface FeVCToyFeature { feature_enabled: boolean, feature_type: FeVCFeatureType, osc_parameter: string, feature_index: number, flip_input_float: boolean, feature_levels: FeLevelTweaks, smooth_enabled: boolean, }
