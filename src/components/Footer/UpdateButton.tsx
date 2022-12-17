@@ -8,7 +8,7 @@ export default function ({ enabled }: { enabled: boolean }) {
       await installUpdate();
       await relaunch();
     } catch (e) {
-      console.log(e);
+      alert(e);
     }
   }
   return (
