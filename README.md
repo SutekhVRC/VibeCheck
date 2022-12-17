@@ -9,7 +9,6 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - [SutekhVRC Discord](https://discord.gg/g6kUFtMtpw)
 
 ## VibeCheck 2.0 Credits
-- Sutekh: Lead developer and backend dev.
 - TutiDore: Frontend developer.
 - DigiGhost: Commissioned Artist (Icons and Banners).
 - Tini: Helped with frontend UI mockups and testing.
