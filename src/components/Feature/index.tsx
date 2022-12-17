@@ -31,7 +31,7 @@ export function Feature({
             </div>
           </Disclosure.Button>
           <Disclosure.Panel>
-            <ToyFeatureForm toyId={toyId} feature={feature} />
+            <ToyFeatureForm toyId={toyId} toyFeature={feature} />
           </Disclosure.Panel>
         </>
       )}
