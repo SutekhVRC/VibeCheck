@@ -13,6 +13,7 @@ pub mod frontend {
         AlterToyFailure(ToyAlterError),
         // App State Errors
         EnableFailure,
+        EnableBindFailure,
         DisableFailure,
         StartScanFailure(String),
         StopScanFailure(String),

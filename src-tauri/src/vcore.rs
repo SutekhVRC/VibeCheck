@@ -425,7 +425,9 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
 
     let mut vc_lock = vc_state.0.lock();
     if let RunningState::Running = vc_lock.running {
-        return Err(frontend::VCFeError::EnableFailure);
+        //return Err(frontend::VCFeError::EnableFailure);
+        // Don't fail if already enabled
+        return Ok(());
     }
 
     if vc_lock.bp_client.is_none() {
@@ -463,9 +465,9 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
                             logerr!("Bind Error in TME sig: Sending shutdown signal!");
 
                             vc_lock.tme_send_tx.send(ToyManagementEvent::Sig(TmSig::StopListening)).unwrap();
-                            vc_lock.running = RunningState::Error("Bind Error! Set a different bind port in Settings!".to_string());
+                            vc_lock.running = RunningState::Stopped;
 
-                            return Err(frontend::VCFeError::EnableFailure);
+                            return Err(frontend::VCFeError::EnableBindFailure);
                         },
                         _ => {//Did not get the correct signal oops
                             warn!("Got incorrect TME signal.");
