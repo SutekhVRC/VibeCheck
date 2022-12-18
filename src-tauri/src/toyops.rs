@@ -174,42 +174,6 @@ impl VCToy {
     }        
 }
 
-/*
-[
-    {
-        "feature_enabled": true,
-        "feature_index": 0,
-        "feature_levels": {
-            "idle_level": 0,
-            "maximum_level": 100,
-            "minimum_level": 0,
-            "smooth_rate": 2
-        },
-        "feature_type": "Vibrator",
-        "osc_parameter": "/avatar/parameters/vibe",
-        "saved": true,
-        "smooth_enabled": true,
-        "smooth_entries": []
-    },
-    {
-        "feature_enabled": true,
-        "feature_index": 1,
-        "feature_levels": {
-            "idle_level": 0,
-            "maximum_level": 100,
-            "minimum_level": 0,
-            "smooth_rate": 2
-        },
-        "feature_type": "Vibrator",
-        "osc_parameter": "/avatar/parameters/vibe1",
-        "saved": true,
-        "smooth_enabled": true,
-        "smooth_entries": []
-    }
-]
- */
-
-
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct VCToyFeature {
 

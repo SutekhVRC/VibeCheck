@@ -104,14 +104,6 @@ pub enum FeToyAlter {
     OSCData(bool),
 }
 
-/*
-#[derive(Debug, Deserialize, TS)]
-#[ts(export)]
-pub enum FeLCOverride {
-    Host(String),
-    Clear,
-}*/
-
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, TS)]
 #[ts(export)]
 pub enum FeVCFeatureType {

@@ -73,15 +73,7 @@ fn main() {
                 "show" => {
                     let window = app.get_window("main").unwrap();
                     window.show().unwrap();
-                },/*
-                "enable_osc" => {
-                    let vc_lock = app.state::<vcore::VCStateMutex>();
-                    let _ = vcore::native_vibecheck_enable(vc_lock);
                 },
-                "disable_osc" => {
-                    let vc_lock = app.state::<vcore::VCStateMutex>();
-                    let _ = tauri::async_runtime::block_on(async move {vcore::native_vibecheck_disable(vc_lock).await});
-                }*/
                 _ => {},
             }
         },
@@ -114,14 +106,6 @@ fn main() {
     let identifier = app.config().tauri.bundle.identifier.clone();
     info!("Got bundle id: {}", identifier);
 
-    /*
-    let handling_pointer = vibecheck_state_pointer.clone();
-    {
-        let mut lock = vibecheck_state_pointer.lock();
-        lock.message_handler_thread = Some(lock.async_rt.spawn(handling::message_handling(handling_pointer, identifier)));
-    }
-    trace!("Spawned message_handling()");
-*/
     let vc_state_pointer = vibecheck_state_pointer.clone();
     {
         let mut vc_state = vibecheck_state_pointer.lock();

@@ -4,20 +4,16 @@ use std::net::{SocketAddrV4, Ipv4Addr};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
-//use std::time::Duration;
 use buttplug::client::ButtplugClient;
-//use futures_timer::Delay;
 use log::{warn, error as logerr, info, trace};
 use tauri::{AppHandle, Manager};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use parking_lot::Mutex;
 use crate::bluetooth;
-//use crate::config::save_toy_config;
 use crate::handling::{HandlerErr, toy_refresh, vc_disabled_osc_command_listen};
 use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter, FeToyEvent};
 use crate::vcerror::{backend, frontend};
-//use crate::vcupdate::{VibeCheckUpdater, VERSION};
 use crate::{
     util::get_user_home_dir,
     handling::{client_event_handler, toy_management_handler},
@@ -35,13 +31,6 @@ use tokio::sync::{
     mpsc::UnboundedReceiver,
     mpsc::UnboundedSender,
 };
-
-/*
-#[derive(Debug, Clone, Serialize)]
-pub struct ConnectionModes {
-    btle_enabled: bool,
-    lc_enabled: bool,
-}*/
 
 pub struct VCStateMutex(pub Arc<Mutex<VibeCheckState>>);
 
@@ -107,33 +96,10 @@ impl VibeCheckState {
         // Create async runtime for toy handling routines
         let async_rt = Runtime::new().unwrap();
 
-
-        //let connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
-
         // Setup channels
         let (tme_recv_tx, tme_recv_rx): (UnboundedSender<ToyManagementEvent>, UnboundedReceiver<ToyManagementEvent>) = unbounded_channel();
         let (tme_send_tx, tme_send_rx): (UnboundedSender<ToyManagementEvent>, UnboundedReceiver<ToyManagementEvent>) = unbounded_channel();
-
-        // Main thread toy management event bidirectional channels
-        /*
-        let tme_recv = tme_recv_rx;
-        let tme_send = tme_send_tx;
-        */
-        // Start toy management thread
-        /*
-        let toy_management_h_thread = async_rt.spawn(toy_management_handler(
-            tme_recv_tx,
-            tme_send_rx,
-            toys.clone(),
-            config.networking.clone(),
-            app_handle.clone(),
-        ));
-        */
-
-        // Timer prob remove idrc
-        //let minute_sync = Instant::now();
         
-
         Self {
 
             app_handle: None,
@@ -352,20 +318,6 @@ pub enum RunningState {
     Running,
     Stopped,
 }
-
-/*
-fn update_vibecheck(&mut self) {
-    if let RunningState::Running = self.running {
-        self.disable_vibecheck();
-    }
-    let blob = self.update_engine.release_blob.take().unwrap();
-
-    thread::spawn(move || {
-        VibeCheckUpdater::update_vibecheck(blob);
-    });
-    thread::sleep(std::time::Duration::from_secs(1));
-    std::process::exit(0);
-}*/
 
 pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
 
@@ -653,18 +605,6 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::Vi
     Ok(())
 }
 
-/*
-pub struct FrontendVCToyModel {
-    pub toy_id: u32,
-    pub toy_name: String,
-    pub battery_level: f64,
-    pub toy_connected: bool,
-    pub osc_params_list: Vec<String>,
-    pub param_feature_map: FeatureParamMap,
-    pub listening: bool,
-}
-*/
-
 pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: tauri::AppHandle, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
 
     let altered = {
@@ -724,64 +664,3 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
         Err(_e) => Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::TMESendFailure)),
     }
 }
-
-/*
-pub fn native_set_lc_override(vc_state: tauri::State<'_, VCStateMutex>, host: FeLCOverride) -> Result<(), frontend::VCFeError> {
-
-    if let FeLCOverride::Host(h) = host {
-        let valid = match Ipv4Addr::from_str(&h) {
-            Ok(sa) => sa,
-            Err(_e) => return Err(frontend::VCFeError::InvalidIpv4Host),
-        };
-    
-        // Force port because buttplug forces non http atm
-        std::env::set_var("VCLC_HOST_PORT", format!("{}:20010", valid.to_string()).as_str());
-        match std::env::var("VCLC_HOST_PORT") {
-            Ok(_) => {
-                {
-                    let mut vc_lock = vc_state.0.lock();
-                    vc_lock.config.lc_override = Some(valid);
-                }
-                Ok(())
-            },
-            Err(_) => return Err(frontend::VCFeError::SetLCOverrideFailure),
-        }
-    } else {
-
-        std::env::remove_var("VCLC_HOST_PORT");
-        match std::env::var("VCLC_HOST_PORT") {
-            Ok(_) => return Err(frontend::VCFeError::UnsetLCOverrideFailure),
-            Err(e) => {
-                match e {
-                    std::env::VarError::NotPresent => {
-                        {
-                            let mut vc_lock = vc_state.0.lock();
-                            vc_lock.config.lc_override = None;
-                        }
-                        Ok(())
-                    },
-                    _ => {
-                        logerr!("Got Non unicode var during unset routine");
-                        return Err(frontend::VCFeError::UnsetLCOverrideFailure);
-                    },
-                }
-            }
-        }
-    }
-}
-
-pub fn native_get_lc_override(vc_state: tauri::State<'_, VCStateMutex>) -> Result<String, frontend::VCFeError> {
-
-    let lc_or = {
-        let vc_lock = vc_state.0.lock();
-        match vc_lock.config.lc_override {
-            Some(host) => {
-                host.to_string()
-            },
-            None => "Clear".to_string()
-        }
-    };
-    Ok(lc_or)
-
-}
-*/

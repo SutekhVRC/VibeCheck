@@ -99,21 +99,6 @@ pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, fe_
  * alter_toy
  * Alters a toy state
  * Args: toy_id, FeToyAlter
- * Javascript input example
- * let altered = {
- *  feature_enabled: true,
- *  osc_parameter: "/avatar/parameters/vibin",
- *  feature_index: 0,
- *  feature_levels: {
- *      minimum_level: 0.00,
- *      maximum_level: 100.00,
- *      idle_level: 0.00,
- *      smooth_rate: 2.00,
- *  },
- *      smooth_enabled: true,
- *  };
- * let alter_err = window.__TAURI_INVOKE__("alter_toy", {toyId: 0, frontendToy: altered});
- *
  * Return: Result<Ok(()), Err(ToyAlterError)>
  */
 #[tauri::command(async)]
@@ -133,23 +118,3 @@ pub fn open_default_browser(link: FeSocialLink) {
         FeSocialLink::VRChatGroup => {let _ = open::that("https://vrc.group/VIBE.9503");},
     };
 }
-
-/*
-#[tauri::command(async)]
-pub fn get_connection_modes(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> ConnectionModes {
-    let vc_lock = vc_state.0.lock();
-    vc_lock.connection_modes.clone()
-}*/
-
-/*
-#[tauri::command(async)]
-pub fn set_lc_override(vc_state: tauri::State<'_, vcore::VCStateMutex>, host: FeLCOverride) -> Result<(), frontend::VCFeError> {
-    trace!("set_lc_override({:?})", host);
-    vcore::native_set_lc_override(vc_state, host)
-}
-
-#[tauri::command(async)]
-pub fn get_lc_override(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<String, frontend::VCFeError> {
-    trace!("get_lc_override()");
-    vcore::native_get_lc_override(vc_state)
-}*/

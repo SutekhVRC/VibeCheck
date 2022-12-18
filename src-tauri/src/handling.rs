@@ -751,7 +751,7 @@ fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
 }
 
 
-/*
+/* FUTURE MAYBE
  * Toy update loop every 1 sec maybe 5
  * How to do parameter structure
  * /avatar/parameters/toy_name
@@ -760,6 +760,7 @@ fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
  * -1: connected
  * -2: disconnected
  * 
+ * ATM this only sends a battery life OSC address/value.
  */
 
 pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, app_handle: AppHandle) {
