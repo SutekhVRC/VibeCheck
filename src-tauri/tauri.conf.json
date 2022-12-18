@@ -64,7 +64,7 @@
       {
         "fullscreen": false,
         "height": 800,
-        "resizable": false,
+        "resizable": true,
         "title": "VibeCheck",
         "width": 600
       }

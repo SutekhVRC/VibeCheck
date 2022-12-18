@@ -351,7 +351,6 @@ pub enum VCError {
 pub enum RunningState {
     Running,
     Stopped,
-    Error(String)
 }
 
 /*
