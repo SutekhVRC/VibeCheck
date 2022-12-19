@@ -46,10 +46,9 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
   );
 
   async function enable() {
-    await invoke(ENABLE).catch(() => {
-      return; // Enable Failure: already on, don't need to do anything
-    });
-    setIsEnabled(true);
+    await invoke(ENABLE)
+      .then(() => setIsEnabled(true))
+      .catch((e) => alert(e));
   }
 
   async function stopScanAndDisable() {

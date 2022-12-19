@@ -15,14 +15,13 @@ export default function () {
 
   return (
     <div className="flex-col justify-between items-stretch text-lg rounded-lg p-4 bg-zinc-800 h-[600px]">
-
       {Object.keys(toys).length == 0 ? (
         <div className="flex justify-center items-center">
           No Toys
           <img src={cryingAnimeGirl} />
         </div>
       ) : (
-        <div className="overflow-y-scroll pl-2 scrollbar pt-2 pb-2 max-h-[480px]">
+        <div className="overflow-y-scroll pl-2 scrollbar pt-2 pb-2 max-h-[520px]">
           {Object.values(toys).map((toy) => (
             <div
               className="rounded-md bg-zinc-700 p-4 m-2"
