@@ -7,6 +7,7 @@ import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConf
 import { SET_CONFIG } from "../data/constants";
 import Modal from "./Modal";
 import UpdateButton from "./Footer/UpdateButton";
+import TooltipLabel from "./Tooltip/TooltipLabel";
 
 type settingsDialogProps = {
   isOpen: boolean;
@@ -61,7 +62,7 @@ export default function ({
     <Modal title="Config" isOpen={isOpen} onClose={onClose}>
       <form id="config" onSubmit={handleSubmit}>
         <div className="grid grid-cols-2 gap-y-2 justify-items-end">
-          <label className="justify-self-start">OSC Bind</label>
+          <TooltipLabel text="OSC Bind" tooltip="OSC Reveive Port" />
           <input
             name="bind"
             className="text-zinc-800"
@@ -77,7 +78,7 @@ export default function ({
               (e.target as HTMLInputElement).setCustomValidity("")
             }
           />
-          <label className="justify-self-start">OSC Remote</label>
+          <TooltipLabel text="OSC Remote" tooltip="OSC Send Port" />
           <input
             name="remote"
             className="text-zinc-800"
@@ -93,7 +94,10 @@ export default function ({
               (e.target as HTMLInputElement).setCustomValidity("")
             }
           />
-          <label className="justify-self-start">Lovense Connect Override</label>
+          <TooltipLabel
+            text="Lovense Connect Override"
+            tooltip="Override and force the Lovense Connect host to connect to."
+          />
           <div className="">
             <input
               type="checkbox"
@@ -125,21 +129,30 @@ export default function ({
               />
             )}
           </div>
-          <label className="justify-self-start">Scan on Disconnect</label>
+          <TooltipLabel
+            text="Scan On Disconnect"
+            tooltip="Automatically start scanning when a toy disconnects."
+          />
           <input
             name="scan_on_disconnect"
             type="checkbox"
             checked={newConfig.scan_on_disconnect}
             onChange={onCheck}
           />
-          <label className="justify-self-start">Minimize on Exit</label>
+          <TooltipLabel
+            text="Minimize On Exit"
+            tooltip="Minimize VibeCheck instead of exiting."
+          />
           <input
             name="minimize_on_exit"
             type="checkbox"
             checked={newConfig.minimize_on_exit}
             onChange={onCheck}
           />
-          <label className="justify-self-start">Desktop Notifications</label>
+          <TooltipLabel
+            text="Desktop Notifications"
+            tooltip="Notifications for toy connect and disconnect."
+          />
           <input
             name="desktop_notifications"
             type="checkbox"

@@ -1,12 +1,21 @@
 import { invoke } from "@tauri-apps/api";
 import type { FeSocialLink } from "../../../src-tauri/bindings/FeSocialLink";
 import { OPEN_BROWSER } from "../../data/constants";
+import Tooltip from "../Tooltip";
 
-export default function ({ src, link }: { src: string; link: FeSocialLink }) {
+type ExternalLogoProps = {
+  src: string;
+  link: FeSocialLink;
+  tooltip: string;
+};
+
+export default function ({ src, link, tooltip }: ExternalLogoProps) {
   async function openBrowser() {
     await invoke(OPEN_BROWSER, { link: link });
   }
   return (
-    <img className="max-h-8 cursor-pointer" src={src} onClick={openBrowser} />
+    <Tooltip text={tooltip}>
+      <img className="max-h-8 cursor-pointer" src={src} onClick={openBrowser} />
+    </Tooltip>
   );
 }

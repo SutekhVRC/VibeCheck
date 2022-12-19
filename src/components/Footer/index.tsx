@@ -49,9 +49,21 @@ export function Footer() {
       </div>
       {version}
       <div className="flex justify-around items-center">
-        <ExternalLogo src={VrchatLogo} link="VRChatGroup" />
-        <ExternalLogo src={DiscordLogo} link="Discord" />
-        <ExternalLogo src={GithubLogo} link="Github" />
+        <ExternalLogo
+          src={VrchatLogo}
+          link="VRChatGroup"
+          tooltip="Vibecheck VRChat Group"
+        />
+        <ExternalLogo
+          src={DiscordLogo}
+          link="Discord"
+          tooltip="Vibecheck Discord"
+        />
+        <ExternalLogo
+          src={GithubLogo}
+          link="Github"
+          tooltip="Vibecheck Github"
+        />
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ export default function ({
   toggleIsEnabled: () => void;
 }) {
   return (
-    <Tooltip text={isEnabled ? "Running" : "Off"} delay={500}>
+    <Tooltip text={isEnabled ? "Running" : "Off"} delay={250}>
       <Switch
         checked={isEnabled}
         onChange={toggleIsEnabled}

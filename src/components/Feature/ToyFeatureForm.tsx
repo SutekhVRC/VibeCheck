@@ -6,6 +6,7 @@ import { ALTER_TOY, ALTER_TOY_DEBOUNCE } from "../../data/constants";
 import { round0 } from "../../utils";
 import type { FeVCToyFeature } from "../../../src-tauri/bindings/FeVCToyFeature";
 import Slider from "../Slider";
+import TooltipLabel from "../Tooltip/TooltipLabel";
 
 type ToyFeatureFormProps = {
   toyId: number;
@@ -65,7 +66,7 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
 
   return (
     <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(3rem,_10fr)_1fr] text-sm text-justify gap-x-2 gap-y-1 p-4">
-      <label>Enabled</label>
+      <TooltipLabel text="Enabled" tooltip="Enable/Disable this feature." />
       <input
         type="checkbox"
         name="feature_enabled"
@@ -74,7 +75,10 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
       />
       <div></div>
       <div></div>
-      <label>OSC Parameter</label>
+      <TooltipLabel
+        text="OSC Parameter"
+        tooltip="The float OSC parameter to control this feature's motor."
+      />
       <div></div>
       <input
         className="text-zinc-800 text-xs"
@@ -83,7 +87,10 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
         onChange={handleFeatureValue}
       />
       <div></div>
-      <label>Flip Input</label>
+      <TooltipLabel
+        text="Flip Input"
+        tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
+      />
       <input
         type="checkbox"
         name="flip_input_float"
@@ -92,7 +99,10 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
       />
       <div></div>
       <div></div>
-      <label>Smoothing</label>
+      <TooltipLabel
+        text="Smoothing"
+        tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
+      />
       <input
         type="checkbox"
         name="smooth_enabled"
@@ -108,7 +118,10 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
         onValueChange={(e) => handleLevels("smooth_rate", e[0])}
       />
       <div className="text-right">{levels.smooth_rate}</div>
-      <label>Idle</label>
+      <TooltipLabel
+        text="Idle"
+        tooltip="Set the idle motor speed for this feature. Idle activates when there is no input. Your set idle speed won't activate until you send at least one float value in the valid min/max range you have set."
+      />
       <div></div>
       <Slider
         min={0}
@@ -118,7 +131,10 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
         onValueChange={(e) => handleLevels("idle_level", e[0])}
       />
       <div className="text-right">{round0.format(levels.idle_level * 100)}</div>
-      <label>Minimum</label>
+      <TooltipLabel
+        text="Minimum"
+        tooltip="The minimum motor speed that will be sent to the feature's motor."
+      />
       <div></div>
       <Slider
         min={0}
@@ -130,7 +146,10 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
       <div className="text-right">
         {round0.format(levels.minimum_level * 100)}
       </div>
-      <label>Maximum</label>
+      <TooltipLabel
+        text="Maximum"
+        tooltip="The maximum motor speed that will be sent to the feature's motor."
+      />
       <div></div>
       <Slider
         min={0}

@@ -16,7 +16,7 @@ export default function ({
         <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
         <Tooltip.Portal>
           <Tooltip.Content
-            className="rounded-md text-gray-50 bg-gray-600 pl-3 pr-3"
+            className="rounded-md text-gray-50 bg-gray-600 pl-3 pr-3 max-w-md z-50"
             sideOffset={5}
           >
             {text}
