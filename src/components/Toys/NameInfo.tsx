@@ -11,7 +11,7 @@ import {
 export default function ({ name, battery }: { name: string; battery: number }) {
   let toyName = name;
   let badge: ReactNode = null;
-  if (name.startsWith("Lovense Connect")) {
+  if (name.startsWith("Lovense Connect ")) {
     toyName = name.replace("Lovense Connect ", "");
     badge = (
       <Tooltip text="Lovense Connect">
