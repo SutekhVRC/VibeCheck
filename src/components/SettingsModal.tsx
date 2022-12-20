@@ -62,7 +62,7 @@ export default function ({
     <Modal title="Config" isOpen={isOpen} onClose={onClose}>
       <form id="config" onSubmit={handleSubmit}>
         <div className="grid grid-cols-2 gap-y-2 justify-items-end">
-          <TooltipLabel text="OSC Bind" tooltip="OSC Reveive Port" />
+          <TooltipLabel text="OSC Bind" tooltip="OSC Receive Port" />
           <input
             name="bind"
             className="text-zinc-800"
