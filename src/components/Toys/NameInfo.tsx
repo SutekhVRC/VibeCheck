@@ -15,7 +15,7 @@ export default function ({ name, battery }: { name: string; battery: number }) {
     toyName = name.replace("Lovense Connect ", "");
     badge = (
       <Tooltip text="Lovense Connect">
-        <img className="max-h-6 rounded-lg" src={lovenseConnectLogo} />;
+        <img className="max-h-6 rounded-lg" src={lovenseConnectLogo} />
       </Tooltip>
     );
   } else if (name.startsWith("Lovense")) {
