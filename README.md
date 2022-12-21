@@ -13,14 +13,6 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - DigiGhost: Commissioned Artist (Icons and Banners).
 - Tini: Helped with frontend UI mockups and testing.
 
-## Thanks
-Thanks to the people below for testing and suggestions!
-- Googii
-- Buneskapp
-- MikuLove
-- Kali
-- Nitro
-
 ## Buttplug IO Supported Toys
 - [Supported Toys (All)](https://iostindex.com/?filter0ButtplugSupport=4)
 - [Supported Toys (Lovense)](https://iostindex.com/?filter0ButtplugSupport=4&filter1Brand=Lovense)
@@ -188,3 +180,11 @@ VibeCheck functions by receiving OSC input from VRChat.
   - VibeCheck can be configured so that each feature/motor of a toy is assigned to different OSC addresses.
   - VibeCheck only reads Float parameters.
   - If you add a parameter to an avatar remember to refresh the OSC config. I do this by deleting the OSC configuration files for my avatars and then changing out and back in to my avatar. The button in game never works for me.
+
+## Thanks
+Thanks to the people below for testing and suggestions!
+- Googii
+- Buneskapp
+- MikuLove
+- Kali
+- Nitro
