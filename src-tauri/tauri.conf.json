@@ -26,7 +26,7 @@
         "depends": []
       },
       "externalBin": [],
-      "icon": ["icons/vibecheck-ico32x32.ico", "icons/vibecheck.ico"],
+      "icon": ["icons/vibecheck.ico"],
       "identifier": "com.vibecheck.dev",
       "longDescription": "",
       "macOS": {
@@ -41,8 +41,8 @@
       "targets": "all",
       "windows": {
         "wix": {
-          "bannerPath": "wix/vibecheck-bmp-493x58.bmp",
-          "dialogImagePath": "wix/vibecheck-bmp-493x312.bmp"
+          "bannerPath": "wix/VibeCheck_BANNER.bmp",
+          "dialogImagePath": "wix/VibeCheck_Dialog.bmp"
         },
         "certificateThumbprint": null,
         "digestAlgorithm": "sha256",
