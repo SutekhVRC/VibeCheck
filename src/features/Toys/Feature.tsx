@@ -1,5 +1,5 @@
 import type { FeVCToyFeature } from "../../../src-tauri/bindings/FeVCToyFeature";
-import ToyFeatureForm from "./ToyFeatureForm";
+import FeatureForm from "./FeatureForm";
 import { ChevronUpIcon } from "@heroicons/react/20/solid";
 import { Disclosure } from "@headlessui/react";
 
@@ -31,7 +31,7 @@ export function Feature({
             </div>
           </Disclosure.Button>
           <Disclosure.Panel>
-            <ToyFeatureForm toyId={toyId} toyFeature={feature} />
+            <FeatureForm toyId={toyId} toyFeature={feature} />
           </Disclosure.Panel>
         </>
       )}

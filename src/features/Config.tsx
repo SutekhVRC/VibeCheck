@@ -5,9 +5,9 @@ import { invoke } from "@tauri-apps/api";
 
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 import { SET_CONFIG } from "../data/constants";
-import Modal from "./Modal";
-import UpdateButton from "./Footer/UpdateButton";
-import TooltipLabel from "./Tooltip/TooltipLabel";
+import Modal from "../layout/Modal";
+import UpdateButton from "../components/UpdateButton";
+import TooltipLabel from "../layout/Tooltip/TooltipLabel";
 
 type settingsDialogProps = {
   isOpen: boolean;

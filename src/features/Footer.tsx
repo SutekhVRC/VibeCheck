@@ -1,18 +1,18 @@
-import VrchatLogo from "../../assets/vrchat-192x192.png";
-import DiscordLogo from "../../assets/discord-mark-white.svg";
-import GithubLogo from "../../assets/GitHub-Mark-Light-64px.png";
-import Switch from "../Switch";
-import ExternalLogo from "./ExternalLogo";
-import { useVersion } from "../../hooks/useVersion";
+import VrchatLogo from "../assets/vrchat-192x192.png";
+import DiscordLogo from "../assets/discord-mark-white.svg";
+import GithubLogo from "../assets/GitHub-Mark-Light-64px.png";
+import Switch from "../layout/Switch";
+import ExternalLogo from "../components/ExternalLogo";
+import { useVersion } from "../hooks/useVersion";
 import { Cog6ToothIcon } from "@heroicons/react/20/solid";
 import { useEffect, useState } from "react";
-import { useCoreEventContext } from "../../context/CoreEventContext";
-import SettingsModal from "../SettingsModal";
-import UpdatePing from "./UpdatePing";
-import { useUpdate } from "../../hooks/useUpdate";
+import { useCoreEventContext } from "../context/CoreEventContext";
+import Config from "./Config";
+import UpdatePing from "../components/UpdatePing";
+import { useUpdate } from "../hooks/useUpdate";
 
 export function Footer() {
-  const [settingsIsOpen, setSettingsIsOpen] = useState(false);
+  const [configIsOpen, setConfigIsOpen] = useState(false);
   const { config, refreshConfig, isEnabled, toggleIsEnabled } =
     useCoreEventContext();
   const { canUpdate } = useUpdate();
@@ -20,9 +20,9 @@ export function Footer() {
 
   useEffect(() => {
     // Refresh from backend when modal is closed
-    if (settingsIsOpen) return;
+    if (configIsOpen) return;
     refreshConfig();
-  }, [settingsIsOpen]);
+  }, [configIsOpen]);
 
   return (
     <div className="grid grid-cols-3 items-center fixed left-0 bottom-4 min-w-full px-8">
@@ -30,17 +30,17 @@ export function Footer() {
         <UpdatePing canUpdate={canUpdate}>
           <Cog6ToothIcon
             className={`h-10 cursor-pointer transform duration-300 ease-in-out ${
-              settingsIsOpen && "rotate-45"
+              configIsOpen && "rotate-45"
             }`}
             onClick={() => {
-              if (config != null) setSettingsIsOpen(true);
+              if (config != null) setConfigIsOpen(true);
             }}
           />
         </UpdatePing>
         {config != null && (
-          <SettingsModal
-            isOpen={settingsIsOpen}
-            onClose={() => setSettingsIsOpen(false)}
+          <Config
+            isOpen={configIsOpen}
+            onClose={() => setConfigIsOpen(false)}
             config={config}
             canUpdate={canUpdate}
           />
