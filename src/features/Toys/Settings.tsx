@@ -2,8 +2,8 @@ import { invoke } from "@tauri-apps/api";
 import { useState } from "react";
 import type { FeVCToy } from "../../../src-tauri/bindings/FeVCToy";
 import { ALTER_TOY } from "../../data/constants";
-import Modal from "../Modal";
-import Toast from "../Toast";
+import Modal from "../../layout/Modal";
+import Toast from "../../layout/Toast";
 
 export default function ({
   isOpen,
@@ -15,6 +15,12 @@ export default function ({
   toy: FeVCToy;
 }) {
   const [oscData, setOscData] = useState(toy.osc_data);
+
+  const parsed_toy_name = toy.toy_name
+    .replace("Lovense Connect", "Lovense")
+    .replaceAll(" ", "_")
+    .toLowerCase();
+  const osc_data_addr = `/avatar/parameters/${parsed_toy_name}/${toy.sub_id}/battery`;
 
   async function onSave(newOSCDataState: boolean) {
     await invoke(ALTER_TOY, {
@@ -29,12 +35,6 @@ export default function ({
     }
     onClose();
   }
-
-  const parsed_toy_name = toy.toy_name
-    .replace("Lovense Connect", "Lovense")
-    .replaceAll(" ", "_")
-    .toLowerCase();
-  const osc_data_addr = `/avatar/parameters/${parsed_toy_name}/${toy.sub_id}/battery`;
 
   const copy = async () => {
     await navigator.clipboard.writeText(osc_data_addr);

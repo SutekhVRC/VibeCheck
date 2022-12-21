@@ -2,11 +2,11 @@ import { useState } from "react";
 import { useCoreEventContext } from "../../context/CoreEventContext";
 import { useToys } from "../../context/ToysContext";
 import NameInfo from "./NameInfo";
-import ToySettingsModal from "./ToySettingsModal";
-import { Feature } from "../Feature";
-import Loading from "./Loading";
+import Settings from "./Settings";
+import { Feature } from "./Feature";
 import { WrenchScrewdriverIcon } from "@heroicons/react/20/solid";
 import cryingAnimeGirl from "../../assets/menhera_chan.gif";
+import ScanButton from "../../components/ScanButton";
 
 export default function () {
   const [toySettingsModalIsOpen, setToySettingsModalIsOpen] = useState(false);
@@ -34,7 +34,7 @@ export default function () {
                   onClick={() => setToySettingsModalIsOpen(true)}
                 />
               </div>
-              <ToySettingsModal
+              <Settings
                 isOpen={toySettingsModalIsOpen}
                 onClose={() => setToySettingsModalIsOpen(false)}
                 toy={toy}
@@ -54,24 +54,7 @@ export default function () {
           ))}
         </div>
       )}
-      <div>
-        <button
-          type="button"
-          onClick={() => toggleScan()}
-          className={
-            "text-lg font-bold pl-4 pr-4 m-4 border-gray-500 border-solid border-2 rounded-sm shadow-zinc-900 shadow-md hover:border-gray-300"
-          }
-        >
-          {isScanning ? (
-            <div className="flex">
-              <div>Scanning</div>
-              <Loading />
-            </div>
-          ) : (
-            <div>Search for toys</div>
-          )}
-        </button>
-      </div>
+      <ScanButton isScanning={isScanning} toggleScan={toggleScan} />
     </div>
   );
 }

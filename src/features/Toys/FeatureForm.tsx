@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import { ALTER_TOY, ALTER_TOY_DEBOUNCE } from "../../data/constants";
 import { round0 } from "../../utils";
 import type { FeVCToyFeature } from "../../../src-tauri/bindings/FeVCToyFeature";
-import Slider from "../Slider";
-import TooltipLabel from "../Tooltip/TooltipLabel";
+import Slider from "../../layout/Slider";
+import TooltipLabel from "../../layout/Tooltip/TooltipLabel";
 
 type ToyFeatureFormProps = {
   toyId: number;

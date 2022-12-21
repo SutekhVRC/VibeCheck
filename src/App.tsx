@@ -1,7 +1,7 @@
 import { ToysProvider } from "./context/ToysContext";
-import Toys from "./components/Toys/Toys";
+import Toys from "./features/Toys";
 import { CoreEventProvider } from "./context/CoreEventContext";
-import { Footer } from "./components/Footer";
+import { Footer } from "./features/Footer";
 import "./App.css";
 
 export default function App() {

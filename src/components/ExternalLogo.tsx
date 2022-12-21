@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api";
-import type { FeSocialLink } from "../../../src-tauri/bindings/FeSocialLink";
-import { OPEN_BROWSER } from "../../data/constants";
-import Tooltip from "../Tooltip";
+import type { FeSocialLink } from "../../src-tauri/bindings/FeSocialLink";
+import { OPEN_BROWSER } from "../data/constants";
+import Tooltip from "../layout/Tooltip";
 
 type ExternalLogoProps = {
   src: string;
