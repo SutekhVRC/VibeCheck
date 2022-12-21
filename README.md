@@ -68,6 +68,7 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 ### Feature Modifiers
 - Enabled: Enable/Disabled feature.
 - OSC Parameter: OSC address/parameter to listen for.
+- Flip Input: Transforms the input float to the opposite value.
 - Smoothing: Smooths the float inputs received from OSC.
 - Idle: The idle level of the feature. Idle starts once the feature has been triggered for the first time.
 - Minimum: The minimum level the feature is allowed to be active at. Minimum does not influence idle.
@@ -96,16 +97,19 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - Make sure the VibeCheck PC and your phone or computer running Lovense Connect are on the same network/subnet
 - Connect your toys to Lovense Connect
 - It may take like 30 seconds for Lovense Connect to update their NAT punchtrough API
+- I recommend using the "Lovense Connect Override" option in VibeCheck so you don't have to deal with the Lovense Connect API.
+- To use the override functionality in VibeCheck just input the LAN IP address of your device running Lovense Connect. (127.0.0.1 if you are using the desktop Lovense Connect app).
 - Press Enable!
 
 #### Lovense Connect Pros/Cons
 
 - Pros
-    - Easy to use.
-    - If using Lovense Connect phone app as long as your phone is connected to the same network as your PC running vibecheck,and your toy is near your phone. You can technically be as far away as your phone can connect to your wifi and it will still take input from VibeCheck!
+    - Don't need to buy a Bluetooth LE adapter. You can just use your phone + WiFi.
+    - If using Lovense Connect phone app as long as your phone is connected to the same network as your PC running vibecheck, and your toy is near your phone. You can technically be as far away as your phone can connect to your wifi and it will still take input from VibeCheck!
 
 - Cons
     - Can only use with Lovense toys.
+    - Slower response time than Bluetooth LE.
 
 ### Connect using both methods at the same time
 
@@ -156,7 +160,7 @@ VibeCheck functions by receiving OSC input from VRChat.
 ### Bluetooth Mode
 
 #### Pros
- - Generally has a faster response time
+ - Faster response time. Basically instant response.
  - Supports many different toys.
 
 #### Cons
