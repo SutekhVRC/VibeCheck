@@ -8,7 +8,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use tauri::{Manager, SystemTrayMenu};
 use log::{info, trace};
-use env_logger;
+//use env_logger;
 
 mod config;
 mod handling;
@@ -24,9 +24,9 @@ fn main() {
 
     //tracing_subscriber::fmt::init();
     
-    let mut log_builder = env_logger::builder();
-    log_builder.filter(None, log::LevelFilter::Trace);
-    log_builder.init();
+    //let mut log_builder = env_logger::builder();
+    //log_builder.filter(None, log::LevelFilter::Trace);
+    //log_builder.init();
 
     let vibecheck_state_pointer = Arc::new(
         Mutex::new(
