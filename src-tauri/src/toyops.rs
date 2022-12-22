@@ -94,7 +94,22 @@ impl VCToy {
             Some(ref conf) => {
 
                 // If feature count differs the user probably swapped between connection types
-                let conn_toy_feature_len = self.toy_features.scalar_cmd().as_ref().unwrap().iter().len() + self.toy_features.rotate_cmd().as_ref().iter().len() + self.toy_features.linear_cmd().as_ref().iter().len();
+                //let conn_toy_feature_len = self.toy_features.scalar_cmd().as_ref().unwrap().iter().len() + self.toy_features.rotate_cmd().as_ref().iter().len() + self.toy_features.linear_cmd().as_ref().iter().len();
+                
+                let mut conn_toy_feature_len = 0;
+
+                if self.toy_features.scalar_cmd().is_some() {
+                    conn_toy_feature_len += self.toy_features.scalar_cmd().as_ref().unwrap().iter().len();
+                }
+
+                if self.toy_features.rotate_cmd().is_some() {
+                    conn_toy_feature_len += self.toy_features.rotate_cmd().as_ref().unwrap().iter().len();
+                }
+
+                if self.toy_features.linear_cmd().is_some() {
+                    conn_toy_feature_len += self.toy_features.linear_cmd().as_ref().unwrap().iter().len();
+                }
+
                 if conn_toy_feature_len != conf.features.features.len() {
                     self.populate_routine();
                     return;
