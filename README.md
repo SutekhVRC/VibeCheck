@@ -10,7 +10,7 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 
 ## VibeCheck 2.0 Credits
 - TutiDore: Frontend developer.
-- DigiGhost: Commissioned Artist (Icons and Banners).
+- [DigiGhost](https://twitter.com/digi_ghost): Commissioned Artist (Icons and Banners).
 - [Tini](https://vrchat.com/home/user/usr_7d526959-f3ab-4226-aa82-dba613df998e): Helped with frontend UI mockups and testing.
 
 ## Buttplug IO Supported Toys
