@@ -20,7 +20,7 @@ export default function ({
     .replace("Lovense Connect", "Lovense")
     .replaceAll(" ", "_")
     .toLowerCase();
-  const osc_data_addr = `/avatar/parameters/${parsed_toy_name}/${toy.sub_id}/battery`;
+  const osc_data_addr = `${parsed_toy_name}/${toy.sub_id}/battery`;
 
   async function onSave(newOSCDataState: boolean) {
     await invoke(ALTER_TOY, {
