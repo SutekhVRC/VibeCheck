@@ -64,7 +64,13 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 7. Once you are in VRChat you will need to enable OSC in the expressions menu. If you have used OSC before with your avatar, remember to refresh the OSC config for that avatar (In the OSC expressions menu OR delete the avatar's OSC config file adn re-load the avatar).
 8. You should be all set now. Enjoyyyyyy ;}
 
-### Feature Modifiers
+### Enable/Disable OSC command
+- VibeCheck will listen for the boolean parameter 'vibecheck/state' to be true or false. If true it will enable and scan for 10 seconds. If false it will disable the app.
+
+### Toy Settings
+- OSC Data: Click the checkbox to enable a float to be sent to VRChat that is the battery life of the toy. You can use this parameter in your avatar's animation controllers. Click the address bar to copy the parameter.
+
+### Toy Feature Modifiers
 - Enabled: Enable/Disabled feature.
 - OSC Parameter: OSC address/parameter to listen for.
 - Flip Input: Transforms the input float to the opposite value.
