@@ -15,7 +15,7 @@ use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink}
  */
 #[tauri::command]
 pub fn vibecheck_version() -> &'static str {
-    "0.2.1-beta-windows"
+    "0.2.2-beta-windows"
 }
 
 /*
