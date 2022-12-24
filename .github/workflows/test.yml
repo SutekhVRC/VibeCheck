@@ -1,9 +1,12 @@
-name: test-build
+name: test
 
 on:
-  workflow_run:
-    workflows: ["lint"]
-    types: [completed]
+  push:
+    branches:
+      - gh-actions
+  pull_request:
+    branches:
+      - main
 
 jobs:
   test-tauri:
@@ -19,8 +22,12 @@ jobs:
           node-version: 18
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
-      - name: install app dependencies and build it
-        run: yarn && yarn build
+      - name: install app dependencies
+        run: yarn
+      - name: check linting and formatting
+        run: yarn lint:check && yarn format:check
+      - name: build
+        run: yarn build
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
