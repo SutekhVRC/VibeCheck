@@ -12,14 +12,14 @@ jobs:
   eslint-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: "18"
+          node-version: 18
           cache: yarn
       - name: install deps via yarn
         run: yarn
-      - name: run lint
-        run: yarn lint
-      - name: run format
+      - name: check linting
+        run: yarn lint:check
+      - name: check formatting
         run: yarn format:check
