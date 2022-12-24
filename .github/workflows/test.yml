@@ -12,7 +12,8 @@ jobs:
   check-frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: checkout repo
+        uses: actions/checkout@v3
       - name: setup node
         uses: actions/setup-node@v3
         with:
@@ -29,7 +30,8 @@ jobs:
 
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: checkout repo
+        uses: actions/checkout@v3
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
       - name: Rust cache
@@ -44,7 +46,7 @@ jobs:
       - name: install app dependencies
         run: yarn
       - name: test build
-      - uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
