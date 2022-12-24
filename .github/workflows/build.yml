@@ -1,10 +1,9 @@
-name: "test-build"
+name: test-build
+
 on:
   workflow_run:
-    workflows:
-      - lint
-    types:
-      - completed
+    workflows: ["lint"]
+    types: [completed]
 
 jobs:
   test-tauri:
