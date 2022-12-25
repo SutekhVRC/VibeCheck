@@ -23,7 +23,6 @@ jobs:
         run: yarn && yarn lint:check && yarn format:check
 
   test-build:
-    environment: TauriReleaseBuildSecrets
     needs: check-frontend
     strategy:
       fail-fast: false
@@ -49,5 +48,5 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with:
+          args: "-b msi"
