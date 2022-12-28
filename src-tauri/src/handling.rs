@@ -371,6 +371,9 @@ pub async fn toy_management_handler(
                                                         }
                                                     }
                                                 }
+                                                VCFeatureType::ScalarRotator => {
+                                                    scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Rotate, flip_float, feature_levels).await;
+                                                },
                                             }
                                         }
                                     }
