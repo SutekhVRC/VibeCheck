@@ -2,15 +2,15 @@ import { Dialog, Transition } from "@headlessui/react";
 import type { ReactNode } from "react";
 import { Fragment } from "react";
 
-export default function MyModal({
+export default function ({
   title,
   children,
-  isOpen,
+  isOpen = true,
   onClose,
 }: {
   title: string;
   children: ReactNode;
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
 }) {
   return (

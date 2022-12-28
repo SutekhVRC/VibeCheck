@@ -6,11 +6,9 @@ import Modal from "../../layout/Modal";
 import Toast from "../../layout/Toast";
 
 export default function ({
-  isOpen,
   onClose,
   toy,
 }: {
-  isOpen: boolean;
   onClose: () => void;
   toy: FeVCToy;
 }) {
@@ -41,7 +39,7 @@ export default function ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleOnClose} title={toy.toy_name}>
+    <Modal onClose={handleOnClose} title={toy.toy_name}>
       <div className="grid grid-cols-2 gap-y-2 justify-items-end">
         <label className="justify-self-start">OSC Data</label>
         <input
