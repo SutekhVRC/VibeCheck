@@ -3,7 +3,7 @@ name: test
 on:
   push:
     branches:
-      - gh-actions
+      - gh-actions # TODO delete
   pull_request:
     branches:
       - main
@@ -26,7 +26,6 @@ jobs:
     needs: check-frontend
     strategy:
       fail-fast: false
-
     runs-on: windows-latest
     steps:
       - name: checkout repo
