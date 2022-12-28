@@ -18,6 +18,7 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - [Supported Toys (Lovense)](https://iostindex.com/?filter0ButtplugSupport=4&filter1Brand=Lovense)
 
 ## Dependencies
+- Relies on [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download-section), which is likely already installed on your computer.
 - (Lovense Connect Only) Lovense Connect app on phone / Lovense Connect adapter for PC Lovense Connect app.
 - (Bluetooth LE Only) A bluetooth LE adapter. You will definitely want one with a reasonable range.
 
@@ -88,33 +89,27 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - Start VibeCheck
 - Turn on toys
 
-#### Bluetooth Pros/Cons
+## Pros, Cons, Lovense Connect or Bluetooth?
 
-- Pros
-    - Supports many different toys.
+### Bluetooth Mode
 
-- Cons
-    - If the Bluetooth LE adapter used doesn't have good range it could be a less stable connection than Lovense Connect.
+#### Pros
+ - Faster response time. Basically instant response.
+ - Supports many different toys.
 
+#### Cons
+- Can be less stable than Lovense Connect if the Bluetooth LE adapter in use isn't very strong.
 
-### Lovense Connect
+### Lovense Connect Mode
 
-- Make sure the VibeCheck PC and your phone or computer running Lovense Connect are on the same network/subnet
-- Connect your toys to Lovense Connect
-- It may take like 30 seconds for Lovense Connect to update their NAT punchtrough API
-- I recommend using the "Lovense Connect Override" option in VibeCheck so you don't have to deal with the Lovense Connect API.
-- To use the override functionality in VibeCheck just input the LAN IP address of your device running Lovense Connect. (127.0.0.1 if you are using the desktop Lovense Connect app).
-- Press Enable!
+#### Pros
+  - Can be a more stable alternative if you dont have a very good bluetooth LE adapter
+  - Don't need to buy any adapters if you have a smart phone and WiFi.
+  - Can use Lovense Connect on phone to take advantage of your WiFi's range.
 
-#### Lovense Connect Pros/Cons
-
-- Pros
-    - Don't need to buy a Bluetooth LE adapter. You can just use your phone + WiFi.
-    - If using Lovense Connect phone app as long as your phone is connected to the same network as your PC running vibecheck, and your toy is near your phone. You can technically be as far away as your phone can connect to your wifi and it will still take input from VibeCheck!
-
-- Cons
-    - Can only use with Lovense toys.
-    - Slower response time than Bluetooth LE.
+#### Cons
+  - Can only be used with Lovense Toys.
+  - Slower response time than Bluetooth LE.
 
 ### Connect using both methods at the same time
 
@@ -180,7 +175,7 @@ VibeCheck functions by receiving OSC input from VRChat.
 
 #### Cons
   - Can only be used with Lovense Toys.
-  - If Lovense API is down you cannot use it.
+  - Slower response time than Bluetooth LE.
 
 ## Avatar Configuration
 
