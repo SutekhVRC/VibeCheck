@@ -69,7 +69,7 @@ impl VCToy {
                 
                 // Filter out Rotators
                 match scalar_feature.actuator_type() {
-                    &ActuatorType::Rotate => {},
+                    &ActuatorType::Rotate => self.param_feature_map.features.push(VCToyFeature::new(format!("/avatar/parameters/{:?}_{}", VCFeatureType::Rotator, indexer), indexer, VCFeatureType::ScalarRotator)),
                     &ActuatorType::Vibrate => self.param_feature_map.features.push(VCToyFeature::new(format!("/avatar/parameters/{:?}_{}", VCFeatureType::Vibrator, indexer), indexer, VCFeatureType::Vibrator)),
                     &ActuatorType::Constrict => self.param_feature_map.features.push(VCToyFeature::new(format!("/avatar/parameters/{:?}_{}", VCFeatureType::Constrict, indexer), indexer, VCFeatureType::Constrict)),
                     &ActuatorType::Inflate => self.param_feature_map.features.push(VCToyFeature::new(format!("/avatar/parameters/{:?}_{}", VCFeatureType::Inflate, indexer), indexer, VCFeatureType::Inflate)),
@@ -231,6 +231,7 @@ impl VCToyFeature {
 pub enum VCFeatureType {
     Vibrator,
     Rotator,
+    ScalarRotator,
     Linear,
     Oscillate,
     Constrict,
@@ -271,6 +272,7 @@ impl VCFeatureType {
             VCFeatureType::Oscillate => FeVCFeatureType::Oscillate,
             VCFeatureType::Position => FeVCFeatureType::Position,
             VCFeatureType::Rotator => FeVCFeatureType::Rotator,
+            VCFeatureType::ScalarRotator => FeVCFeatureType::Rotator,
             VCFeatureType::Vibrator => FeVCFeatureType::Vibrator,
         }
     }
@@ -387,7 +389,7 @@ impl FeatureParamMap {
         self.features.iter_mut().for_each(|f| {
             
             if f.feature_index == fe_feature.feature_index
-            && f.feature_type == fe_feature.feature_type {
+            && (f.feature_type == fe_feature.feature_type || f.feature_type == VCFeatureType::ScalarRotator && fe_feature.feature_type == FeVCFeatureType::Rotator) {
                 f.from_fe(fe_feature.clone());
                 success = true;
             }
