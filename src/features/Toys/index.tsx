@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { useCoreEventContext } from "../../context/CoreEventContext";
 import { useToys } from "../../context/ToysContext";
@@ -9,7 +10,7 @@ import cryingAnimeGirl from "../../assets/menhera_chan.gif";
 import ScanButton from "../../components/ScanButton";
 
 export default function () {
-  const [toySettingsModalIsOpen, setToySettingsModalIsOpen] = useState(false);
+  const [modal, setModal] = useState<ReactNode>(null);
   const { toys } = useToys();
   const { isScanning, toggleScan } = useCoreEventContext();
 
@@ -29,16 +30,16 @@ export default function () {
             >
               <div className="text-4xl flex justify-between items-center">
                 <NameInfo name={toy.toy_name} battery={toy.battery_level} />
+                {modal}
                 <WrenchScrewdriverIcon
                   className="h-6 cursor-pointer"
-                  onClick={() => setToySettingsModalIsOpen(true)}
+                  onClick={() =>
+                    setModal(
+                      <Settings onClose={() => setModal(null)} toy={toy} />
+                    )
+                  }
                 />
               </div>
-              <Settings
-                isOpen={toySettingsModalIsOpen}
-                onClose={() => setToySettingsModalIsOpen(false)}
-                toy={toy}
-              />
               <div className="grid">
                 {toy.features.map((feature) => (
                   <div
