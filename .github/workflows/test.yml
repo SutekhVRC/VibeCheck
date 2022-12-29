@@ -23,6 +23,7 @@ jobs:
         run: yarn && yarn lint:check && yarn format:check
 
   test-build:
+    environment: TauriReleaseBuildSecrets
     needs: check-frontend
     strategy:
       fail-fast: false
