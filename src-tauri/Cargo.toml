@@ -1,12 +1,12 @@
 [package]
 name = "vibecheck"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 authors = ["SutekhVRC"]
 rust-version = "1.57"
 
 [build-dependencies]
-tauri-build = { version = "1.2.0", features = [] }
+tauri-build = { version = "1.2.1", features = [] }
 
 [dependencies]
 buttplug = {git = "https://github.com/SutekhVRC/buttplug", branch = "vibecheck"}
@@ -31,7 +31,7 @@ env_logger = "0.9.3"
 open = "3.2.0"
 
 # Tauri dependencies
-tauri = { version = "1.1.1", features = ["api-all", "system-tray", "updater"] }
+tauri = { version = "1.2.3", features = ["api-all", "system-tray", "updater"] }
 [features]
 # by default Tauri runs in production mode
 # when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
