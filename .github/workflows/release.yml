@@ -1,29 +1,15 @@
-name: test
+name: "publish"
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: [gh-actions] # TODO change to [main]
 
 jobs:
-  check-frontend:
-    runs-on: [ubuntu-latest]
-    steps:
-      - name: checkout repo
-        uses: actions/checkout@v3
-      - name: setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: "yarn"
-      - name: install app dependencies and check frontend
-        run: yarn && yarn lint:check && yarn format:check
-
-  test-build:
-    needs: check-frontend
+  publish-tauri:
+    environment: TauriReleaseBuildSecrets
     strategy:
       fail-fast: false
+
     runs-on: [windows-latest]
     steps:
       - name: checkout repo
@@ -41,9 +27,15 @@ jobs:
           cache: "yarn"
       - name: install app dependencies
         run: yarn
-      - name: test build
+      - name: build release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
-          args: "-b msi"
+          tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
+          releaseName: "App v__VERSION__"
+          releaseBody: "See the assets to download this version and install."
+          releaseDraft: true
+          prerelease: false
