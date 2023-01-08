@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [gh-actions] # TODO change to [main]
+    branches: [main]
 
 jobs:
   build-tauri:
