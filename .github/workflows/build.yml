@@ -6,7 +6,6 @@ on:
 
 jobs:
   build-tauri:
-    needs: create-release
     environment: TauriReleaseBuildSecrets
     strategy:
       fail-fast: false
