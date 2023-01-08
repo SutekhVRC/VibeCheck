@@ -5,35 +5,6 @@ on:
     branches: [gh-actions] # TODO change to [main]
 
 jobs:
-  create-release:
-    runs-on: ubuntu-latest
-    outputs:
-      release_id: ${{ steps.create-release.outputs.result }}
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      - name: get version
-        run: echo "TAURI_VERSION=$(node -p "require('./src-tauri/tauri.conf.json').package.version")" >> $GITHUB_ENV
-      - name: create release
-        id: create-release
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { data } = await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: `${process.env.TAURI_VERSION}-beta`,
-              name: `${process.env.TAURI_VERSION} BETA`,
-              body: 'Take a look at the assets to download and install this app.',
-              draft: true,
-              prerelease: false
-            })
-            return data.id
-
   build-tauri:
     needs: create-release
     environment: TauriReleaseBuildSecrets
@@ -61,4 +32,9 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
-          releaseId: ${{ needs.create-release.outputs.release_id }}
+          # the action automatically replaces \_\_VERSION\_\_ with the app version
+          tagName: __VERSION__-beta
+          releaseName: "__VERSION__ BETA"
+          releaseBody: "See the assets to download this version and install."
+          releaseDraft: true
+          prerelease: false
