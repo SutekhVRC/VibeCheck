@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "lint": "eslint --fix \"./src/**/*.{ts,tsx}\"",
+    "lint:check": "eslint \"./src/**/*.{ts,tsx}\"",
+    "format": "prettier --write --end-of-line=auto \"./src/**/*.{cjs,js,jsx,ts,tsx,html,css,json}\"",
+    "format:check": "prettier --check --end-of-line=auto \"./src/**/*.{cjs,js,jsx,ts,tsx,html,css,json}\""
   },
   "dependencies": {
     "@headlessui/react": "^1.7.4",
@@ -29,6 +32,7 @@
     "autoprefixer": "^10.4.13",
     "eslint": "^8.29.0",
     "postcss": "^8.4.19",
+    "prettier": "^2.8.1",
     "tailwindcss": "^3.2.4",
     "typescript": "^4.6.4",
     "vite": "^4.0.2"

@@ -42,6 +42,7 @@ export function ToysProvider({ children }: { children: ReactNode }) {
         case "Remove":
           const remove = event.payload.data;
           setToys((t) => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { [remove]: _, ...newToys } = t;
             return newToys;
           });

@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "VibeCheck",
-    "version": "0.2.4"
+    "version": "0.2.5"
   },
   "tauri": {
     "systemTray": {
@@ -60,7 +60,7 @@
       "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZFNUE0MUZBQjdCNDQ3OTcKUldTWFI3UzMra0ZhL3FkNk9QcFdNS3kwaVRhU0xEcnd1eDV4RnFzb2dHcE96UERIaGFDQmZaSjgK",
       "endpoints": [
-        "https://gist.githubusercontent.com/SutekhVRC/bb0a9fee8aa13724b5caa153ddfb7119/raw/tauri-patch.json"
+        "https://github.com/SutekhVRC/VibeCheck/releases/latest/download/latest.json"
       ]
     },
     "windows": [
