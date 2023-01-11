@@ -229,14 +229,16 @@ impl VCToyFeature {
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, TS)]
 pub enum VCFeatureType {
-    Vibrator,
-    Rotator,
-    ScalarRotator,
-    Linear,
-    Oscillate,
-    Constrict,
-    Inflate,
-    Position,
+    Vibrator = 0,
+    Rotator = 1,
+    Linear = 2,
+    Oscillate = 3,
+    Constrict = 4,
+    Inflate = 5,
+    Position = 6,
+    ScalarRotator = 7,
+    // Note: no ScalarRotator in FeVCFeatureType bc conversion is done in vcore
+    // Fe and Core feature types have different number of values
 }
 impl Eq for VCFeatureType {}
 
@@ -387,9 +389,10 @@ impl FeatureParamMap {
 
         let mut success = false;
         self.features.iter_mut().for_each(|f| {
-            
+            info!("Checking Loaded: [{}: {:?}] - Fe: [{}: {:?}]", f.feature_index, f.feature_type, fe_feature.feature_index, fe_feature.feature_type);
             if f.feature_index == fe_feature.feature_index
             && (f.feature_type == fe_feature.feature_type || f.feature_type == VCFeatureType::ScalarRotator && fe_feature.feature_type == FeVCFeatureType::Rotator) {
+                info!("FE Object and Loaded Object are Eq: {}: {:?}", f.feature_index, f.feature_type);
                 f.from_fe(fe_feature.clone());
                 success = true;
             }

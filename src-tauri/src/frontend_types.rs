@@ -107,13 +107,14 @@ pub enum FeToyAlter {
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, TS)]
 #[ts(export)]
 pub enum FeVCFeatureType {
-    Vibrator,
-    Rotator,
-    Linear,
-    Oscillate,
-    Constrict,
-    Inflate,
-    Position,
+    Vibrator = 0,
+    Rotator = 1,
+    Linear = 2,
+    Oscillate = 3,
+    Constrict = 4,
+    Inflate = 5,
+    Position = 6,
+    // Note no ScalarRotator bc conversion is done in vcore
 }
 
 impl PartialEq<VCFeatureType> for FeVCFeatureType {
