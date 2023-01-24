@@ -16,7 +16,7 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 1. Import [VibeCheck Prefab Package]().
 2. In the "Simple" folder there is a folder for the default Simple prefab and folder for the TPS prefab.
 3. Drag the prefab you want to use onto your Hips and unpack it completely.
-4. If you are setting it up for a penetrator, you will want to put the center of the Contact sphere at the base of the penetrator. If you are setting if up for an oriface just adjust it inside the body where you want it.
+4. If you are setting it up for a penetrator, you will want to put the center of the Contact sphere at the base of the penetrator. If you are setting if up for an oriface just adjust it inside the orifice where you want it.
 
 ## Constant to float conversion
 1. Import [VibeCheck Prefab Package]().
@@ -25,7 +25,7 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 ## Contact rate system
 1. Import [VibeCheck Prefab Package]().
 
-# TPS with VibeCheck
+# TPS & VibeCheck
 
 Using TPS with VibeCheck is as easy as setting the float parameters driven by TPS in your toy OSC parameters in the VibeCheck app.
 
