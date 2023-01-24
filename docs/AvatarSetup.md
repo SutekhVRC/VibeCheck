@@ -33,10 +33,10 @@ Using TPS with VibeCheck is as easy as setting the float parameters driven by TP
 
 Use the 'TPS_Internal/Orf/0/Depth_In' orifice parameter created by the TPS wizard.
 
-![TPS Orifice](./docs/VC_TPS_Orifice_Parameter.png)
+![TPS Orifice](./VC_TPS_Orifice_Parameter.png)
 
 ## TPS **Penetrator** with VibeCheck
 
 Use the 'TPS_Internal/Pen/0/RootRoot' penetrator parameter created by the TPS wizard.
 
-![TPS Penetrator](./docs/VC_TPS_Penetrator_Parameter.png)
+![TPS Penetrator](./VC_TPS_Penetrator_Parameter.png)
