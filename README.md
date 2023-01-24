@@ -1,5 +1,5 @@
 # VibeCheck
-[![Github All Releases](https://img.shields.io/github/downloads/SutekhVRC/VibeCheck/total.svg)]()
+![GitHub all releases](https://img.shields.io/github/downloads/SutekhVRC/VibeCheck/total?color=pink&logoColor=pink&style=for-the-badge)
 ![Discord](https://img.shields.io/discord/1031167339246407721?color=pink&label=Discord&logo=discord&logoColor=pink&style=for-the-badge)
 
 An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC implementation.
