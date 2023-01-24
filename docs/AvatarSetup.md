@@ -29,7 +29,7 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 
 Using TPS with VibeCheck is as easy as setting the float parameters driven by TPS in your toy OSC parameters in the VibeCheck app.
 
-## TPS **Oriface** with VibeCheck
+## TPS **Orifice** with VibeCheck
 
 Use the 'TPS_Internal/Orf/0/Depth_In' orifice parameter created by the TPS wizard.
 
