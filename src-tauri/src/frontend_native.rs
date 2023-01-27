@@ -5,7 +5,7 @@
  */
 
 use log::trace;
-use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink}, vcerror::frontend};
+use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink}, vcerror::{frontend, backend}};
 
 /*
  * vibecheck_version
@@ -117,4 +117,14 @@ pub fn open_default_browser(link: FeSocialLink) {
         FeSocialLink::Github => {let _ = open::that("https://github.com/SutekhVRC/VibeCheck");},
         FeSocialLink::VRChatGroup => {let _ = open::that("https://vrc.group/VIBE.9503");},
     };
+}
+
+/*
+ * Clears VRChat OSC avatar configs
+ * Clears all folders in the OSC folder that start with 'usr_'
+ */
+#[tauri::command(async)]
+pub fn clear_osc_config() -> Result<(), backend::VibeCheckFSError>{
+    trace!("clear_osc_config");
+    vcore::native_clear_osc_config()
 }
