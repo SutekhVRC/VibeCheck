@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export default function ({
+export default function UpdatePing({
   children,
   canUpdate,
 }: {

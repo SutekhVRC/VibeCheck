@@ -1,6 +1,6 @@
 import Loading from "./Loading";
 
-export default function ({
+export default function ScanButton({
   isScanning,
   toggleScan,
 }: {

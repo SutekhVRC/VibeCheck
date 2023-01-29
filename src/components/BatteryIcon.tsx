@@ -5,7 +5,7 @@ import {
 } from "@heroicons/react/20/solid";
 import Tooltip from "../layout/Tooltip";
 
-export default function ({ battery }: { battery: number }) {
+export default function Batteryicon({ battery }: { battery: number }) {
   return (
     <Tooltip text={`${battery * 100}%`}>
       <div

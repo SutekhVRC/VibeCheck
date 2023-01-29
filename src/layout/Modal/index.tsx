@@ -2,7 +2,7 @@ import { Dialog, Transition } from "@headlessui/react";
 import type { ReactNode } from "react";
 import { Fragment } from "react";
 
-export default function ({
+export default function Modal({
   title,
   children,
   isOpen = true,

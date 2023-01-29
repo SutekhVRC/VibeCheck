@@ -17,7 +17,10 @@ type ToyFeatureFormProps = {
   toyFeature: FeVCToyFeature;
 };
 
-export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
+export default function FeatureForm({
+  toyId,
+  toyFeature,
+}: ToyFeatureFormProps) {
   const { feature_levels: initLevels, ...initFeature } = toyFeature;
   const [feature, setFeature] = useState(initFeature);
   const [levels, setLevels] = useState(initLevels);

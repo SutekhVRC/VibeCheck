@@ -9,7 +9,11 @@ type ExternalLogoProps = {
   tooltip: string;
 };
 
-export default function ({ src, link, tooltip }: ExternalLogoProps) {
+export default function ExternalLogo({
+  src,
+  link,
+  tooltip,
+}: ExternalLogoProps) {
   async function openBrowser() {
     await invoke(OPEN_BROWSER, { link: link });
   }

@@ -16,7 +16,7 @@ type settingsDialogProps = {
   canUpdate: boolean;
 };
 
-export default function ({
+export default function Config({
   isOpen,
   onClose,
   config,

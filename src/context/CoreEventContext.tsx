@@ -84,12 +84,13 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unlistenPromise = listen<FeCoreEvent>(CORE_EVENT, (event) => {
+      let data;
       switch (event.payload.kind) {
         case "Scan":
           setIsScanning(event.payload.data == "Start");
           break;
         case "State":
-          const data = event.payload.data;
+          data = event.payload.data;
           switch (data) {
             case "Disable":
               stopScanAndDisable();

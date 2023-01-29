@@ -1,4 +1,4 @@
-import * as Slider from "@radix-ui/react-slider";
+import * as RadixSlider from "@radix-ui/react-slider";
 
 type SliderProps = {
   disabled?: boolean;
@@ -9,17 +9,17 @@ type SliderProps = {
   onValueChange: (e: number[]) => void;
 };
 
-export default function (props: SliderProps) {
+export default function Slider(props: SliderProps) {
   return (
-    <Slider.Root
+    <RadixSlider.Root
       className="relative flex items-center"
       {...props}
       aria-label="Slider"
     >
-      <Slider.Track className="relative bg-gray-800 flex-grow rounded-full h-1">
-        <Slider.Range className="absolute bg-gray-100 rounded-full h-full data-[disabled]:bg-gray-600" />
-      </Slider.Track>
-      <Slider.Thumb className="block w-3 h-3 bg-gray-100 rounded-xl data-[disabled]:bg-gray-600 focus:[box-shadow:0_0_0_0.25rem_rgba(0,_0,_0,_0.25)]" />
-    </Slider.Root>
+      <RadixSlider.Track className="relative bg-gray-800 flex-grow rounded-full h-1">
+        <RadixSlider.Range className="absolute bg-gray-100 rounded-full h-full data-[disabled]:bg-gray-600" />
+      </RadixSlider.Track>
+      <RadixSlider.Thumb className="block w-3 h-3 bg-gray-100 rounded-xl data-[disabled]:bg-gray-600 focus:[box-shadow:0_0_0_0.25rem_rgba(0,_0,_0,_0.25)]" />
+    </RadixSlider.Root>
   );
 }

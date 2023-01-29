@@ -3,7 +3,13 @@ import lovenseConnectLogo from "../../assets/Lovense_Connect.png";
 import Tooltip from "../../layout/Tooltip";
 import BatteryIcon from "../../components/BatteryIcon";
 
-export default function ({ name, battery }: { name: string; battery: number }) {
+export default function NameInfo({
+  name,
+  battery,
+}: {
+  name: string;
+  battery: number;
+}) {
   return (
     <div className="flex gap-x-4 items-center">
       {name.startsWith("Lovense Connect ") ? (
