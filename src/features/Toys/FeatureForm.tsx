@@ -2,7 +2,11 @@ import { invoke } from "@tauri-apps/api";
 import type { ChangeEvent } from "react";
 import { useMemo } from "react";
 import { useEffect, useState } from "react";
-import { ALTER_TOY, ALTER_TOY_DEBOUNCE } from "../../data/constants";
+import {
+  ALTER_TOY,
+  ALTER_TOY_DEBOUNCE,
+  OSC_PARAM_PREFIX,
+} from "../../data/constants";
 import { round0 } from "../../utils";
 import type { FeVCToyFeature } from "../../../src-tauri/bindings/FeVCToyFeature";
 import Slider from "../../layout/Slider";
@@ -56,8 +60,11 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
     setFeature({ ...feature, [e.target.name]: e.target.checked });
   }
 
-  function handleFeatureValue(e: ChangeEvent<HTMLInputElement>) {
-    setFeature({ ...feature, [e.target.name]: e.target.value });
+  function handleOscParam(e: ChangeEvent<HTMLInputElement>) {
+    setFeature({
+      ...feature,
+      [e.target.name]: `${OSC_PARAM_PREFIX}${e.target.value}`,
+    });
   }
 
   function handleLevels(key: string, value: number) {
@@ -65,7 +72,7 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
   }
 
   return (
-    <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(3rem,_10fr)_1fr] text-sm text-justify gap-x-2 gap-y-1 p-4">
+    <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 p-4">
       <TooltipLabel text="Enabled" tooltip="Enable/Disable this feature." />
       <input
         type="checkbox"
@@ -83,8 +90,8 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
       <input
         className="text-zinc-800 text-xs"
         name="osc_parameter"
-        value={feature.osc_parameter}
-        onChange={handleFeatureValue}
+        value={feature.osc_parameter.replace(OSC_PARAM_PREFIX, "")}
+        onChange={handleOscParam}
       />
       <div></div>
       <TooltipLabel

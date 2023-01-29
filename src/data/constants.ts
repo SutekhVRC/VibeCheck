@@ -13,3 +13,5 @@ export const OPEN_BROWSER = "open_default_browser";
 
 export const SCAN_LENGTH = 10000;
 export const ALTER_TOY_DEBOUNCE = 250;
+
+export const OSC_PARAM_PREFIX = "/avatar/parameters/";
