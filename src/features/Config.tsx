@@ -4,10 +4,11 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api";
 
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
-import { SET_CONFIG } from "../data/constants";
+import { CLEAR_OSC_CONFIG, SET_CONFIG } from "../data/constants";
 import Modal from "../layout/Modal";
 import UpdateButton from "../components/UpdateButton";
 import TooltipLabel from "../layout/Tooltip/TooltipLabel";
+import Tooltip from "../layout/Tooltip";
 
 type settingsDialogProps = {
   isOpen: boolean;
@@ -46,6 +47,12 @@ export default function Config({
     await invoke(SET_CONFIG, { feVcConfig: newConfig });
   }
 
+  async function refreshConfig() {
+    await invoke(CLEAR_OSC_CONFIG)
+      .then(() => alert("Avatar OSC configs have been cleared."))
+      .catch(() => alert("Failed to clear avatar OSC configs!"));
+  }
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     saveConfig();
@@ -61,7 +68,7 @@ export default function Config({
   return (
     <Modal title="Config" isOpen={isOpen} onClose={onClose}>
       <form id="config" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-2 gap-y-2 justify-items-end">
+        <div className="grid grid-cols-2 gap-y-2 justify-items-end my-4">
           <TooltipLabel text="OSC Bind" tooltip="OSC Receive Port" />
           <input
             name="bind"
@@ -161,7 +168,7 @@ export default function Config({
           />
         </div>
       </form>
-      <div className="mt-4 flex justify-around">
+      <div className="flex justify-around">
         <button
           type="submit"
           form="config"
@@ -169,6 +176,14 @@ export default function Config({
         >
           Save
         </button>
+        <Tooltip text="Force refresh OSC avatar parameters by deleting VRChat OSC config folders. The in-game button does not work.">
+          <button
+            className="rounded-md bg-zinc-100 px-4 text-zinc-900 hover:bg-zinc-200"
+            onClick={refreshConfig}
+          >
+            Refresh OSC
+          </button>
+        </Tooltip>
         <UpdateButton enabled={canUpdate} />
       </div>
     </Modal>

@@ -36,7 +36,7 @@ export default function FeatureForm({
     } else {
       // Debounce text input
       const t = setTimeout(() => {
-        alterToy(toyId, newFeature).then(() => clearOscConfig());
+        alterToy(toyId, newFeature);
       }, ALTER_TOY_DEBOUNCE);
       return () => clearTimeout(t);
     }
@@ -56,10 +56,6 @@ export default function FeatureForm({
       toyId: toyId,
       mutate: { Feature: newFeature },
     });
-  }
-
-  async function clearOscConfig() {
-    await invoke(CLEAR_OSC_CONFIG);
   }
 
   function handleFeatureCheckbox(e: ChangeEvent<HTMLInputElement>) {
