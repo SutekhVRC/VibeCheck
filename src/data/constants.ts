@@ -1,6 +1,7 @@
 export const CORE_EVENT = "fe_core_event";
 export const TOY_EVENT = "fe_toy_event";
 export const ALTER_TOY = "alter_toy";
+export const CLEAR_OSC_CONFIG = "clear_osc_config";
 
 export const VERSION = "vibecheck_version";
 export const START_SCAN = "vibecheck_start_bt_scan";

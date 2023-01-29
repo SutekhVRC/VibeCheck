@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   ALTER_TOY,
   ALTER_TOY_DEBOUNCE,
+  CLEAR_OSC_CONFIG,
   OSC_PARAM_PREFIX,
 } from "../../data/constants";
 import { round0 } from "../../utils";
@@ -29,34 +30,36 @@ export default function FeatureForm({
   }, [feature, levels]);
 
   useEffect(() => {
-    // Don't invoke on mount
     if (feature == initFeature) return;
-    // Debounce only for text input, not checkboxes
     if (feature.osc_parameter == initFeature.osc_parameter) {
-      invokeFeature(toyId, newFeature);
+      alterToy(toyId, newFeature);
     } else {
+      // Debounce text input
       const t = setTimeout(() => {
-        invokeFeature(toyId, newFeature);
+        alterToy(toyId, newFeature).then(() => clearOscConfig());
       }, ALTER_TOY_DEBOUNCE);
       return () => clearTimeout(t);
     }
   }, [feature]);
 
   useEffect(() => {
-    // Don't invoke on mount
     if (levels == initLevels) return;
-    // Debounce everything
+    // Debounce all level changes
     const t = setTimeout(() => {
-      invokeFeature(toyId, newFeature);
+      alterToy(toyId, newFeature);
     }, ALTER_TOY_DEBOUNCE);
     return () => clearTimeout(t);
   }, [levels]);
 
-  async function invokeFeature(toyId: number, newFeature: FeVCToyFeature) {
+  async function alterToy(toyId: number, newFeature: FeVCToyFeature) {
     await invoke(ALTER_TOY, {
       toyId: toyId,
       mutate: { Feature: newFeature },
     });
+  }
+
+  async function clearOscConfig() {
+    await invoke(CLEAR_OSC_CONFIG);
   }
 
   function handleFeatureCheckbox(e: ChangeEvent<HTMLInputElement>) {
