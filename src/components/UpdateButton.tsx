@@ -2,7 +2,7 @@ import { installUpdate } from "@tauri-apps/api/updater";
 import { relaunch } from "@tauri-apps/api/process";
 import UpdatePing from "./UpdatePing";
 
-export default function ({ enabled }: { enabled: boolean }) {
+export default function UpdateButton({ enabled }: { enabled: boolean }) {
   async function handleUpdate() {
     try {
       await installUpdate();

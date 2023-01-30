@@ -1,8 +1,8 @@
-import * as Toast from "@radix-ui/react-toast";
+import * as RadixToast from "@radix-ui/react-toast";
 import { useState } from "react";
 import "./Toast.css";
 
-export default function ({
+export default function Toast({
   buttonText,
   toastText,
   onClick,
@@ -19,21 +19,21 @@ export default function ({
   }
 
   return (
-    <Toast.Provider swipeDirection="right" duration={1500}>
+    <RadixToast.Provider swipeDirection="right" duration={1500}>
       <button
         className="rounded-sm border-zinc-400 border-solid border-2 py-1 px-2 hover:border-zinc-300 whitespace-pre-wrap text-xs"
         onClick={handleClick}
       >
         {buttonText}
       </button>
-      <Toast.Root
+      <RadixToast.Root
         className="ToastRoot bg-zinc-100 text-zinc-900 rounded-md px-2 fixed right-2 bottom-2"
         open={open}
         onOpenChange={setOpen}
       >
-        <Toast.Title>{toastText}</Toast.Title>
-      </Toast.Root>
-      <Toast.Viewport className="absolute" />
-    </Toast.Provider>
+        <RadixToast.Title>{toastText}</RadixToast.Title>
+      </RadixToast.Root>
+      <RadixToast.Viewport className="absolute" />
+    </RadixToast.Provider>
   );
 }

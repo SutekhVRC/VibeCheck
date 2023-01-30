@@ -21,7 +21,9 @@ export function Feature({
                   className={
                     feature.feature_enabled ? "text-gray-200" : "text-gray-500"
                   }
-                >{`${feature.feature_type} ${feature.feature_index}`}</div>
+                >
+                  {feature.feature_type} {feature.feature_index}
+                </div>
               </div>
               <ChevronUpIcon
                 className={`${

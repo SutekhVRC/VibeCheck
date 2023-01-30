@@ -5,7 +5,7 @@ import { ALTER_TOY } from "../../data/constants";
 import Modal from "../../layout/Modal";
 import Toast from "../../layout/Toast";
 
-export default function ({
+export default function Settings({
   onClose,
   toy,
 }: {

@@ -1,7 +1,7 @@
-import { Switch } from "@headlessui/react";
+import { Switch as HeadlessSwitch } from "@headlessui/react";
 import Tooltip from "../Tooltip";
 
-export default function ({
+export default function Switch({
   isEnabled,
   toggleIsEnabled,
 }: {
@@ -10,7 +10,7 @@ export default function ({
 }) {
   return (
     <Tooltip text={isEnabled ? "OSC Enabled" : "OSC Disabled"} delay={250}>
-      <Switch
+      <HeadlessSwitch
         checked={isEnabled}
         onChange={toggleIsEnabled}
         className={`${isEnabled ? "bg-green-600" : "bg-red-600"}
@@ -22,7 +22,7 @@ export default function ({
           className={`${isEnabled ? "translate-x-4" : "translate-x-0"}
             inline-block h-5 w-5 rounded-full bg-white transition duration-200 ease-in-out`}
         />
-      </Switch>
+      </HeadlessSwitch>
     </Tooltip>
   );
 }

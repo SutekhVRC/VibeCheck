@@ -2,7 +2,12 @@ import { invoke } from "@tauri-apps/api";
 import type { ChangeEvent } from "react";
 import { useMemo } from "react";
 import { useEffect, useState } from "react";
-import { ALTER_TOY, ALTER_TOY_DEBOUNCE } from "../../data/constants";
+import {
+  ALTER_TOY,
+  ALTER_TOY_DEBOUNCE,
+  CLEAR_OSC_CONFIG,
+  OSC_PARAM_PREFIX,
+} from "../../data/constants";
 import { round0 } from "../../utils";
 import type { FeVCToyFeature } from "../../../src-tauri/bindings/FeVCToyFeature";
 import Slider from "../../layout/Slider";
@@ -13,7 +18,10 @@ type ToyFeatureFormProps = {
   toyFeature: FeVCToyFeature;
 };
 
-export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
+export default function FeatureForm({
+  toyId,
+  toyFeature,
+}: ToyFeatureFormProps) {
   const { feature_levels: initLevels, ...initFeature } = toyFeature;
   const [feature, setFeature] = useState(initFeature);
   const [levels, setLevels] = useState(initLevels);
@@ -22,30 +30,28 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
   }, [feature, levels]);
 
   useEffect(() => {
-    // Don't invoke on mount
     if (feature == initFeature) return;
-    // Debounce only for text input, not checkboxes
     if (feature.osc_parameter == initFeature.osc_parameter) {
-      invokeFeature(toyId, newFeature);
+      alterToy(toyId, newFeature);
     } else {
+      // Debounce text input
       const t = setTimeout(() => {
-        invokeFeature(toyId, newFeature);
+        alterToy(toyId, newFeature);
       }, ALTER_TOY_DEBOUNCE);
       return () => clearTimeout(t);
     }
   }, [feature]);
 
   useEffect(() => {
-    // Don't invoke on mount
     if (levels == initLevels) return;
-    // Debounce everything
+    // Debounce all level changes
     const t = setTimeout(() => {
-      invokeFeature(toyId, newFeature);
+      alterToy(toyId, newFeature);
     }, ALTER_TOY_DEBOUNCE);
     return () => clearTimeout(t);
   }, [levels]);
 
-  async function invokeFeature(toyId: number, newFeature: FeVCToyFeature) {
+  async function alterToy(toyId: number, newFeature: FeVCToyFeature) {
     await invoke(ALTER_TOY, {
       toyId: toyId,
       mutate: { Feature: newFeature },
@@ -56,8 +62,11 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
     setFeature({ ...feature, [e.target.name]: e.target.checked });
   }
 
-  function handleFeatureValue(e: ChangeEvent<HTMLInputElement>) {
-    setFeature({ ...feature, [e.target.name]: e.target.value });
+  function handleOscParam(e: ChangeEvent<HTMLInputElement>) {
+    setFeature({
+      ...feature,
+      [e.target.name]: `${OSC_PARAM_PREFIX}${e.target.value}`,
+    });
   }
 
   function handleLevels(key: string, value: number) {
@@ -65,7 +74,7 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
   }
 
   return (
-    <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(3rem,_10fr)_1fr] text-sm text-justify gap-x-2 gap-y-1 p-4">
+    <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 p-4">
       <TooltipLabel text="Enabled" tooltip="Enable/Disable this feature." />
       <input
         type="checkbox"
@@ -83,8 +92,8 @@ export default function ({ toyId, toyFeature }: ToyFeatureFormProps) {
       <input
         className="text-zinc-800 text-xs"
         name="osc_parameter"
-        value={feature.osc_parameter}
-        onChange={handleFeatureValue}
+        value={feature.osc_parameter.replace(OSC_PARAM_PREFIX, "")}
+        onChange={handleOscParam}
       />
       <div></div>
       <TooltipLabel

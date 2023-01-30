@@ -9,7 +9,7 @@ import { WrenchScrewdriverIcon } from "@heroicons/react/20/solid";
 import cryingAnimeGirl from "../../assets/menhera_chan.gif";
 import ScanButton from "../../components/ScanButton";
 
-export default function () {
+export default function Toys() {
   const [modal, setModal] = useState<ReactNode>(null);
   const { toys } = useToys();
   const { isScanning, toggleScan } = useCoreEventContext();

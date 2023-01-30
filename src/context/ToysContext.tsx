@@ -29,30 +29,32 @@ export function ToysProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unlistenPromise = listen<FeToyEvent>(TOY_EVENT, (event) => {
+      let payload: FeVCToy;
+      let id: number;
       switch (event.payload.kind) {
         case "Add":
-          const add = event.payload.data;
+          payload = event.payload.data;
           setToys((t) => {
             return {
               ...t,
-              [add.toy_id]: add,
+              [payload.toy_id]: payload,
             };
           });
           break;
         case "Remove":
-          const remove = event.payload.data;
+          id = event.payload.data;
           setToys((t) => {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { [remove]: _, ...newToys } = t;
+            const { [id]: _, ...newToys } = t;
             return newToys;
           });
           break;
         case "Update":
-          const update = event.payload.data;
+          payload = event.payload.data;
           setToys((t) => {
             return {
               ...t,
-              [update.toy_id]: update,
+              [payload.toy_id]: payload,
             };
           });
           break;
