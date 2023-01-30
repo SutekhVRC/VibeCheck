@@ -61,5 +61,7 @@ pub mod backend {
     #[derive(Serialize, Debug)]
     pub enum VibeCheckFSError {
         ReadDirFailure,
+        ReadDirPathFailure,
+        RemoveDirsFailure,
     }
 }

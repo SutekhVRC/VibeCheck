@@ -666,6 +666,7 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
 }
 
 pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
+
     let osc_dirs = match std::fs::read_dir(format!("{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\", get_user_home_dir())) {
         Ok(dirs) => dirs,
         Err(_e) => return Err(backend::VibeCheckFSError::ReadDirFailure),
@@ -676,7 +677,7 @@ pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
     let usr_dirs = match osc_dirs.map(|res| res.map(|e| e.path()))
     .collect::<Result<Vec<_>, std::io::Error>>() {
         Ok(usr_dirs) => usr_dirs,
-        Err(_) => return Err(backend::VibeCheckFSError::ReadDirFailure),
+        Err(_) => return Err(backend::VibeCheckFSError::ReadDirPathFailure),
     };
 
     for dir in usr_dirs {
@@ -689,7 +690,10 @@ pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
             if dir.file_name().unwrap().to_str().unwrap().starts_with("usr_") {
                 let delete_dir = dir.as_path().to_str().unwrap();
                 info!("Clearing dir: {}", delete_dir);
-                let _ = std::fs::remove_dir_all(delete_dir).unwrap();
+                match std::fs::remove_dir_all(delete_dir) {
+                    Ok(()) => {},
+                    Err(_e) => return Err(backend::VibeCheckFSError::RemoveDirsFailure),
+                }
             }
         }
     }
