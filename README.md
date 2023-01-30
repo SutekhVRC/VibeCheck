@@ -51,7 +51,7 @@ You can do whatever you want you don't NEED to use contacts scripts. VibeCheck j
 2. If VibeCheck is your only OSC app that receives data from VRChat, skip step 3.
 3. If you are using multiple OSC apps that **Receive** data from VRChat consider using my OSC router app: [VOR](https://github.com/SutekhVRC/VOR/releases/latest). Then go to the 'Settings' tab and setup VibeCheck's OSC bind host/port to listen on.
 4. Setup connection via [Bluetooth](./docs/Bluetooth.md) or [Lovense Connect](./docs/LovenseConnect.md), and turn on your toy(s).
-5. Once your toy(s) are connected, configure them to use the parameters you want them to listen for (Floats only). You have full control of the parameter address to listen for. So you will have to input the whole parameter address. You will almost always only need to use the avatar parameters address. So inputting your parameter will follow this format: /avatar/parameters/YOUR_CONTACTS_RECEIVER_PARAMETER_HERE. So if I put the parameter name 'vtest' into my contacts receiver on my avatar I would input '/avatar/parameters/vtest' for my parameter in the toy's configuration.
+5. Once your toy(s) are connected, configure them to use the parameters you want them to listen for (Floats only).
 
 ![Toy Config](./docs/Toy_config.png)
 
