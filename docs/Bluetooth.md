@@ -11,9 +11,9 @@
 
 # Requirements
 
-- [Generic Bluetooth Adapter](https://www.amazon.com/s?k=bluetooth+adapter)
-  - I recommend using an adapter that can handle more than one device and has a **strong/long-range** connection.
-- Make sure any onboard generic bluetooth interfaces are disabled.
+- Bluetooth LE
+- I recommend using an adapter that can handle more than one device and has a **strong/long-range** connection.
+- If you are using an adapter, be sure any onboard generic bluetooth interfaces are disabled.
 
 # Common Bluetooth Issues
 
