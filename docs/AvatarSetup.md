@@ -12,7 +12,7 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 - Constant to float conversion
 - Contact rate system
 
-## Simple Contact Receiver
+## Simple Contact Receiver (Simple)
 
 1. Import [VibeCheck Prefab Package]().
 2. In the "Simple" folder there is a folder for the default Simple prefab and folder for the TPS prefab.
@@ -21,7 +21,7 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 5. If you are setting it up for a penetrator, you will want to put the center of the Contact sphere at the base of the penetrator.
 6. If you are setting it up for an oriface just adjust it inside the orifice where you want it.
 
-## Constant to float conversion
+## Constant to float conversion (Constant)
 
 1. Import [VibeCheck Prefab Package]().
 2. Import [AV3 Manager by VRLabs](https://github.com/VRLabs/Avatars-3.0-Manager/releases/latest).
@@ -31,7 +31,7 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 6. Using AV3 Manager, copy the parameters from VibeCheck_Constant_Parameters into your avatar's parameters.
 7. Make a new sub menu in your expressions menu on your avatar. Then input the VibeCheck_Constant_Menu into it.
 
-## Contact rate system
+## Contact rate system (Rate)
 
 1. Import [VibeCheck Prefab Package]().
 2. Import [AV3 Manager by VRLabs](https://github.com/VRLabs/Avatars-3.0-Manager/releases/latest).
