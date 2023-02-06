@@ -17,7 +17,8 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 1. Import [VibeCheck Prefab Package]().
 2. In the "Simple" folder there is a folder for the default Simple prefab and folder for the TPS prefab.
 3. Drag the prefab you want to use onto your Hips and unpack it completely. Keep in mind, the center of the sphere will be the maximum float value / motor speed.
-4. If you are setting it up for a penetrator, you will want to put the center of the Contact sphere at the base of the penetrator. 5. If you are setting it up for an oriface just adjust it inside the orifice where you want it.
+4. If you are setting it up for a penetrator, you will want to put the center of the Contact sphere at the base of the penetrator.
+5. If you are setting it up for an oriface just adjust it inside the orifice where you want it.
 
 ## Constant to float conversion
 
