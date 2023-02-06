@@ -4,7 +4,7 @@ VibeCheck isn't attached to any unity prefabs/setups. You can use VibeCheck with
 
 # Premade Prefabs
 
-***When adding a prefab remember to refresh your avatar's OSC config!**
+**When adding a prefab remember to refresh your avatar's OSC config!**
 
 I have created some prefabs to make setup a bit more simple, if you don't want to setup your avatar completely yourself.
 
