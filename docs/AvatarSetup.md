@@ -20,6 +20,7 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 4. Scale and move the prefab as needed. Keep in mind, the center of the sphere will be the maximum float value / motor speed.
 5. If you are setting it up for a penetrator, you will want to put the center of the Contact sphere at the base of the penetrator.
 6. If you are setting it up for an oriface just adjust it inside the orifice where you want it.
+7. Put the 'vibecheck/simple/out' parameter in the VibeCheck application.
 
 ## Constant to float conversion (Constant)
 
@@ -30,6 +31,7 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 5. Using AV3 Manager, merge VibeCheck_Constant_FX controller with your avatar's FX controller.
 6. Using AV3 Manager, copy the parameters from VibeCheck_Constant_Parameters into your avatar's parameters.
 7. Make a new sub menu in your expressions menu on your avatar. Then input the VibeCheck_Constant_Menu into it.
+8. Put the 'vibecheck/constant/out' parameter in the VibeCheck application.
 
 ## Contact rate system (Rate)
 
@@ -40,6 +42,7 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 6. Using AV3 Manager, merge VibeCheck_Rate_FX controller with your avatar's FX controller.
 7. Using AV3 Manager, copy the parameters from VibeCheck_Rate_Parameters into your avatar's parameters.
 8. Make a new sub menu in your expressions menu on your avatar. Then put the VibeCheck_Rate_Menu into it.
+9. Put the 'vibecheck/rate/out' parameter in the VibeCheck application.
 
 # TPS & VibeCheck
 
