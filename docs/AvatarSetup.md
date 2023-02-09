@@ -1,4 +1,4 @@
-# Avatar Setup (Incomplete)
+# Avatar Setup
 
 VibeCheck isn't attached to any unity prefabs/setups. You can use VibeCheck with any animator logic you want to make, as long as you are sending a float parameter to VibeCheck. This could be a single VRChat Contact Receiver script, or a complex feature set where an animator sends different float values to different motors on a toy. This can allow fun interactions with your avatar like slapping a butt or pulling a chain etc.
 
@@ -15,10 +15,12 @@ VibeCheck isn't attached to any unity prefabs/setups. You can use VibeCheck with
 I have created some prefabs to make setup a bit more simple, if you don't want to setup your avatar completely yourself.
 
 - [Simple Contact Receiver](./AvatarSetup.md#simple-contact-receiver-simple)
-- [Constant to float conversion](./AvatarSetup.md#constant-to-float-conversion-constant)
+- [Constant system](./AvatarSetup.md#constant-to-float-conversion-constant)
 - [Contact rate system](./AvatarSetup.md#contact-rate-system-rate)
 
 ## Simple Contact Receiver (Simple)
+
+The simple system is good for a quick and easy setup and uses just one contact receiver.
 
 1. Import [VibeCheck Prefab Package]().
 2. In the "Simple" folder there is a folder for the default Simple prefab and folder for the TPS prefab.
@@ -28,7 +30,9 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 6. If you are setting it up for an oriface just adjust it inside the orifice where you want it.
 7. Put the 'vibecheck/simple/out' parameter in the VibeCheck application.
 
-## Constant to float conversion (Constant)
+## Constant system (Constant)
+
+The constant system is great for when u just want to activate a toy to whatever level you have set in your expressions menu when someone enters the contact receiver. This system is great for things like butt slaps and boops etc. This system has adjustments for motor speed and the cooldown speed for how long before the contact is ready to send 
 
 1. Import [VibeCheck Prefab Package]().
 2. Import [AV3 Manager by VRLabs](https://github.com/VRLabs/Avatars-3.0-Manager/releases/latest).
@@ -40,6 +44,8 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 8. Put the 'vibecheck/constant/out' parameter in the VibeCheck application.
 
 ## Contact rate system (Rate)
+
+The contact rate system is a system I've been working on to allow a rate-like interaction with contacts. The faster you move a sender through the receivers the faster the motor speed will go. This system has an adjustment for the passive motor speed decrease period.
 
 1. Import [VibeCheck Prefab Package]().
 2. Import [AV3 Manager by VRLabs](https://github.com/VRLabs/Avatars-3.0-Manager/releases/latest).
