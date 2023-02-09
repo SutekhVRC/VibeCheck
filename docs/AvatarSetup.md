@@ -23,7 +23,7 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 The simple system is good for a quick and easy setup and uses just one contact receiver.
 
 1. Import [VibeCheck Prefab Package]().
-2. In the **Simple** folder there is a folder for the default Simple prefab and folder for the TPS prefab.
+2. In the "Simple" folder there is a folder for the default Simple prefab and folder for the TPS prefab.
 3. Drag the prefab onto your avatar's armature wherever you want it to be.
 4. Scale and move the prefab as needed. Keep in mind, the center of the sphere will be the maximum float value / motor speed.
 5. If you are setting it up for a penetrator, you will want to put the center of the Contact sphere at the base of the penetrator.
@@ -36,11 +36,11 @@ The constant system is great for when u just want to activate a toy to whatever 
 
 1. Import [VibeCheck Prefab Package]().
 2. Import [AV3 Manager by VRLabs](https://github.com/VRLabs/Avatars-3.0-Manager/releases/latest).
-3. Place **VibeCheck_Constant** prefab on your avatar wherever you want it.
+3. Place `VibeCheck_Constant` prefab on your avatar wherever you want it.
 4. Scale and position the prefab contact receiver how you want it.
-5. Using AV3 Manager, merge **VibeCheck_Constant_FX** controller with your avatar's FX controller.
-6. Using AV3 Manager, copy the parameters from **VibeCheck_Constant_Parameters** into your avatar's parameters.
-7. Make a new sub menu in your expressions menu on your avatar. Then input the **VibeCheck_Constant_Menu** into it.
+5. Using AV3 Manager, merge `VibeCheck_Constant_FX` controller with your avatar's FX controller.
+6. Using AV3 Manager, copy the parameters from `VibeCheck_Constant_Parameters` into your avatar's parameters.
+7. Make a new sub menu in your expressions menu on your avatar. Then input the `VibeCheck_Constant_Menu` into it.
 8. Put the `vibecheck/constant/out` parameter in the VibeCheck application.
 
 ## Contact rate system (Rate)
@@ -49,11 +49,11 @@ The contact rate system is a system I've been working on to allow a rate-like in
 
 1. Import [VibeCheck Prefab Package]().
 2. Import [AV3 Manager by VRLabs](https://github.com/VRLabs/Avatars-3.0-Manager/releases/latest).
-3. Place the VibeCheck_Rate_Orifice or VibeCheck_Rate_Penetrator prefab where you want it.
+3. Place the `VibeCheck_Rate_Orifice` or `VibeCheck_Rate_Penetrator` prefab where you want it.
 5. Scale and position the prefab how you want it.
-6. Using AV3 Manager, merge **VibeCheck_Rate_FX** controller with your avatar's FX controller.
-7. Using AV3 Manager, copy the parameters from **VibeCheck_Rate_Parameters** into your avatar's parameters.
-8. Make a new sub menu in your expressions menu on your avatar. Then put the **VibeCheck_Rate_Menu** into it.
+6. Using AV3 Manager, merge `VibeCheck_Rate_FX` controller with your avatar's FX controller.
+7. Using AV3 Manager, copy the parameters from `VibeCheck_Rate_Parameters` into your avatar's parameters.
+8. Make a new sub menu in your expressions menu on your avatar. Then put the `VibeCheck_Rate_Menu` into it.
 9. Put the `vibecheck/rate/out` parameter in the VibeCheck application.
 
 # TPS & VibeCheck
