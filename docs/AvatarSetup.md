@@ -14,9 +14,9 @@ VibeCheck isn't attached to any unity prefabs/setups. You can use VibeCheck with
 
 I have created some prefabs to make setup a bit more simple, if you don't want to setup your avatar completely yourself.
 
-- Simple Contact Receiver
-- Constant to float conversion
-- Contact rate system
+- [Simple Contact Receiver](./AvatarSetup.md#simple-contact-receiver-simple)
+- [Constant to float conversion](./AvatarSetup.md#constant-to-float-conversion-constant)
+- [Contact rate system](./AvatarSetup.md#contact-rate-system-rate)
 
 ## Simple Contact Receiver (Simple)
 
