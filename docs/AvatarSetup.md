@@ -18,6 +18,14 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 - [Constant system](./AvatarSetup.md#constant-to-float-conversion-constant)
 - [Contact rate system](./AvatarSetup.md#contact-rate-system-rate)
 
+## Custom setup
+
+If you want to make your own system for VibeCheck the only requirement is just that VibeCheck receives only float parameters for the toy motor parameters.
+
+**VibeCheck parameters**
+`vibecheck/state (Sent to VibeCheck)`: Boolean - Enables VibeCheck and scans for 10 seconds when true and disables VibCheck when false.
+`{toy_name}/{toy duplicate id}/battery (Sent to VRChat)`: Float - The battery percentage of the toy. (Will sometimes say 0 even when charged if toy is not fully initialized. Just wait 60 seconds for the next toy update).
+
 ## Simple Contact Receiver (Simple)
 
 The simple system is good for a quick and easy setup and uses just one contact receiver.
@@ -32,7 +40,7 @@ The simple system is good for a quick and easy setup and uses just one contact r
 
 ## Constant system (Constant)
 
-The constant system is great for when u just want to activate a toy to whatever level you have set in your expressions menu when someone enters the contact receiver. This system is great for things like butt slaps and boops etc. This system has adjustments for motor speed and the cooldown speed for how long before the contact is ready to send 
+The constant system is great for when you just want to activate a toy to whatever level you have set in your expressions menu when someone enters the contact receiver. This system is great for things like butt slaps and boops etc. This system has adjustments for motor speed and the cooldown speed for how long before the contact is ready to send 
 
 1. Import [VibeCheck Prefab Package]().
 2. Import [AV3 Manager by VRLabs](https://github.com/VRLabs/Avatars-3.0-Manager/releases/latest).
