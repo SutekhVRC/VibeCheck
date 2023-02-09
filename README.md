@@ -11,39 +11,14 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 
 **Please report bugs/issues or feature requests if you have them!**
 
-## TL;DR
+## Getting Started
 
 - Get requirements for [Bluetooth](./docs/Bluetooth.md#requirements) or [Lovense Connect](./docs/LovenseConnect.md#requirements)
 - [Download Installer](https://github.com/SutekhVRC/VibeCheck/releases/latest) and Install VibeCheck.
-- Setup avatar to send a synced float parameter (or multiple float parameters) to utilize OSC and send input to VibeCheck. You probably want to drive the parameters with [Avatar Dynamics Contacts](https://docs.vrchat.com/docs/contacts) scripts.
-- Start VibeCheck and turn on toy(s)
-- Search for toy(s) and configure
-
-# Avatar Setup
-
-You can do whatever you want you don't NEED to use contacts scripts. VibeCheck just listens for OSC parameters.
-
-### VibeCheck Standard Tags
-
-- Using standard tags allows people to generally be setup for people without having to match tags and re-upload avatars. I recommend unchecking 'Allow Self' to avoid triggering your own toys.
-- Standard tag: 'vibecheck_tag'
-
-### Steps
-
-![Contact Receiver On Hip](./docs/Contact_Receiver_Hip.png)
-
-- Setup your avatar to have a [VRChat Contact Receiver](https://docs.vrchat.com/docs/contacts#vrccontactreceiver) wherever you want the toy(s) to be controlled from.
-- Ex. A contact receiver sphere in the hips area would control the toy(s) when a contact sender with a matching collision tag enters the receiver sphere. The contact receiver **MUST** be in proximity mode to function correctly, because VibeCheck expects float input from VRChat. **NOTE:** (Capsule mode does not work with Proximity)
-- If you want another person to be able to interact with your receiver make sure they add the matching collision tags to their [VRChat Contact Senders](https://docs.vrchat.com/docs/contacts#vrccontactsender).
-- The parameter(s) you enter into the contact receivers are the parameters you will assign to toys in the VibeCheck app.
-
-# Avatar Configuration
-
-### OSC
-
-- VibeCheck can be configured so that each feature/motor of a toy is assigned to different OSC addresses.
-- VibeCheck only reads Float parameters.
-- If you add a parameter to an avatar remember to refresh the OSC config. I do this by deleting the OSC configuration files for my avatars and then changing out and back in to my avatar. The button in game never works for me.
+- Setup avatar your own custom way or use a [VibeCheck prefab]()
+- Start VibeCheck and turn on toy(s).
+- Search for toy(s) and configure them.
+- Join the discord for help!
 
 # VibeCheck App Setup
 

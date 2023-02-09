@@ -2,6 +2,12 @@
 
 VibeCheck isn't attached to any unity prefabs/setups. You can use VibeCheck with any animator logic you want to make, as long as you are sending a float parameter to VibeCheck. This could be a single VRChat Contact Receiver script, or a complex feature set where an animator sends different float values to different motors on a toy. This can allow fun interactions with your avatar like slapping a butt or pulling a chain etc.
 
+## OSC
+
+- VibeCheck can be configured so that each feature/motor of a toy is assigned to different OSC addresses.
+- VibeCheck only reads Float parameters.
+- If you add a parameter to an avatar remember to refresh the OSC config. I do this by deleting the OSC configuration files for my avatars and then changing out and back in to my avatar. The button in game never works for me.
+
 # Premade Prefabs
 
 **When adding a prefab remember to refresh your avatar's OSC config!**
