@@ -1,5 +1,9 @@
 # Lovense Connect
 
+## Usage
+
+1. ..
+
 ## Pros
 
 - Can be a more stable alternative if you dont have a very good bluetooth LE adapter

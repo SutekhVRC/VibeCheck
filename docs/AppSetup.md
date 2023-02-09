@@ -9,7 +9,7 @@
 ![Toy Config](./Toy_config.png)
 
 6. Once your toy is configured/saved press on switch in the bottom left to start using VibeCheck with VRChat.
-7. Once you are in VRChat you will need to enable OSC in the expressions menu. If you have used OSC before with your avatar, remember to refresh the OSC config for that avatar (In the OSC expressions menu OR delete the avatar's OSC config file adn re-load the avatar).
+7. Once you are in VRChat you will need to enable OSC in the expressions menu. If you have used OSC before with your avatar, remember to refresh the OSC config for that avatar (Click the Refresh OSC button in the VibeCheck settings menu and re-load the avatar).
 8. You should be all set now. Enjoyyyyyy ;}
 
 ### Enable/Disable OSC command
