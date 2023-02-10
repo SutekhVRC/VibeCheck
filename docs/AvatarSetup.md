@@ -23,8 +23,10 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 If you want to make your own system for VibeCheck the only requirement is just that VibeCheck receives only float parameters for the toy motor parameters.
 
 **VibeCheck parameters**
-`vibecheck/state (Sent to VibeCheck)`: Boolean - Enables VibeCheck and scans for 10 seconds when true and disables VibCheck when false.
-`{toy_name}/{toy duplicate id}/battery (Sent to VRChat)`: Float - The battery percentage of the toy. (Will sometimes say 0 even when charged if toy is not fully initialized. Just wait 60 seconds for the next toy update).
+
+- `vibecheck/state`: (Boolean sent to VibeCheck) Enables VibeCheck and scans for 10 seconds when true and disables VibCheck when false.
+
+- `{toy_name}/{toy duplicate id}/battery`: (Float sent to VRChat) The battery percentage of the toy. (Will sometimes say 0 even when charged if toy is not fully initialized. Just wait 60 seconds for the next toy update).
 
 ## Simple Contact Receiver (Simple)
 
