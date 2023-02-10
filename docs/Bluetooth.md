@@ -9,13 +9,13 @@
 
 - Can be less stable than Lovense Connect if the Bluetooth LE adapter in use isn't very strong.
 
-# Requirements
+## Requirements
 
 - Bluetooth LE
 - I recommend using an adapter that can handle more than one device and has a **strong/long-range** connection.
 - If you are using an adapter, be sure any onboard generic bluetooth interfaces are disabled.
 
-# Common Bluetooth Issues
+## Common Bluetooth Issues
 
 - Your Bluetooth adapter may just be really weak (Feel free to ask for Bluetooth adapter recommendations)
 - Make sure your Bluetooth adapter/dongle supports LE

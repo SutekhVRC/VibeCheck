@@ -19,14 +19,14 @@ The Lovense Connect API can be finnicky at times. I recommend using VibeCheck's 
 - Can only be used with Lovense Toys.
 - Slower response time than Bluetooth LE.
 
-# Requirements
+## Requirements
 
 - [Lovense USB Bluetooth Adapter](https://www.lovense.com/bluetooth-adapter)
 - Download Lovense Connect for phone or desktop.
 - Connect toys to Lovense Connect
 - Start VibeCheck (Sometimes you may need to wait like 10 - 20 seconds if the Lovense API is being slow)
 
-# Common Lovense Connect Issues
+## Common Lovense Connect Issues
 
 - I recommend using VibeCheck's Lovense Connect Host Override setting. Enter the LAN IP address for the device running Lovense Connect. If you are using desktop Lovense Connect you can use 127.0.0.1 as the IP address.
 - Start Lovense Connect **before** starting VibeCheck (If you are using VibeCheck 0.1.x).

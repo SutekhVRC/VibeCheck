@@ -15,6 +15,10 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 - [Setup VibeCheck](./docs/AppSetup.md) app.
 - Join the discord for help!
 
+## FAQ
+
+Having issues? Check the [FAQ](./docs/Faq.md)
+
 ## Credits
 
 - TutiDore: Frontend developer.
