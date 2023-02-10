@@ -9,7 +9,7 @@
   - Your Bluetooth adapter may just be really weak (Feel free to ask for Bluetooth adapter recommendations)
   - Make sure your Bluetooth adapter/dongle supports LE
   - If your computer has an onboard bluetooth interface, make sure it is disabled if you are using another bluetooth interface (USB Bluetooth dongle).
-- Windows updates will sometimes re-enable previously disabled devices. So if you disabled your onboard bluetooth before and are having issues where toys will disconnect you may need to re-disable your onboard bluetooth.
+  - Windows updates will sometimes re-enable previously disabled devices. So if you disabled your onboard bluetooth before and are having issues where toys will disconnect you may need to re-disable your onboard bluetooth.
   - Windows only supports the use of 1 generic bluetooth interface at a time.
 
 # How to connect
@@ -22,7 +22,7 @@
 
 ## Bluetooth
   - You need a Bluetooth LE adapter.
-    - Note on Bluetooth LE adapters: I recommend using an adapter that can handle more than one device and has a **strong/long-range** connection.
+  - Note on Bluetooth LE adapters: I recommend using an adapter that can handle more than one device and has a **strong/long-range** connection.
   - Make sure any onboard generic bluetooth interfaces are disabled.
   - Plug in the Bluetooth LE adapter
   - Start VibeCheck
