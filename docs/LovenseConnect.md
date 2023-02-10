@@ -1,8 +1,12 @@
 # Lovense Connect
 
-## Usage
+The Lovense Connect API can be finnicky at times. I recommend using VibeCheck's `Lovense Connect Override` option in the settings menu.
 
-1. ..
+## How To: Lovense Connect Override
+
+1. Enable by clicking the checkbox.
+2. If using the Lovense Connect app for PC you can just leave the default IP address `127.0.0.1`.
+3. If using a smartphone with Lovense Connect, the smartphone must be on the same LAN as your PC running VibeCheck. Then input the smartphone's LAN IP address.
 
 ## Pros
 
