@@ -1,5 +1,11 @@
 # Bluetooth
 
+## Requirements
+
+- Bluetooth LE
+- I recommend using an adapter that can handle more than one device and has a **strong/long-range** connection.
+- If you are using an adapter, be sure any onboard generic bluetooth interfaces are disabled.
+
 ## Getting Connected
 
 - The bluetooth interface you are using must support LE.
@@ -17,12 +23,6 @@
 ## Cons
 
 - Can be less stable than Lovense Connect if the Bluetooth LE adapter in use isn't very strong.
-
-## Requirements
-
-- Bluetooth LE
-- I recommend using an adapter that can handle more than one device and has a **strong/long-range** connection.
-- If you are using an adapter, be sure any onboard generic bluetooth interfaces are disabled.
 
 ## Common Bluetooth Issues
 
