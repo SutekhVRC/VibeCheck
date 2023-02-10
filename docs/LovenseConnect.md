@@ -8,6 +8,13 @@ The Lovense Connect API can be finnicky at times. I recommend using VibeCheck's 
 2. If using the Lovense Connect app for PC you can just leave the default IP address `127.0.0.1`.
 3. If using a smartphone with Lovense Connect, the smartphone must be on the same LAN as your PC running VibeCheck. Then input the smartphone's LAN IP address.
 
+## Getting Connected
+
+- Download the [Lovense Connect](https://www.lovense.com/cam-model/guides/pc-dongle) app (Lovense Connect is a different app than Lovense Remote) either on your smartphone or on PC. If using the PC version you must have the Lovense adapter.
+- Open the Lovense Connect app and connect your toys to it.
+- Start VibeCheck
+- VibeCheck will ask the Lovense Connect API for your devices. I recommend using the `Lovense Connect Override` option to tell VibeCheck to connect to the device directly instead of using the Lovense Connect API.
+
 ## Pros
 
 - Can be a more stable alternative if you dont have a very good bluetooth LE adapter
