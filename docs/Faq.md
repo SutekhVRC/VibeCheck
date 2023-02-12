@@ -55,4 +55,4 @@
 
   - VibeCheck can be configured so that each feature/motor of a toy is assigned to different OSC addresses.
   - VibeCheck only reads Float parameters.
-  - If you add a parameter to an avatar remember to refresh the OSC config. I do this by deleting the OSC configuration files for my avatars and then changing out and back in to my avatar. The button in game never works for me.
+  - If you add a parameter to an avatar remember to refresh the OSC config. Click the `Refresh OSC` button in the settings menu.
