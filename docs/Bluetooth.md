@@ -10,9 +10,9 @@
 
 - The bluetooth interface you are using must support LE.
 - I recommend using an adapter that can handle more than one device and has a **strong/long-range** connection.
+- Plug in the bluetooth adapter.
 - Make sure bluetooth is enabled.
 - If using a bluetooth adapter make sure to disable your onboard bluetooth device in device manager if you have one.
-- Plug in the bluetooth adapter.
 - Start VibeCheck!
 
 ## Pros
