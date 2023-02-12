@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Bluetooth LE
+- Bluetooth LE (Onboard, PCI, USB adapter)
 - I recommend using an adapter that can handle more than one device and has a **strong/long-range** connection.
 - If you are using an adapter, be sure any onboard generic bluetooth interfaces are disabled.
 
