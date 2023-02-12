@@ -40,7 +40,7 @@ The simple system is good for a quick and easy setup and uses just one contact r
 6. If you are setting it up for an oriface just adjust it inside the orifice where you want it.
 7. Put the `vibecheck/simple/out` parameter in the VibeCheck application.
 
-## Constant system (Constant)
+## Constant system (Constant) (Incomplete)
 
 The constant system is great for when you just want to activate a toy to whatever level you have set in your expressions menu when someone enters the contact receiver. This system is great for things like butt slaps and boops etc. This system has adjustments for motor speed and the cooldown speed for how long between each activation. 
 
@@ -53,7 +53,7 @@ The constant system is great for when you just want to activate a toy to whateve
 7. Make a new sub menu in your expressions menu on your avatar. Then input the `VibeCheck_Constant_Menu` into it.
 8. Put the `vibecheck/constant/out` parameter in the VibeCheck application.
 
-## Contact rate system (Rate)
+## Contact rate system (Rate) (Incomplete)
 
 The contact rate system is a system I've been working on to allow a rate-like interaction with contacts. The faster you move a sender through the receivers the faster the motor speed will go. This system has an adjustment for the passive motor speed decrease period.
 
