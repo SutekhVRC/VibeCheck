@@ -25,15 +25,15 @@ jobs:
           workspaces: "./src-tauri -> target"
       - name: install app dependencies
         run: yarn
-      - uses: solvedDev/tauri-action@dev
+      - uses: tauri-apps/tauri-action@dev
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           # the action automatically replaces \_\_VERSION\_\_ with the app version
-          tagName: __VERSION__-beta
-          releaseName: "__VERSION__ BETA"
-          releaseBody: "See the assets to download this version and install."
+          tagName: draft-release
+          releaseName: "TEMPLATE"
+          releaseBody: "This template build used tauri config __VERSION__"
           releaseDraft: true
           prerelease: false
