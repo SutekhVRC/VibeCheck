@@ -32,7 +32,7 @@ If you want to make your own system for VibeCheck the only requirement is just t
 
 The simple system is good for a quick and easy setup and uses just one contact receiver.
 
-1. Import [VibeCheck Prefab Package](https://github.com/SutekhVRC/VibeCheck/blob/main/UnityPrefabs/VibeCheck_Prefabs.unitypackage).
+1. Import [VibeCheck Prefab Package](https://github.com/SutekhVRC/VibeCheck/raw/main/UnityPrefabs/VibeCheck_Prefabs.unitypackage).
 2. In the "Simple" folder there is a folder for the default Simple prefab and folder for the TPS prefab.
 3. Drag the prefab onto your avatar's armature wherever you want it to be.
 4. Scale and move the prefab as needed. Keep in mind, the center of the sphere will be the maximum float value / motor speed.
