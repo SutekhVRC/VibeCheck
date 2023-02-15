@@ -38,8 +38,9 @@ The simple system is good for a quick and easy setup and uses just one contact r
 4. Scale and move the prefab as needed. Keep in mind, the center of the sphere will be the maximum float value / motor speed.
 5. If you are setting it up for a penetrator, you will want to put the center of the Contact sphere at the base of the penetrator.
 6. If you are setting it up for an orifice, adjust it so the bottom of the sphere is slightly below or even with the orifice opening.
-7. Check "Allow Self" if you want to be able to activate the contact yourself.
-8. Put the `vibecheck/simple/out` parameter in the VibeCheck application.
+7. Add/Remove tags you want or don't want in the contact receiver.
+8. Check "Allow Self" if you want to be able to activate the contact yourself.
+9. Put the `vibecheck/simple/out` parameter in the VibeCheck application.
 
 ## Constant system (Constant) (Incomplete)
 
