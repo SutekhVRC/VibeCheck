@@ -3,7 +3,7 @@
 # Problems with the app
 
 - App instantly closes/crashes when starting the app.
-  - You either have no WebView2 runtime installed OR your WebView2 runtime install is broken. [Install Webiew2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download-section) or if it is showing up in your program list in control panel as installed, try clicking repair on it.
+  - You either have no WebView2 runtime installed OR your WebView2 runtime install is broken. [Install WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download-section) or if it is showing up in your program list in control panel as installed, try clicking repair on it.
 
 - App fails to bind or seems to not receive any OSC data.
   - Make sure you don't have two instances of VibeCheck open at the same time!
