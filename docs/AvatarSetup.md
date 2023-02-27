@@ -54,6 +54,7 @@ The constant system is great for when you just want to activate a toy to whateve
 6. Using AV3 Manager, copy the parameters from `VibeCheck_Constant_Parameters` into your avatar's parameters.
 7. Make a new sub menu in your expressions menu on your avatar. Then input the `VibeCheck_Constant_Menu` into it.
 8. Put the `vibecheck/constant/out` parameter in the VibeCheck application.
+9. Once you have uploaded the avatar make sure to click the "Refresh OSC" button in VibeCheck (In settings). Then change out and back in to your avatar.
 
 ## Contact rate system (Rate) (Incomplete)
 
