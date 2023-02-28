@@ -41,6 +41,7 @@ The simple system is good for a quick and easy setup and uses just one contact r
 7. Add/Remove tags you want or don't want in the contact receiver.
 8. Check "Allow Self" if you want to be able to activate the contact yourself.
 9. Put the `vibecheck/simple/out` parameter in the VibeCheck application.
+10. Once you have uploaded the avatar make sure to click the "Refresh OSC" button in VibeCheck (In settings). Then change out and back in to your avatar.
 
 ## Constant system (Constant)
 
