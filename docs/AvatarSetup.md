@@ -50,12 +50,13 @@ The constant system is great for when you just want to activate a toy to whateve
 2. Import [AV3 Manager by VRLabs](https://github.com/VRLabs/Avatars-3.0-Manager/releases/latest).
 3. Place `VibeCheck_Constant` prefab on your avatar wherever you want it.
 4. Scale and position the prefab contact receiver how you want it.
-5. Using AV3 Manager, merge the **"WD OFF"** or **"WD ON"** `VibeCheck_Constant_FX` controller with your avatar's FX controller.
-6. Using AV3 Manager, copy the parameters from `VibeCheck_Constant_Parameters` into your avatar's parameters.
-7. Make a new sub menu in your expressions menu on your avatar. Then input the `VibeCheck_Constant_Menu` into it.
-8. Put the `vibecheck/constant/out` parameter in the VibeCheck application.
-9. **IMPORTANT:** For the Constant system to function correctly you will need to disable the "Smoothing" option for every feature you want to work.
-10. Once you have uploaded the avatar make sure to click the "Refresh OSC" button in VibeCheck (In settings). Then change out and back in to your avatar.
+5. Figure out if your avatar is using **"Write Defaults On"** or **"Write Defaults Off"**. Once you know that, use the `VibeCheck_Constant_FX` controller in the folder that matches your avatar's WD state.
+6. Using AV3 Manager, merge the `VibeCheck_Constant_FX` controller with your avatar's FX controller.
+7. Using AV3 Manager, copy the parameters from `VibeCheck_Constant_Parameters` into your avatar's parameters.
+8. Make a new sub menu in your expressions menu on your avatar. Then input the `VibeCheck_Constant_Menu` into it.
+9. Put the `vibecheck/constant/out` parameter in the VibeCheck application.
+10. **IMPORTANT:** For the Constant system to function correctly you will need to disable the "Smoothing" option for every feature you want to work.
+11. Once you have uploaded the avatar make sure to click the "Refresh OSC" button in VibeCheck (In settings). Then change out and back in to your avatar.
 
 ## Contact rate system (Rate) (Incomplete)
 
