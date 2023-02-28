@@ -42,19 +42,20 @@ The simple system is good for a quick and easy setup and uses just one contact r
 8. Check "Allow Self" if you want to be able to activate the contact yourself.
 9. Put the `vibecheck/simple/out` parameter in the VibeCheck application.
 
-## Constant system (Constant) (Incomplete)
+## Constant system (Constant)
 
-The constant system is great for when you just want to activate a toy to whatever level you have set in your expressions menu when someone enters the contact receiver. This system is great for things like butt slaps and boops etc. This system has adjustments for motor speed and the cooldown speed for how long between each activation. 
+The constant system is great for when you just want to activate a toy to whatever level you have set in your expressions menu when someone enters the contact receiver. This system is great for things like butt slaps and boops etc. This system has adjustments for motor speed, cooldown speed, and "added active length time". 
 
-1. Import [VibeCheck Prefab Package]().
+1. Import [VibeCheck Prefab Package](https://github.com/SutekhVRC/VibeCheck/raw/main/UnityPrefabs/VibeCheck_Prefabs.unitypackage).
 2. Import [AV3 Manager by VRLabs](https://github.com/VRLabs/Avatars-3.0-Manager/releases/latest).
 3. Place `VibeCheck_Constant` prefab on your avatar wherever you want it.
 4. Scale and position the prefab contact receiver how you want it.
-5. Using AV3 Manager, merge `VibeCheck_Constant_FX` controller with your avatar's FX controller.
+5. Using AV3 Manager, merge the **"WD OFF"** or **"WD ON"** `VibeCheck_Constant_FX` controller with your avatar's FX controller.
 6. Using AV3 Manager, copy the parameters from `VibeCheck_Constant_Parameters` into your avatar's parameters.
 7. Make a new sub menu in your expressions menu on your avatar. Then input the `VibeCheck_Constant_Menu` into it.
 8. Put the `vibecheck/constant/out` parameter in the VibeCheck application.
-9. Once you have uploaded the avatar make sure to click the "Refresh OSC" button in VibeCheck (In settings). Then change out and back in to your avatar.
+9. **IMPORTANT:** For the Constant system to function correctly you will need to disable the "Smoothing" option for every feature you want to work.
+10. Once you have uploaded the avatar make sure to click the "Refresh OSC" button in VibeCheck (In settings). Then change out and back in to your avatar.
 
 ## Contact rate system (Rate) (Incomplete)
 
