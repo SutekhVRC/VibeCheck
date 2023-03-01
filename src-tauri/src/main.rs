@@ -98,6 +98,7 @@ fn main() {
             frontend_native::alter_toy,
             frontend_native::open_default_browser,
             frontend_native::clear_osc_config,
+            frontend_native::simulate_feature_osc_input,
             ]
     )
     .build(tauri::generate_context!())

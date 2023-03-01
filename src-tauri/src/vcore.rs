@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 use std::fs;
-use std::net::{SocketAddrV4, Ipv4Addr};
+use std::net::{SocketAddrV4, Ipv4Addr, UdpSocket};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
 use log::{warn, error as logerr, info, trace};
+use rosc::{OscMessage, encoder, OscPacket, OscType};
 use tauri::{AppHandle, Manager};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
@@ -698,4 +699,38 @@ pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
         }
     }
     return Ok(());
+}
+
+pub fn native_simulate_feature_osc_input(vc_state: tauri::State<'_, VCStateMutex>, simulated_param_address: String, simulated_param_value: f32) {
+    
+    let osc_buf = match encoder::encode(&OscPacket::Message(OscMessage {
+        addr: simulated_param_address.clone(),
+        args: vec![OscType::Float(simulated_param_value)],
+    })) {
+        Ok(buf) => buf,
+        Err(_e) => return,
+    };
+
+    let simulation_sock = match UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)) {
+        Ok(sim_sock) => sim_sock,
+        Err(_e) => return,
+    };
+
+    let self_osc_bind_address = {
+        let vc_config = vc_state.0.lock();
+        vc_config.config.networking.bind
+    };
+
+    let _ = simulation_sock.send_to(&osc_buf, self_osc_bind_address);
+    std::thread::sleep(std::time::Duration::from_secs(1));
+
+    let osc_buf = match encoder::encode(&OscPacket::Message(OscMessage {
+        addr: simulated_param_address,
+        args: vec![OscType::Float(0.0)],
+    })) {
+        Ok(buf) => buf,
+        Err(_e) => return,
+    };
+
+    let _ = simulation_sock.send_to(&osc_buf, self_osc_bind_address);
 }
