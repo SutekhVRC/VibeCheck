@@ -5,7 +5,7 @@
  */
 
 use log::trace;
-use crate::{vcore::{self, native_simulate_feature_osc_input}, frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink}, vcerror::{frontend, backend}};
+use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink}, vcerror::{frontend, backend}};
 
 /*
  * vibecheck_version
@@ -136,5 +136,5 @@ pub fn clear_osc_config() -> Result<(), backend::VibeCheckFSError>{
 #[tauri::command(async)]
 pub fn simulate_feature_osc_input(vc_state: tauri::State<'_, vcore::VCStateMutex>, simulated_param_address: String, simulated_param_value: f32) {
     trace!("simulate_feature_osc_input");
-    native_simulate_feature_osc_input(vc_state, simulated_param_address, simulated_param_value)
+    vcore::native_simulate_feature_osc_input(vc_state, simulated_param_address, simulated_param_value)
 }
