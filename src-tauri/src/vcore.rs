@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::fs;
-use std::net::{SocketAddrV4, Ipv4Addr, UdpSocket};
+use std::net::{SocketAddrV4, Ipv4Addr};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
 use log::{warn, error as logerr, info, trace};
-use rosc::{OscMessage, encoder, OscPacket, OscType};
+//use rosc::{OscMessage, encoder, OscPacket, OscType};
 use tauri::{AppHandle, Manager};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
@@ -701,6 +701,8 @@ pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
     return Ok(());
 }
 
+/* Leaving this here in case of future use
+ *
 pub fn native_simulate_feature_osc_input(vc_state: tauri::State<'_, VCStateMutex>, simulated_param_address: String, simulated_param_value: f32) {
     
     let osc_buf = match encoder::encode(&OscPacket::Message(OscMessage {
@@ -734,3 +736,5 @@ pub fn native_simulate_feature_osc_input(vc_state: tauri::State<'_, VCStateMutex
 
     let _ = simulation_sock.send_to(&osc_buf, self_osc_bind_address);
 }
+ *
+ */

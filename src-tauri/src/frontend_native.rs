@@ -132,9 +132,11 @@ pub fn clear_osc_config() -> Result<(), backend::VibeCheckFSError>{
 /*
  * Sends the specified OSC address / value to the app itself
  * Args: simulated_param_address, simulated_param_value
- */
+ * Removing this code for now
 #[tauri::command(async)]
 pub fn simulate_feature_osc_input(vc_state: tauri::State<'_, vcore::VCStateMutex>, simulated_param_address: String, simulated_param_value: f32) {
     trace!("simulate_feature_osc_input");
     vcore::native_simulate_feature_osc_input(vc_state, simulated_param_address, simulated_param_value)
 }
+ *
+ */
