@@ -29,6 +29,7 @@ ts-rs = {version = "6.2.1", features = ["serde-compat"] }
 log = "0.4.17"
 env_logger = "0.10.0"
 open = "3.2.0"
+tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "dev" }
 
 # Tauri dependencies
 tauri = { version = "1.2.3", features = ["api-all", "system-tray", "updater"] }

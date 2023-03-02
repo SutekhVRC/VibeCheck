@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 use tauri::{Manager, SystemTrayMenu};
-use log::{info, trace};
+use log::{info, trace, warn};
 //use env_logger;
 
 mod config;
@@ -24,9 +24,9 @@ fn main() {
 
     //tracing_subscriber::fmt::init();
     
-    //let mut log_builder = env_logger::builder();
-    //log_builder.filter(None, log::LevelFilter::Trace);
-    //log_builder.init();
+    let mut log_builder = env_logger::builder();
+    log_builder.filter(None, log::LevelFilter::Trace);
+    log_builder.init();
 
     let vibecheck_state_pointer = Arc::new(
         Mutex::new(
@@ -52,6 +52,11 @@ fn main() {
     .add_item(quit);
 
     let app = tauri::Builder::default()
+    .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        warn!("Another {} process mutex created.. Showing already running app.", app.package_info().name);
+        let window = app.get_window("main").unwrap();
+        window.show().unwrap();
+    }))
     .setup(|_app| {
 
         Ok(())
