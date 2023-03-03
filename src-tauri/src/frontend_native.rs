@@ -129,6 +129,16 @@ pub fn clear_osc_config() -> Result<(), backend::VibeCheckFSError>{
     vcore::native_clear_osc_config()
 }
 
+/* 
+ * Injects motor test values into a device feature directly.
+ */
+#[tauri::command(async)]
+pub fn simulate_device_feature(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, toy_sub_id: u8, feature_index: u32, float_level: f64) {
+    trace!("simulate_device_feature");
+    vcore::native_simulate_device_feature(vc_state, toy_id, toy_sub_id, feature_index, float_level)
+}
+
+
 /*
  * Sends the specified OSC address / value to the app itself
  * Args: simulated_param_address, simulated_param_value

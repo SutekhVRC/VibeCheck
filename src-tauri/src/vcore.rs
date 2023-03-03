@@ -5,15 +5,17 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
+use buttplug::core::message::ActuatorType;
 use log::{warn, error as logerr, info, trace};
 //use rosc::{OscMessage, encoder, OscPacket, OscType};
 use tauri::{AppHandle, Manager};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use parking_lot::Mutex;
-use crate::bluetooth;
-use crate::handling::{HandlerErr, toy_refresh, vc_disabled_osc_command_listen};
+use crate::{bluetooth, handling};
+use crate::handling::{HandlerErr, toy_refresh, vc_disabled_osc_command_listen, command_toy};
 use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter, FeToyEvent};
+use crate::toyops::VCFeatureType;
 use crate::vcerror::{backend, frontend};
 use crate::{
     util::get_user_home_dir,
@@ -699,6 +701,28 @@ pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
         }
     }
     return Ok(());
+}
+
+pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, toy_sub_id: u8, feature_index: u32, float_level: f64) {
+    
+    let vc_toys = {
+        let vc_lock = vc_state.0.lock();
+        vc_lock.toys.clone()
+    };
+    
+    for toy in vc_toys {
+        if toy.1.toy_id == toy_id && toy.1.sub_id == toy_sub_id {
+            for feature in toy.1.param_feature_map.features {
+                if feature.feature_index == feature_index {
+                    let handle_clone = toy.1.device_handle.clone();
+                    {
+                        let vc_lock = vc_state.0.lock();
+                        vc_lock.async_rt.spawn(command_toy(handle_clone, feature.feature_type, float_level, feature.feature_index, feature.flip_input_float, feature.feature_levels));
+                    }
+                }
+            }
+        }
+    }
 }
 
 /* Leaving this here in case of future use
