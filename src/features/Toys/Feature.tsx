@@ -5,9 +5,11 @@ import { Disclosure } from "@headlessui/react";
 
 export function Feature({
   toyId,
+  toySubId,
   feature,
 }: {
   toyId: number;
+  toySubId: number;
   feature: FeVCToyFeature;
 }) {
   return (
@@ -27,13 +29,17 @@ export function Feature({
               </div>
               <ChevronUpIcon
                 className={`${
-                  open ? "rotate-180 transform" : ""
+                  open && "rotate-180 transform"
                 } h-6 w-6 text-zinc-400`}
               />
             </div>
           </Disclosure.Button>
           <Disclosure.Panel>
-            <FeatureForm toyId={toyId} toyFeature={feature} />
+            <FeatureForm
+              toyId={toyId}
+              toySubId={toySubId}
+              toyFeature={feature}
+            />
           </Disclosure.Panel>
         </>
       )}
