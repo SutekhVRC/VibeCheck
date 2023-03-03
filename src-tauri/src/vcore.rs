@@ -5,17 +5,15 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
-use buttplug::core::message::ActuatorType;
 use log::{warn, error as logerr, info, trace};
 //use rosc::{OscMessage, encoder, OscPacket, OscType};
 use tauri::{AppHandle, Manager};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use parking_lot::Mutex;
-use crate::{bluetooth, handling};
+use crate::bluetooth;
 use crate::handling::{HandlerErr, toy_refresh, vc_disabled_osc_command_listen, command_toy};
 use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter, FeToyEvent};
-use crate::toyops::VCFeatureType;
 use crate::vcerror::{backend, frontend};
 use crate::{
     util::get_user_home_dir,
