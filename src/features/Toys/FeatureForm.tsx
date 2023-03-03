@@ -4,22 +4,24 @@ import { useMemo } from "react";
 import { useEffect, useState } from "react";
 import {
   ALTER_TOY,
-  ALTER_TOY_DEBOUNCE,
-  CLEAR_OSC_CONFIG,
+  DEBOUNCE_TIME,
   OSC_PARAM_PREFIX,
 } from "../../data/constants";
 import { round0 } from "../../utils";
 import type { FeVCToyFeature } from "../../../src-tauri/bindings/FeVCToyFeature";
 import Slider from "../../layout/Slider";
 import TooltipLabel from "../../layout/Tooltip/TooltipLabel";
+import useSimulate from "../../hooks/useSimulate";
 
 type ToyFeatureFormProps = {
   toyId: number;
+  toySubId: number;
   toyFeature: FeVCToyFeature;
 };
 
 export default function FeatureForm({
   toyId,
+  toySubId,
   toyFeature,
 }: ToyFeatureFormProps) {
   const { feature_levels: initLevels, ...initFeature } = toyFeature;
@@ -37,7 +39,7 @@ export default function FeatureForm({
       // Debounce text input
       const t = setTimeout(() => {
         alterToy(toyId, newFeature);
-      }, ALTER_TOY_DEBOUNCE);
+      }, DEBOUNCE_TIME);
       return () => clearTimeout(t);
     }
   }, [feature]);
@@ -47,7 +49,7 @@ export default function FeatureForm({
     // Debounce all level changes
     const t = setTimeout(() => {
       alterToy(toyId, newFeature);
-    }, ALTER_TOY_DEBOUNCE);
+    }, DEBOUNCE_TIME);
     return () => clearTimeout(t);
   }, [levels]);
 
@@ -72,6 +74,9 @@ export default function FeatureForm({
   function handleLevels(key: string, value: number) {
     setLevels({ ...levels, [key]: value });
   }
+
+  const { simulate, simulateHandler, simulateLevel, simulateLevelHandler } =
+    useSimulate(toyId, toySubId, toyFeature.feature_index);
 
   return (
     <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 p-4">
@@ -170,6 +175,25 @@ export default function FeatureForm({
       <div className="text-right">
         {round0.format(levels.maximum_level * 100)}
       </div>
+      <div className="h-2" />
+      <div />
+      <div />
+      <div />
+      <TooltipLabel text="Simulate" tooltip="Test feature power level." />
+      <input
+        type="checkbox"
+        name="simulate"
+        checked={simulate}
+        onChange={simulateHandler}
+      />
+      <Slider
+        min={0}
+        max={1}
+        step={0.01}
+        value={[simulateLevel]}
+        onValueChange={(e) => simulateLevelHandler(e[0])}
+      />
+      <div className="text-right">{round0.format(simulateLevel * 100)}</div>
     </div>
   );
 }

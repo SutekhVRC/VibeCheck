@@ -47,7 +47,11 @@ export default function Toys() {
                     key={`${toy.toy_id} ${feature.feature_type} ${feature.feature_index}`}
                   >
                     <hr className="border-1 border-zinc-800 m-1 border-opacity-75" />
-                    <Feature toyId={toy.toy_id} feature={feature} />
+                    <Feature
+                      toyId={toy.toy_id}
+                      toySubId={toy.sub_id}
+                      feature={feature}
+                    />
                   </div>
                 ))}
               </div>
