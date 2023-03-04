@@ -702,7 +702,7 @@ pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
     return Ok(());
 }
 
-pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, toy_sub_id: u8, feature_index: u32, feature_type: FeVCFeatureType, float_level: f64) {
+pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, feature_index: u32, feature_type: FeVCFeatureType, float_level: f64) {
     
     let vc_toys = {
         let vc_lock = vc_state.0.lock();
