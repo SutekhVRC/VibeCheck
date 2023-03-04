@@ -390,6 +390,9 @@ impl FeatureParamMap {
         let mut success = false;
         self.features.iter_mut().for_each(|f| {
             info!("Checking Loaded: [{}: {:?}] - Fe: [{}: {:?}]", f.feature_index, f.feature_type, fe_feature.feature_index, fe_feature.feature_type);
+            // Check that the index and type are the same
+            // Note that here there is an OR for when the feature type is a ScalarRotator
+            // May be a good idea in the future to create Scalar types and then convert the names in the frontend.
             if f.feature_index == fe_feature.feature_index
             && (f.feature_type == fe_feature.feature_type || f.feature_type == VCFeatureType::ScalarRotator && fe_feature.feature_type == FeVCFeatureType::Rotator) {
                 info!("FE Object and Loaded Object are Eq: {}: {:?}", f.feature_index, f.feature_type);

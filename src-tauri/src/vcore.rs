@@ -13,7 +13,8 @@ use tokio::task::JoinHandle;
 use parking_lot::Mutex;
 use crate::bluetooth;
 use crate::handling::{HandlerErr, toy_refresh, vc_disabled_osc_command_listen, command_toy};
-use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter, FeToyEvent};
+use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter, FeToyEvent, FeVCFeatureType};
+use crate::toyops::VCFeatureType;
 use crate::vcerror::{backend, frontend};
 use crate::{
     util::get_user_home_dir,
@@ -701,24 +702,30 @@ pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
     return Ok(());
 }
 
-pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, toy_sub_id: u8, feature_index: u32, float_level: f64) {
+pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, toy_sub_id: u8, feature_index: u32, feature_type: FeVCFeatureType, float_level: f64) {
     
     let vc_toys = {
         let vc_lock = vc_state.0.lock();
         vc_lock.toys.clone()
     };
     
-    for toy in vc_toys {
-        if toy.1.toy_id == toy_id && toy.1.sub_id == toy_sub_id {
-            for feature in toy.1.param_feature_map.features {
-                if feature.feature_index == feature_index {
-                    let handle_clone = toy.1.device_handle.clone();
-                    {
-                        let vc_lock = vc_state.0.lock();
-                        vc_lock.async_rt.spawn(command_toy(handle_clone, feature.feature_type, float_level, feature.feature_index, feature.flip_input_float, feature.feature_levels));
-                    }
-                }
+    let toy = match vc_toys.get(&toy_id) {
+        Some(toy) => toy,
+        None => return,
+    }.clone();
+
+    // Need to filter between ScalarCmd's and non ScalarCmd's
+    for feature in toy.param_feature_map.features {
+        // Check that feature index and feature type are the same.
+        // Have to do this due to feature type separation between FE and BE. And buttplug IO mixing scalar rotator and normal rotator commands.
+        // Could make this a bit simpler by creating ScalarTYPE types and converting their names in the frontend.
+        if feature.feature_index == feature_index && (feature.feature_type == feature_type || feature.feature_type == VCFeatureType::ScalarRotator && feature_type == FeVCFeatureType::Rotator){
+            let handle_clone = toy.device_handle.clone();
+            {
+                let vc_lock = vc_state.0.lock();
+                vc_lock.async_rt.spawn(command_toy(handle_clone, feature.feature_type, float_level, feature.feature_index, feature.flip_input_float, feature.feature_levels));
             }
+            return;
         }
     }
 }
