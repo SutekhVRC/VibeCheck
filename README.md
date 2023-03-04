@@ -24,6 +24,7 @@ Having issues? Check the [FAQ](./docs/Faq.md)
 - TutiDore: Frontend developer.
 - [DigiGhost](https://twitter.com/digi_ghost): Commissioned Artist (Icons and Banners).
 - [Tini](https://vrchat.com/home/user/usr_7d526959-f3ab-4226-aa82-dba613df998e): Helped with frontend UI mockups and testing.
+- [Buttplug IO developers!](https://buttplug.io/) For the amazing work they have put in to making Bluetooth sex toys more accessible for app developers!
 
 Thanks to the people below for testing and suggestions!
 
