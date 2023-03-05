@@ -15,13 +15,11 @@ import useSimulate from "../../hooks/useSimulate";
 
 type ToyFeatureFormProps = {
   toyId: number;
-  toySubId: number;
   toyFeature: FeVCToyFeature;
 };
 
 export default function FeatureForm({
   toyId,
-  toySubId,
   toyFeature,
 }: ToyFeatureFormProps) {
   const { feature_levels: initLevels, ...initFeature } = toyFeature;
@@ -76,7 +74,7 @@ export default function FeatureForm({
   }
 
   const { simulate, simulateHandler, simulateLevel, simulateLevelHandler } =
-    useSimulate(toyId, toySubId, toyFeature.feature_index);
+    useSimulate(toyId, toyFeature.feature_index, toyFeature.feature_type);
 
   return (
     <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 p-4">
