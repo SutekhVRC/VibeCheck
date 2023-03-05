@@ -1,8 +1,7 @@
 name: build
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build-tauri:
@@ -32,8 +31,8 @@ jobs:
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           # the action automatically replaces \_\_VERSION\_\_ with the app version
-          tagName: draft-release
-          releaseName: "TEMPLATE"
-          releaseBody: "This template build used tauri config __VERSION__"
+          tagName: __VERSION__-beta
+          releaseName: "__VERSION__ BETA"
+          releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false
