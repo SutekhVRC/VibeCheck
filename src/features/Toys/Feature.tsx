@@ -5,11 +5,9 @@ import { Disclosure } from "@headlessui/react";
 
 export function Feature({
   toyId,
-  toySubId,
   feature,
 }: {
   toyId: number;
-  toySubId: number;
   feature: FeVCToyFeature;
 }) {
   return (
@@ -35,11 +33,7 @@ export function Feature({
             </div>
           </Disclosure.Button>
           <Disclosure.Panel>
-            <FeatureForm
-              toyId={toyId}
-              toySubId={toySubId}
-              toyFeature={feature}
-            />
+            <FeatureForm toyId={toyId} toyFeature={feature} />
           </Disclosure.Panel>
         </>
       )}

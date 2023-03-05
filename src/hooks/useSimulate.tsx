@@ -1,12 +1,13 @@
 import { invoke } from "@tauri-apps/api";
 import type { ChangeEvent } from "react";
 import { useEffect, useState } from "react";
+import type { FeVCFeatureType } from "../../src-tauri/bindings/FeVCFeatureType";
 import { DEBOUNCE_TIME, SIMULATE_TOY_FEATURE } from "../data/constants";
 
 export default function useSimulate(
   toyId: number,
-  toySubId: number,
-  featureIndex: number
+  featureIndex: number,
+  featureType: FeVCFeatureType
 ) {
   const [simulate, setSimulate] = useState(false);
   const [simulateLevel, setSimulateLevel] = useState(0.5);
@@ -33,8 +34,8 @@ export default function useSimulate(
   async function invokeSimulation(floatLevel: number) {
     await invoke(SIMULATE_TOY_FEATURE, {
       toyId,
-      toySubId,
       featureIndex,
+      featureType,
       floatLevel,
     });
   }
