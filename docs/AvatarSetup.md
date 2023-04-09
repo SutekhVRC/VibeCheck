@@ -16,7 +16,7 @@ I have created some prefabs to make setup a bit more simple, if you don't want t
 
 - [Simple Contact Receiver](./AvatarSetup.md#simple-contact-receiver-simple)
 - [Constant system](./AvatarSetup.md#constant-to-float-conversion-constant)
-- [Contact rate system](./AvatarSetup.md#contact-rate-system-rate)
+- [Contact rate system (REMAKING In-Prog)](./AvatarSetup.md#contact-rate-system-rate)
 
 ## Custom setup
 
@@ -59,7 +59,7 @@ The constant system is great for when you just want to activate a toy to whateve
 10. **IMPORTANT:** For the Constant system to function correctly you will need to disable the "Smoothing" option for every feature you want to work.
 11. Once you have uploaded the avatar make sure to click the "Refresh OSC" button in VibeCheck (In settings). Then change out and back in to your avatar.
 
-## Contact rate system (Rate) (Incomplete)
+## Contact rate system (Rate) (Incomplete - Remaking)
 
 The contact rate system is a system I've been working on to allow a rate-like interaction with contacts. The faster you move a sender through the receivers the faster the motor speed will go. This system has an adjustment for the passive motor speed decrease period.
 
