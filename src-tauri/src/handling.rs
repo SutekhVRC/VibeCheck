@@ -220,6 +220,10 @@ pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, s
             info!("IDLE FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, feature_levels.idle_level);
             let _e = dev.scalar(&buttplug::client::ScalarCommand::ScalarMap(HashMap::from([(feature_index, (feature_levels.idle_level, actuator_type))]))).await;
 
+        } else if scalar_level > feature_levels.maximum_level {
+            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (feature_levels.maximum_level, actuator_type))]))).await;
+        } else if scalar_level < feature_levels.minimum_level {
+            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (feature_levels.minimum_level, actuator_type))]))).await;
         }
     } else {// FLOAT FLIPPED
         
@@ -235,6 +239,10 @@ pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, s
 
             info!("IDLE FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, flip_float64(feature_levels.idle_level));
             let _e = dev.scalar(&buttplug::client::ScalarCommand::ScalarMap(HashMap::from([(feature_index, (flip_float64(feature_levels.idle_level), actuator_type))]))).await;
+        } else if flipped_lvl < flip_float64(feature_levels.maximum_level) {
+            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (flip_float64(feature_levels.maximum_level), actuator_type))]))).await;
+        } else if flipped_lvl > flip_float64(feature_levels.minimum_level) {
+            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (flip_float64(feature_levels.minimum_level), actuator_type))]))).await;
         }
     }
 }
@@ -555,11 +563,18 @@ pub async fn command_toy(
         // We handle Rotator differently because it is not included in the Scalar feature set
         VCFeatureType::Rotator => {
 
+            // I think im going to convert this to match
             if !flip_float {
                 if float_level != 0.0 && float_level >= feature_levels.minimum_level && float_level <= feature_levels.maximum_level {
+                    // Do normal input
                     let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (float_level, true))]))).await;
                 } else if float_level == 0.0 {// if level is 0 put at idle
                     let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (feature_levels.idle_level, true))]))).await;
+                } else if float_level > feature_levels.maximum_level {
+                    // Do max
+                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (feature_levels.maximum_level, true))]))).await;
+                } else if float_level < feature_levels.minimum_level {
+                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (feature_levels.minimum_level, true))]))).await;
                 }
             } else {// FLOAT FLIPPED
                 
@@ -569,6 +584,10 @@ pub async fn command_toy(
                     let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flipped_lvl, true))]))).await;
                 } else if flipped_lvl == 1.0 {// if flipped level is 1.0 put at idle
                     let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flip_float64(feature_levels.idle_level), true))]))).await;
+                } else if flipped_lvl < flip_float64(feature_levels.maximum_level) {
+                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flip_float64(feature_levels.maximum_level), true))]))).await;
+                } else if flipped_lvl > flip_float64(feature_levels.minimum_level) {
+                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flip_float64(feature_levels.minimum_level), true))]))).await;
                 }
             }
         },
@@ -592,6 +611,10 @@ pub async fn command_toy(
                     let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, float_level))]))).await;
                 } else if float_level == 0.0 {// if level is 0 put at idle
                     let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, feature_levels.idle_level))]))).await;
+                } else if float_level > feature_levels.maximum_level {
+                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, feature_levels.maximum_level))]))).await;
+                } else if float_level < feature_levels.minimum_level {
+                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, feature_levels.minimum_level))]))).await;
                 }
             } else {// FLOAT FLIPPED
                 
@@ -601,6 +624,10 @@ pub async fn command_toy(
                     let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(float_level)))]))).await;
                 } else if flipped_lvl == 1.0 {// if flipped level is 1.0 put at idle
                     let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(feature_levels.idle_level)))]))).await;
+                } else if flipped_lvl < flip_float64(feature_levels.maximum_level) {
+                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(feature_levels.maximum_level)))]))).await;
+                } else if flipped_lvl > flip_float64(feature_levels.minimum_level) {
+                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(feature_levels.minimum_level)))]))).await;
                 }
             }
         }
