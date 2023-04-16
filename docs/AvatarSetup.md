@@ -5,6 +5,7 @@ VibeCheck isn't attached to any unity prefabs/setups. You can use VibeCheck with
 ## OSC
 
 - VibeCheck can be configured so that each feature/motor of a toy is assigned to different OSC addresses.
+- If you want a toy's feature/motor to use multiple OSC parameters, the best way to do this is to convert your animator logic and/or contact receiver scripts to all use the same OSC parameter and set that OSC parameter in VibeCheck.
 - VibeCheck only reads Float parameters.
 - If you add a parameter to an avatar remember to refresh the OSC config. I do this by deleting the OSC configuration files for my avatars and then changing out and back in to my avatar. The button in game never works for me.
 
