@@ -5,7 +5,7 @@ use ts_rs::TS;
 use core::fmt;
 use std::{collections::HashMap, sync::Arc, fs};
 
-use crate::{config::toy::VCToyConfig, frontend_types::{FeVCToyFeature, FeVCFeatureType, FeLevelTweaks}, util::{get_user_home_dir, file_exists}, vcerror};
+use crate::{config::toy::VCToyConfig, frontend_types::{FeVCToyFeature, FeVCFeatureType, FeLevelTweaks}, util::{file_exists, get_config_dir}, vcerror};
 
 #[derive(Clone, Debug)]
 pub struct VCToy {
@@ -133,8 +133,8 @@ impl VCToy {
         // - Transform Lovense Connect toys to load lovense configs
 
         let config_path = format!(
-            "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}.json",
-            get_user_home_dir(),
+            "{}\\ToyConfigs\\{}.json",
+            get_config_dir(),
             self.toy_name.replace("Lovense Connect ", "Lovense "),
         );
     
@@ -159,8 +159,8 @@ impl VCToy {
     // Save Toy config by name
     pub fn save_toy_config(&self) {
         let config_path = format!(
-            "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\ToyConfigs\\{}.json",
-            get_user_home_dir(),
+            "{}\\ToyConfigs\\{}.json",
+            get_config_dir(),
             self.toy_name.replace("Lovense Connect ", "Lovense "),
         );
         info!("Saving toy config to: {}", config_path);

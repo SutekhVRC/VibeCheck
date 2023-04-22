@@ -5,7 +5,7 @@ use log::{info, trace, error as logerr, warn};
 use crate::{util::{
     file_exists,
     path_exists,
-    get_user_home_dir,
+    get_config_dir,
 }};
 
 
@@ -35,10 +35,9 @@ pub struct VibeCheckConfig {
 }
 
 pub fn config_load() -> VibeCheckConfig {
-    let vc_root_dir = format!(
-        "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck",
-        get_user_home_dir()
-    );
+
+    let vc_root_dir = get_config_dir();
+
     let vc_config_file = format!("{}\\Config.json", vc_root_dir);
     let vc_toy_config_dir = format!("{}\\ToyConfigs", vc_root_dir);
 

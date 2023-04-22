@@ -15,9 +15,9 @@ use crate::bluetooth;
 use crate::handling::{HandlerErr, toy_refresh, vc_disabled_osc_command_listen, command_toy};
 use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter, FeToyEvent, FeVCFeatureType};
 use crate::toyops::VCFeatureType;
+use crate::util::{get_config_dir, get_user_home_dir};
 use crate::vcerror::{backend, frontend};
 use crate::{
-    util::get_user_home_dir,
     handling::{client_event_handler, toy_management_handler},
     config::{
         VibeCheckConfig,
@@ -593,8 +593,8 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::Vi
 
     match fs::write(
         format!(
-            "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\VibeCheck\\Config.json",
-            get_user_home_dir()
+            "{}\\Config.json",
+            get_config_dir()
         ),
         json_config_str,
     ) {
