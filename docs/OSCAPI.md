@@ -1,7 +1,7 @@
 # VibeCheck OSC API
 
 VibeCheck features an OSC API that listens while the app is enabled. At the moment the API is early in dev and has only two endpoints.
-To use the API the parameter on your avatar must be a synced parameter.
+To use the API, the parameter on your avatar must be a synced parameter.
 
 Synced parameters include:
 - Parameters listed in the VRCExpressionParameters script.
@@ -9,7 +9,7 @@ Synced parameters include:
 
 ## Endpoints
 
-### VibeCheck State
+### State
 
 Value Type: `Boolean`
 
@@ -25,7 +25,7 @@ Value Type: `Boolean`
 Parameter Address:
 `vibecheck/api/anatomy/<ANATOMY_TYPE>/enabled`
 
-Anatomy address parameter types:
+Anatomy address parameter types (Not case-sensitive):
 ```
 Anus
 Breasts
