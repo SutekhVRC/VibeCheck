@@ -75,6 +75,7 @@ impl VCToy {
                     &ActuatorType::Inflate => self.param_feature_map.features.push(VCToyFeature::new(format!("/avatar/parameters/{:?}_{}", VCFeatureType::Inflate, indexer), indexer, VCFeatureType::Inflate)),
                     &ActuatorType::Oscillate => self.param_feature_map.features.push(VCToyFeature::new(format!("/avatar/parameters/{:?}_{}", VCFeatureType::Oscillate, indexer), indexer, VCFeatureType::Oscillate)),
                     &ActuatorType::Position => self.param_feature_map.features.push(VCToyFeature::new(format!("/avatar/parameters/{:?}_{}", VCFeatureType::Position, indexer), indexer, VCFeatureType::Position)),
+                    &ActuatorType::Unknown => {},
                 }
                 indexer += 1;
             });
