@@ -134,13 +134,105 @@ pub fn config_load() -> VibeCheckConfig {
 
 
 pub mod toy {
+
+    use log::warn;
     use serde::{Serialize, Deserialize};
-    use crate::toyops::FeatureParamMap;
+    use crate::{toyops::FeatureParamMap, frontend_types::FeVCToyAnatomy};
+
+    #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
+    pub enum VCToyAnatomy {
+        Anus,
+        //Any, I forgot what the point of this was?
+        Breasts,
+        Buttocks,
+        Chest,
+        Clitoris,
+        Face,
+        Feet,
+        FootL,
+        FootR,
+        HandLeft,
+        HandRight,
+        Hands,
+        Labia,
+        Mouth,
+        #[default]
+        NA,
+        Nipples,
+        Penis,
+        Perineum,
+        Testicles,
+        Vagina,
+        Vulva,
+        Wrist,
+    }
+    
+    impl VCToyAnatomy {
+        pub fn get_anatomy(token: &String) -> Self {
+            match token.to_lowercase().as_str() {
+                "anus" => Self::Anus,
+                //"any" => Self::Any,
+                "breasts" => Self::Breasts,
+                "butt" | "buttocks" => Self::Buttocks,
+                "chest" => Self::Chest,
+                "clitoris" => Self::Clitoris,
+                "face" => Self::Face,
+                "feet" => Self::Feet,
+                "footl" => Self::FootL,
+                "footr" => Self::FootR,
+                "hands" => Self::Hands,
+                "handl" => Self::HandLeft,
+                "handr" => Self::HandRight,
+                "labia" => Self::Labia,
+                "mouth" => Self::Mouth,
+                "na" => Self::NA,
+                "nipples" => Self::Nipples,
+                "penis" => Self::Penis,
+                "perineum" => Self::Perineum,
+                "testicles" => Self::Testicles,
+                "vagina" => Self::Vagina,
+                "vulva" => Self::Vulva,
+                "wrist" => Self::Wrist,
+                _ => {
+                    warn!("Got \"{}\" for anatomy token.. Defaulting to Self::NA", token);
+                    Self::NA
+                }
+            }
+        }
+
+        pub fn to_fe(&self) -> FeVCToyAnatomy {
+            match self {
+                Self::Anus => FeVCToyAnatomy::Anus,
+                Self::Breasts => FeVCToyAnatomy::Breasts,
+                Self::Buttocks => FeVCToyAnatomy::Buttocks,
+                Self::Chest => FeVCToyAnatomy::Chest,
+                Self::Clitoris => FeVCToyAnatomy::Clitoris,
+                Self::Face => FeVCToyAnatomy::Face,
+                Self::Feet => FeVCToyAnatomy::Feet,
+                Self::FootL => FeVCToyAnatomy::FootL,
+                Self::FootR => FeVCToyAnatomy::FootR,
+                Self::HandLeft => FeVCToyAnatomy::HandLeft,
+                Self::HandRight => FeVCToyAnatomy::HandRight,
+                Self::Hands => FeVCToyAnatomy::Hands,
+                Self::Labia => FeVCToyAnatomy::Labia,
+                Self::Mouth => FeVCToyAnatomy::Mouth,
+                Self::NA => FeVCToyAnatomy::NA,
+                Self::Nipples => FeVCToyAnatomy::Nipples,
+                Self::Penis => FeVCToyAnatomy::Penis,
+                Self::Perineum => FeVCToyAnatomy::Perineum,
+                Self::Testicles => FeVCToyAnatomy::Testicles,
+                Self::Vagina => FeVCToyAnatomy::Vagina,
+                Self::Vulva => FeVCToyAnatomy::Vulva,
+                Self::Wrist => FeVCToyAnatomy::Wrist,
+            }
+        }
+    }
 
     #[derive(Debug, Serialize, Deserialize, Clone, Default)]
     pub struct VCToyConfig {
         pub toy_name: String,
         pub features: FeatureParamMap,
         pub osc_data: bool,
+        pub anatomy: VCToyAnatomy,
     }
 }
