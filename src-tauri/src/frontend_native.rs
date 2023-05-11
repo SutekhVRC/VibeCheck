@@ -4,7 +4,7 @@
  * 
  */
 
-use log::trace;
+ use log::{error as logerr, trace};
 use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink, FeVCFeatureType}, vcerror::{frontend, backend}};
 
 /*
@@ -104,7 +104,38 @@ pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, fe_
 #[tauri::command(async)]
 pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: tauri::AppHandle, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
     trace!("alter_toy({}, {:?})", toy_id, mutate);
-    vcore::native_alter_toy(vc_state, app_handle, toy_id, mutate)
+
+    let altered = {
+        let mut vc_lock = vc_state.0.lock();
+        if let Some(toy) = vc_lock.toys.get_mut(&toy_id) {
+
+            match mutate {
+                FeToyAlter::Feature(f) => {
+                    if !toy.param_feature_map.from_fe(f) {
+                        logerr!("Failed to convert FeVCToyFeature to VCToyFeature");
+                        return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
+                    } else {
+                        // If altering feature map suceeds write the data to the config
+                        toy.config.as_mut().unwrap().features = toy.param_feature_map.clone();
+                    }
+                },
+                FeToyAlter::OSCData(osc_data) => {
+                    toy.osc_data = osc_data;
+                    // Write the data to config
+                    toy.config.as_mut().unwrap().osc_data = osc_data;
+                }
+            }
+            // Return altered toy
+            toy.clone()
+        } else {
+            return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoToyIndex));
+        }
+    };
+
+    if vcore::native_alter_toy(vc_state, app_handle, altered).is_err() {
+        return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::TMESendFailure));
+    }
+    Ok(())
 }
 
 /*

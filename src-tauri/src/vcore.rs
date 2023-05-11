@@ -13,7 +13,7 @@ use tokio::task::JoinHandle;
 use parking_lot::Mutex;
 use crate::bluetooth;
 use crate::handling::{HandlerErr, toy_refresh, vc_disabled_osc_command_listen, command_toy};
-use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter, FeToyEvent, FeVCFeatureType};
+use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyEvent, FeVCFeatureType};
 use crate::toyops::VCFeatureType;
 use crate::util::{get_config_dir, get_user_home_dir};
 use crate::vcerror::{backend, frontend};
@@ -607,36 +607,8 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::Vi
     Ok(())
 }
 
-pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: tauri::AppHandle, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
+pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: tauri::AppHandle, altered: VCToy) -> Result<(), backend::ToyAlterError> {
 
-    let altered = {
-        let mut vc_lock = vc_state.0.lock();
-        if let Some(toy) = vc_lock.toys.get_mut(&toy_id) {
-
-            match mutate {
-                FeToyAlter::Feature(f) => {
-                    if !toy.param_feature_map.from_fe(f) {
-                        logerr!("Failed to convert FeVCToyFeature to VCToyFeature");
-                        return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
-                    } else {
-                        // If altering feature map suceeds write the data to the config
-                        toy.config.as_mut().unwrap().features = toy.param_feature_map.clone();
-                    }
-                },
-                FeToyAlter::OSCData(osc_data) => {
-                    toy.osc_data = osc_data;
-                    // Write the data to config
-                    toy.config.as_mut().unwrap().osc_data = osc_data;
-                }
-            }
-            // Return altered toy
-            toy.clone()
-        } else {
-            return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoToyIndex));
-        }
-    };
-
-    //save_toy_config(&altered.toy_name, altered.param_feature_map.clone());
     let alter_clone = altered.clone();
     info!("Altered toy: {:?}", altered);
     altered.save_toy_config();
@@ -651,6 +623,7 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
             FeVCToy {
                 toy_id: alter_clone.toy_id,
                 toy_name: alter_clone.toy_name,
+                toy_anatomy: alter_clone.config.as_ref().unwrap().anatomy.to_fe(),
                 battery_level: alter_clone.battery_level,
                 toy_connected: alter_clone.toy_connected,
                 features: alter_clone.param_feature_map.to_fe(),
@@ -663,7 +636,7 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
 
     match send_res {
         Ok(()) => Ok(()),
-        Err(_e) => Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::TMESendFailure)),
+        Err(_e) => Err(backend::ToyAlterError::TMESendFailure),
     }
 }
 
