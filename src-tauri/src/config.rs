@@ -226,6 +226,33 @@ pub mod toy {
                 Self::Wrist => FeVCToyAnatomy::Wrist,
             }
         }
+
+        pub fn from_fe(&mut self, anatomy_type: FeVCToyAnatomy) {
+            match anatomy_type {
+                FeVCToyAnatomy::Anus => *self = Self::Anus,
+                FeVCToyAnatomy::Breasts => *self = Self::Breasts,
+                FeVCToyAnatomy::Buttocks => *self = Self::Buttocks,
+                FeVCToyAnatomy::Chest => *self = Self::Chest,
+                FeVCToyAnatomy::Clitoris => *self = Self::Clitoris,
+                FeVCToyAnatomy::Face => *self = Self::Face,
+                FeVCToyAnatomy::Feet => *self = Self::Feet,
+                FeVCToyAnatomy::FootL => *self = Self::FootL,
+                FeVCToyAnatomy::FootR => *self = Self::FootR,
+                FeVCToyAnatomy::HandLeft => *self = Self::HandLeft,
+                FeVCToyAnatomy::HandRight => *self = Self::HandRight,
+                FeVCToyAnatomy::Hands => *self = Self::Hands,
+                FeVCToyAnatomy::Labia => *self = Self::Labia,
+                FeVCToyAnatomy::Mouth => *self = Self::Mouth,
+                FeVCToyAnatomy::NA => *self = Self::NA,
+                FeVCToyAnatomy::Nipples => *self = Self::Nipples,
+                FeVCToyAnatomy::Penis => *self = Self::Penis,
+                FeVCToyAnatomy::Perineum => *self = Self::Perineum,
+                FeVCToyAnatomy::Testicles => *self = Self::Testicles,
+                FeVCToyAnatomy::Vagina => *self = Self::Vagina,
+                FeVCToyAnatomy::Vulva => *self = Self::Vulva,
+                FeVCToyAnatomy::Wrist => *self = Self::Wrist,
+            }
+        }
     }
 
     #[derive(Debug, Serialize, Deserialize, Clone, Default)]
