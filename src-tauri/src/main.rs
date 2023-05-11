@@ -17,6 +17,7 @@ mod vcore;
 mod util;
 mod toyops;
 mod bluetooth;
+mod osc_api;
 mod frontend_types;
 mod vcerror;
 

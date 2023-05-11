@@ -1,11 +1,11 @@
 use buttplug::{core::message::{ActuatorType, ClientDeviceMessageAttributes}, client::ButtplugClientDevice};
-use log::{warn, info, error as logerr};
+use log::{warn, info, error as logerr, debug};
 use serde::{Serialize, Deserialize};
 use ts_rs::TS;
 use core::fmt;
 use std::{collections::HashMap, sync::Arc, fs};
 
-use crate::{config::toy::VCToyConfig, frontend_types::{FeVCToyFeature, FeVCFeatureType, FeLevelTweaks}, util::{file_exists, get_config_dir}, vcerror};
+use crate::{config::toy::{VCToyConfig, VCToyAnatomy}, frontend_types::{FeVCToyFeature, FeVCFeatureType, FeLevelTweaks}, util::{file_exists, get_config_dir}, vcerror};
 
 #[derive(Clone, Debug)]
 pub struct VCToy {
@@ -82,7 +82,7 @@ impl VCToy {
         }
         // Save toy on first time add
         //save_toy_config(&self.toy_name, self.param_feature_map.clone());
-        self.config = Some(VCToyConfig { toy_name: self.toy_name.clone(), features: self.param_feature_map.clone(), osc_data: false, });
+        self.config = Some(VCToyConfig { toy_name: self.toy_name.clone(), features: self.param_feature_map.clone(), osc_data: false, anatomy: VCToyAnatomy::default()});
         info!("Set toy config populate defaults");
         self.save_toy_config();
     }
@@ -118,7 +118,7 @@ impl VCToy {
                 // Feature count is the same so its probably safe to assume the toy config is intact
                 self.param_feature_map = conf.features.clone();
                 self.osc_data = conf.osc_data;
-                info!("Populated toy with loaded config");
+                info!("Populated toy with loaded config from file!");
             },
             // If config is not loaded populate the toy
             None => {
@@ -151,6 +151,7 @@ impl VCToy {
                     return Err(vcerror::backend::VibeCheckToyConfigError::DeserializeError);
                 }
             };
+            debug!("Loaded & parsed toy config successfully!");
             self.config = Some(config);
             return Ok(());
         }
@@ -186,7 +187,17 @@ impl VCToy {
         } else {
             warn!("save_toy_config() called while toy config is None");
         }
-    }        
+    }   
+
+    pub fn mutate_state_by_anatomy(&mut self, anatomy_type: &VCToyAnatomy, value: bool) -> bool {
+        if self.config.as_ref().unwrap().anatomy == *anatomy_type {
+            self.param_feature_map.features.iter_mut().for_each(|feature| {
+                feature.feature_enabled = value;
+            });
+            return true;
+        }
+        return false;
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]

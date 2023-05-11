@@ -33,6 +33,7 @@ use crate::frontend_types::FeCoreEvent;
 use crate::frontend_types::FeToyEvent;
 use crate::frontend_types::FeVCToy;
 use crate::frontend_types::FeScanEvent;
+use crate::osc_api::osc_api::vibecheck_osc_api;
 use crate::toyops::LevelTweaks;
 use crate::toyops::VCFeatureType;
 use crate::toyops::{VCToy, FeatureParamMap};
@@ -132,6 +133,7 @@ pub async fn client_event_handler(
                             FeVCToy {
                                 toy_id: toy.toy_id,
                                 toy_name: toy.toy_name.clone(),
+                                toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
                                 battery_level: toy.battery_level,
                                 toy_connected: toy.toy_connected,
                                 features: toy.param_feature_map.to_fe(),
@@ -665,38 +667,10 @@ fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: UnboundedSender<Toy
         // Send address and arg to broadcast channel
         // Die when channel disconnects
 
-        match recv_osc_cmd(&bind_sock) {
-            Some(mut msg) => {
-                if msg.addr == "/avatar/parameters/vibecheck/state" {
-                    if let Some(state_bool) = msg.args.pop().unwrap().bool() {
-                        if !state_bool {
-                            info!("State false: Sending Disable event");
-                            let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::Disable));
-                        }
-                    }
-                } else if msg.addr.starts_with("/avatar/change") {
-                    info!("Avatar Changed: Halting toy actions");
-                    {
-                        let vc_pointer = app_handle.state::<super::vcore::VCStateMutex>().0.clone();
-                        let vc_lock = vc_pointer.lock();
-                        let _ = vc_lock.async_rt.block_on(async {vc_lock.bp_client.as_ref().unwrap().stop_all_devices().await}).unwrap();
-                    }
-                    //let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::Disable));
-                } else {// Not a vibecheck OSC command, broadcast to toys
-                    if let Err(_) = toy_bcst_tx.send(ToySig::OSCMsg(msg)) {
-                        info!("BCST TX is disconnected. Shutting down toy input routine!");
-                        return; // Shutting down handler_routine
-                    }
-                }
-            }
-            None => {
-                if toy_bcst_tx.receiver_count() == 0 {
-                    info!(
-                        "BCST TX is disconnected (RECV C=0). Shutting down toy input routine!"
-                    );
-                    return;
-                }
-            }
+        if vibecheck_osc_api(&bind_sock, &app_handle, &toy_bcst_tx) {
+            continue;
+        } else {
+            return;
         }
     }
 }
@@ -765,7 +739,7 @@ pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OS
     }
 }
 
-fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
+pub fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
     let mut buf = [0u8; rosc::decoder::MTU];
 
     let (br, _a) = match sock.recv_from(&mut buf) {
@@ -844,6 +818,7 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
                             FeVCToy {
                                 toy_id: toy.toy_id,
                                 toy_name: toy.toy_name.clone(),
+                                toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
                                 battery_level: toy.battery_level,
                                 toy_connected: toy.toy_connected,
                                 features: toy.param_feature_map.to_fe(),
