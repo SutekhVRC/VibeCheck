@@ -63,11 +63,40 @@ pub enum FeSocialLink {
     Discord,
 }
 
+#[derive(Serialize, Deserialize, Clone, TS, Debug)]
+#[ts(export)]
+pub enum FeVCToyAnatomy {
+    Anus,
+    //Any, I forgot what the point of this was?
+    Breasts,
+    Buttocks,
+    Chest,
+    Clitoris,
+    Face,
+    Feet,
+    FootL,
+    FootR,
+    HandLeft,
+    HandRight,
+    Hands,
+    Labia,
+    Mouth,
+    NA,
+    Nipples,
+    Penis,
+    Perineum,
+    Testicles,
+    Vagina,
+    Vulva,
+    Wrist,
+}
+
 #[derive(Serialize, Clone, TS)]
 #[ts(export)]
 pub struct FeVCToy {
     pub toy_id: u32,
     pub toy_name: String,
+    pub toy_anatomy: FeVCToyAnatomy,
     pub battery_level: f64,
     pub toy_connected: bool,
     pub features: Vec<FeVCToyFeature>,
@@ -102,6 +131,7 @@ pub struct FeVCToyFeature {
 pub enum FeToyAlter {
     Feature(FeVCToyFeature),
     OSCData(bool),
+    Anatomy(FeVCToyAnatomy),
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, TS)]
