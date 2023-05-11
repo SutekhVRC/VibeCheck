@@ -123,6 +123,9 @@ pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: ta
                     toy.osc_data = osc_data;
                     // Write the data to config
                     toy.config.as_mut().unwrap().osc_data = osc_data;
+                },
+                FeToyAlter::Anatomy(anatomy_type) => {
+                    toy.config.as_mut().unwrap().anatomy.from_fe(anatomy_type);
                 }
             }
             // Return altered toy
