@@ -112,6 +112,7 @@ pub struct FeLevelTweaks {
     pub maximum_level: f64,
     pub idle_level: f64,
     pub smooth_rate: f64,
+    pub linear_position_speed: u32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]

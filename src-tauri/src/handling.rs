@@ -610,26 +610,26 @@ pub async fn command_toy(
 
             if !flip_float {
                 if float_level != 0.0 && float_level >= feature_levels.minimum_level && float_level <= feature_levels.maximum_level {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, float_level))]))).await;
+                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, float_level))]))).await;
                 } else if float_level == 0.0 {// if level is 0 put at idle
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, feature_levels.idle_level))]))).await;
+                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, feature_levels.idle_level))]))).await;
                 } else if float_level > feature_levels.maximum_level {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, feature_levels.maximum_level))]))).await;
+                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, feature_levels.maximum_level))]))).await;
                 } else if float_level < feature_levels.minimum_level {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, feature_levels.minimum_level))]))).await;
+                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, feature_levels.minimum_level))]))).await;
                 }
             } else {// FLOAT FLIPPED
                 
                 let flipped_lvl = flip_float64(float_level);
                 // Reverse logic here for flipped float
                 if flipped_lvl != 1.0 && flipped_lvl <= flip_float64(feature_levels.minimum_level) && flipped_lvl >= flip_float64(feature_levels.maximum_level) {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(float_level)))]))).await;
+                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, flip_float64(float_level)))]))).await;
                 } else if flipped_lvl == 1.0 {// if flipped level is 1.0 put at idle
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(feature_levels.idle_level)))]))).await;
+                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, flip_float64(feature_levels.idle_level)))]))).await;
                 } else if flipped_lvl < flip_float64(feature_levels.maximum_level) {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(feature_levels.maximum_level)))]))).await;
+                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, flip_float64(feature_levels.maximum_level)))]))).await;
                 } else if flipped_lvl > flip_float64(feature_levels.minimum_level) {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(feature_levels.minimum_level)))]))).await;
+                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, flip_float64(feature_levels.minimum_level)))]))).await;
                 }
             }
         }
@@ -786,7 +786,7 @@ pub fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
 pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, app_handle: AppHandle) {
 
     loop {
-        Delay::new(Duration::from_secs(60)).await;
+        Delay::new(Duration::from_secs(30)).await;
 
 
         let (toys, remote) = {

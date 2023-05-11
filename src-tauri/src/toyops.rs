@@ -307,11 +307,12 @@ pub struct LevelTweaks {
     pub maximum_level: f64,
     pub idle_level: f64,
     pub smooth_rate: f64,
+    pub linear_position_speed: u32,
 }
 
 impl Default for LevelTweaks {
     fn default() -> Self {
-        LevelTweaks { minimum_level: 0., maximum_level: 1., idle_level: 0., smooth_rate: 2.0 }
+        LevelTweaks { minimum_level: 0., maximum_level: 1., idle_level: 0., smooth_rate: 2. , linear_position_speed: 100}
     }
 }
 
@@ -321,6 +322,7 @@ impl LevelTweaks {
         self.maximum_level = fe_lt.maximum_level;
         self.minimum_level = fe_lt.minimum_level;
         self.smooth_rate = fe_lt.smooth_rate;
+        self.linear_position_speed = fe_lt.linear_position_speed;
     }
 
     pub fn to_fe(&self) -> FeLevelTweaks {
@@ -329,6 +331,7 @@ impl LevelTweaks {
             maximum_level: self.maximum_level,
             idle_level: self.idle_level,
             smooth_rate: self.smooth_rate,
+            linear_position_speed: self.linear_position_speed,
         }
     }
 }
