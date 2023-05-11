@@ -64,4 +64,10 @@ pub mod backend {
         ReadDirPathFailure,
         RemoveDirsFailure,
     }
+
+    pub enum ToyAlterError {
+        //NoFeatureIndex,
+        //NoToyIndex,
+        TMESendFailure
+    }
 }
