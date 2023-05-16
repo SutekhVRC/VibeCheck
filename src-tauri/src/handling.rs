@@ -273,6 +273,10 @@ pub async fn toy_management_handler(
              mut feature_map: FeatureParamMap| {
         // Read toy config here?
         async move {
+
+            // Put smooth_entries here
+            // Put rate tracking here
+            // Time tracking here?
             
             while dev.connected() {
                 //trace!("Toy recv loop start");

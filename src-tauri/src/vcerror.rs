@@ -66,6 +66,7 @@ pub mod backend {
     }
 
     pub enum ToyAlterError {
+        DisconToyFailure,
         //NoFeatureIndex,
         //NoToyIndex,
         TMESendFailure

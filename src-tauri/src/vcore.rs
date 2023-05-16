@@ -49,6 +49,7 @@ pub struct VibeCheckState {
 
     pub running: RunningState,
     pub toys: HashMap<u32, VCToy>,
+    //pub disconnected_toys: 
     //================================================
     // Handlers error recvr
     //inner_channels: Arc<RwLock<innerChannels>>,
@@ -638,6 +639,14 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
         Ok(()) => Ok(()),
         Err(_e) => Err(backend::ToyAlterError::TMESendFailure),
     }
+}
+
+pub fn native_alter_disconnected_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: tauri::AppHandle, altered: VCToy) -> Result<(), backend::ToyAlterError> {
+
+/* 
+ * For saving configs of offline toys I could use the native_alter_toy
+ */
+    Ok(())
 }
 
 pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {

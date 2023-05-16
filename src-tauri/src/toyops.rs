@@ -81,10 +81,10 @@ impl VCToy {
             });
             info!("Populated {} scalars", indexer);
         }
-        // Save toy on first time add
-        //save_toy_config(&self.toy_name, self.param_feature_map.clone());
+        
         self.config = Some(VCToyConfig { toy_name: self.toy_name.clone(), features: self.param_feature_map.clone(), osc_data: false, anatomy: VCToyAnatomy::default()});
         info!("Set toy config populate defaults");
+        // Save toy on first time add
         self.save_toy_config();
     }
 
