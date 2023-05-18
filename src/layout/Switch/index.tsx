@@ -1,26 +1,72 @@
 import { Switch as HeadlessSwitch } from "@headlessui/react";
 import Tooltip from "../Tooltip";
+import classNames from "classnames";
+
+const themeColors = {
+  "red-green": {
+    inactive: "bg-red-600",
+    active: "bg-green-600",
+  },
+  "yellow-blue": {
+    inactive: "bg-yellow-300",
+    active: "bg-blue-600",
+  },
+};
+
+const sizes = {
+  small: {
+    container: "h-4 w-8 border-2",
+    switch: "h-3 w-3",
+    translateLeft: "translate-x-4",
+  },
+  medium: {
+    container: "h-6 w-12 border-2",
+    switch: "h-5 w-5",
+    translateLeft: "translate-x-6",
+  },
+  large: {
+    container: "h-10 w-20 border-4",
+    switch: "h-8 w-8",
+    translateLeft: "translate-x-10",
+  },
+};
 
 export default function Switch({
   isEnabled,
   toggleIsEnabled,
+  tooltipPrefix = "",
+  theme = "red-green",
+  size = "medium",
 }: {
   isEnabled: boolean;
-  toggleIsEnabled: () => void;
+  toggleIsEnabled: (checked: boolean) => void;
+  tooltipPrefix?: string;
+  theme?: "red-green" | "yellow-blue";
+  size?: "small" | "medium" | "large";
 }) {
+  const selectedTheme = themeColors[theme];
   return (
-    <Tooltip text={isEnabled ? "OSC Enabled" : "OSC Disabled"} delay={250}>
+    <Tooltip
+      text={isEnabled ? `${tooltipPrefix}Enabled` : `${tooltipPrefix}Disabled`}
+      delay={250}
+    >
       <HeadlessSwitch
         checked={isEnabled}
         onChange={toggleIsEnabled}
-        className={`${isEnabled ? "bg-green-600" : "bg-red-600"}
-            relative inline-flex h-6 w-10 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out`}
+        className={classNames(
+          isEnabled ? selectedTheme.active : selectedTheme.inactive,
+          sizes[size].container,
+          "relative inline-flex cursor-pointer rounded-full border-transparent transition-colors duration-200 ease-in-out"
+        )}
       >
         <span className="sr-only">Enable</span>
         <span
           aria-hidden="true"
-          className={`${isEnabled ? "translate-x-4" : "translate-x-0"}
-            inline-block h-5 w-5 rounded-full bg-white transition duration-200 ease-in-out`}
+          className={classNames(
+            isEnabled ? sizes[size].translateLeft : "translate-x-0",
+            sizes[size].switch,
+            "inline-block rounded-full bg-white transition duration-200 ease-in-out"
+          )}
         />
       </HeadlessSwitch>
     </Tooltip>
