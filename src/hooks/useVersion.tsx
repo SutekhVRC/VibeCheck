@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 export function useVersion() {
   const [version, setVersion] = useState("");
   async function getVersion() {
-    await invoke<string>(VERSION).then((v) => setVersion(v));
+    await invoke<string>(VERSION).then((v:string) => setVersion(v));
   }
   useEffect(() => {
     getVersion();
