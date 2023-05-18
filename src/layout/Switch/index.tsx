@@ -4,20 +4,20 @@ import classNames from "classnames";
 
 const themeColors = {
   "red-green": {
-    active: "bg-red-600",
-    inactive: "bg-green-600",
+    inactive: "bg-red-600",
+    active: "bg-green-600",
   },
-  "blue-yellow": {
+  "yellow-blue": {
+    inactive: "bg-yellow-300",
     active: "bg-blue-600",
-    inactive: "bg-yellow-600",
   },
 };
 
 const sizes = {
   small: {
-    container: "h-4 w-6 border-2",
+    container: "h-4 w-8 border-2",
     switch: "h-3 w-3",
-    translateLeft: "translate-x-2",
+    translateLeft: "translate-x-4",
   },
   medium: {
     container: "h-6 w-12 border-2",
@@ -33,18 +33,23 @@ const sizes = {
 
 export default function Switch({
   isEnabled,
+  toggleIsEnabled,
+  tooltipPrefix = "",
   theme = "red-green",
   size = "medium",
-  toggleIsEnabled,
 }: {
   isEnabled: boolean;
-  theme?: "red-green" | "blue-yellow";
+  toggleIsEnabled: (checked: boolean) => void;
+  tooltipPrefix?: string;
+  theme?: "red-green" | "yellow-blue";
   size?: "small" | "medium" | "large";
-  toggleIsEnabled: () => void;
 }) {
   const selectedTheme = themeColors[theme];
   return (
-    <Tooltip text={isEnabled ? "OSC Enabled" : "OSC Disabled"} delay={250}>
+    <Tooltip
+      text={isEnabled ? `${tooltipPrefix}Enabled` : `${tooltipPrefix}Disabled`}
+      delay={250}
+    >
       <HeadlessSwitch
         checked={isEnabled}
         onChange={toggleIsEnabled}

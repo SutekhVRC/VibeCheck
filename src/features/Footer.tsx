@@ -45,7 +45,11 @@ export function Footer() {
             canUpdate={canUpdate}
           />
         )}
-        <Switch isEnabled={isEnabled} toggleIsEnabled={toggleIsEnabled} />
+        <Switch
+          isEnabled={isEnabled}
+          toggleIsEnabled={toggleIsEnabled}
+          tooltipPrefix="OSC "
+        />
       </div>
       {version}
       <div className="flex justify-around items-center">

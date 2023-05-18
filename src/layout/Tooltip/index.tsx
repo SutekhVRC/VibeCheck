@@ -16,7 +16,7 @@ export default function Tooltip({
         <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
         <RadixTooltip.Portal>
           <RadixTooltip.Content
-            className="rounded-md text-gray-50 bg-gray-600 pl-3 pr-3 max-w-md z-50"
+            className="rounded-md text-gray-50 bg-gray-600 pl-3 pr-3 max-w-md z-50 cursor-pointer pointer-events-none"
             sideOffset={5}
           >
             {text}

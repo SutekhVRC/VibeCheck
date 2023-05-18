@@ -9,6 +9,7 @@ import Modal from "../layout/Modal";
 import UpdateButton from "../components/UpdateButton";
 import TooltipLabel from "../layout/Tooltip/TooltipLabel";
 import Tooltip from "../layout/Tooltip";
+import Switch from "../layout/Switch";
 
 type settingsDialogProps = {
   isOpen: boolean;
@@ -29,8 +30,14 @@ export default function Config({
     setNewConfig({ ...newConfig, [e.target.name]: e.target.value });
   };
 
-  const onCheck = (e: ChangeEvent<HTMLInputElement>) => {
-    setNewConfig({ ...newConfig, [e.target.name]: e.target.checked });
+  const onCheckSwitch = (checked: boolean, name: keyof FeVibeCheckConfig) => {
+    setNewConfig({ ...newConfig, [name]: checked });
+  };
+
+  const handleLcOverride = () => {
+    if (newConfig.lc_override == null)
+      setNewConfig({ ...newConfig, lc_override: "127.0.0.1" });
+    else setNewConfig({ ...newConfig, lc_override: null });
   };
 
   const onChangeNetworking = (e: ChangeEvent<HTMLInputElement>) => {
@@ -68,7 +75,7 @@ export default function Config({
   return (
     <Modal title="Config" isOpen={isOpen} onClose={onClose}>
       <form id="config" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-2 gap-y-2 justify-items-end my-4">
+        <div className="grid grid-cols-[minmax(0,_6fr)_minmax(0,_4fr)_minmax(0,_1fr)] gap-3 my-4 items-center">
           <TooltipLabel text="OSC Bind" tooltip="OSC Receive Port" />
           <input
             name="bind"
@@ -85,6 +92,7 @@ export default function Config({
               (e.target as HTMLInputElement).setCustomValidity("")
             }
           />
+          <div />
           <TooltipLabel text="OSC Remote" tooltip="OSC Send Port" />
           <input
             name="remote"
@@ -101,70 +109,70 @@ export default function Config({
               (e.target as HTMLInputElement).setCustomValidity("")
             }
           />
+          <div />
           <TooltipLabel
             text="Lovense Connect Override"
             tooltip="Override and force the Lovense Connect host to connect to."
           />
-          <div className="">
+          {newConfig.lc_override == null ? (
+            <div />
+          ) : (
             <input
-              type="checkbox"
-              checked={newConfig.lc_override != null}
-              onChange={(e) =>
-                setNewConfig((v) => {
-                  return {
-                    ...v,
-                    lc_override: e.target.checked ? "127.0.0.1" : null,
-                  };
-                })
+              name="lc_override"
+              className="text-zinc-800"
+              value={newConfig.lc_override}
+              onChange={onChange}
+              pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$`}
+              onInvalid={(e) =>
+                (e.target as HTMLInputElement).setCustomValidity(
+                  "Enter valid IP"
+                )
+              }
+              onInput={(e) =>
+                (e.target as HTMLInputElement).setCustomValidity("")
               }
             />
-            {newConfig.lc_override != null && (
-              <input
-                name="lc_override"
-                className="text-zinc-800 ml-2"
-                value={newConfig.lc_override}
-                onChange={onChange}
-                pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$`}
-                onInvalid={(e) =>
-                  (e.target as HTMLInputElement).setCustomValidity(
-                    "Enter valid IP"
-                  )
-                }
-                onInput={(e) =>
-                  (e.target as HTMLInputElement).setCustomValidity("")
-                }
-              />
-            )}
-          </div>
+          )}
+          <Switch
+            isEnabled={newConfig.lc_override != null}
+            toggleIsEnabled={handleLcOverride}
+            size="small"
+          />
           <TooltipLabel
             text="Scan On Disconnect"
             tooltip="Automatically start scanning when a toy disconnects."
           />
-          <input
-            name="scan_on_disconnect"
-            type="checkbox"
-            checked={newConfig.scan_on_disconnect}
-            onChange={onCheck}
+          <div />
+          <Switch
+            isEnabled={newConfig.scan_on_disconnect}
+            toggleIsEnabled={(checked: boolean) =>
+              onCheckSwitch(checked, "scan_on_disconnect")
+            }
+            size="small"
           />
           <TooltipLabel
             text="Minimize On Exit"
             tooltip="Minimize VibeCheck instead of exiting."
           />
-          <input
-            name="minimize_on_exit"
-            type="checkbox"
-            checked={newConfig.minimize_on_exit}
-            onChange={onCheck}
+          <div />
+          <Switch
+            isEnabled={newConfig.minimize_on_exit}
+            toggleIsEnabled={(checked: boolean) =>
+              onCheckSwitch(checked, "minimize_on_exit")
+            }
+            size="small"
           />
           <TooltipLabel
             text="Desktop Notifications"
             tooltip="Notifications for toy connect and disconnect."
           />
-          <input
-            name="desktop_notifications"
-            type="checkbox"
-            checked={newConfig.desktop_notifications}
-            onChange={onCheck}
+          <div />
+          <Switch
+            isEnabled={newConfig.desktop_notifications}
+            toggleIsEnabled={(checked: boolean) =>
+              onCheckSwitch(checked, "desktop_notifications")
+            }
+            size="small"
           />
         </div>
       </form>
