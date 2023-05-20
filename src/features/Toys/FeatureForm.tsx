@@ -54,10 +54,14 @@ export default function FeatureForm({
   }, [levels]);
 
   async function alterToy(toyId: number, newFeature: FeVCToyFeature) {
-    await invoke(ALTER_TOY, {
-      toyId: toyId,
-      mutate: { Feature: newFeature },
-    });
+    try {
+      await invoke(ALTER_TOY, {
+        toyId: toyId,
+        mutate: { Feature: newFeature },
+      });
+    } catch (e) {
+      alert(e);
+    }
   }
 
   const onCheckSwitch = (checked: boolean, name: keyof FeVCToyFeature) => {

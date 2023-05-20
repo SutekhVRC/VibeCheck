@@ -31,12 +31,16 @@ export default function useSimulate(
   }, [simulate, simulateLevel]);
 
   async function invokeSimulation(floatLevel: number) {
-    await invoke(SIMULATE_TOY_FEATURE, {
-      toyId,
-      featureIndex,
-      featureType,
-      floatLevel,
-    });
+    try {
+      await invoke(SIMULATE_TOY_FEATURE, {
+        toyId,
+        featureIndex,
+        featureType,
+        floatLevel,
+      });
+    } catch (e) {
+      alert(e);
+    }
   }
 
   return { simulate, simulateHandler, simulateLevel, simulateLevelHandler };
