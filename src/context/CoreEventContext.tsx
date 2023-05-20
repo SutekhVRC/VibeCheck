@@ -48,7 +48,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
   async function enable() {
     await invoke(ENABLE)
       .then(() => setIsEnabled(true))
-      .catch((e) => alert(e));
+      .catch((e: string) => alert(e));
   }
 
   async function stopScanAndDisable() {
@@ -116,7 +116,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
   // Not sure where else to put it
   async function refreshConfig() {
     await invoke<FeVibeCheckConfig>(GET_CONFIG)
-      .then((r) => setConfig(r))
+      .then((r: FeVibeCheckConfig) => setConfig(r))
       .catch(() => setConfig(null));
   }
   useEffect(() => {

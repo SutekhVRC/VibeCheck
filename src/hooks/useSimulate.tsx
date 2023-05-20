@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api";
-import type { ChangeEvent } from "react";
 import { useEffect, useState } from "react";
 import type { FeVCFeatureType } from "../../src-tauri/bindings/FeVCFeatureType";
 import { DEBOUNCE_TIME, SIMULATE_TOY_FEATURE } from "../data/constants";
@@ -12,8 +11,8 @@ export default function useSimulate(
   const [simulate, setSimulate] = useState(false);
   const [simulateLevel, setSimulateLevel] = useState(0.5);
 
-  function simulateHandler(e: ChangeEvent<HTMLInputElement>) {
-    setSimulate(e.target.checked);
+  function simulateHandler() {
+    setSimulate((b) => !b);
   }
 
   function simulateLevelHandler(e: number) {

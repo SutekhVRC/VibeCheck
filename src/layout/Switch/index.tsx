@@ -1,5 +1,4 @@
 import { Switch as HeadlessSwitch } from "@headlessui/react";
-import Tooltip from "../Tooltip";
 import classNames from "classnames";
 
 const themeColors = {
@@ -34,41 +33,34 @@ const sizes = {
 export default function Switch({
   isEnabled,
   toggleIsEnabled,
-  tooltipPrefix = "",
   theme = "red-green",
   size = "medium",
 }: {
   isEnabled: boolean;
   toggleIsEnabled: (checked: boolean) => void;
-  tooltipPrefix?: string;
   theme?: "red-green" | "yellow-blue";
   size?: "small" | "medium" | "large";
 }) {
   const selectedTheme = themeColors[theme];
   return (
-    <Tooltip
-      text={isEnabled ? `${tooltipPrefix}Enabled` : `${tooltipPrefix}Disabled`}
-      delay={250}
+    <HeadlessSwitch
+      checked={isEnabled}
+      onChange={toggleIsEnabled}
+      className={classNames(
+        isEnabled ? selectedTheme.active : selectedTheme.inactive,
+        sizes[size].container,
+        "relative inline-flex cursor-pointer rounded-full border-transparent transition-colors duration-200 ease-in-out"
+      )}
     >
-      <HeadlessSwitch
-        checked={isEnabled}
-        onChange={toggleIsEnabled}
+      <span className="sr-only">Enable</span>
+      <span
+        aria-hidden="true"
         className={classNames(
-          isEnabled ? selectedTheme.active : selectedTheme.inactive,
-          sizes[size].container,
-          "relative inline-flex cursor-pointer rounded-full border-transparent transition-colors duration-200 ease-in-out"
+          isEnabled ? sizes[size].translateLeft : "translate-x-0",
+          sizes[size].switch,
+          "inline-block rounded-full bg-white transition duration-200 ease-in-out"
         )}
-      >
-        <span className="sr-only">Enable</span>
-        <span
-          aria-hidden="true"
-          className={classNames(
-            isEnabled ? sizes[size].translateLeft : "translate-x-0",
-            sizes[size].switch,
-            "inline-block rounded-full bg-white transition duration-200 ease-in-out"
-          )}
-        />
-      </HeadlessSwitch>
-    </Tooltip>
+      />
+    </HeadlessSwitch>
   );
 }
