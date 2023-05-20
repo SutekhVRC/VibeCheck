@@ -15,7 +15,11 @@ export default function ExternalLogo({
   tooltip,
 }: ExternalLogoProps) {
   async function openBrowser() {
-    await invoke(OPEN_BROWSER, { link: link });
+    try {
+      await invoke(OPEN_BROWSER, { link: link });
+    } catch (e) {
+      alert(e);
+    }
   }
   return (
     <Tooltip text={tooltip}>

@@ -52,10 +52,14 @@ export default function FeatureForm({
   }, [levels]);
 
   async function alterToy(toyId: number, newFeature: FeVCToyFeature) {
-    await invoke(ALTER_TOY, {
-      toyId: toyId,
-      mutate: { Feature: newFeature },
-    });
+    try {
+      await invoke(ALTER_TOY, {
+        toyId: toyId,
+        mutate: { Feature: newFeature },
+      });
+    } catch (e) {
+      alert(e);
+    }
   }
 
   function handleFeatureCheckbox(e: ChangeEvent<HTMLInputElement>) {

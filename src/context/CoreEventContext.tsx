@@ -46,15 +46,22 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
   );
 
   async function enable() {
-    await invoke(ENABLE)
-      .then(() => setIsEnabled(true))
-      .catch((e) => alert(e));
+    try {
+      await invoke(ENABLE);
+      setIsEnabled(true);
+    } catch (e) {
+      alert(e);
+    }
   }
 
   async function stopScanAndDisable() {
-    stopScan();
-    await invoke(DISABLE);
-    setIsEnabled(false);
+    try {
+      stopScan();
+      await invoke(DISABLE);
+      setIsEnabled(false);
+    } catch (e) {
+      alert(e);
+    }
   }
 
   async function toggleIsEnabled() {
@@ -62,14 +69,22 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
   }
 
   async function enableAndStartScan() {
-    enable();
-    await invoke(START_SCAN);
-    setIsScanning(true);
+    try {
+      enable();
+      await invoke(START_SCAN);
+      setIsScanning(true);
+    } catch (e) {
+      alert(e);
+    }
   }
 
   async function stopScan() {
-    await invoke(STOP_SCAN);
-    setIsScanning(false);
+    try {
+      await invoke(STOP_SCAN);
+      setIsScanning(false);
+    } catch (e) {
+      alert(e);
+    }
   }
 
   function toggleScan() {
@@ -115,9 +130,12 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
   // Config here because I don't want the async refresh inside the Settings Dialog
   // Not sure where else to put it
   async function refreshConfig() {
-    await invoke<FeVibeCheckConfig>(GET_CONFIG)
-      .then((r) => setConfig(r))
-      .catch(() => setConfig(null));
+    try {
+      const config = await invoke<FeVibeCheckConfig>(GET_CONFIG);
+      setConfig(config);
+    } catch {
+      setConfig(null);
+    }
   }
   useEffect(() => {
     refreshConfig();

@@ -25,6 +25,7 @@ export default function Config({
   canUpdate,
 }: settingsDialogProps) {
   const [newConfig, setNewConfig] = useState<FeVibeCheckConfig>(config);
+  const [refreshDisabled, setRefreshDisabled] = useState(false);
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
     setNewConfig({ ...newConfig, [e.target.name]: e.target.value });
@@ -51,13 +52,21 @@ export default function Config({
   };
 
   async function saveConfig() {
-    await invoke(SET_CONFIG, { feVcConfig: newConfig });
+    try {
+      await invoke(SET_CONFIG, { feVcConfig: newConfig });
+      setRefreshDisabled(false);
+    } catch (e) {
+      alert(e);
+    }
   }
 
   async function refreshConfig() {
-    await invoke(CLEAR_OSC_CONFIG)
-      .then(() => alert("Avatar OSC configs have been cleared."))
-      .catch(() => alert("Failed to clear avatar OSC configs!"));
+    try {
+      await invoke(CLEAR_OSC_CONFIG);
+      setRefreshDisabled(true);
+    } catch (e) {
+      alert(`Failed to clear avatar OSC configs!\n${e}`);
+    }
   }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -186,7 +195,8 @@ export default function Config({
         </button>
         <Tooltip text="Force refresh OSC avatar parameters by deleting VRChat OSC config folders. The in-game button does not work.">
           <button
-            className="rounded-md bg-zinc-100 px-4 text-zinc-900 hover:bg-zinc-200"
+            disabled={refreshDisabled}
+            className="rounded-md bg-zinc-100 px-4 text-zinc-900 hover:bg-zinc-200 disabled:text-zinc-300"
             onClick={refreshConfig}
           >
             Refresh OSC

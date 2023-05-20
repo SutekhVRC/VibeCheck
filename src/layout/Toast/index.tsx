@@ -27,7 +27,7 @@ export default function Toast({
         {buttonText}
       </button>
       <RadixToast.Root
-        className="ToastRoot bg-zinc-100 text-zinc-900 rounded-md px-2 fixed right-2 bottom-2"
+        className="bg-zinc-100 text-zinc-900 rounded-md px-2 fixed right-2 bottom-2"
         open={open}
         onOpenChange={setOpen}
       >
