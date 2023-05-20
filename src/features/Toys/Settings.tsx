@@ -4,6 +4,7 @@ import type { FeVCToy } from "../../../src-tauri/bindings/FeVCToy";
 import { ALTER_TOY } from "../../data/constants";
 import Modal from "../../layout/Modal";
 import Toast from "../../layout/Toast";
+import Switch from "../../layout/Switch";
 
 export default function Settings({
   onClose,
@@ -40,13 +41,14 @@ export default function Settings({
 
   return (
     <Modal onClose={handleOnClose} title={toy.toy_name}>
-      <div className="grid grid-cols-2 gap-y-2 justify-items-end">
-        <label className="justify-self-start">OSC Data</label>
-        <input
-          type="checkbox"
-          checked={oscData}
-          onChange={() => setOscData((e) => !e)}
+      <div className="grid grid-cols-[1fr,_4fr] gap-y-2 items-center pb-12">
+        <Switch
+          size="small"
+          isEnabled={oscData}
+          toggleIsEnabled={(e: boolean) => setOscData(e)}
         />
+        <label>OSC Data</label>
+        <div />
       </div>
       <div>
         <div className="flex justify-center">
