@@ -9,6 +9,7 @@ export default function Batteryicon({ battery }: { battery: number }) {
   return (
     <Tooltip text={`${battery * 100}%`}>
       <div
+        className="cursor-help"
         style={{
           color: `hsl(${battery * 120}, 75%, 50%)`,
         }}

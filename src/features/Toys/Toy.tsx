@@ -77,7 +77,7 @@ function ToyInfo({
     <div className="flex gap-x-4 items-center">
       {nameInfo.logo != undefined && (
         <Tooltip text={nameInfo.fullName}>
-          <img className="max-h-6 rounded-lg" src={nameInfo.logo} />
+          <img className="max-h-6 rounded-lg cursor-help" src={nameInfo.logo} />
         </Tooltip>
       )}
       <BatteryIcon battery={battery} />
