@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
 import type { FeVCToy } from "../../../src-tauri/bindings/FeVCToy";
-import { ALTER_TOY } from "../../data/constants";
+import { ALTER_TOY, OSC_PARAM_PREFIX } from "../../data/constants";
 import Toast from "../../layout/Toast";
 import Switch from "../../layout/Switch";
 
@@ -12,7 +12,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
     .replace("Lovense Connect", "Lovense")
     .replaceAll(" ", "_")
     .toLowerCase();
-  const osc_data_addr = `${parsed_toy_name}/${toy.sub_id}/battery`;
+  const osc_data_addr = `${OSC_PARAM_PREFIX}${parsed_toy_name}/${toy.sub_id}/battery`;
 
   useEffect(() => {
     async function saveConfig(newOSCDataState: boolean) {
