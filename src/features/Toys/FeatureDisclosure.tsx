@@ -1,4 +1,4 @@
-import { ChevronUpIcon } from "@heroicons/react/20/solid";
+import { ChevronUpIcon } from "@heroicons/react/24/solid";
 import classNames from "classnames";
 import { AnimatePresence, motion } from "framer-motion";
 import { ReactNode, useState } from "react";

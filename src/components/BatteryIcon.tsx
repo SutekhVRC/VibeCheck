@@ -2,7 +2,7 @@ import {
   Battery0Icon,
   Battery100Icon,
   Battery50Icon,
-} from "@heroicons/react/20/solid";
+} from "@heroicons/react/24/solid";
 import Tooltip from "../layout/Tooltip";
 
 export default function Batteryicon({ battery }: { battery: number }) {
