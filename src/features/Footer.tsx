@@ -45,7 +45,11 @@ export function Footer() {
             canUpdate={canUpdate}
           />
         )}
-        <Switch isEnabled={isEnabled} toggleIsEnabled={toggleIsEnabled} />
+        <Switch
+          theme="red-green"
+          isEnabled={isEnabled}
+          toggleIsEnabled={toggleIsEnabled}
+        />
       </div>
       {version}
       <div className="flex justify-around items-center">
