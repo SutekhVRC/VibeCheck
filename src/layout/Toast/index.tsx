@@ -1,14 +1,15 @@
 import * as RadixToast from "@radix-ui/react-toast";
 import { useState } from "react";
-import "./Toast.css";
 
 export default function Toast({
   buttonText,
-  toastText,
+  title,
+  description,
   onClick,
 }: {
   buttonText: string;
-  toastText: string;
+  title: string;
+  description: string;
   onClick: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -27,11 +28,12 @@ export default function Toast({
         {buttonText}
       </button>
       <RadixToast.Root
-        className="bg-zinc-100 text-zinc-900 rounded-md px-2 fixed right-2 bottom-2"
+        className="bg-zinc-100 text-zinc-900 rounded-md px-2 fixed right-2 bottom-2 z-50"
         open={open}
         onOpenChange={setOpen}
       >
-        <RadixToast.Title>{toastText}</RadixToast.Title>
+        <RadixToast.Title>{title}</RadixToast.Title>
+        <RadixToast.Description>{description}</RadixToast.Description>
       </RadixToast.Root>
       <RadixToast.Viewport className="absolute" />
     </RadixToast.Provider>

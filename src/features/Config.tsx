@@ -82,7 +82,7 @@ export default function Config({
   }, [isOpen]);
 
   return (
-    <Modal title="Config" isOpen={isOpen} onClose={onClose}>
+    <Modal title="Vibecheck Config" isOpen={isOpen} onClose={onClose}>
       <form id="config" onSubmit={handleSubmit}>
         <div className="grid grid-cols-[minmax(0,_6fr)_minmax(0,_4fr)_minmax(0,_1fr)] gap-3 my-4 items-center">
           <TooltipLabel text="OSC Bind" tooltip="OSC Receive Port" />
