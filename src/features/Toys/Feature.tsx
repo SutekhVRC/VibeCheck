@@ -15,7 +15,10 @@ export function Feature({
   const [isOpen, setIsOpen] = useState(false);
   return (
     <>
-      <button className="flex justify-between items-center pl-2 pr-2" onClick={() => setIsOpen(b => !b)}>
+      <button
+        className="flex justify-between items-center pl-2 pr-2"
+        onClick={() => setIsOpen((b) => !b)}
+      >
         <div className="flex items-center">
           <div
             className={

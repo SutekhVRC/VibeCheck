@@ -13,6 +13,7 @@ import Slider from "../../layout/Slider";
 import TooltipLabel from "../../layout/Tooltip/TooltipLabel";
 import useSimulate from "../../hooks/useSimulate";
 import { motion } from "framer-motion";
+import Switch from "../../layout/Switch";
 
 type ToyFeatureFormProps = {
   toyId: number;
@@ -59,9 +60,9 @@ export default function FeatureForm({
     });
   }
 
-  function handleFeatureCheckbox(e: ChangeEvent<HTMLInputElement>) {
-    setFeature({ ...feature, [e.target.name]: e.target.checked });
-  }
+  const onCheckSwitch = (checked: boolean, name: keyof FeVCToyFeature) => {
+    setFeature({ ...feature, [name]: checked });
+  };
 
   function handleOscParam(e: ChangeEvent<HTMLInputElement>) {
     setFeature({
@@ -89,11 +90,12 @@ export default function FeatureForm({
     >
       <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 p-4">
         <TooltipLabel text="Enabled" tooltip="Enable/Disable this feature." />
-        <input
-          type="checkbox"
-          name="feature_enabled"
-          checked={feature.feature_enabled}
-          onChange={handleFeatureCheckbox}
+        <Switch
+          size="small"
+          isEnabled={feature.feature_enabled}
+          toggleIsEnabled={(checked: boolean) =>
+            onCheckSwitch(checked, "feature_enabled")
+          }
         />
         <div></div>
         <div></div>
@@ -113,11 +115,12 @@ export default function FeatureForm({
           text="Flip Input"
           tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
         />
-        <input
-          type="checkbox"
-          name="flip_input_float"
-          checked={feature.flip_input_float}
-          onChange={handleFeatureCheckbox}
+        <Switch
+          size="small"
+          isEnabled={feature.flip_input_float}
+          toggleIsEnabled={(checked: boolean) =>
+            onCheckSwitch(checked, "flip_input_float")
+          }
         />
         <div></div>
         <div></div>
@@ -125,11 +128,12 @@ export default function FeatureForm({
           text="Smoothing"
           tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
         />
-        <input
-          type="checkbox"
-          name="smooth_enabled"
-          checked={feature.smooth_enabled}
-          onChange={handleFeatureCheckbox}
+        <Switch
+          size="small"
+          isEnabled={feature.smooth_enabled}
+          toggleIsEnabled={(checked: boolean) =>
+            onCheckSwitch(checked, "smooth_enabled")
+          }
         />
         <Slider
           disabled={!feature.smooth_enabled}
@@ -190,11 +194,10 @@ export default function FeatureForm({
         <div />
         <div />
         <TooltipLabel text="Simulate" tooltip="Test feature power level." />
-        <input
-          type="checkbox"
-          name="simulate"
-          checked={simulate}
-          onChange={simulateHandler}
+        <Switch
+          size="small"
+          isEnabled={simulate}
+          toggleIsEnabled={simulateHandler}
         />
         <Slider
           min={0}

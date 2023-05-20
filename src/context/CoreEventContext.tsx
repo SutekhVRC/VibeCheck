@@ -116,7 +116,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
   // Not sure where else to put it
   async function refreshConfig() {
     await invoke<FeVibeCheckConfig>(GET_CONFIG)
-      .then((r:FeVibeCheckConfig) => setConfig(r))
+      .then((r: FeVibeCheckConfig) => setConfig(r))
       .catch(() => setConfig(null));
   }
   useEffect(() => {
