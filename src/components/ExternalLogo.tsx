@@ -20,7 +20,7 @@ export default function ExternalLogo({
     try {
       await invoke(OPEN_BROWSER, { link: link });
     } catch (e) {
-      toast.createToast("Open Browser", "Could not open browser", "error");
+      toast.createToast("Could not open browser", `${e}`, "error");
     }
   }
   return (

@@ -41,11 +41,7 @@ export default function useSimulate(
         floatLevel,
       });
     } catch (e) {
-      toast.createToast(
-        "Simulate Device Feature",
-        `Could not simulate device feature!\n${e}`,
-        "error"
-      );
+      toast.createToast("Could not simulate device feature!", `${e}`, "error");
     }
   }
 
