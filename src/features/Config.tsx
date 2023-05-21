@@ -7,10 +7,11 @@ import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConf
 import { CLEAR_OSC_CONFIG, SET_CONFIG } from "../data/constants";
 import Modal from "../layout/Modal";
 import UpdateButton from "../components/UpdateButton";
-import {TooltipLabel} from "../layout/Tooltip";
+import { TooltipLabel } from "../layout/Tooltip";
 import Tooltip from "../layout/Tooltip";
 import Switch from "../layout/Switch";
 import { useToastContext } from "../context/ToastContext";
+import Button from "../layout/Button";
 
 type settingsDialogProps = {
   isOpen: boolean;
@@ -188,21 +189,16 @@ export default function Config({
         </div>
       </form>
       <div className="flex justify-around">
-        <button
-          type="submit"
-          form="config"
-          className="rounded-md bg-zinc-100 px-4 text-zinc-900 hover:bg-zinc-200"
-        >
+        <Button type="submit" form="config">
           Save
-        </button>
+        </Button>
         <Tooltip text="Force refresh OSC avatar parameters by deleting VRChat OSC config folders. The in-game button does not work.">
-          <button
+          <Button
             disabled={refreshDisabled}
-            className="rounded-md bg-zinc-100 px-4 text-zinc-900 hover:bg-zinc-200 disabled:text-zinc-300"
             onClick={refreshConfig}
           >
             Refresh OSC
-          </button>
+          </Button>
         </Tooltip>
         <UpdateButton enabled={canUpdate} />
       </div>

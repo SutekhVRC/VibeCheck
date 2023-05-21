@@ -4,6 +4,7 @@ import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import { ALTER_TOY, OSC_DATA_PREFIX } from "../data/constants";
 import Switch from "../layout/Switch";
 import { useToastContext } from "../context/ToastContext";
+import Button from "../layout/Button";
 
 export default function ToySettings({ toy }: { toy: FeVCToy }) {
   const [oscData, setOscData] = useState(toy.osc_data);
@@ -40,7 +41,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
   }
 
   return (
-    <div className="pb-4">
+    <div className="pb-4 text-sm">
       <div className="grid grid-cols-[2fr,_1fr,_6fr] text-sm text-justify gap-y-1 p-4">
         <label>OSC Data</label>
         <Switch
@@ -52,12 +53,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
         <div />
         <div />
       </div>
-      <button
-        onClick={handleCopy}
-        className="border-2 px-2 rounded-sm border-zinc-500 text-sm"
-      >
-        Click to copy osc data parameter
-      </button>
+      <Button onClick={handleCopy}>Copy osc data parameter</Button>
     </div>
   );
 }

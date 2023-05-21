@@ -2,6 +2,7 @@ import { installUpdate } from "@tauri-apps/api/updater";
 import { relaunch } from "@tauri-apps/api/process";
 import UpdatePing from "./UpdatePing";
 import { useToastContext } from "../context/ToastContext";
+import Button from "../layout/Button";
 
 export default function UpdateButton({ enabled }: { enabled: boolean }) {
   const toast = useToastContext();
@@ -16,15 +17,9 @@ export default function UpdateButton({ enabled }: { enabled: boolean }) {
   }
   return (
     <UpdatePing canUpdate={enabled}>
-      <button
-        disabled={!enabled}
-        onClick={handleUpdate}
-        className={`bg-zinc-100 rounded-md p-1 px-5 ${
-          enabled && "text-zinc-900 hover:bg-zinc-200"
-        }`}
-      >
+      <Button disabled={!enabled} onClick={handleUpdate}>
         Upgrade
-      </button>
+      </Button>
     </UpdatePing>
   );
 }
