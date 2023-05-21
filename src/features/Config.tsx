@@ -7,7 +7,7 @@ import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConf
 import { CLEAR_OSC_CONFIG, SET_CONFIG } from "../data/constants";
 import Modal from "../layout/Modal";
 import UpdateButton from "../components/UpdateButton";
-import TooltipLabel from "../layout/Tooltip/TooltipLabel";
+import {TooltipLabel} from "../layout/Tooltip";
 import Tooltip from "../layout/Tooltip";
 import Switch from "../layout/Switch";
 import { useToastContext } from "../context/ToastContext";

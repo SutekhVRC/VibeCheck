@@ -1,12 +1,11 @@
-import { FeVCToy } from "../../../src-tauri/bindings/FeVCToy";
-
-import lovenseLogo from "../../assets/Lovense.png";
-import lovenseConnectLogo from "../../assets/Lovense_Connect.png";
+import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
+import lovenseLogo from "../assets/Lovense.png";
+import lovenseConnectLogo from "../assets/Lovense_Connect.png";
 import FeatureForm from "./FeatureForm";
 import ToySettings from "./ToySettings";
 import { FeatureDisclosure } from "./FeatureDisclosure";
-import Tooltip from "../../layout/Tooltip";
-import BatteryIcon from "../../components/BatteryIcon";
+import Tooltip from "../layout/Tooltip";
+import BatteryIcon from "../components/BatteryIcon";
 import { motion } from "framer-motion";
 
 export default function Toy({ toy }: { toy: FeVCToy }) {

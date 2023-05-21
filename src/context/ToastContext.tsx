@@ -33,7 +33,7 @@ export function useToastContext() {
 function toastDuraction(t: Toast) {
   switch (t.type) {
     case "info":
-      return 1000;
+      return 1500;
     case "warn":
       return 3000;
     case "error":

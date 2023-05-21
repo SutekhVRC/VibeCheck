@@ -1,12 +1,8 @@
+import { useCoreEventContext } from "../context/CoreEventContext";
 import Loading from "./Loading";
 
-export default function ScanButton({
-  isScanning,
-  toggleScan,
-}: {
-  isScanning: boolean;
-  toggleScan: () => void;
-}) {
+export default function ScanButton() {
+  const { isScanning, toggleScan } = useCoreEventContext();
   return (
     <button
       type="button"

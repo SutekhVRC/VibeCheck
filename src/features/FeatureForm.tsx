@@ -2,18 +2,14 @@ import { invoke } from "@tauri-apps/api";
 import type { ChangeEvent } from "react";
 import { useMemo } from "react";
 import { useEffect, useState } from "react";
-import {
-  ALTER_TOY,
-  DEBOUNCE_TIME,
-  OSC_PARAM_PREFIX,
-} from "../../data/constants";
-import { round0 } from "../../utils";
-import type { FeVCToyFeature } from "../../../src-tauri/bindings/FeVCToyFeature";
-import Slider from "../../layout/Slider";
-import TooltipLabel from "../../layout/Tooltip/TooltipLabel";
-import useSimulate from "../../hooks/useSimulate";
-import Switch from "../../layout/Switch";
-import { useToastContext } from "../../context/ToastContext";
+import { ALTER_TOY, DEBOUNCE_TIME, OSC_PARAM_PREFIX } from "../data/constants";
+import { round0 } from "../utils";
+import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
+import Slider from "../layout/Slider";
+import { TooltipLabel } from "../layout/Tooltip";
+import useSimulate from "../hooks/useSimulate";
+import Switch from "../layout/Switch";
+import { useToastContext } from "../context/ToastContext";
 
 type ToyFeatureFormProps = {
   toyId: number;

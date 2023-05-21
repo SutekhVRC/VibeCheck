@@ -1,9 +1,9 @@
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
-import type { FeVCToy } from "../../../src-tauri/bindings/FeVCToy";
-import { ALTER_TOY, OSC_DATA_PREFIX } from "../../data/constants";
-import Switch from "../../layout/Switch";
-import { useToastContext } from "../../context/ToastContext";
+import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
+import { ALTER_TOY, OSC_DATA_PREFIX } from "../data/constants";
+import Switch from "../layout/Switch";
+import { useToastContext } from "../context/ToastContext";
 
 export default function ToySettings({ toy }: { toy: FeVCToy }) {
   const [oscData, setOscData] = useState(toy.osc_data);
