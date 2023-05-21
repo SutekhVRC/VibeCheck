@@ -7,12 +7,30 @@ import ToySettings from "./ToySettings";
 import { FeatureDisclosure } from "./FeatureDisclosure";
 import Tooltip from "../../layout/Tooltip";
 import BatteryIcon from "../../components/BatteryIcon";
+import { motion } from "framer-motion";
 
 export default function Toy({ toy }: { toy: FeVCToy }) {
   const nameInfo = NameInfo(toy.toy_name);
 
   return (
-    <div className="rounded-md bg-zinc-700 px-2 py-4 m-2">
+    <motion.div
+      className="rounded-md bg-zinc-700 px-2 py-4 m-2"
+      initial={{ y: "100%", opacity: 0 }}
+      animate={{
+        y: 0,
+        opacity: 1,
+        transition: {
+          type: "spring",
+          duration: 2,
+          bounce: 0.5,
+          y: { delay: 0.15 },
+        },
+      }}
+      exit={{
+        y: "100%",
+        opacity: 0,
+      }}
+    >
       <div className="text-4xl flex justify-between items-center px-6">
         <div>{nameInfo.shortName}</div>
         <ToyInfo nameInfo={nameInfo} battery={toy.battery_level} />
@@ -35,7 +53,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
           </div>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

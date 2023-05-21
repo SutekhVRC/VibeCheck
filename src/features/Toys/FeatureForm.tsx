@@ -13,6 +13,7 @@ import Slider from "../../layout/Slider";
 import TooltipLabel from "../../layout/Tooltip/TooltipLabel";
 import useSimulate from "../../hooks/useSimulate";
 import Switch from "../../layout/Switch";
+import { useToastContext } from "../../context/ToastContext";
 
 type ToyFeatureFormProps = {
   toyId: number;
@@ -29,6 +30,7 @@ export default function FeatureForm({
   const newFeature = useMemo(() => {
     return { ...feature, feature_levels: levels };
   }, [feature, levels]);
+  const toast = useToastContext()
 
   useEffect(() => {
     if (feature == initFeature) return;
@@ -59,7 +61,11 @@ export default function FeatureForm({
         mutate: { Feature: newFeature },
       });
     } catch (e) {
-      alert(e);
+      toast.createToast(
+        "Alter Toy",
+        `Could not alter toy!\n${e}`,
+        "error"
+      );
     }
   }
 

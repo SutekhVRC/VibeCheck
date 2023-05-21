@@ -2,11 +2,13 @@ import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
 import type { FeVCToy } from "../../../src-tauri/bindings/FeVCToy";
 import { ALTER_TOY, OSC_PARAM_PREFIX } from "../../data/constants";
-import Toast from "../../layout/Toast";
 import Switch from "../../layout/Switch";
+import { useToastContext } from "../../context/ToastContext";
 
 export default function ToySettings({ toy }: { toy: FeVCToy }) {
   const [oscData, setOscData] = useState(toy.osc_data);
+
+  const toast = useToastContext();
 
   const parsed_toy_name = toy.toy_name
     .replace("Lovense Connect", "Lovense")
@@ -22,15 +24,24 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
           mutate: { OSCData: newOSCDataState },
         });
       } catch (e) {
-        alert(e);
+        toast.createToast("Alter Toy", `Could not alter toy!\n${e}`, "error");
       }
     }
     saveConfig(oscData);
   }, [oscData]);
 
-  const copy = async () => {
-    await navigator.clipboard.writeText(osc_data_addr);
-  };
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(osc_data_addr);
+      toast.createToast("Copied to clipboard", osc_data_addr, "info");
+    } catch (e) {
+      toast.createToast(
+        "Clipboard",
+        `Could not copy to clipboard!\n${e}`,
+        "error"
+      );
+    }
+  }
 
   return (
     <div className="pb-4">
@@ -45,12 +56,12 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
         <div />
         <div />
       </div>
-      <Toast
-        buttonText="Click to copy osc data address"
-        title="Copied to clipboard"
-        description={osc_data_addr}
-        onClick={copy}
-      />
+      <button
+        onClick={handleCopy}
+        className="border-2 px-2 rounded-sm border-zinc-500 text-sm"
+      >
+        Click to copy osc data address
+      </button>
     </div>
   );
 }

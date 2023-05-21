@@ -3,6 +3,7 @@ import { useToys } from "../../context/ToysContext";
 import cryingAnimeGirl from "../../assets/menhera_chan.gif";
 import ScanButton from "../../components/ScanButton";
 import Toy from "./Toy";
+import { AnimatePresence } from "framer-motion";
 
 export default function Toys() {
   const { toys } = useToys();
@@ -17,9 +18,11 @@ export default function Toys() {
         </div>
       ) : (
         <div className="overflow-y-scroll pl-2 scrollbar pt-2 pb-2 max-h-[520px]">
-          {Object.values(toys).map((toy) => (
-            <Toy toy={toy} key={`${toy.toy_name} ${toy.toy_id}`} />
-          ))}
+          <AnimatePresence>
+            {Object.values(toys).map((toy) => (
+              <Toy toy={toy} key={`${toy.toy_name} ${toy.toy_id}`} />
+            ))}
+          </AnimatePresence>
         </div>
       )}
       <ScanButton isScanning={isScanning} toggleScan={toggleScan} />

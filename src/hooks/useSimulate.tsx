@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
 import type { FeVCFeatureType } from "../../src-tauri/bindings/FeVCFeatureType";
 import { DEBOUNCE_TIME, SIMULATE_TOY_FEATURE } from "../data/constants";
+import { useToastContext } from "../context/ToastContext";
 
 export default function useSimulate(
   toyId: number,
@@ -10,6 +11,7 @@ export default function useSimulate(
 ) {
   const [simulate, setSimulate] = useState(false);
   const [simulateLevel, setSimulateLevel] = useState(0.5);
+  const toast = useToastContext();
 
   function simulateHandler() {
     setSimulate((b) => !b);
@@ -39,7 +41,11 @@ export default function useSimulate(
         floatLevel,
       });
     } catch (e) {
-      alert(e);
+      toast.createToast(
+        "Simulate Device Feature",
+        `Could not simulate device feature!\n${e}`,
+        "error"
+      );
     }
   }
 
