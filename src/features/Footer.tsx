@@ -4,7 +4,7 @@ import GithubLogo from "../assets/GitHub-Mark-Light-64px.png";
 import Switch from "../layout/Switch";
 import ExternalLogo from "../components/ExternalLogo";
 import { useVersion } from "../hooks/useVersion";
-import { Cog6ToothIcon } from "@heroicons/react/20/solid";
+import { Cog6ToothIcon } from "@heroicons/react/24/solid";
 import { useEffect, useState } from "react";
 import { useCoreEventContext } from "../context/CoreEventContext";
 import Config from "./Config";
@@ -45,7 +45,11 @@ export function Footer() {
             canUpdate={canUpdate}
           />
         )}
-        <Switch isEnabled={isEnabled} toggleIsEnabled={toggleIsEnabled} />
+        <Switch
+          theme="red-green"
+          isEnabled={isEnabled}
+          toggleIsEnabled={toggleIsEnabled}
+        />
       </div>
       {version}
       <div className="flex justify-around items-center">

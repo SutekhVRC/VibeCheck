@@ -2,13 +2,13 @@ import { Switch as HeadlessSwitch } from "@headlessui/react";
 import classNames from "classnames";
 
 const themeColors = {
+  "white-blue": {
+    inactive: "bg-slate-300",
+    active: "bg-blue-600",
+  },
   "red-green": {
     inactive: "bg-red-600",
     active: "bg-green-600",
-  },
-  "yellow-blue": {
-    inactive: "bg-yellow-300",
-    active: "bg-blue-600",
   },
 };
 
@@ -33,13 +33,13 @@ const sizes = {
 export default function Switch({
   isEnabled,
   toggleIsEnabled,
-  theme = "red-green",
+  theme = "white-blue",
   size = "medium",
 }: {
   isEnabled: boolean;
   toggleIsEnabled: (checked: boolean) => void;
-  theme?: "red-green" | "yellow-blue";
-  size?: "small" | "medium" | "large";
+  theme?: keyof typeof themeColors;
+  size?: keyof typeof sizes;
 }) {
   const selectedTheme = themeColors[theme];
   return (

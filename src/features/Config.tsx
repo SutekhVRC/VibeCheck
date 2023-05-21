@@ -10,6 +10,7 @@ import UpdateButton from "../components/UpdateButton";
 import TooltipLabel from "../layout/Tooltip/TooltipLabel";
 import Tooltip from "../layout/Tooltip";
 import Switch from "../layout/Switch";
+import { useToastContext } from "../context/ToastContext";
 
 type settingsDialogProps = {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export default function Config({
 }: settingsDialogProps) {
   const [newConfig, setNewConfig] = useState<FeVibeCheckConfig>(config);
   const [refreshDisabled, setRefreshDisabled] = useState(false);
+  const toast = useToastContext();
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
     setNewConfig({ ...newConfig, [e.target.name]: e.target.value });
@@ -56,7 +58,7 @@ export default function Config({
       await invoke(SET_CONFIG, { feVcConfig: newConfig });
       setRefreshDisabled(false);
     } catch (e) {
-      alert(e);
+      toast.createToast("Set Config", `Could not set config!\n${e}`, "error");
     }
   }
 
@@ -65,7 +67,11 @@ export default function Config({
       await invoke(CLEAR_OSC_CONFIG);
       setRefreshDisabled(true);
     } catch (e) {
-      alert(`Failed to clear avatar OSC configs!\n${e}`);
+      toast.createToast(
+        "OSC Config",
+        `Could not clear avatar OSC configs!\n${e}`,
+        "error"
+      );
     }
   }
 
@@ -82,7 +88,7 @@ export default function Config({
   }, [isOpen]);
 
   return (
-    <Modal title="Config" isOpen={isOpen} onClose={onClose}>
+    <Modal title="Vibecheck Config" isOpen={isOpen} onClose={onClose}>
       <form id="config" onSubmit={handleSubmit}>
         <div className="grid grid-cols-[minmax(0,_6fr)_minmax(0,_4fr)_minmax(0,_1fr)] gap-3 my-4 items-center">
           <TooltipLabel text="OSC Bind" tooltip="OSC Receive Port" />
