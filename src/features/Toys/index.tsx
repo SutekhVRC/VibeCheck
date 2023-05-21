@@ -1,16 +1,11 @@
-import type { ReactNode } from "react";
-import { useState } from "react";
 import { useCoreEventContext } from "../../context/CoreEventContext";
 import { useToys } from "../../context/ToysContext";
-import NameInfo from "./NameInfo";
-import Settings from "./Settings";
-import { Feature } from "./Feature";
-import { WrenchScrewdriverIcon } from "@heroicons/react/20/solid";
 import cryingAnimeGirl from "../../assets/menhera_chan.gif";
 import ScanButton from "../../components/ScanButton";
+import Toy from "./Toy";
+import { AnimatePresence } from "framer-motion";
 
 export default function Toys() {
-  const [modal, setModal] = useState<ReactNode>(null);
   const { toys } = useToys();
   const { isScanning, toggleScan } = useCoreEventContext();
 
@@ -23,36 +18,11 @@ export default function Toys() {
         </div>
       ) : (
         <div className="overflow-y-scroll pl-2 scrollbar pt-2 pb-2 max-h-[520px]">
-          {Object.values(toys).map((toy) => (
-            <div
-              className="rounded-md bg-zinc-700 p-4 m-2"
-              key={`${toy.toy_name} ${toy.toy_id}`}
-            >
-              <div className="text-4xl flex justify-between items-center">
-                <NameInfo name={toy.toy_name} battery={toy.battery_level} />
-                {modal}
-                <WrenchScrewdriverIcon
-                  className="h-6 cursor-pointer"
-                  onClick={() =>
-                    setModal(
-                      <Settings onClose={() => setModal(null)} toy={toy} />
-                    )
-                  }
-                />
-              </div>
-              <div className="grid">
-                {toy.features.map((feature) => (
-                  <div
-                    className="flex flex-col"
-                    key={`${toy.toy_id} ${feature.feature_type} ${feature.feature_index}`}
-                  >
-                    <hr className="border-1 border-zinc-800 m-1 border-opacity-75" />
-                    <Feature toyId={toy.toy_id} feature={feature} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+          <AnimatePresence>
+            {Object.values(toys).map((toy) => (
+              <Toy toy={toy} key={`${toy.toy_name} ${toy.toy_id}`} />
+            ))}
+          </AnimatePresence>
         </div>
       )}
       <ScanButton isScanning={isScanning} toggleScan={toggleScan} />

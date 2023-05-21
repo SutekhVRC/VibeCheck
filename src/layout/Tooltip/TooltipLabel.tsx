@@ -8,7 +8,7 @@ type TooltipProps = {
 export default function TooltipLabel({ text, tooltip }: TooltipProps) {
   return (
     <Tooltip text={tooltip}>
-      <label className="justify-self-start">{text}</label>
+      <label className="justify-self-start cursor-help">{text}</label>
     </Tooltip>
   );
 }

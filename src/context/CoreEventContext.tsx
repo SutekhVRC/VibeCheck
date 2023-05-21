@@ -14,6 +14,8 @@ import { assertExhaustive } from "../utils";
 import type { ReactNode } from "react";
 import type { FeCoreEvent } from "../../src-tauri/bindings/FeCoreEvent";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
+import { FeStateEvent } from "../../src-tauri/bindings/FeStateEvent";
+import { useToastContext } from "./ToastContext";
 
 type CoreContextProps = {
   isScanning: boolean;
@@ -40,6 +42,7 @@ export function useCoreEventContext() {
 export function CoreEventProvider({ children }: { children: ReactNode }) {
   const [isEnabled, setIsEnabled] = useState(INITIAL_CORE_STATE.isEnabled);
   const [isScanning, setIsScanning] = useState(INITIAL_CORE_STATE.isScanning);
+  const toast = useToastContext();
 
   const [config, setConfig] = useState<FeVibeCheckConfig | null>(
     INITIAL_CORE_STATE.config
@@ -50,7 +53,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
       await invoke(ENABLE);
       setIsEnabled(true);
     } catch (e) {
-      alert(e);
+      toast.createToast("Enable", `Could not enable!\n${e}`, "error");
     }
   }
 
@@ -60,7 +63,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
       await invoke(DISABLE);
       setIsEnabled(false);
     } catch (e) {
-      alert(e);
+      toast.createToast("Disable", `Could not disable!\n${e}`, "error");
     }
   }
 
@@ -74,7 +77,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
       await invoke(START_SCAN);
       setIsScanning(true);
     } catch (e) {
-      alert(e);
+      toast.createToast("Start Scan", "Could not start scan!", "error");
     }
   }
 
@@ -83,7 +86,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
       await invoke(STOP_SCAN);
       setIsScanning(false);
     } catch (e) {
-      alert(e);
+      toast.createToast("Stop Scan", "Could not stop scan!", "error");
     }
   }
 
@@ -97,30 +100,36 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(i);
   }, [isScanning]);
 
+  function handleStateEvent(payload: FeStateEvent) {
+    switch (payload) {
+      case "Disable":
+        stopScanAndDisable();
+        break;
+      case "EnableAndScan":
+        enableAndStartScan();
+        break;
+      default:
+        assertExhaustive(payload);
+    }
+  }
+
+  function handleCoreEvent(payload: FeCoreEvent) {
+    switch (payload.kind) {
+      case "Scan":
+        setIsScanning(payload.data == "Start");
+        break;
+      case "State":
+        handleStateEvent(payload.data);
+        break;
+      default:
+        assertExhaustive(payload);
+    }
+  }
+
   useEffect(() => {
-    const unlistenPromise = listen<FeCoreEvent>(CORE_EVENT, (event) => {
-      let data;
-      switch (event.payload.kind) {
-        case "Scan":
-          setIsScanning(event.payload.data == "Start");
-          break;
-        case "State":
-          data = event.payload.data;
-          switch (data) {
-            case "Disable":
-              stopScanAndDisable();
-              break;
-            case "EnableAndScan":
-              enableAndStartScan();
-              break;
-            default:
-              assertExhaustive(data);
-          }
-          break;
-        default:
-          assertExhaustive(event.payload);
-      }
-    });
+    const unlistenPromise = listen<FeCoreEvent>(CORE_EVENT, (event) =>
+      handleCoreEvent(event.payload)
+    );
 
     return () => {
       unlistenPromise.then((unlisten) => unlisten());
