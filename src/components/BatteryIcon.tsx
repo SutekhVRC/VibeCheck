@@ -4,10 +4,11 @@ import {
   Battery50Icon,
 } from "@heroicons/react/24/solid";
 import Tooltip from "../layout/Tooltip";
+import { percent } from "../utils";
 
 export default function Batteryicon({ battery }: { battery: number }) {
   return (
-    <Tooltip text={`${battery * 100}%`}>
+    <Tooltip text={percent.format(battery)}>
       <div
         className="cursor-help"
         style={{
