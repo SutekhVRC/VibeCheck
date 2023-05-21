@@ -58,7 +58,7 @@ export default function Config({
       await invoke(SET_CONFIG, { feVcConfig: newConfig });
       setRefreshDisabled(false);
     } catch (e) {
-      toast.createToast("Set Config", `Could not set config!\n${e}`, "error");
+      toast.createToast("Could not set config!", `${e}`, "error");
     }
   }
 
@@ -67,11 +67,7 @@ export default function Config({
       await invoke(CLEAR_OSC_CONFIG);
       setRefreshDisabled(true);
     } catch (e) {
-      toast.createToast(
-        "OSC Config",
-        `Could not clear avatar OSC configs!\n${e}`,
-        "error"
-      );
+      toast.createToast("Could not clear avatar OSC configs!", `${e}`, "error");
     }
   }
 
