@@ -28,7 +28,7 @@
       },
       "externalBin": [],
       "icon": ["icons/vibecheck.ico"],
-      "identifier": "com.vibecheck.dev",
+      "identifier": "com.vibecheck",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
