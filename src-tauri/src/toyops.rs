@@ -9,7 +9,7 @@ use crate::{config::toy::{VCToyConfig, VCToyAnatomy}, frontend_types::{FeVCToyFe
 
 #[derive(Clone, Debug)]
 pub struct VCToy {
-    pub toy_id: u32,
+    pub toy_id: Option<u32>,
     pub toy_name: String,
     pub battery_level: f64,
     pub toy_connected: bool,
@@ -30,7 +30,7 @@ impl VCToy {
         let features = self.toy_features.clone();
         info!(
             "Populating toy: {}",
-            self.toy_id,
+            self.toy_id.unwrap(),
             //toy.toy_features.len()
         );
         // New algo: Check if exists then iterate
@@ -131,11 +131,11 @@ impl VCToy {
     pub fn load_toy_config(&mut self) -> Result<(), vcerror::backend::VibeCheckToyConfigError> {
 
         // Generate config path
-        // - Transform Lovense Connect toys to load lovense configs
 
         let config_path = format!(
             "{}\\ToyConfigs\\{}.json",
             get_config_dir(),
+            // - Transform Lovense Connect toys to load lovense configs
             self.toy_name.replace("Lovense Connect ", "Lovense "),
         );
     
@@ -157,7 +157,7 @@ impl VCToy {
             return Ok(());
         }
     }
-    
+
     // Save Toy config by name
     pub fn save_toy_config(&self) {
         let config_path = format!(
