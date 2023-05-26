@@ -91,10 +91,10 @@ pub enum FeVCToyAnatomy {
     Wrist,
 }
 
-#[derive(Serialize, Clone, TS)]
+#[derive(Debug, Deserialize, Serialize, Clone, TS)]
 #[ts(export)]
 pub struct FeVCToy {
-    pub toy_id: u32,
+    pub toy_id: Option<u32>,
     pub toy_name: String,
     pub toy_anatomy: FeVCToyAnatomy,
     pub battery_level: f64,
@@ -130,9 +130,13 @@ pub struct FeVCToyFeature {
 #[derive(Debug, Deserialize, TS)]
 #[ts(export)]
 pub enum FeToyAlter {
-    Feature(FeVCToyFeature),
-    OSCData(bool),
-    Anatomy(FeVCToyAnatomy),
+    Connected(FeVCToy),
+    Disconnected(FeVCToy),
+    //Feature(FeVCToyFeature),
+    //Feature((u32, FeVCToyFeature)),
+    //OSCData((u32, bool)),
+    //Anatomy((u32, FeVCToyAnatomy)),
+    //Offline(OfflineToy),
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, TS)]
@@ -147,6 +151,20 @@ pub enum FeVCFeatureType {
     Position = 6,
     // Note no ScalarRotator bc conversion is done in vcore
 }
+/*
+impl FeVCFeatureType {
+    pub fn to_be(&self) -> VCFeatureType {
+        match self {
+            Self::Vibrator => VCFeatureType::Vibrator,
+            Self::Rotator => VCFeatureType::Rotator,
+            Self::Linear => VCFeatureType::Linear,
+            Self::Oscillate => VCFeatureType::Oscillate,
+            Self::Constrict => VCFeatureType::Constrict,
+            Self::Inflate => VCFeatureType::Inflate,
+            Self::Position => VCFeatureType::Position,
+        }
+    }
+}*/
 
 impl PartialEq<VCFeatureType> for FeVCFeatureType {
     fn eq(&self, other: &VCFeatureType) -> bool {

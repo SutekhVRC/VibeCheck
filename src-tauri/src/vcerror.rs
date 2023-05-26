@@ -33,10 +33,11 @@ pub mod frontend {
     pub enum ToyAlterError {
         NoFeatureIndex,
         NoToyIndex,
-        TMESendFailure
+        TMESendFailure,
+        ToyNotDisconnected,
+        OfflineToyNotExist,
+        OfflineToyNoFeatureIndex,
     }
-
-    
 }
 
 pub mod backend {
@@ -54,6 +55,7 @@ pub mod backend {
     pub enum VibeCheckToyConfigError {
         //ReadFailure,
         DeserializeError,
+        OfflineToyConfigNotFound,
         //SerializeError,
         //WriteFailure,
     }
@@ -66,7 +68,6 @@ pub mod backend {
     }
 
     pub enum ToyAlterError {
-        DisconToyFailure,
         //NoFeatureIndex,
         //NoToyIndex,
         TMESendFailure

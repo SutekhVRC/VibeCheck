@@ -100,7 +100,7 @@ pub async fn client_event_handler(
 
                     // Load toy config for name of toy if it exists otherwise create the config for the toy name
                     let mut toy = VCToy {
-                        toy_id: dev.index(),
+                        toy_id: Some(dev.index()),
                         toy_name: dev.name().clone(),
                         battery_level,
                         toy_connected: dev.connected(),
@@ -122,7 +122,7 @@ pub async fn client_event_handler(
                     
                     {
                         let mut vc_lock = vibecheck_state_pointer.lock();
-                        vc_lock.toys.insert(toy.toy_id, toy.clone());
+                        vc_lock.toys.insert(toy.toy_id.unwrap(), toy.clone());
                     }
                     trace!("Toy inserted into VibeCheckState toys");
 
@@ -154,7 +154,7 @@ pub async fn client_event_handler(
                         }
                     }
 
-                    info!("Toy Connected: {} | {}", toy.toy_name, toy.toy_id);
+                    info!("Toy Connected: {} | {}", toy.toy_name, toy.toy_id.unwrap());
                 }
                 ButtplugClientEvent::DeviceRemoved(dev) => {
 
@@ -164,7 +164,7 @@ pub async fn client_event_handler(
                         (vc_lock.config.scan_on_disconnect, vc_lock.toys.remove(&dev.index()))
                     };
                     
-                    // Check is toy is valid
+                    // Check if toy is valid
                     if let Some(toy) = toy {
                         trace!("Removed toy from VibeCheckState toys");
                         tme_send.send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(dev.index()))).unwrap();
@@ -339,9 +339,9 @@ pub async fn toy_management_handler(
                                 match toy {
                                     // Update feature map while toy running!
                                     ToyUpdate::AlterToy(new_toy) => {
-                                        if new_toy.toy_id == dev.index() {
+                                        if new_toy.toy_id.unwrap() == dev.index() {
                                             feature_map = new_toy.param_feature_map;
-                                            info!("Altered toy: {}", new_toy.toy_id);
+                                            info!("Altered toy: {}", new_toy.toy_id.unwrap());
                                         }
                                     }
                                     _ => {} // Remove and Add are handled internally from device connected state and management loop (listening)
@@ -370,13 +370,13 @@ pub async fn toy_management_handler(
                     // Handle Toy Update Signals
                     ToyManagementEvent::Tu(tu) => match tu {
                         ToyUpdate::AddToy(toy) => {
-                            toys.insert(toy.toy_id, toy);
+                            toys.insert(toy.toy_id.unwrap(), toy);
                         }
                         ToyUpdate::RemoveToy(id) => {
                             toys.remove(&id);
                         }
                         ToyUpdate::AlterToy(toy) => {
-                            toys.insert(toy.toy_id, toy);
+                            toys.insert(toy.toy_id.unwrap(), toy);
                         }
                     },
                     // Handle Management Signals
@@ -450,19 +450,19 @@ pub async fn toy_management_handler(
                             ToyManagementEvent::Tu(tu) => {
                                 match tu {
                                     ToyUpdate::AddToy(toy) => {
-                                        toys.insert(toy.toy_id, toy.clone());
+                                        toys.insert(toy.toy_id.unwrap(), toy.clone());
                                         let f_run = f(
                                             toy.device_handle,
                                             toy_bcst_tx.subscribe(),
                                             toy.param_feature_map.clone(),
                                         );
                                         running_toy_ths.insert(
-                                            toy.toy_id,
+                                            toy.toy_id.unwrap(),
                                             toy_async_rt.spawn(async move {
                                                 f_run.await;
                                             }),
                                         );
-                                        info!("Toy: {} started listening..", toy.toy_id);
+                                        info!("Toy: {} started listening..", toy.toy_id.unwrap());
                                     }
                                     ToyUpdate::RemoveToy(id) => {
                                         // OSC Listener thread will only die on StopListening event
@@ -484,7 +484,7 @@ pub async fn toy_management_handler(
                                             Ok(receivers) => info!("Sent ToyUpdate broadcast to {} toys", receivers-1),
                                             Err(e) => logerr!("Failed to send UpdateToy: {}", e),
                                         }
-                                        toys.insert(toy.toy_id, toy);
+                                        toys.insert(toy.toy_id.unwrap(), toy);
                                     }
                                 }
                             }
@@ -790,7 +790,7 @@ pub fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
 pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, app_handle: AppHandle) {
 
     loop {
-        Delay::new(Duration::from_secs(30)).await;
+        Delay::new(Duration::from_secs(15)).await;
 
 
         let (toys, remote) = {

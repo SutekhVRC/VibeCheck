@@ -5,7 +5,7 @@
  */
 
  use log::{error as logerr, trace};
-use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink, FeVCFeatureType}, vcerror::{frontend, backend}};
+use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink, FeVCFeatureType}, vcerror::{frontend, backend}, config::toy::VCToyConfig};
 
 /*
  * vibecheck_version
@@ -102,43 +102,70 @@ pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, fe_
  * Return: Result<Ok(()), Err(ToyAlterError)>
  */
 #[tauri::command(async)]
-pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: tauri::AppHandle, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
-    trace!("alter_toy({}, {:?})", toy_id, mutate);
+pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: tauri::AppHandle, /*toy_id: u32,*/ mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
+    trace!("alter_toy({:?})", mutate);
 
-    let altered = {
-        let mut vc_lock = vc_state.0.lock();
-        if let Some(toy) = vc_lock.toys.get_mut(&toy_id) {
+    match mutate {
 
-            match mutate {
-                FeToyAlter::Feature(f) => {
-                    if !toy.param_feature_map.from_fe(f) {
-                        logerr!("Failed to convert FeVCToyFeature to VCToyFeature");
-                        return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
-                    } else {
-                        // If altering feature map suceeds write the data to the config
-                        toy.config.as_mut().unwrap().features = toy.param_feature_map.clone();
+        FeToyAlter::Connected(fe_toy) => {
+            let altered = {
+                let mut vc_lock = vc_state.0.lock();
+                if let Some(toy) = vc_lock.toys.get_mut(&fe_toy.toy_id.unwrap()) {
+
+                    toy.osc_data = fe_toy.osc_data;
+                    toy.config.as_mut().unwrap().osc_data = fe_toy.osc_data;
+                    toy.config.as_mut().unwrap().anatomy.from_fe(fe_toy.toy_anatomy);
+
+                    // Overwrite all features in the state handled toy.
+                    for fe_feature in fe_toy.features {
+                        if !toy.param_feature_map.from_fe(fe_feature.clone()) {
+                            logerr!("Failed to convert FeVCToyFeature to VCToyFeature");
+                            return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
+                        } else {
+                            // If altering feature map succeeds write the data to the config
+                            toy.config.as_mut().unwrap().features = toy.param_feature_map.clone();
+                        }
                     }
-                },
-                FeToyAlter::OSCData(osc_data) => {
-                    toy.osc_data = osc_data;
-                    // Write the data to config
-                    toy.config.as_mut().unwrap().osc_data = osc_data;
-                },
-                FeToyAlter::Anatomy(anatomy_type) => {
-                    toy.config.as_mut().unwrap().anatomy.from_fe(anatomy_type);
-                }
-            }
-            // Return altered toy
-            toy.clone()
-        } else {
-            return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoToyIndex));
-        }
-    };
 
-    if vcore::native_alter_toy(vc_state, app_handle, altered).is_err() {
-        return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::TMESendFailure));
+                    toy.clone()
+
+                } else {
+                    return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoToyIndex));
+                }
+            };
+
+            if vcore::native_alter_toy(vc_state, app_handle, altered).is_err() {
+                return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::TMESendFailure));
+            }
+            Ok(())
+        },
+        FeToyAlter::Disconnected(fe_toy) => {
+            
+            if let None = fe_toy.toy_id {
+
+                let mut offline_toy_config = match VCToyConfig::load_offline_toy_config(fe_toy.toy_name) {
+                    Ok(toy_config) => toy_config,
+                    Err(_e) => return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::OfflineToyNotExist)),
+                };
+
+                offline_toy_config.osc_data = fe_toy.osc_data;
+                offline_toy_config.anatomy.from_fe(fe_toy.toy_anatomy);
+
+                for f in fe_toy.features {
+                    if !offline_toy_config.features.from_fe(f) {
+                        return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::OfflineToyNoFeatureIndex));
+                    }
+                }
+
+                offline_toy_config.save_offline_toy_config();
+
+            } else {
+                return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::ToyNotDisconnected));
+            }
+
+            Ok(())
+        }
     }
-    Ok(())
 }
 
 /*
