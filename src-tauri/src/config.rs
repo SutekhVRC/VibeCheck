@@ -135,9 +135,9 @@ pub fn config_load() -> VibeCheckConfig {
 
 pub mod toy {
 
-    use log::warn;
+    use log::{warn, debug, info, error as logerr};
     use serde::{Serialize, Deserialize};
-    use crate::{toyops::FeatureParamMap, frontend_types::FeVCToyAnatomy};
+    use crate::{toyops::FeatureParamMap, frontend_types::FeVCToyAnatomy, util::{get_config_dir, file_exists}, vcerror};
 
     #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
     pub enum VCToyAnatomy {
@@ -261,5 +261,64 @@ pub mod toy {
         pub features: FeatureParamMap,
         pub osc_data: bool,
         pub anatomy: VCToyAnatomy,
+    }
+
+    impl VCToyConfig {
+        pub fn load_offline_toy_config(toy_name: String) -> Result<VCToyConfig, vcerror::backend::VibeCheckToyConfigError> {
+
+            // Generate config path
+            // - Transform Lovense Connect toys to load lovense configs
+    
+            let config_path = format!(
+                "{}\\ToyConfigs\\{}.json",
+                get_config_dir(),
+                toy_name.replace("Lovense Connect ", "Lovense "),
+            );
+        
+            if !file_exists(&config_path) {
+                return Err(vcerror::backend::VibeCheckToyConfigError::OfflineToyConfigNotFound);
+            } else {
+                let con = std::fs::read_to_string(config_path).unwrap();
+        
+                let config: VCToyConfig = match serde_json::from_str(&con) {
+                    Ok(vc_toy_config) => vc_toy_config,
+                    Err(_) => {
+                        return Err(vcerror::backend::VibeCheckToyConfigError::DeserializeError);
+                    }
+                };
+                debug!("Loaded & parsed toy config successfully!");
+                return Ok(config);
+            }
+        }
+
+        pub fn save_offline_toy_config(&self) {
+
+            let config_path = format!(
+                "{}\\ToyConfigs\\{}.json",
+                get_config_dir(),
+                self.toy_name.replace("Lovense Connect ", "Lovense "),
+            );
+
+            info!("Saving toy config to: {}", config_path);
+        
+            if let Ok(json_string) = serde_json::to_string(self) {
+                match std::fs::write(
+                    &config_path,
+                    json_string,
+                ) {
+                    Ok(()) => {
+                        info!("Saved toy config: {}", self.toy_name);
+                        return;
+                    },
+                    Err(e) => {
+                        logerr!("Failed to write to file: {}", e);
+                        return;
+                    },
+                }
+            } else {
+                warn!("Failed to serialize config to json");
+            }
+
+        }
     }
 }
