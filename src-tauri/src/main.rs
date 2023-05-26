@@ -18,6 +18,7 @@ mod util;
 mod toyops;
 mod bluetooth;
 mod osc_api;
+mod offline_toys;
 mod frontend_types;
 mod vcerror;
 
