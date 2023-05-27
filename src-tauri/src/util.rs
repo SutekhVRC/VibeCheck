@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, ffi::OsStr};
 use directories::BaseDirs;
 use tauri::{api::path::{resolve_path, BaseDirectory}, Env};
 
@@ -6,7 +6,11 @@ pub fn path_exists(p: &String) -> bool {
     Path::new(&p).is_dir()
 }
 
-pub fn file_exists(p: &String) -> bool {
+
+
+pub fn file_exists<P>(p: &P) -> bool 
+where P: AsRef<OsStr> + ?Sized
+{
     Path::new(&p).is_file()
 }
 
