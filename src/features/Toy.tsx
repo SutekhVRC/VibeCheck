@@ -22,7 +22,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
         mutate: { Connected: newToy }, // TODO new toy for now - testing
       });
     } catch (e) {
-      toast.createToast("Could not alter toy!", `${e}`, "error");
+      toast.createToast("Could not alter toy!", JSON.stringify(e), "error");
     }
   }
 

@@ -12,7 +12,7 @@ export default function UpdateButton({ enabled }: { enabled: boolean }) {
       await installUpdate();
       await relaunch();
     } catch (e) {
-      toast.createToast("Could not update!", `${e}`, "error");
+      toast.createToast("Could not update!", JSON.stringify(e), "error");
     }
   }
   return (

@@ -26,7 +26,11 @@ export default function ToySettings({
       await navigator.clipboard.writeText(osc_data_addr);
       toast.createToast("Copied to clipboard", osc_data_addr, "info");
     } catch (e) {
-      toast.createToast("Could not copy to clipboard!", `${e}`, "error");
+      toast.createToast(
+        "Could not copy to clipboard!",
+        JSON.stringify(e),
+        "error"
+      );
     }
   }
 
