@@ -9,7 +9,7 @@ use crate::{config::toy::{VCToyConfig, VCToyAnatomy}, frontend_types::{FeVCToyFe
 
 #[derive(Clone, Debug)]
 pub struct VCToy {
-    pub toy_id: Option<u32>,
+    pub toy_id: u32,
     pub toy_name: String,
     pub battery_level: f64,
     pub toy_connected: bool,
@@ -30,7 +30,7 @@ impl VCToy {
         let features = self.toy_features.clone();
         info!(
             "Populating toy: {}",
-            self.toy_id.unwrap(),
+            self.toy_id,
             //toy.toy_features.len()
         );
         // New algo: Check if exists then iterate

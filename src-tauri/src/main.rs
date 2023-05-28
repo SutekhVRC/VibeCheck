@@ -18,7 +18,7 @@ mod util;
 mod toyops;
 mod bluetooth;
 mod osc_api;
-mod offline_toys;
+mod toy_manager;
 mod frontend_types;
 mod vcerror;
 
@@ -123,6 +123,8 @@ fn main() {
         trace!("State pointer set");
         vc_state.set_app_handle(app.app_handle());
         trace!("App handle set");
+        vc_state.init_toy_manager();
+        trace!("ToyManager initialized");
         vc_state.identifier = identifier;
         trace!("App Identifier set");
         vc_state.start_tmh();

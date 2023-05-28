@@ -31,6 +31,7 @@ pub enum FeToyEvent {
     Add(FeVCToy),
     Remove(u32),
     Update(FeVCToy),
+    OfflineSyncAll(Vec<FeVCToy>),
 }
 
 #[derive(Serialize, Clone, TS)]
@@ -97,7 +98,7 @@ pub struct FeVCToy {
     pub toy_id: Option<u32>,
     pub toy_name: String,
     pub toy_anatomy: FeVCToyAnatomy,
-    pub battery_level: f64,
+    pub battery_level: Option<f64>,
     pub toy_connected: bool,
     pub features: Vec<FeVCToyFeature>,
     pub listening: bool,

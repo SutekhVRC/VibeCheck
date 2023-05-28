@@ -34,6 +34,7 @@ use crate::frontend_types::FeToyEvent;
 use crate::frontend_types::FeVCToy;
 use crate::frontend_types::FeScanEvent;
 use crate::osc_api::osc_api::vibecheck_osc_api;
+use crate::toy_manager::ToyManager;
 use crate::toyops::LevelTweaks;
 use crate::toyops::VCFeatureType;
 use crate::toyops::{VCToy, FeatureParamMap};
@@ -84,13 +85,16 @@ pub async fn client_event_handler(
                     Delay::new(Duration::from_secs(3)).await;
                     let battery_level = match dev.battery_level().await {
                         Ok(battery_lvl) => battery_lvl,
-                        Err(_e) => 0.0,
+                        Err(_e) => {
+                            warn!("Device battery_level error: {:?}", _e);
+                            0.0
+                        },
                     };
 
                     let sub_id = {
                         let vc_lock = vibecheck_state_pointer.lock();
                         let mut toy_dup_count = 0;
-                        vc_lock.toys.iter().for_each(|toy| {
+                        vc_lock.core_toy_manager.as_ref().unwrap().online_toys.iter().for_each(|toy| {
                             if &toy.1.toy_name == dev.name() {
                                 toy_dup_count += 1;
                             }
@@ -100,7 +104,7 @@ pub async fn client_event_handler(
 
                     // Load toy config for name of toy if it exists otherwise create the config for the toy name
                     let mut toy = VCToy {
-                        toy_id: Some(dev.index()),
+                        toy_id: dev.index(),
                         toy_name: dev.name().clone(),
                         battery_level,
                         toy_connected: dev.connected(),
@@ -122,7 +126,7 @@ pub async fn client_event_handler(
                     
                     {
                         let mut vc_lock = vibecheck_state_pointer.lock();
-                        vc_lock.toys.insert(toy.toy_id.unwrap(), toy.clone());
+                        vc_lock.core_toy_manager.as_mut().unwrap().online_toys.insert(toy.toy_id, toy.clone());
                     }
                     trace!("Toy inserted into VibeCheckState toys");
 
@@ -131,10 +135,10 @@ pub async fn client_event_handler(
                     let _ = app_handle.emit_all("fe_toy_event",
                         FeToyEvent::Add ({
                             FeVCToy {
-                                toy_id: toy.toy_id,
+                                toy_id: Some(toy.toy_id),
                                 toy_name: toy.toy_name.clone(),
                                 toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
-                                battery_level: toy.battery_level,
+                                battery_level: Some(toy.battery_level),
                                 toy_connected: toy.toy_connected,
                                 features: toy.param_feature_map.to_fe(),
                                 listening: toy.listening,
@@ -154,14 +158,14 @@ pub async fn client_event_handler(
                         }
                     }
 
-                    info!("Toy Connected: {} | {}", toy.toy_name, toy.toy_id.unwrap());
+                    info!("Toy Connected: {} | {}", toy.toy_name, toy.toy_id);
                 }
                 ButtplugClientEvent::DeviceRemoved(dev) => {
 
                     // Get scan on disconnect and toy
                     let (sod, toy) = {
                         let mut vc_lock = vibecheck_state_pointer.lock();
-                        (vc_lock.config.scan_on_disconnect, vc_lock.toys.remove(&dev.index()))
+                        (vc_lock.config.scan_on_disconnect, vc_lock.core_toy_manager.as_mut().unwrap().online_toys.remove(&dev.index()))
                     };
                     
                     // Check if toy is valid
@@ -264,7 +268,7 @@ pub fn flip_float64(orig: f64) -> f64 {
 pub async fn toy_management_handler(
     tme_send: UnboundedSender<ToyManagementEvent>,
     mut tme_recv: UnboundedReceiver<ToyManagementEvent>,
-    mut toys: HashMap<u32, VCToy>,
+    mut core_toy_manager: ToyManager,
     mut vc_config: OSCNetworking,
     app_handle: AppHandle,
 ) {
@@ -339,9 +343,9 @@ pub async fn toy_management_handler(
                                 match toy {
                                     // Update feature map while toy running!
                                     ToyUpdate::AlterToy(new_toy) => {
-                                        if new_toy.toy_id.unwrap() == dev.index() {
+                                        if new_toy.toy_id == dev.index() {
                                             feature_map = new_toy.param_feature_map;
-                                            info!("Altered toy: {}", new_toy.toy_id.unwrap());
+                                            info!("Altered toy: {}", new_toy.toy_id);
                                         }
                                     }
                                     _ => {} // Remove and Add are handled internally from device connected state and management loop (listening)
@@ -370,13 +374,13 @@ pub async fn toy_management_handler(
                     // Handle Toy Update Signals
                     ToyManagementEvent::Tu(tu) => match tu {
                         ToyUpdate::AddToy(toy) => {
-                            toys.insert(toy.toy_id.unwrap(), toy);
+                            core_toy_manager.online_toys.insert(toy.toy_id, toy);
                         }
                         ToyUpdate::RemoveToy(id) => {
-                            toys.remove(&id);
+                            core_toy_manager.online_toys.remove(&id);
                         }
                         ToyUpdate::AlterToy(toy) => {
-                            toys.insert(toy.toy_id.unwrap(), toy);
+                            core_toy_manager.online_toys.insert(toy.toy_id, toy);
                         }
                     },
                     // Handle Management Signals
@@ -417,7 +421,7 @@ pub async fn toy_management_handler(
                 sync::broadcast::channel(1024);
 
             // Create toy threads
-            for toy in &toys {
+            for toy in &core_toy_manager.online_toys {
                 let f_run = f(
                     toy.1.device_handle.clone(),
                     toy_bcst_tx.subscribe(),
@@ -450,19 +454,19 @@ pub async fn toy_management_handler(
                             ToyManagementEvent::Tu(tu) => {
                                 match tu {
                                     ToyUpdate::AddToy(toy) => {
-                                        toys.insert(toy.toy_id.unwrap(), toy.clone());
+                                        core_toy_manager.online_toys.insert(toy.toy_id, toy.clone());
                                         let f_run = f(
                                             toy.device_handle,
                                             toy_bcst_tx.subscribe(),
                                             toy.param_feature_map.clone(),
                                         );
                                         running_toy_ths.insert(
-                                            toy.toy_id.unwrap(),
+                                            toy.toy_id,
                                             toy_async_rt.spawn(async move {
                                                 f_run.await;
                                             }),
                                         );
-                                        info!("Toy: {} started listening..", toy.toy_id.unwrap());
+                                        info!("Toy: {} started listening..", toy.toy_id);
                                     }
                                     ToyUpdate::RemoveToy(id) => {
                                         // OSC Listener thread will only die on StopListening event
@@ -474,7 +478,7 @@ pub async fn toy_management_handler(
                                             }
                                             info!("[TOY ID: {}] Stopped listening. (ToyUpdate::RemoveToy)", id);
                                             running_toy_ths.remove(&id);
-                                            toys.remove(&id);
+                                            core_toy_manager.online_toys.remove(&id);
                                         }
                                     }
                                     ToyUpdate::AlterToy(toy) => {
@@ -484,7 +488,7 @@ pub async fn toy_management_handler(
                                             Ok(receivers) => info!("Sent ToyUpdate broadcast to {} toys", receivers-1),
                                             Err(e) => logerr!("Failed to send UpdateToy: {}", e),
                                         }
-                                        toys.insert(toy.toy_id.unwrap(), toy);
+                                        core_toy_manager.online_toys.insert(toy.toy_id, toy);
                                     }
                                 }
                             }
@@ -513,7 +517,7 @@ pub async fn toy_management_handler(
                                         drop(_toy_bcst_rx); // Causes OSC listener to die
                                         toy_async_rt.shutdown_background();
                                         listening = false;
-                                        info!("Toys: {}", toys.len());
+                                        info!("Toys: {}", core_toy_manager.online_toys.len());
                                         break;//Stop Listening
                                     },
                                     TmSig::TMHReset => {
@@ -535,7 +539,7 @@ pub async fn toy_management_handler(
                                         drop(_toy_bcst_rx); // Causes OSC listener to die
                                         toy_async_rt.shutdown_background();
                                         listening = false;
-                                        info!("Toys: {}", toys.len());
+                                        info!("Toys: {}", core_toy_manager.online_toys.len());
                                         break;//Stop Listening
                                     }
                                     _ => {},
@@ -795,8 +799,8 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
 
         let (toys, remote) = {
             let vc_lock = vibecheck_state_pointer.lock();
-            if !vc_lock.toys.is_empty() {
-                (vc_lock.toys.clone(), vc_lock.config.networking.remote)
+            if !vc_lock.core_toy_manager.as_ref().unwrap().online_toys.is_empty() {
+                (vc_lock.core_toy_manager.as_ref().unwrap().online_toys.clone(), vc_lock.config.networking.remote)
             } else {
                 continue;
             }
@@ -807,23 +811,23 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
         sock.connect(remote).await.unwrap();
         for (.., mut toy) in toys {
 
-            let b_level = match toy.device_handle.battery_level().await {
-                Ok(battery_lvl) => battery_lvl,
+            let b_level: Option<f64> = match toy.device_handle.battery_level().await {
+                Ok(battery_lvl) => Some(battery_lvl),
                 Err(_e) => {
                     warn!("Failed to get battery for toy: {}", toy.toy_name);
-                    0.0
+                    None
                 },
             };
 
-            toy.battery_level = b_level;
+            toy.battery_level = match b_level {Some(bl)=>bl,None=>0.0};
 
             let _ = app_handle.emit_all("fe_toy_event",
                         FeToyEvent::Update ({
                             FeVCToy {
-                                toy_id: toy.toy_id,
+                                toy_id: Some(toy.toy_id),
                                 toy_name: toy.toy_name.clone(),
                                 toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
-                                battery_level: toy.battery_level,
+                                battery_level: Some(toy.battery_level),
                                 toy_connected: toy.toy_connected,
                                 features: toy.param_feature_map.to_fe(),
                                 listening: toy.listening,
@@ -839,12 +843,12 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
 
                 let battery_level_msg = encoder::encode(&OscPacket::Message(OscMessage {
                     addr: format!("/avatar/parameters/{}/{}/battery", toy.toy_name.replace("Lovense Connect", "lovense").replace(" ", "_").to_lowercase(), toy.sub_id),
-                    args: vec![OscType::Float(b_level as f32)]
+                    args: vec![OscType::Float(b_level.unwrap() as f32)]
                 })).unwrap();
 
                 let batt_send_err = sock.send(&battery_level_msg).await;
                 if batt_send_err.is_err(){warn!("Failed to send battery_level to {}", remote.to_string());}
-                else{info!("Sent battery_level: {} to {}", b_level, toy.toy_name);}
+                else{info!("Sent battery_level: {} to {}", b_level.unwrap() as f32, toy.toy_name);}
             } else {
                 trace!("OSC data disabled for toy {}", toy.toy_name);
             }

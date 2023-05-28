@@ -38,7 +38,7 @@ impl APIProcessor {
                     let vc_pointer = app_handle.state::<crate::vcore::VCStateMutex>().0.clone();
                     let mut vc_lock = vc_pointer.lock();
 
-                    vc_lock.toys.iter_mut().for_each(|toy| {
+                    vc_lock.core_toy_manager.as_mut().unwrap().online_toys.iter_mut().for_each(|toy| {
                         if toy.1.mutate_state_by_anatomy(&anatomy, state_bool) {
                             trace!("[*] Mutating feature state from anatomy for toy: {}", toy.1.toy_name);
                             altered_toys.push(toy.1.clone());

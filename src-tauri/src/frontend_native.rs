@@ -108,40 +108,47 @@ pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: ta
     match mutate {
 
         FeToyAlter::Connected(fe_toy) => {
-            let altered = {
-                let mut vc_lock = vc_state.0.lock();
-                if let Some(toy) = vc_lock.toys.get_mut(&fe_toy.toy_id.unwrap()) {
 
-                    toy.osc_data = fe_toy.osc_data;
-                    toy.config.as_mut().unwrap().osc_data = fe_toy.osc_data;
-                    toy.config.as_mut().unwrap().anatomy.from_fe(fe_toy.toy_anatomy);
-
-                    // Overwrite all features in the state handled toy.
-                    for fe_feature in fe_toy.features {
-                        if !toy.param_feature_map.from_fe(fe_feature.clone()) {
-                            logerr!("Failed to convert FeVCToyFeature to VCToyFeature");
-                            return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
-                        } else {
-                            // If altering feature map succeeds write the data to the config
-                            toy.config.as_mut().unwrap().features = toy.param_feature_map.clone();
+            if fe_toy.toy_connected {
+                let altered = {
+                    let mut vc_lock = vc_state.0.lock();
+                    if let Some(toy) = vc_lock.core_toy_manager.as_mut().unwrap().online_toys.get_mut(&fe_toy.toy_id.unwrap()) {
+    
+                        toy.osc_data = fe_toy.osc_data;
+                        toy.config.as_mut().unwrap().osc_data = fe_toy.osc_data;
+                        toy.config.as_mut().unwrap().anatomy.from_fe(fe_toy.toy_anatomy);
+    
+                        // Overwrite all features in the state handled toy.
+                        for fe_feature in fe_toy.features {
+                            if !toy.param_feature_map.from_fe(fe_feature.clone()) {
+                                logerr!("Failed to convert FeVCToyFeature to VCToyFeature");
+                                return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
+                            } else {
+                                // If altering feature map succeeds write the data to the config
+                                toy.config.as_mut().unwrap().features = toy.param_feature_map.clone();
+                            }
                         }
+    
+                        toy.clone()
+    
+                    } else {
+                        return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoToyIndex));
                     }
-
-                    toy.clone()
-
-                } else {
-                    return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoToyIndex));
+                };
+    
+                if vcore::native_alter_toy(vc_state, app_handle, altered).is_err() {
+                    return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::TMESendFailure));
                 }
-            };
 
-            if vcore::native_alter_toy(vc_state, app_handle, altered).is_err() {
-                return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::TMESendFailure));
+            } else {
+                return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::ToyDisconnected));
             }
+
             Ok(())
         },
         FeToyAlter::Disconnected(fe_toy) => {
             
-            if let None = fe_toy.toy_id {
+            if fe_toy.toy_connected {
 
                 let mut offline_toy_config = match VCToyConfig::load_offline_toy_config(fe_toy.toy_name) {
                     Ok(toy_config) => toy_config,
@@ -160,7 +167,7 @@ pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: ta
                 offline_toy_config.save_offline_toy_config();
 
             } else {
-                return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::ToyNotDisconnected));
+                return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::ToyConnected));
             }
 
             Ok(())

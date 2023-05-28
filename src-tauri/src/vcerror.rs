@@ -34,7 +34,8 @@ pub mod frontend {
         NoFeatureIndex,
         NoToyIndex,
         TMESendFailure,
-        ToyNotDisconnected,
+        ToyConnected,
+        ToyDisconnected,
         OfflineToyNotExist,
         OfflineToyNoFeatureIndex,
     }

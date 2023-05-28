@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fs;
 use std::net::{SocketAddrV4, Ipv4Addr};
 use std::str::FromStr;
@@ -14,6 +13,7 @@ use parking_lot::Mutex;
 use crate::bluetooth;
 use crate::handling::{HandlerErr, toy_refresh, vc_disabled_osc_command_listen, command_toy};
 use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyEvent, FeVCFeatureType};
+use crate::toy_manager::ToyManager;
 use crate::toyops::VCFeatureType;
 use crate::util::{get_config_dir, get_user_home_dir};
 use crate::vcerror::{backend, frontend};
@@ -48,8 +48,8 @@ pub struct VibeCheckState {
     pub bp_client: Option<ButtplugClient>,
 
     pub running: RunningState,
-    pub toys: HashMap<u32, VCToy>,
-    //pub disconnected_toys: 
+    pub core_toy_manager: Option<ToyManager>,
+    //pub offline_toys: OfflineToys,
     //================================================
     // Handlers error recvr
     //inner_channels: Arc<RwLock<innerChannels>>,
@@ -91,7 +91,7 @@ impl VibeCheckState {
     pub fn new(config: VibeCheckConfig) -> Self {
 
         // Toys hashmap
-        let toys = HashMap::new();
+        //let core_toy_manager = ToyHandler::new();
 
         // Create error handling/passig channels
         let (error_tx, error_rx): (Sender<VCError>, Receiver<VCError>) = mpsc::channel();
@@ -102,7 +102,7 @@ impl VibeCheckState {
         // Setup channels
         let (tme_recv_tx, tme_recv_rx): (UnboundedSender<ToyManagementEvent>, UnboundedReceiver<ToyManagementEvent>) = unbounded_channel();
         let (tme_send_tx, tme_send_rx): (UnboundedSender<ToyManagementEvent>, UnboundedReceiver<ToyManagementEvent>) = unbounded_channel();
-        
+
         Self {
 
             app_handle: None,
@@ -111,8 +111,7 @@ impl VibeCheckState {
             //connection_modes,
             bp_client: None,
             running: RunningState::Stopped,
-            toys,
-
+            core_toy_manager: None,
             //======================================
             // Error channels
             error_rx,
@@ -157,10 +156,16 @@ impl VibeCheckState {
             logerr!("start_tmh() called but no app_handle was set");
             return;
         }
+
+        if self.core_toy_manager.is_none() {
+            logerr!("start_tmh() called but no core_toy_manager was set");
+            return;
+        }
+
         self.toy_management_h_thread = Some(self.async_rt.spawn(toy_management_handler(
             self.tme_recv_tx.take().unwrap(),
             self.tme_send_rx.take().unwrap(),
-            self.toys.clone(),
+            self.core_toy_manager.as_ref().unwrap().clone(),
             self.config.networking.clone(),
             self.app_handle.as_ref().unwrap().clone(),
         )));
@@ -199,6 +204,9 @@ impl VibeCheckState {
     }
     pub fn set_app_handle(&mut self, app_handle: AppHandle) {
         self.app_handle = Some(app_handle);
+    }
+    pub fn init_toy_manager(&mut self) {
+        self.core_toy_manager = Some(ToyManager::new(self.app_handle.as_ref().unwrap().clone()));
     }
 
     pub fn init_ceh(&mut self) {
@@ -622,10 +630,10 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
     let _ = app_handle.emit_all("fe_toy_event",
         FeToyEvent::Update ({
             FeVCToy {
-                toy_id: alter_clone.toy_id,
+                toy_id: Some(alter_clone.toy_id),
                 toy_name: alter_clone.toy_name,
                 toy_anatomy: alter_clone.config.as_ref().unwrap().anatomy.to_fe(),
-                battery_level: alter_clone.battery_level,
+                battery_level: Some(alter_clone.battery_level),
                 toy_connected: alter_clone.toy_connected,
                 features: alter_clone.param_feature_map.to_fe(),
                 listening: alter_clone.listening,
@@ -680,7 +688,7 @@ pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, 
     
     let vc_toys = {
         let vc_lock = vc_state.0.lock();
-        vc_lock.toys.clone()
+        vc_lock.core_toy_manager.as_ref().unwrap().online_toys.clone()
     };
     
     let toy = match vc_toys.get(&toy_id) {
