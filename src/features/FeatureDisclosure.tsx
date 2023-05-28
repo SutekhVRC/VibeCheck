@@ -1,21 +1,27 @@
 import { ChevronUpIcon } from "@heroicons/react/24/solid";
+import classNames from "classnames";
 import { AnimatePresence, motion } from "framer-motion";
 import { ReactNode, useState } from "react";
 
 export function FeatureDisclosure({
   title,
   titleIsOn = true,
+  outline,
   children,
 }: {
   title: string;
   titleIsOn?: boolean;
+  outline: string;
   children: ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   return (
     <>
       <button
-        className="flex justify-between items-center px-4 py-2 bg-zinc-700 outline outline-1 outline-zinc-600 rounded-md"
+        className={classNames(
+          "flex justify-between items-center px-4 py-2 outline outline-1 rounded-md",
+          outline
+        )}
         onClick={() => setIsOpen((b) => !b)}
       >
         <div className="flex items-center">
