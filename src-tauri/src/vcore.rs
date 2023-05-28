@@ -633,7 +633,7 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
                 toy_id: Some(alter_clone.toy_id),
                 toy_name: alter_clone.toy_name,
                 toy_anatomy: alter_clone.config.as_ref().unwrap().anatomy.to_fe(),
-                battery_level: Some(alter_clone.battery_level),
+                battery_level: alter_clone.battery_level,
                 toy_connected: alter_clone.toy_connected,
                 features: alter_clone.param_feature_map.to_fe(),
                 listening: alter_clone.listening,

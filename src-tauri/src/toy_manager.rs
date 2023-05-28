@@ -30,9 +30,10 @@ impl ToyManager {
         ot.populate_configs();
         trace!("ToyManager config population complete!");
 
+/*
         ot.sync_frontend();
         trace!("ToyManager initialization sent frontend sync");
-
+*/
         ot
     }
 
