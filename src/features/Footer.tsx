@@ -10,6 +10,7 @@ import { useCoreEventContext } from "../context/CoreEventContext";
 import Config from "./Config";
 import UpdatePing from "../components/UpdatePing";
 import { useUpdate } from "../hooks/useUpdate";
+import classNames from "classnames";
 
 export function Footer() {
   const [configIsOpen, setConfigIsOpen] = useState(false);
@@ -25,15 +26,16 @@ export function Footer() {
   }, [configIsOpen]);
 
   return (
-    <div className="grid grid-cols-3 items-center fixed left-0 bottom-4 min-w-full px-8">
+    <div className="grid grid-cols-3 items-center px-8 max-w-xl flex-grow">
       <div className="flex justify-around items-center">
         <UpdatePing canUpdate={canUpdate}>
           <Cog6ToothIcon
-            className={`h-10 cursor-pointer transform duration-300 ease-in-out ${
+            className={classNames(
+              "h-10 cursor-pointer transform duration-300 ease-in-out",
               configIsOpen && "rotate-45"
-            }`}
+            )}
             onClick={() => {
-              if (config != null) setConfigIsOpen(true);
+              setConfigIsOpen(true);
             }}
           />
         </UpdatePing>

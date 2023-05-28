@@ -91,7 +91,7 @@ export default function Config({
           <TooltipLabel text="OSC Bind" tooltip="OSC Receive Port" />
           <input
             name="bind"
-            className="text-zinc-800"
+            className="text-zinc-800 px-1 rounded-sm outline-none"
             value={newConfig.networking.bind}
             onChange={onChangeNetworking}
             pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}
@@ -108,7 +108,7 @@ export default function Config({
           <TooltipLabel text="OSC Remote" tooltip="OSC Send Port" />
           <input
             name="remote"
-            className="text-zinc-800"
+            className="text-zinc-800 px-1 rounded-sm outline-none"
             value={newConfig.networking.remote}
             onChange={onChangeNetworking}
             pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}
@@ -193,10 +193,7 @@ export default function Config({
           Save
         </Button>
         <Tooltip text="Force refresh OSC avatar parameters by deleting VRChat OSC config folders. The in-game button does not work.">
-          <Button
-            disabled={refreshDisabled}
-            onClick={refreshConfig}
-          >
+          <Button disabled={refreshDisabled} onClick={refreshConfig}>
             Refresh OSC
           </Button>
         </Tooltip>

@@ -70,10 +70,12 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 800,
-        "resizable": false,
+        "resizable": true,
         "title": "VibeCheck",
-        "width": 600
+        "width": 600,
+        "height": 900,
+        "minWidth": 450,
+        "minHeight": 500
       }
     ]
   }

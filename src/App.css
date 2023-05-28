@@ -1,7 +1,5 @@
 #root {
-  max-width: 800px;
   margin: 0 auto;
-  padding: 2rem;
   text-align: center;
   --blue: rgb(86, 205, 255);
   --purple: rgb(167, 164, 217);
