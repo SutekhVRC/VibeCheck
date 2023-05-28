@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
 import type { FeVCToy } from "../../../src-tauri/bindings/FeVCToy";
-import { ALTER_TOY, OSC_PARAM_PREFIX } from "../../data/constants";
+import { ALTER_TOY, OSC_DATA_PREFIX } from "../../data/constants";
 import Switch from "../../layout/Switch";
 import { useToastContext } from "../../context/ToastContext";
 
@@ -14,7 +14,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
     .replace("Lovense Connect", "Lovense")
     .replaceAll(" ", "_")
     .toLowerCase();
-  const osc_data_addr = `${OSC_PARAM_PREFIX}${parsed_toy_name}/${toy.sub_id}/battery`;
+  const osc_data_addr = `${OSC_DATA_PREFIX}${parsed_toy_name}/${toy.sub_id}/battery`;
 
   useEffect(() => {
     async function saveConfig(newOSCDataState: boolean) {
@@ -24,7 +24,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
           mutate: { OSCData: newOSCDataState },
         });
       } catch (e) {
-        toast.createToast("Alter Toy", `Could not alter toy!\n${e}`, "error");
+        toast.createToast("Could not alter toy!", `${e}`, "error");
       }
     }
     saveConfig(oscData);
@@ -35,11 +35,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
       await navigator.clipboard.writeText(osc_data_addr);
       toast.createToast("Copied to clipboard", osc_data_addr, "info");
     } catch (e) {
-      toast.createToast(
-        "Clipboard",
-        `Could not copy to clipboard!\n${e}`,
-        "error"
-      );
+      toast.createToast("Could not copy to clipboard!", `${e}`, "error");
     }
   }
 
@@ -60,7 +56,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
         onClick={handleCopy}
         className="border-2 px-2 rounded-sm border-zinc-500 text-sm"
       >
-        Click to copy osc data address
+        Click to copy osc data parameter
       </button>
     </div>
   );

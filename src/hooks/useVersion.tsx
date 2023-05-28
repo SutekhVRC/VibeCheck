@@ -12,7 +12,7 @@ export function useVersion() {
       const version = await invoke<string>(VERSION);
       setVersion(version);
     } catch (e) {
-      toast.createToast("Version", `Could not get version!\n${e}`, "error");
+      toast.createToast("Could not get version!", `${e}`, "error");
     }
   }
   useEffect(() => {

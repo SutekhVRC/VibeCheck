@@ -30,7 +30,7 @@ export default function FeatureForm({
   const newFeature = useMemo(() => {
     return { ...feature, feature_levels: levels };
   }, [feature, levels]);
-  const toast = useToastContext()
+  const toast = useToastContext();
 
   useEffect(() => {
     if (feature == initFeature) return;
@@ -61,11 +61,7 @@ export default function FeatureForm({
         mutate: { Feature: newFeature },
       });
     } catch (e) {
-      toast.createToast(
-        "Alter Toy",
-        `Could not alter toy!\n${e}`,
-        "error"
-      );
+      toast.createToast("Could not alter toy!", `${e}`, "error");
     }
   }
 

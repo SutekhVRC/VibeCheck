@@ -93,11 +93,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 toast.type == "info" && "bg-blue-400",
                 toast.type == "warn" && "bg-amber-400",
                 toast.type == "error" && "bg-red-400",
-                "w-64 rounded-md m-1 p-1"
+                "w-80 rounded-md m-1 p-1"
               )}
               initial={{ x: "100vh", opacity: 0 }}
               animate={{
-                x: "calc(100vw - 300px)",
+                x: "calc(100vw - 350px)",
                 opacity: 1,
                 transition: {
                   type: "spring",
