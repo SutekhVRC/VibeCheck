@@ -1,5 +1,4 @@
 import { ChevronUpIcon } from "@heroicons/react/24/solid";
-import classNames from "classnames";
 import { AnimatePresence, motion } from "framer-motion";
 import { ReactNode, useState } from "react";
 
@@ -24,12 +23,9 @@ export function FeatureDisclosure({
             {title}
           </div>
         </div>
-        <ChevronUpIcon
-          className={classNames(
-            isOpen && "rotate-180 transform",
-            "h-6 w-6 text-zinc-400"
-          )}
-        />
+        <motion.div animate={{ rotate: isOpen ? 180 : 0 }}>
+          <ChevronUpIcon className="h-6 w-6 text-zinc-400" />
+        </motion.div>
       </button>
       <AnimatePresence>
         {isOpen && (

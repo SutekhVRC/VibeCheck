@@ -1,12 +1,17 @@
-import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
-import { ALTER_TOY, OSC_DATA_PREFIX } from "../data/constants";
+import { OSC_DATA_PREFIX } from "../data/constants";
 import Switch from "../layout/Switch";
 import { useToastContext } from "../context/ToastContext";
 import Button from "../layout/Button";
 
-export default function ToySettings({ toy }: { toy: FeVCToy }) {
+export default function ToySettings({
+  toy,
+  handleToyAlter,
+}: {
+  toy: FeVCToy;
+  handleToyAlter: (newToy: FeVCToy) => void;
+}) {
   const [oscData, setOscData] = useState(toy.osc_data);
 
   const toast = useToastContext();
@@ -18,15 +23,8 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
   const osc_data_addr = `${OSC_DATA_PREFIX}${parsed_toy_name}/${toy.sub_id}/battery`;
 
   useEffect(() => {
-    async function saveConfig(newOSCDataState: boolean) {
-      try {
-        await invoke(ALTER_TOY, {
-          toyId: toy.toy_id,
-          mutate: { OSCData: newOSCDataState },
-        });
-      } catch (e) {
-        toast.createToast("Could not alter toy!", `${e}`, "error");
-      }
+    async function saveConfig(osc_data: boolean) {
+      handleToyAlter({ ...toy, osc_data });
     }
     saveConfig(oscData);
   }, [oscData]);

@@ -7,9 +7,29 @@ import { FeatureDisclosure } from "./FeatureDisclosure";
 import Tooltip from "../layout/Tooltip";
 import BatteryIcon from "../components/BatteryIcon";
 import { motion } from "framer-motion";
+import { ALTER_TOY } from "../data/constants";
+import { invoke } from "@tauri-apps/api";
+import { useToastContext } from "../context/ToastContext";
+import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 
 export default function Toy({ toy }: { toy: FeVCToy }) {
   const nameInfo = NameInfo(toy.toy_name);
+  const toast = useToastContext();
+
+  async function handleToyAlter(newToy: FeVCToy) {
+    try {
+      await invoke(ALTER_TOY, {
+        mutate: { Connected: newToy }, // TODO new toy for now - testing
+      });
+    } catch (e) {
+      toast.createToast("Could not alter toy!", `${e}`, "error");
+    }
+  }
+
+  function handleFeatureAlter(newFeature: FeVCToyFeature) {
+    toy.features[newFeature.feature_index] = newFeature;
+    handleToyAlter(toy);
+  }
 
   return (
     <motion.div
@@ -36,7 +56,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
       </div>
       <div className="grid m-2">
         <FeatureDisclosure title="Config">
-          <ToySettings toy={toy} />
+          <ToySettings toy={toy} handleToyAlter={handleToyAlter} />
         </FeatureDisclosure>
         {toy.features.map((feature) => (
           <div
@@ -47,7 +67,11 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
               title={`${feature.feature_type} ${feature.feature_index}`}
               titleIsOn={feature.feature_enabled}
             >
-              <FeatureForm toyId={toy.toy_id} toyFeature={feature} />
+              <FeatureForm
+                handleFeatureAlter={handleFeatureAlter}
+                toyId={toy.toy_id}
+                toyFeature={feature}
+              />
             </FeatureDisclosure>
           </div>
         ))}

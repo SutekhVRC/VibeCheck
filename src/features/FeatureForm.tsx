@@ -1,83 +1,72 @@
-import { invoke } from "@tauri-apps/api";
-import type { ChangeEvent } from "react";
-import { useMemo } from "react";
-import { useEffect, useState } from "react";
-import { ALTER_TOY, DEBOUNCE_TIME, OSC_PARAM_PREFIX } from "../data/constants";
+import { ChangeEvent, useEffect, useState } from "react";
+import { DEBOUNCE_TIME, OSC_PARAM_PREFIX } from "../data/constants";
 import { round0 } from "../utils";
 import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import Slider from "../layout/Slider";
 import { TooltipLabel } from "../layout/Tooltip";
 import useSimulate from "../hooks/useSimulate";
 import Switch from "../layout/Switch";
-import { useToastContext } from "../context/ToastContext";
+import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
+import { debounce } from "lodash";
 
 type ToyFeatureFormProps = {
+  handleFeatureAlter: (newFeature: FeVCToyFeature) => void;
   toyId: number | null;
   toyFeature: FeVCToyFeature;
 };
 
 export default function FeatureForm({
+  handleFeatureAlter,
   toyId,
   toyFeature,
 }: ToyFeatureFormProps) {
-  const { feature_levels: initLevels, ...initFeature } = toyFeature;
-  const [feature, setFeature] = useState(initFeature);
-  const [levels, setLevels] = useState(initLevels);
-  const newFeature = useMemo(() => {
-    return { ...feature, feature_levels: levels };
-  }, [feature, levels]);
-  const toast = useToastContext();
+  const [feature, setToyFeature] = useState(toyFeature);
+  const levels = feature.feature_levels;
 
   useEffect(() => {
-    if (feature == initFeature) return;
-    if (feature.osc_parameter == initFeature.osc_parameter) {
-      alterToy(toyId, newFeature);
-    } else {
-      // Debounce text input
-      const t = setTimeout(() => {
-        alterToy(toyId, newFeature);
-      }, DEBOUNCE_TIME);
-      return () => clearTimeout(t);
-    }
+    const debouncedAlter = debounce(
+      () => handleFeatureAlter(feature),
+      DEBOUNCE_TIME
+    );
+    if (
+      toyFeature.feature_enabled != feature.feature_enabled ||
+      toyFeature.flip_input_float != feature.flip_input_float ||
+      toyFeature.smooth_enabled != feature.smooth_enabled
+    )
+      handleFeatureAlter(feature);
+    else debouncedAlter();
+    return () => debouncedAlter.cancel();
   }, [feature]);
 
-  useEffect(() => {
-    if (levels == initLevels) return;
-    // Debounce all level changes
-    const t = setTimeout(() => {
-      alterToy(toyId, newFeature);
-    }, DEBOUNCE_TIME);
-    return () => clearTimeout(t);
-  }, [levels]);
-
-  async function alterToy(toyId: number, newFeature: FeVCToyFeature) {
-    try {
-      await invoke(ALTER_TOY, {
-        toyId: toyId,
-        mutate: { Feature: newFeature },
-      });
-    } catch (e) {
-      toast.createToast("Could not alter toy!", `${e}`, "error");
-    }
-  }
-
-  const onCheckSwitch = (checked: boolean, name: keyof FeVCToyFeature) => {
-    setFeature({ ...feature, [name]: checked });
+  const handleBool = (checked: boolean, name: keyof FeVCToyFeature) => {
+    setToyFeature((feature) => {
+      return {
+        ...feature,
+        [name]: checked,
+      };
+    });
   };
 
   function handleOscParam(e: ChangeEvent<HTMLInputElement>) {
-    setFeature({
-      ...feature,
-      [e.target.name]: `${OSC_PARAM_PREFIX}${e.target.value}`,
+    setToyFeature((feature) => {
+      return {
+        ...feature,
+        [e.target.name]: `${OSC_PARAM_PREFIX}${e.target.value}`,
+      };
     });
   }
 
-  function handleLevels(key: string, value: number) {
-    setLevels({ ...levels, [key]: value });
+  function handleLevels(key: keyof FeLevelTweaks, value: number) {
+    setToyFeature((feature) => {
+      return {
+        ...feature,
+        feature_levels: { ...levels, [key]: value },
+      };
+    });
   }
 
   const { simulate, simulateHandler, simulateLevel, simulateLevelHandler } =
-    useSimulate(toyId, toyFeature.feature_index, toyFeature.feature_type);
+    useSimulate(toyId, feature.feature_index, feature.feature_type);
 
   return (
     <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 p-4">
@@ -86,7 +75,7 @@ export default function FeatureForm({
         size="small"
         isEnabled={feature.feature_enabled}
         toggleIsEnabled={(checked: boolean) =>
-          onCheckSwitch(checked, "feature_enabled")
+          handleBool(checked, "feature_enabled")
         }
       />
       <div></div>
@@ -97,7 +86,7 @@ export default function FeatureForm({
       />
       <div></div>
       <input
-        className="text-zinc-800 text-xs"
+        className="text-zinc-800 text-xs px-2 rounded-sm outline-none"
         name="osc_parameter"
         value={feature.osc_parameter.replace(OSC_PARAM_PREFIX, "")}
         onChange={handleOscParam}
@@ -111,7 +100,7 @@ export default function FeatureForm({
         size="small"
         isEnabled={feature.flip_input_float}
         toggleIsEnabled={(checked: boolean) =>
-          onCheckSwitch(checked, "flip_input_float")
+          handleBool(checked, "flip_input_float")
         }
       />
       <div></div>
@@ -124,7 +113,7 @@ export default function FeatureForm({
         size="small"
         isEnabled={feature.smooth_enabled}
         toggleIsEnabled={(checked: boolean) =>
-          onCheckSwitch(checked, "smooth_enabled")
+          handleBool(checked, "smooth_enabled")
         }
       />
       <Slider
@@ -179,24 +168,28 @@ export default function FeatureForm({
       <div className="text-right">
         {round0.format(levels.maximum_level * 100)}
       </div>
-      <div className="h-2" />
-      <div />
-      <div />
-      <div />
-      <TooltipLabel text="Simulate" tooltip="Test feature power level." />
-      <Switch
-        size="small"
-        isEnabled={simulate}
-        toggleIsEnabled={simulateHandler}
-      />
-      <Slider
-        min={0}
-        max={1}
-        step={0.01}
-        value={[simulateLevel]}
-        onValueChange={(e) => simulateLevelHandler(e[0])}
-      />
-      <div className="text-right">{round0.format(simulateLevel * 100)}</div>
+      {simulate != null && (
+        <>
+          <div className="h-2" />
+          <div />
+          <div />
+          <div />
+          <TooltipLabel text="Simulate" tooltip="Test feature power level." />
+          <Switch
+            size="small"
+            isEnabled={simulate}
+            toggleIsEnabled={simulateHandler}
+          />
+          <Slider
+            min={0}
+            max={1}
+            step={0.01}
+            value={[simulateLevel]}
+            onValueChange={(e) => simulateLevelHandler(e[0])}
+          />
+          <div className="text-right">{round0.format(simulateLevel * 100)}</div>
+        </>
+      )}
     </div>
   );
 }

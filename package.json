@@ -21,11 +21,13 @@
     "@tauri-apps/api": "^1.2.0",
     "classnames": "^2.3.2",
     "framer-motion": "^10.12.12",
+    "lodash": "^4.17.21",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.2.3",
+    "@types/lodash": "^4.14.195",
     "@types/node": "^18.14.6",
     "@types/react": "^18.0.28",
     "@types/react-dom": "^18.0.11",

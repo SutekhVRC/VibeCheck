@@ -5,10 +5,18 @@ import { DEBOUNCE_TIME, SIMULATE_TOY_FEATURE } from "../data/constants";
 import { useToastContext } from "../context/ToastContext";
 
 export default function useSimulate(
-  toyId: number,
+  toyId: number | null,
   featureIndex: number,
   featureType: FeVCFeatureType
 ) {
+  if (toyId == null)
+    return {
+      simulate: null,
+      simulateHandler: () => null,
+      simulateLevel: null,
+      simulateLevelHandler: () => null,
+    };
+
   const [simulate, setSimulate] = useState(false);
   const [simulateLevel, setSimulateLevel] = useState(0.5);
   const toast = useToastContext();
