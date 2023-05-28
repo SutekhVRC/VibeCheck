@@ -83,11 +83,24 @@ pub async fn client_event_handler(
             match event {
                 ButtplugClientEvent::DeviceAdded(dev) => {
                     Delay::new(Duration::from_secs(3)).await;
-                    let battery_level = match dev.battery_level().await {
-                        Ok(battery_lvl) => battery_lvl,
+                    let battery_level: Option<f64> = match dev.battery_level().await {
+                        Ok(battery_lvl) => Some(battery_lvl),
                         Err(_e) => {
                             warn!("Device battery_level error: {:?}", _e);
-                            0.0
+                            match _e {
+                                buttplug::client::ButtplugClientError::ButtplugError(bpe) => {
+                                    match bpe {
+                                        buttplug::core::errors::ButtplugError::ButtplugDeviceError(bde) => {
+                                            match bde {
+                                                buttplug::core::errors::ButtplugDeviceError::MessageNotSupported(_) => None,
+                                                _ => Some(0.0)// Not Message not supported error
+                                            }// msg not supported
+                                        },// buttplug device error
+                                        _ => Some(0.0)// Not device error
+                                    }// buttplug error
+                                },// buttplug error
+                                _ => Some(0.0),
+                            }
                         },
                     };
 
@@ -106,7 +119,7 @@ pub async fn client_event_handler(
                     let mut toy = VCToy {
                         toy_id: dev.index(),
                         toy_name: dev.name().clone(),
-                        battery_level,
+                        battery_level: battery_level,
                         toy_connected: dev.connected(),
                         toy_features: dev.message_attributes().clone(),
                         param_feature_map: FeatureParamMap::new(),
@@ -138,7 +151,7 @@ pub async fn client_event_handler(
                                 toy_id: Some(toy.toy_id),
                                 toy_name: toy.toy_name.clone(),
                                 toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
-                                battery_level: Some(toy.battery_level),
+                                battery_level,
                                 toy_connected: toy.toy_connected,
                                 features: toy.param_feature_map.to_fe(),
                                 listening: toy.listening,
@@ -153,7 +166,7 @@ pub async fn client_event_handler(
                         if vc_lock.config.desktop_notifications {
                             let _ = Notification::new(identifier.clone())
                             .title("Toy Connected")
-                            .body(format!("{} ({}%)", toy.toy_name, (100.0 * toy.battery_level)).as_str())
+                            .body(format!("{} ({}%)", toy.toy_name, (100.0 * toy.battery_level.unwrap_or(0.0))).as_str())
                             .show();
                         }
                     }
@@ -819,7 +832,7 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
                 },
             };
 
-            toy.battery_level = match b_level {Some(bl)=>bl,None=>0.0};
+            toy.battery_level = b_level;
 
             let _ = app_handle.emit_all("fe_toy_event",
                         FeToyEvent::Update ({
@@ -827,7 +840,7 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
                                 toy_id: Some(toy.toy_id),
                                 toy_name: toy.toy_name.clone(),
                                 toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
-                                battery_level: Some(toy.battery_level),
+                                battery_level: b_level,
                                 toy_connected: toy.toy_connected,
                                 features: toy.param_feature_map.to_fe(),
                                 listening: toy.listening,

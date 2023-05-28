@@ -11,7 +11,7 @@ use crate::{config::toy::{VCToyConfig, VCToyAnatomy}, frontend_types::{FeVCToyFe
 pub struct VCToy {
     pub toy_id: u32,
     pub toy_name: String,
-    pub battery_level: f64,
+    pub battery_level: Option<f64>,
     pub toy_connected: bool,
     pub toy_features: ClientDeviceMessageAttributes,
     pub param_feature_map: FeatureParamMap,
@@ -218,6 +218,9 @@ pub struct VCToyFeature {
 
     pub smooth_enabled: bool,
     pub smooth_entries: Vec<f64>,
+
+    //pub rate_enabled: bool,
+    //pub rate_hertz: u64,
 
     //pub saved: bool,
 }

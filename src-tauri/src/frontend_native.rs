@@ -102,7 +102,7 @@ pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, fe_
  * Return: Result<Ok(()), Err(ToyAlterError)>
  */
 #[tauri::command(async)]
-pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: tauri::AppHandle, /*toy_id: u32,*/ mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
+pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: tauri::AppHandle, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
     trace!("alter_toy({:?})", mutate);
 
     match mutate {
