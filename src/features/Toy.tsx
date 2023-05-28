@@ -88,7 +88,7 @@ function ToyInfo({
   battery,
 }: {
   nameInfo: NameInfo;
-  battery: number;
+  battery: number | null;
 }) {
   return (
     <div className="flex gap-x-4 items-center">

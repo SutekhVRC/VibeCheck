@@ -12,7 +12,7 @@ import Switch from "../layout/Switch";
 import { useToastContext } from "../context/ToastContext";
 
 type ToyFeatureFormProps = {
-  toyId: number;
+  toyId: number | null;
   toyFeature: FeVCToyFeature;
 };
 
