@@ -1,10 +1,12 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
-import { TOY_EVENT } from "../data/constants";
+import { OFFLINE_SYNC, TOY_EVENT } from "../data/constants";
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import type { FeToyEvent } from "../../src-tauri/bindings/FeToyEvent";
 import { assertExhaustive } from "../utils";
 import assert from "assert";
+import { useToastContext } from "../context/ToastContext";
+import { invoke } from "@tauri-apps/api";
 
 export type OnlineToyMap = {
   [id: number]: FeVCToy;
@@ -16,6 +18,28 @@ export type OfflineToyMap = {
 export function useToys() {
   const [onlineToys, setOnlineToys] = useState<OnlineToyMap>({});
   const [offlineToys, setOfflineToys] = useState<OfflineToyMap>({});
+  const toast = useToastContext();
+
+  useEffect(() => {
+    async function getOfflinetoys() {
+      try {
+        const offlineToys = await invoke<FeVCToy[]>(OFFLINE_SYNC);
+        setOfflineToys(
+          offlineToys.reduce((acc, val) => {
+            acc[val.toy_name] = val;
+            return acc;
+          }, {} as OfflineToyMap)
+        );
+      } catch (e) {
+        toast.createToast(
+          "Could not load offline toys",
+          JSON.stringify(e),
+          "error"
+        );
+      }
+    }
+    getOfflinetoys();
+  }, []);
 
   function handleToyEvent(payload: FeToyEvent): void {
     switch (payload.kind) {
@@ -69,15 +93,6 @@ export function useToys() {
             [payload.data.toy_id as number]: payload.data,
           };
         });
-        break;
-      case "OfflineSyncAll":
-        console.log("OFFLINE SYNC");
-        setOfflineToys(
-          payload.data.reduce((acc, val) => {
-            acc[val.toy_name] = val;
-            return acc;
-          }, {} as OfflineToyMap)
-        );
         break;
       default:
         assertExhaustive(payload);
