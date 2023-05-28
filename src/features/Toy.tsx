@@ -11,6 +11,7 @@ import { ALTER_TOY } from "../data/constants";
 import { invoke } from "@tauri-apps/api";
 import { useToastContext } from "../context/ToastContext";
 import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
+import classNames from "classnames";
 
 export default function Toy({ toy }: { toy: FeVCToy }) {
   const nameInfo = NameInfo(toy.toy_name);
@@ -18,11 +19,18 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
 
   async function handleToyAlter(newToy: FeVCToy) {
     try {
-      await invoke(ALTER_TOY, {
-        mutate: { Connected: newToy }, // TODO new toy for now - testing
-      });
+      console.log(newToy);
+      if (newToy.toy_connected) {
+        await invoke(ALTER_TOY, {
+          mutate: { Connected: newToy },
+        });
+      } else {
+        await invoke(ALTER_TOY, {
+          mutate: { Disconnected: newToy },
+        });
+      }
     } catch (e) {
-      toast.createToast("Could not alter toy!", `${e}`, "error");
+      toast.createToast("Could not alter toy!", JSON.stringify(e), "error");
     }
   }
 
@@ -31,9 +39,14 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
     handleToyAlter(toy);
   }
 
+  const outline = toy.toy_connected ? "outline-zinc-600" : "outline-slate-600";
+
   return (
     <motion.div
-      className="rounded-md bg-zinc-700 px-2 py-4 m-2"
+      className={classNames(
+        toy.toy_connected ? "bg-zinc-700" : "bg-slate-700",
+        "rounded-md px-2 py-4 m-2"
+      )}
       initial={{ y: "100%", opacity: 0 }}
       animate={{
         y: 0,
@@ -51,11 +64,17 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
       }}
     >
       <div className="text-4xl flex justify-between items-center px-6">
-        <div>{nameInfo.shortName}</div>
+        {toy.toy_connected ? (
+          <div>{nameInfo.shortName}</div>
+        ) : (
+          <Tooltip text="Offline">
+            <div className="line-through">{nameInfo.shortName}</div>
+          </Tooltip>
+        )}
         <ToyInfo nameInfo={nameInfo} battery={toy.battery_level} />
       </div>
       <div className="grid m-2">
-        <FeatureDisclosure title="Config">
+        <FeatureDisclosure title="Config" outline={outline}>
           <ToySettings toy={toy} handleToyAlter={handleToyAlter} />
         </FeatureDisclosure>
         {toy.features.map((feature) => (
@@ -64,6 +83,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
             key={`${toy.toy_id} ${feature.feature_type} ${feature.feature_index}`}
           >
             <FeatureDisclosure
+              outline={outline}
               title={`${feature.feature_type} ${feature.feature_index}`}
               titleIsOn={feature.feature_enabled}
             >

@@ -10,7 +10,9 @@ import "./App.css";
 import Loading from "./components/Loading";
 
 export default function App() {
-  const { toys } = useToys();
+  const { onlineToys, offlineToys } = useToys();
+  const totalToys =
+    Object.values(onlineToys).length + Object.values(offlineToys).length;
   const { isScanning, toggleScan } = useCoreEventContext();
 
   return (
@@ -20,16 +22,21 @@ export default function App() {
       </div>
       <div className="h-[calc(100vh-160px)] flex justify-center">
         <div className="flex flex-col justify-between gap-2 text-lg rounded-lg p-3 bg-zinc-800 flex-grow max-w-xl">
-          {Object.keys(toys).length == 0 ? (
-            <div className="flex flex-col justify-center items-center -mt-20">
-              <img src={cryingAnimeGirl} />
-              <div>No Toys</div>
+          {totalToys == 0 ? (
+            <div className="flex-grow flex justify-center">
+              <div className="flex flex-col justify-center items-center -mt-20">
+                <img src={cryingAnimeGirl} />
+                <div>No Toys</div>
+              </div>
             </div>
           ) : (
             <div className="overflow-y-scroll pl-2 scrollbar">
               <AnimatePresence>
-                {Object.values(toys).map((toy) => (
-                  <Toy toy={toy} key={`${toy.toy_name} ${toy.toy_id}`} />
+                {Object.values(onlineToys).map((toy) => (
+                  <Toy toy={toy} key={`${toy.toy_name} ${toy.sub_id}`} />
+                ))}
+                {Object.values(offlineToys).map((toy) => (
+                  <Toy toy={toy} key={`${toy.toy_name}`} />
                 ))}
               </AnimatePresence>
             </div>

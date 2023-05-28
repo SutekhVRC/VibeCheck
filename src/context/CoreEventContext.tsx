@@ -53,7 +53,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
       await invoke(ENABLE);
       setIsEnabled(true);
     } catch (e) {
-      toast.createToast("Could not enable!", `${e}`, "error");
+      toast.createToast("Could not enable!", JSON.stringify(e), "error");
     }
   }
 
@@ -63,7 +63,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
       await invoke(DISABLE);
       setIsEnabled(false);
     } catch (e) {
-      toast.createToast("Could not disable!", `${e}`, "error");
+      toast.createToast("Could not disable!", JSON.stringify(e), "error");
     }
   }
 
@@ -77,7 +77,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
       await invoke(START_SCAN);
       setIsScanning(true);
     } catch (e) {
-      toast.createToast("Could not start scan!", `${e}`, "error");
+      toast.createToast("Could not start scan!", JSON.stringify(e), "error");
     }
   }
 
@@ -86,7 +86,7 @@ export function CoreEventProvider({ children }: { children: ReactNode }) {
       await invoke(STOP_SCAN);
       setIsScanning(false);
     } catch (e) {
-      toast.createToast("Could not stop scan!", `${e}`, "error");
+      toast.createToast("Could not stop scan!", JSON.stringify(e), "error");
     }
   }
 
