@@ -27,6 +27,8 @@ pub mod frontend {
         UnsetLCOverrideFailure,
         SetLCOverrideFailure,
         InvalidLCHost,
+
+        ToyManagerNotReady,
     }
 
     #[derive(Serialize)]

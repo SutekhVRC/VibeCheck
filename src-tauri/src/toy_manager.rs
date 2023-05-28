@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 
 use log::{debug, trace};
-use tauri::{api::dir::read_dir, AppHandle, Manager};
+use tauri::{api::dir::read_dir, AppHandle};
 
-use crate::{config::toy::VCToyConfig, util::{get_config_dir, file_exists}, toyops::VCToy, frontend_types::{FeVCToy, FeToyEvent}};
+use crate::{config::toy::VCToyConfig, util::{get_config_dir, file_exists}, toyops::VCToy, frontend_types::FeVCToy};
 
 #[derive(Clone)]
 pub struct ToyManager {
     pub configs: HashMap<String, VCToyConfig>,
     pub online_toys: HashMap<u32, VCToy>,
-    app_handle: AppHandle,
+    _app_handle: AppHandle,
 }
 
 impl ToyManager {
@@ -25,7 +25,7 @@ impl ToyManager {
          * This struct is the new toys handler / object
          */
 
-        let mut ot = Self { configs: HashMap::new(), online_toys: HashMap::new(), app_handle };
+        let mut ot = Self { configs: HashMap::new(), online_toys: HashMap::new(), _app_handle: app_handle };
 
         ot.populate_configs();
         trace!("ToyManager config population complete!");
@@ -86,15 +86,15 @@ impl ToyManager {
 
     }
 
-    pub fn sync_frontend(&self) {
-
-        let offline_fetoy_vec = self.fetoy_vec_from_offline_toys();
-        let _ = self.app_handle.emit_all("fe_toy_event",
+    pub fn sync_frontend(&self) -> Vec<FeVCToy> {
+        /*
+        let _res = self.app_handle.emit_all("fe_toy_event",
             FeToyEvent::OfflineSyncAll({
                 offline_fetoy_vec
             }),
-        );
-        trace!("Sent FeVCToy sync");
+        );*/
+        trace!("Generating offline toy sync..");
+        self.fetoy_vec_from_offline_toys()
     }
 
     fn check_toy_online(&self, config_toy_name: &String) -> bool {

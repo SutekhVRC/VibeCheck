@@ -31,7 +31,7 @@ pub enum FeToyEvent {
     Add(FeVCToy),
     Remove(u32),
     Update(FeVCToy),
-    OfflineSyncAll(Vec<FeVCToy>),
+    //OfflineSyncAll(Vec<FeVCToy>),
 }
 
 #[derive(Serialize, Clone, TS)]
