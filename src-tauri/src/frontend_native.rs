@@ -148,7 +148,7 @@ pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: ta
         },
         FeToyAlter::Disconnected(fe_toy) => {
             
-            if fe_toy.toy_connected {
+            if !fe_toy.toy_connected {
 
                 let mut offline_toy_config = match VCToyConfig::load_offline_toy_config(fe_toy.toy_name) {
                     Ok(toy_config) => toy_config,
