@@ -11,7 +11,7 @@ import Loading from "./components/Loading";
 
 export default function App() {
   const { onlineToys, offlineToys } = useToys();
-  const totalToys =
+  const toyCount =
     Object.values(onlineToys).length + Object.values(offlineToys).length;
   const { isScanning, toggleScan } = useCoreEventContext();
 
@@ -22,7 +22,7 @@ export default function App() {
       </div>
       <div className="h-[calc(100vh-160px)] flex justify-center">
         <div className="flex flex-col justify-between gap-2 text-lg rounded-lg p-3 bg-zinc-800 flex-grow max-w-xl">
-          {totalToys == 0 ? (
+          {toyCount == 0 ? (
             <div className="flex-grow flex justify-center">
               <div className="flex flex-col justify-center items-center -mt-20">
                 <img src={cryingAnimeGirl} />

@@ -19,7 +19,6 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
 
   async function handleToyAlter(newToy: FeVCToy) {
     try {
-      console.log(newToy);
       if (newToy.toy_connected) {
         await invoke(ALTER_TOY, {
           mutate: { Connected: newToy },
@@ -64,13 +63,12 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
       }}
     >
       <div className="text-4xl flex justify-between items-center px-6">
-        {toy.toy_connected ? (
+        <div className="flex items-end gap-2">
           <div>{nameInfo.shortName}</div>
-        ) : (
-          <Tooltip text="Offline">
-            <div className="line-through">{nameInfo.shortName}</div>
-          </Tooltip>
-        )}
+          {!toy.toy_connected && (
+            <div className="text-sm text-slate-400">offline</div>
+          )}
+        </div>
         <ToyInfo nameInfo={nameInfo} battery={toy.battery_level} />
       </div>
       <div className="grid m-2">
