@@ -4,7 +4,6 @@ import { OFFLINE_SYNC, TOY_EVENT } from "../data/constants";
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import type { FeToyEvent } from "../../src-tauri/bindings/FeToyEvent";
 import { assertExhaustive } from "../utils";
-import assert from "assert";
 import { useToastContext } from "../context/ToastContext";
 import { invoke } from "@tauri-apps/api";
 
@@ -44,10 +43,13 @@ export function useToys() {
   function handleToyEvent(payload: FeToyEvent): void {
     switch (payload.kind) {
       case "Add":
-        if (payload.data.toy_id == null) {
+        if (!payload.data.toy_connected) {
           // TODO I don't think this case ever happens?
-          console.log("ADD WITH NULL TOY ID???");
-          assert(false);
+          toast.createToast(
+            "Add toy",
+            "Adding toy that is not connected?",
+            "error"
+          );
           return;
         }
         setOfflineToys((t) => {
@@ -62,36 +64,39 @@ export function useToys() {
           };
         });
         break;
-      case "Remove":
-        setOnlineToys((t) => {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { [payload.data]: removedToy, ...newToys } = t;
-          // TODO eww this is disgusting
-          setOfflineToys((t) => {
-            removedToy.toy_id = null;
-            removedToy.sub_id = 255;
-            removedToy.toy_connected = false;
-            removedToy.battery_level = null;
+      case "Update":
+        if (payload.data.toy_id != null) {
+          setOnlineToys((t) => {
             return {
               ...t,
-              [removedToy.toy_name]: removedToy,
+              [payload.data.toy_id as number]: payload.data,
+            };
+          });
+        } else {
+          setOfflineToys((t) => {
+            return {
+              ...t,
+              [payload.data.toy_name]: payload.data,
+            };
+          });
+        }
+        break;
+      case "Remove":
+        // TODO get rid of ugly nested setState?
+        setOnlineToys((t) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { [payload.data]: onlineToOfflineToy, ...newToys } = t;
+          onlineToOfflineToy.toy_id = null;
+          onlineToOfflineToy.sub_id = 255;
+          onlineToOfflineToy.toy_connected = false;
+          onlineToOfflineToy.battery_level = null;
+          setOfflineToys((t) => {
+            return {
+              ...t,
+              [onlineToOfflineToy.toy_name]: onlineToOfflineToy,
             };
           });
           return newToys;
-        });
-        break;
-      case "Update":
-        if (payload.data.toy_id == null) {
-          // TODO I don't think this case ever happens?
-          console.log("REMOVE WITH NULL TOY ID???");
-          assert(false);
-          return;
-        }
-        setOnlineToys((t) => {
-          return {
-            ...t,
-            [payload.data.toy_id as number]: payload.data,
-          };
         });
         break;
       default:
