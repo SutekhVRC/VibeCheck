@@ -856,12 +856,12 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
 
                 let battery_level_msg = encoder::encode(&OscPacket::Message(OscMessage {
                     addr: format!("/avatar/parameters/{}/{}/battery", toy.toy_name.replace("Lovense Connect", "lovense").replace(" ", "_").to_lowercase(), toy.sub_id),
-                    args: vec![OscType::Float(b_level.unwrap() as f32)]
+                    args: vec![OscType::Float(b_level.unwrap_or(0.0) as f32)]
                 })).unwrap();
 
                 let batt_send_err = sock.send(&battery_level_msg).await;
                 if batt_send_err.is_err(){warn!("Failed to send battery_level to {}", remote.to_string());}
-                else{info!("Sent battery_level: {} to {}", b_level.unwrap() as f32, toy.toy_name);}
+                else{info!("Sent battery_level: {} to {}", b_level.unwrap_or(0.0) as f32, toy.toy_name);}
             } else {
                 trace!("OSC data disabled for toy {}", toy.toy_name);
             }
