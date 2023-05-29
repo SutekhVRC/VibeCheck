@@ -5,7 +5,8 @@
  */
 
  use log::{error as logerr, trace};
-use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink, FeVCFeatureType, FeVCToy}, vcerror::{frontend, backend}, config::toy::VCToyConfig};
+use tauri::Manager;
+use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink, FeVCFeatureType, FeVCToy, FeToyEvent}, vcerror::{frontend, backend}, config::toy::VCToyConfig};
 
 /*
  * vibecheck_version
@@ -147,11 +148,11 @@ pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: ta
 
             Ok(())
         },
-        FeToyAlter::Disconnected(fe_toy) => {
+        FeToyAlter::Disconnected(mut fe_toy) => {
             
             if !fe_toy.toy_connected {
                 trace!("FeToyAlter::Disconnected: Altering offline toy: {}", fe_toy.toy_name);
-                let mut offline_toy_config = match VCToyConfig::load_offline_toy_config(fe_toy.toy_name) {
+                let mut offline_toy_config = match VCToyConfig::load_offline_toy_config(fe_toy.toy_name.clone()) {
                     Ok(toy_config) => toy_config,
                     Err(_e) => return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::OfflineToyNotExist)),
                 };
@@ -165,7 +166,13 @@ pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: ta
                     }
                 }
 
+                fe_toy.features = offline_toy_config.features.to_fe();
+                fe_toy.osc_data = offline_toy_config.osc_data;
+                fe_toy.toy_anatomy = offline_toy_config.anatomy.to_fe();
+
                 offline_toy_config.save_offline_toy_config();
+
+                let _ = app_handle.emit_all("fe_toy_event", FeToyEvent::Update(fe_toy));
 
             } else {
                 return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::ToyConnected));
@@ -220,6 +227,9 @@ pub fn simulate_feature_osc_input(vc_state: tauri::State<'_, vcore::VCStateMutex
  *
  */
 
+/*
+ * 
+ */
 #[tauri::command(async)]
 pub fn sync_offline_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<Vec<FeVCToy>, frontend::VCFeError> {
     if let Some(toy_manager) = vc_state.0.lock().core_toy_manager.as_ref() {
