@@ -37,7 +37,7 @@ export default function FeatureForm({
       handleFeatureAlter(feature);
     else debouncedAlter();
     return () => debouncedAlter.cancel();
-  }, [feature, oldFeature]);
+  }, [feature]);
 
   const handleBool = (checked: boolean, name: keyof FeVCToyFeature) => {
     setToyFeature((feature) => {
@@ -58,23 +58,6 @@ export default function FeatureForm({
   }
 
   function handleLevels(key: keyof FeLevelTweaks, value: number) {
-    if (
-      (key == "minimum_level" && value > levels.maximum_level) ||
-      (key == "maximum_level" && value < levels.minimum_level)
-    ) {
-      setToyFeature((feature) => {
-        return {
-          ...feature,
-          feature_levels: {
-            ...levels,
-            minimum_level: value,
-            maximum_level: value,
-          },
-        };
-      });
-      return;
-    }
-
     setToyFeature((feature) => {
       return {
         ...feature,
@@ -171,7 +154,7 @@ export default function FeatureForm({
       />
       <div className="text-right">{round0.format(levels.idle_level * 100)}</div>
       <TooltipLabel
-        text="Minimum"
+        text="Range"
         tooltip="The minimum motor speed that will be sent to the feature's motor."
       />
       <div></div>
@@ -180,26 +163,23 @@ export default function FeatureForm({
         min={0}
         max={1}
         step={0.01}
-        value={[levels.minimum_level]}
-        onValueChange={(e) => handleLevels("minimum_level", e[0])}
+        value={[levels.minimum_level, levels.maximum_level]}
+        onValueChange={(e) => {
+          setToyFeature((f) => {
+            return {
+              ...f,
+              feature_levels: {
+                ...levels,
+                minimum_level: e[0],
+                maximum_level: e[1],
+              },
+            };
+          });
+        }}
       />
       <div className="text-right">
         {round0.format(levels.minimum_level * 100)}
-      </div>
-      <TooltipLabel
-        text="Maximum"
-        tooltip="The maximum motor speed that will be sent to the feature's motor."
-      />
-      <div></div>
-      <Slider
-        dir={feature.flip_input_float ? "rtl" : "ltr"}
-        min={0}
-        max={1}
-        step={0.01}
-        value={[levels.maximum_level]}
-        onValueChange={(e) => handleLevels("maximum_level", e[0])}
-      />
-      <div className="text-right">
+        {" - "}
         {round0.format(levels.maximum_level * 100)}
       </div>
       {simulate != null && (
