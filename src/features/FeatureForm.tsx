@@ -37,7 +37,7 @@ export default function FeatureForm({
       handleFeatureAlter(feature);
     else debouncedAlter();
     return () => debouncedAlter.cancel();
-  }, [feature, oldFeature]);
+  }, [feature]);
 
   const handleBool = (checked: boolean, name: keyof FeVCToyFeature) => {
     setToyFeature((feature) => {
@@ -58,23 +58,6 @@ export default function FeatureForm({
   }
 
   function handleLevels(key: keyof FeLevelTweaks, value: number) {
-    if (
-      (key == "minimum_level" && value > levels.maximum_level) ||
-      (key == "maximum_level" && value < levels.minimum_level)
-    ) {
-      setToyFeature((feature) => {
-        return {
-          ...feature,
-          feature_levels: {
-            ...levels,
-            minimum_level: value,
-            maximum_level: value,
-          },
-        };
-      });
-      return;
-    }
-
     setToyFeature((feature) => {
       return {
         ...feature,
@@ -111,19 +94,6 @@ export default function FeatureForm({
       />
       <div></div>
       <TooltipLabel
-        text="Flip Input"
-        tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
-      />
-      <Switch
-        size="small"
-        isEnabled={feature.flip_input_float}
-        toggleIsEnabled={(checked: boolean) =>
-          handleBool(checked, "flip_input_float")
-        }
-      />
-      <div></div>
-      <div></div>
-      <TooltipLabel
         text="Smoothing"
         tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
       />
@@ -144,11 +114,38 @@ export default function FeatureForm({
       />
       <div className="text-right">{levels.smooth_rate}</div>
       <TooltipLabel
+        text="Linear Speed"
+        tooltip="Speed is determined by the toy itself, so this is only requested speed."
+      />
+      <div></div>
+      <Slider
+        min={10}
+        max={1000}
+        step={1}
+        value={[levels.linear_position_speed]}
+        onValueChange={(e) => handleLevels("linear_position_speed", e[0])}
+      />
+      <div className="text-right">{levels.linear_position_speed}</div>
+      <TooltipLabel
+        text="Flip Input"
+        tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
+      />
+      <Switch
+        size="small"
+        isEnabled={feature.flip_input_float}
+        toggleIsEnabled={(checked: boolean) =>
+          handleBool(checked, "flip_input_float")
+        }
+      />
+      <div></div>
+      <div></div>
+      <TooltipLabel
         text="Idle"
         tooltip="Set the idle motor speed for this feature. Idle activates when there is no input. Your set idle speed won't activate until you send at least one float value in the valid min/max range you have set."
       />
       <div></div>
       <Slider
+        dir={feature.flip_input_float ? "rtl" : "ltr"}
         min={0}
         max={1}
         step={0.01}
@@ -157,33 +154,32 @@ export default function FeatureForm({
       />
       <div className="text-right">{round0.format(levels.idle_level * 100)}</div>
       <TooltipLabel
-        text="Minimum"
-        tooltip="The minimum motor speed that will be sent to the feature's motor."
+        text="Range"
+        tooltip="The minimum/maximum motor speed that will be sent to the feature's motor."
       />
       <div></div>
       <Slider
+        dir={feature.flip_input_float ? "rtl" : "ltr"}
         min={0}
         max={1}
         step={0.01}
-        value={[levels.minimum_level]}
-        onValueChange={(e) => handleLevels("minimum_level", e[0])}
+        value={[levels.minimum_level, levels.maximum_level]}
+        onValueChange={(e) => {
+          setToyFeature((f) => {
+            return {
+              ...f,
+              feature_levels: {
+                ...levels,
+                minimum_level: e[0],
+                maximum_level: e[1],
+              },
+            };
+          });
+        }}
       />
       <div className="text-right">
         {round0.format(levels.minimum_level * 100)}
-      </div>
-      <TooltipLabel
-        text="Maximum"
-        tooltip="The maximum motor speed that will be sent to the feature's motor."
-      />
-      <div></div>
-      <Slider
-        min={0}
-        max={1}
-        step={0.01}
-        value={[levels.maximum_level]}
-        onValueChange={(e) => handleLevels("maximum_level", e[0])}
-      />
-      <div className="text-right">
+        {" - "}
         {round0.format(levels.maximum_level * 100)}
       </div>
       {simulate != null && (

@@ -1,15 +1,6 @@
 import * as RadixSlider from "@radix-ui/react-slider";
 
-type SliderProps = {
-  disabled?: boolean;
-  min: number;
-  max: number;
-  step: number;
-  value: number[];
-  onValueChange: (e: number[]) => void;
-};
-
-export default function Slider(props: SliderProps) {
+export default function Slider(props: RadixSlider.SliderProps) {
   return (
     <RadixSlider.Root
       className="relative flex items-center"
