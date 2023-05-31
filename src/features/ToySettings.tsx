@@ -64,7 +64,9 @@ export default function ToySettings({
           ))}
         </select>
       </div>
-      <Button onClick={handleCopy}>Copy osc data parameter</Button>
+      {toy.toy_connected && (
+        <Button onClick={handleCopy}>Copy osc data parameter</Button>
+      )}
     </div>
   );
 }
