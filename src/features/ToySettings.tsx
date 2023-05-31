@@ -36,13 +36,14 @@ export default function ToySettings({
 
   return (
     <div className="pb-4 text-sm">
-      <div className="grid grid-cols-[2fr,_1fr,_6fr] text-sm text-justify gap-y-1 p-4 items-center">
+      <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 p-4">
         <label>OSC Data</label>
         <Switch
           size="small"
           isEnabled={toy.osc_data}
           toggleIsEnabled={(e) => handleToyAlter({ ...toy, osc_data: e })}
         />
+        <div />
         <div />
         <label>Anatomy</label>
         <div />
@@ -64,7 +65,9 @@ export default function ToySettings({
           ))}
         </select>
       </div>
-      <Button onClick={handleCopy}>Copy osc data parameter</Button>
+      {toy.toy_connected && (
+        <Button onClick={handleCopy}>Copy osc data parameter</Button>
+      )}
     </div>
   );
 }

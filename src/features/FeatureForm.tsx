@@ -20,7 +20,6 @@ export default function FeatureForm({
   toyId,
   oldFeature,
 }: ToyFeatureFormProps) {
-  console.log(oldFeature);
   const [feature, setToyFeature] = useState(oldFeature);
   const levels = feature.feature_levels;
 
@@ -59,6 +58,23 @@ export default function FeatureForm({
   }
 
   function handleLevels(key: keyof FeLevelTweaks, value: number) {
+    if (
+      (key == "minimum_level" && value > levels.maximum_level) ||
+      (key == "maximum_level" && value < levels.minimum_level)
+    ) {
+      setToyFeature((feature) => {
+        return {
+          ...feature,
+          feature_levels: {
+            ...levels,
+            minimum_level: value,
+            maximum_level: value,
+          },
+        };
+      });
+      return;
+    }
+
     setToyFeature((feature) => {
       return {
         ...feature,
@@ -88,7 +104,7 @@ export default function FeatureForm({
       />
       <div></div>
       <input
-        className="text-zinc-800 text-xs px-2 rounded-sm outline-none"
+        className="text-zinc-800 px-4 rounded-sm outline-none"
         name="osc_parameter"
         value={feature.osc_parameter.replace(OSC_PARAM_PREFIX, "")}
         onChange={handleOscParam}
@@ -183,6 +199,7 @@ export default function FeatureForm({
             toggleIsEnabled={simulateHandler}
           />
           <Slider
+            disabled={!simulate}
             min={0}
             max={1}
             step={0.01}

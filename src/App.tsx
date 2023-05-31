@@ -46,7 +46,8 @@ export default function App() {
                         toy.toy_name == selectedToy?.toy_name &&
                           toy.sub_id == selectedToy?.sub_id &&
                           "outline",
-                        "bg-gray-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-emerald-400"
+                        toy.toy_connected ? "text-gray-200" : "text-gray-500",
+                        "bg-gray-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400"
                       )}
                     >
                       {toy.toy_name}

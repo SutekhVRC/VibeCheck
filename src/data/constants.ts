@@ -18,4 +18,4 @@ export const SCAN_LENGTH = 10000;
 export const DEBOUNCE_TIME = 250;
 
 export const OSC_PARAM_PREFIX = "/avatar/parameters/";
-export const OSC_DATA_PREFIX = "/vibecheck/osc_data/";
+export const OSC_DATA_PREFIX = "vibecheck/osc_data/";

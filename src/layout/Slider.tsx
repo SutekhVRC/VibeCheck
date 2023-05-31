@@ -16,10 +16,9 @@ export default function Slider(props: SliderProps) {
       {...props}
       aria-label="Slider"
     >
-      <RadixSlider.Track className="relative bg-gray-800 flex-grow rounded-full h-1">
-        <RadixSlider.Range className="absolute bg-gray-100 rounded-full h-full data-[disabled]:bg-gray-600" />
+      <RadixSlider.Track className="relative bg-gray-700 flex-grow rounded-full h-2">
+        <RadixSlider.Range className="absolute bg-gray-100 rounded-full h-full data-[disabled]:bg-gray-600 transition-all" />
       </RadixSlider.Track>
-      <RadixSlider.Thumb className="block w-3 h-3 bg-gray-100 rounded-xl data-[disabled]:bg-gray-600 focus:[box-shadow:0_0_0_0.25rem_rgba(0,_0,_0,_0.25)]" />
     </RadixSlider.Root>
   );
 }
