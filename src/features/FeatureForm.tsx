@@ -157,6 +157,19 @@ export default function FeatureForm({
       />
       <div className="text-right">{round0.format(levels.idle_level * 100)}</div>
       <TooltipLabel
+        text="Linear Speed"
+        tooltip="Speed is determined by the toy itself, so this is only requested speed."
+      />
+      <div></div>
+      <Slider
+        min={10}
+        max={1000}
+        step={1}
+        value={[levels.linear_position_speed]}
+        onValueChange={(e) => handleLevels("linear_position_speed", e[0])}
+      />
+      <div className="text-right">{levels.linear_position_speed}</div>
+      <TooltipLabel
         text="Minimum"
         tooltip="The minimum motor speed that will be sent to the feature's motor."
       />
