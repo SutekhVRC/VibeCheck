@@ -12,31 +12,33 @@ import { debounce } from "lodash";
 type ToyFeatureFormProps = {
   handleFeatureAlter: (newFeature: FeVCToyFeature) => void;
   toyId: number | null;
-  toyFeature: FeVCToyFeature;
+  oldFeature: FeVCToyFeature;
 };
 
 export default function FeatureForm({
   handleFeatureAlter,
   toyId,
-  toyFeature,
+  oldFeature,
 }: ToyFeatureFormProps) {
-  const [feature, setToyFeature] = useState(toyFeature);
+  console.log(oldFeature);
+  const [feature, setToyFeature] = useState(oldFeature);
   const levels = feature.feature_levels;
 
   useEffect(() => {
+    if (JSON.stringify(feature) === JSON.stringify(oldFeature)) return;
     const debouncedAlter = debounce(
       () => handleFeatureAlter(feature),
       DEBOUNCE_TIME
     );
     if (
-      toyFeature.feature_enabled != feature.feature_enabled ||
-      toyFeature.flip_input_float != feature.flip_input_float ||
-      toyFeature.smooth_enabled != feature.smooth_enabled
+      oldFeature.feature_enabled != feature.feature_enabled ||
+      oldFeature.flip_input_float != feature.flip_input_float ||
+      oldFeature.smooth_enabled != feature.smooth_enabled
     )
       handleFeatureAlter(feature);
     else debouncedAlter();
     return () => debouncedAlter.cancel();
-  }, [feature]);
+  }, [feature, oldFeature]);
 
   const handleBool = (checked: boolean, name: keyof FeVCToyFeature) => {
     setToyFeature((feature) => {

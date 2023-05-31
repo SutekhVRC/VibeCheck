@@ -72,10 +72,10 @@
         "fullscreen": false,
         "resizable": true,
         "title": "VibeCheck",
-        "width": 600,
-        "height": 900,
-        "minWidth": 450,
-        "minHeight": 500
+        "width": 900,
+        "height": 600,
+        "minWidth": 600,
+        "minHeight": 450
       }
     ]
   }

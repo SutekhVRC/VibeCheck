@@ -3,17 +3,19 @@ import lovenseLogo from "../assets/Lovense.png";
 import lovenseConnectLogo from "../assets/Lovense_Connect.png";
 import FeatureForm from "./FeatureForm";
 import ToySettings from "./ToySettings";
-import { FeatureDisclosure } from "./FeatureDisclosure";
 import Tooltip from "../layout/Tooltip";
 import BatteryIcon from "../components/BatteryIcon";
-import { motion } from "framer-motion";
 import { ALTER_TOY } from "../data/constants";
 import { invoke } from "@tauri-apps/api";
 import { useToastContext } from "../context/ToastContext";
 import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import classNames from "classnames";
+import { useState } from "react";
 
 export default function Toy({ toy }: { toy: FeVCToy }) {
+  const [selectedFeature, setSelectedFeature] = useState<FeVCToyFeature | null>(
+    toy.features[0]
+  );
   const nameInfo = NameInfo(toy.toy_name);
   const toast = useToastContext();
 
@@ -38,30 +40,8 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
     handleToyAlter(toy);
   }
 
-  const outline = toy.toy_connected ? "outline-zinc-600" : "outline-slate-600";
-
   return (
-    <motion.div
-      className={classNames(
-        toy.toy_connected ? "bg-zinc-700" : "bg-slate-700",
-        "rounded-md px-2 py-4 m-2"
-      )}
-      initial={{ y: "100%", opacity: 0 }}
-      animate={{
-        y: 0,
-        opacity: 1,
-        transition: {
-          type: "spring",
-          duration: 2,
-          bounce: 0.5,
-          y: { delay: 0.15 },
-        },
-      }}
-      exit={{
-        y: "100%",
-        opacity: 0,
-      }}
-    >
+    <div className="w-full">
       <div className="text-4xl flex justify-between items-center px-6">
         <div className="flex items-end gap-2">
           <div>{nameInfo.shortName}</div>
@@ -71,30 +51,32 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
         </div>
         <ToyInfo nameInfo={nameInfo} battery={toy.battery_level} />
       </div>
-      <div className="grid m-2">
-        <FeatureDisclosure title="Config" outline={outline}>
-          <ToySettings toy={toy} handleToyAlter={handleToyAlter} />
-        </FeatureDisclosure>
+      <ToySettings toy={toy} handleToyAlter={handleToyAlter} />
+      <div className="flex">
         {toy.features.map((feature) => (
-          <div
-            className="flex flex-col"
-            key={`${toy.toy_id} ${feature.feature_type} ${feature.feature_index}`}
+          <button
+            key={`${feature.feature_type} ${feature.feature_index}`}
+            onClick={() => setSelectedFeature(feature)}
+            className={classNames(
+              feature.feature_type == selectedFeature?.feature_type &&
+                feature.feature_index == selectedFeature.feature_index &&
+                "outline",
+              "rounded-md bg-gray-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-emerald-500"
+            )}
           >
-            <FeatureDisclosure
-              outline={outline}
-              title={`${feature.feature_type} ${feature.feature_index}`}
-              titleIsOn={feature.feature_enabled}
-            >
-              <FeatureForm
-                handleFeatureAlter={handleFeatureAlter}
-                toyId={toy.toy_id}
-                toyFeature={feature}
-              />
-            </FeatureDisclosure>
-          </div>
+            {feature.feature_type} {feature.feature_index}
+          </button>
         ))}
       </div>
-    </motion.div>
+      {selectedFeature != null && (
+        <FeatureForm
+          key={`${selectedFeature.feature_type} ${selectedFeature.feature_index}`}
+          handleFeatureAlter={handleFeatureAlter}
+          toyId={toy.toy_id}
+          oldFeature={selectedFeature}
+        />
+      )}
+    </div>
   );
 }
 

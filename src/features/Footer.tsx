@@ -26,7 +26,7 @@ export function Footer() {
   }, [configIsOpen]);
 
   return (
-    <div className="grid grid-cols-3 items-center px-8 max-w-xl flex-grow">
+    <div className="grid grid-cols-3 items-center">
       <div className="flex justify-around items-center">
         <UpdatePing canUpdate={canUpdate}>
           <Cog6ToothIcon
