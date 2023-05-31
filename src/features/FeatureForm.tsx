@@ -155,7 +155,7 @@ export default function FeatureForm({
       <div className="text-right">{round0.format(levels.idle_level * 100)}</div>
       <TooltipLabel
         text="Range"
-        tooltip="The minimum motor speed that will be sent to the feature's motor."
+        tooltip="The minimum/maximum motor speed that will be sent to the feature's motor."
       />
       <div></div>
       <Slider
