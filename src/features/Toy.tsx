@@ -61,7 +61,8 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
               feature.feature_type == selectedFeature?.feature_type &&
                 feature.feature_index == selectedFeature.feature_index &&
                 "outline",
-              "rounded-md bg-gray-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-emerald-500"
+              feature.feature_enabled ? "text-gray-200" : "text-gray-500",
+              "rounded-md bg-gray-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-cyan-500"
             )}
           >
             {feature.feature_type} {feature.feature_index}
