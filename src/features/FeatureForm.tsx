@@ -128,6 +128,7 @@ export default function FeatureForm({
         }
         three={
           <Slider
+            disabled={!feature.rate_enabled}
             min={0.01}
             max={1}
             step={0.01}
