@@ -3,10 +3,8 @@ import { OSC_PARAM_PREFIX } from "../data/constants";
 import { round0 } from "../utils";
 import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import Slider from "../layout/Slider";
-import { TooltipLabel } from "../layout/Tooltip";
 import useSimulate from "../hooks/useSimulate";
 import Switch from "../layout/Switch";
-import { ArrowsRightLeftIcon } from "@heroicons/react/24/solid";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
 import FourPanel from "../components/FourPanel";
 
@@ -56,15 +54,19 @@ export default function FeatureForm({
     handleFeatureAlter(feature);
   }
 
-  const { simulate, simulateHandler, simulateLevel, simulateLevelHandler } =
-    useSimulate(toyId, feature.feature_index, feature.feature_type);
+  const {
+    simulate,
+    simulateLevel,
+    simulateOnChange,
+    simulateOnValueChange,
+    simulateOnValueCommit,
+  } = useSimulate(toyId, feature.feature_index, feature.feature_type);
 
   return (
     <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 p-4">
       <FourPanel
-        one={
-          <TooltipLabel text="Enabled" tooltip="Enable/Disable this feature." />
-        }
+        text="Enabled"
+        tooltip="Enable/Disable this feature."
         two={
           <Switch
             size="small"
@@ -76,12 +78,8 @@ export default function FeatureForm({
         }
       />
       <FourPanel
-        one={
-          <TooltipLabel
-            text="OSC Parameter"
-            tooltip="The float OSC parameter to control this feature's motor."
-          />
-        }
+        text="OSC Parameter"
+        tooltip="The float OSC parameter to control this feature's motor."
         three={
           <input
             className="text-zinc-800 px-4 rounded-sm outline-none"
@@ -92,12 +90,8 @@ export default function FeatureForm({
         }
       />
       <FourPanel
-        one={
-          <TooltipLabel
-            text="Smoothing"
-            tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
-          />
-        }
+        text="Smoothing"
+        tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
         two={
           <Switch
             size="small"
@@ -119,15 +113,11 @@ export default function FeatureForm({
             onValueCommit={handleCommit}
           />
         }
-        four={<div className="text-right">{levels.smooth_rate}</div>}
+        four={levels.smooth_rate.toString()}
       />
       <FourPanel
-        one={
-          <TooltipLabel
-            text="Rate Mode"
-            tooltip="Cannot use rate mode and smoothing at the same time."
-          />
-        }
+        text="Rate Mode"
+        tooltip="Cannot use rate mode and smoothing at the same time."
         two={
           <Switch
             size="small"
@@ -139,12 +129,8 @@ export default function FeatureForm({
       />
       {feature.feature_type == "Linear" && (
         <FourPanel
-          one={
-            <TooltipLabel
-              text="Linear Speed"
-              tooltip="Speed is determined by the toy itself, so this is only requested speed."
-            />
-          }
+          text="Linear Speed"
+          tooltip="Speed is determined by the toy itself, so this is only requested speed."
           three={
             <Slider
               min={10}
@@ -155,18 +141,12 @@ export default function FeatureForm({
               onValueCommit={handleCommit}
             />
           }
-          four={
-            <div className="text-right">{levels.linear_position_speed}</div>
-          }
+          four={levels.linear_position_speed.toString()}
         />
       )}
       <FourPanel
-        one={
-          <TooltipLabel
-            text="Flip Input"
-            tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
-          />
-        }
+        text="Flip Input"
+        tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
         two={
           <Switch
             size="small"
@@ -178,17 +158,9 @@ export default function FeatureForm({
         }
       />
       <FourPanel
-        one={
-          <div className="flex items-center gap-2">
-            <TooltipLabel
-              text="Idle"
-              tooltip="Set the idle motor speed for this feature. Idle activates when there is no input. Your set idle speed won't activate until you send at least one float value in the valid min/max range you have set."
-            />
-            {feature.flip_input_float && (
-              <ArrowsRightLeftIcon className="h-4" />
-            )}
-          </div>
-        }
+        text="Idle"
+        tooltip="Set the idle motor speed for this feature. Idle activates when there is no input. Your set idle speed won't activate until you send at least one float value in the valid min/max range you have set."
+        flipped={feature.flip_input_float}
         three={
           <Slider
             min={0}
@@ -199,24 +171,12 @@ export default function FeatureForm({
             onValueCommit={handleCommit}
           />
         }
-        four={
-          <div className="text-right">
-            {round0.format(levels.idle_level * 100)}
-          </div>
-        }
+        four={round0.format(levels.idle_level * 100)}
       />
       <FourPanel
-        one={
-          <div className="flex items-center gap-2">
-            <TooltipLabel
-              text="Range"
-              tooltip="The minimum/maximum motor speed that will be sent to the feature's motor."
-            />
-            {feature.flip_input_float && (
-              <ArrowsRightLeftIcon className="h-4" />
-            )}
-          </div>
-        }
+        text="Range"
+        tooltip="The minimum/maximum motor speed that will be sent to the feature's motor."
+        flipped={feature.flip_input_float}
         three={
           <Slider
             min={0}
@@ -238,20 +198,15 @@ export default function FeatureForm({
             onValueCommit={handleCommit}
           />
         }
-        four={
-          <div className="text-right">
-            {round0.format(levels.minimum_level * 100)}
-            {" - "}
-            {round0.format(levels.maximum_level * 100)}
-          </div>
-        }
+        four={`${round0.format(levels.minimum_level * 100)} - ${round0.format(
+          levels.maximum_level * 100
+        )}`}
       />
-      <div className="h-2" />
       {simulate != null && (
         <FourPanel
-          one={
-            <TooltipLabel text="Simulate" tooltip="Test feature power level." />
-          }
+          text="Simulate"
+          tooltip="Test feature power level."
+          flipped={feature.flip_input_float}
           two={
             <Switch
               size="small"
@@ -269,11 +224,7 @@ export default function FeatureForm({
               onValueCommit={(e) => simulateLevelHandler(e[0])}
             />
           }
-          four={
-            <div className="text-right">
-              {round0.format(simulateLevel * 100)}
-            </div>
-          }
+          four={round0.format(simulateLevel * 100)}
         />
       )}
     </div>

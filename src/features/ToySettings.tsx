@@ -39,7 +39,7 @@ export default function ToySettings({
     <div className="pb-4 text-sm">
       <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 p-4">
         <FourPanel
-          one={<label>OSC Data</label>}
+          text="OSC Data"
           two={
             <Switch
               size="small"
@@ -49,7 +49,7 @@ export default function ToySettings({
           }
         />
         <FourPanel
-          one={<label>Anatomy</label>}
+          text="Anatomy"
           three={
             <select
               className="outline-none text-zinc-800 px-2 rounded-sm"
