@@ -3,7 +3,7 @@ use log::{warn, info, error as logerr, debug};
 use serde::{Serialize, Deserialize};
 use ts_rs::TS;
 use core::fmt;
-use std::{collections::HashMap, sync::Arc, fs, time::{Instant, Duration}};
+use std::{collections::HashMap, sync::Arc, fs, time::Instant};
 
 use crate::{config::toy::{VCToyConfig, VCToyAnatomy}, frontend_types::{FeVCToyFeature, FeVCFeatureType, FeLevelTweaks}, util::{file_exists, get_config_dir}, vcerror};
 
@@ -221,8 +221,9 @@ pub struct VCToyFeature {
     pub smooth_queue: Vec<f64>,
 
     pub rate_enabled: bool,
+    pub rate_tune: f64,
     #[serde(skip)]
-    pub rate_queue: Vec<f64>,
+    pub rate_saved_level: f64,
     #[serde(skip)]
     pub rate_timestamp: Option<Instant>,
 
@@ -231,7 +232,7 @@ pub struct VCToyFeature {
 
 impl VCToyFeature {
     fn new(osc_parameter: String, feature_index: u32, feature_type: VCFeatureType) -> Self {
-        VCToyFeature { feature_enabled: true, feature_type, osc_parameter, feature_index, flip_input_float: false, feature_levels: LevelTweaks::default(), smooth_enabled: true, smooth_queue: vec![], rate_enabled: false, rate_queue: vec![], rate_timestamp: None }
+        VCToyFeature { feature_enabled: true, feature_type, osc_parameter, feature_index, flip_input_float: false, feature_levels: LevelTweaks::default(), smooth_enabled: true, smooth_queue: vec![], rate_enabled: false, rate_tune: 0.05, rate_saved_level: 0., rate_timestamp: None }
     }
 
     pub fn from_fe(&mut self, fe_feature: FeVCToyFeature) {
@@ -317,11 +318,12 @@ pub struct LevelTweaks {
     pub idle_level: f64,
     pub smooth_rate: f64,
     pub linear_position_speed: u32,
+    pub rate_tune: f64,
 }
 
 impl Default for LevelTweaks {
     fn default() -> Self {
-        LevelTweaks { minimum_level: 0., maximum_level: 1., idle_level: 0., smooth_rate: 2. , linear_position_speed: 100}
+        LevelTweaks { minimum_level: 0., maximum_level: 1., idle_level: 0., smooth_rate: 2. , linear_position_speed: 100, rate_tune: 0.5}
     }
 }
 
@@ -332,6 +334,7 @@ impl LevelTweaks {
         self.minimum_level = fe_lt.minimum_level;
         self.smooth_rate = fe_lt.smooth_rate;
         self.linear_position_speed = fe_lt.linear_position_speed;
+        self.rate_tune = fe_lt.rate_tune;
     }
 
     pub fn to_fe(&self) -> FeLevelTweaks {
@@ -341,6 +344,7 @@ impl LevelTweaks {
             idle_level: self.idle_level,
             smooth_rate: self.smooth_rate,
             linear_position_speed: self.linear_position_speed,
+            rate_tune: self.rate_tune,
         }
     }
 }
@@ -388,7 +392,7 @@ impl FeatureParamMap {
         }
     }
 
-    pub fn get_features_from_param(&mut self, param: &String) -> Option<Vec<(VCFeatureType, u32, bool, LevelTweaks, bool, &mut Vec<f64>, bool, &mut Vec<f64>, &mut Option<Instant>)>> {
+    pub fn get_features_from_param(&mut self, param: &String) -> Option<Vec<(VCFeatureType, u32, bool, LevelTweaks, bool, &mut Vec<f64>, bool, &mut f64, &mut Option<Instant>)>> {
         
         let mut parsed_features = vec![];
 
@@ -404,7 +408,8 @@ impl FeatureParamMap {
                         f.smooth_enabled,
                         &mut f.smooth_queue,
                         f.rate_enabled,
-                        &mut f.rate_queue,
+                        //f.rate_tune,
+                        &mut f.rate_saved_level,
                         &mut f.rate_timestamp,
                     ));
                 }
