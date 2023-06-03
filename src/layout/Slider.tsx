@@ -8,7 +8,7 @@ export default function Slider(props: RadixSlider.SliderProps) {
       aria-label="Slider"
     >
       <RadixSlider.Track className="relative bg-gray-700 flex-grow rounded-full h-2">
-        <RadixSlider.Range className="absolute bg-gray-100 rounded-full h-full data-[disabled]:bg-gray-600 transition-all" />
+        <RadixSlider.Range className="absolute bg-gray-100 rounded-full h-full data-[disabled]:bg-gray-600 transition-all cursor-ew-resize" />
       </RadixSlider.Track>
     </RadixSlider.Root>
   );
