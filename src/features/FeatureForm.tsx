@@ -1,5 +1,5 @@
-import { ChangeEvent, useEffect, useState } from "react";
-import { DEBOUNCE_TIME, OSC_PARAM_PREFIX } from "../data/constants";
+import { ChangeEvent, useState } from "react";
+import { OSC_PARAM_PREFIX } from "../data/constants";
 import { round0 } from "../utils";
 import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import Slider from "../layout/Slider";
@@ -7,7 +7,6 @@ import { TooltipLabel } from "../layout/Tooltip";
 import useSimulate from "../hooks/useSimulate";
 import Switch from "../layout/Switch";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
-import { debounce } from "lodash";
 
 type ToyFeatureFormProps = {
   handleFeatureAlter: (newFeature: FeVCToyFeature) => void;
@@ -23,37 +22,22 @@ export default function FeatureForm({
   const [feature, setToyFeature] = useState(oldFeature);
   const levels = feature.feature_levels;
 
-  useEffect(() => {
-    if (JSON.stringify(feature) === JSON.stringify(oldFeature)) return;
-    const debouncedAlter = debounce(
-      () => handleFeatureAlter(feature),
-      DEBOUNCE_TIME
-    );
-    if (
-      oldFeature.feature_enabled != feature.feature_enabled ||
-      oldFeature.flip_input_float != feature.flip_input_float ||
-      oldFeature.smooth_enabled != feature.smooth_enabled
-    )
-      handleFeatureAlter(feature);
-    else debouncedAlter();
-    return () => debouncedAlter.cancel();
-  }, [feature]);
-
   const handleBool = (checked: boolean, name: keyof FeVCToyFeature) => {
-    setToyFeature((feature) => {
-      return {
-        ...feature,
-        [name]: checked,
-      };
+    setToyFeature((f) => {
+      const newF = { ...f, [name]: checked };
+      handleFeatureAlter(newF);
+      return newF;
     });
   };
 
   function handleOscParam(e: ChangeEvent<HTMLInputElement>) {
-    setToyFeature((feature) => {
-      return {
-        ...feature,
+    setToyFeature((f) => {
+      const newF = {
+        ...f,
         [e.target.name]: `${OSC_PARAM_PREFIX}${e.target.value}`,
       };
+      handleFeatureAlter(newF);
+      return newF;
     });
   }
 
@@ -64,6 +48,10 @@ export default function FeatureForm({
         feature_levels: { ...levels, [key]: value },
       };
     });
+  }
+
+  function handleCommit() {
+    handleFeatureAlter(feature);
   }
 
   const { simulate, simulateHandler, simulateLevel, simulateLevelHandler } =
@@ -90,7 +78,7 @@ export default function FeatureForm({
         className="text-zinc-800 px-4 rounded-sm outline-none"
         name="osc_parameter"
         value={feature.osc_parameter.replace(OSC_PARAM_PREFIX, "")}
-        onChange={handleOscParam}
+        onChange={handleOscParam} // Not debounced because :shrug:
       />
       <div></div>
       <TooltipLabel
@@ -111,21 +99,27 @@ export default function FeatureForm({
         step={1}
         value={[levels.smooth_rate]}
         onValueChange={(e) => handleLevels("smooth_rate", e[0])}
+        onValueCommit={handleCommit}
       />
       <div className="text-right">{levels.smooth_rate}</div>
-      <TooltipLabel
-        text="Linear Speed"
-        tooltip="Speed is determined by the toy itself, so this is only requested speed."
-      />
-      <div></div>
-      <Slider
-        min={10}
-        max={1000}
-        step={1}
-        value={[levels.linear_position_speed]}
-        onValueChange={(e) => handleLevels("linear_position_speed", e[0])}
-      />
-      <div className="text-right">{levels.linear_position_speed}</div>
+      {feature.feature_type == "Linear" && (
+        <>
+          <TooltipLabel
+            text="Linear Speed"
+            tooltip="Speed is determined by the toy itself, so this is only requested speed."
+          />
+          <div></div>
+          <Slider
+            min={10}
+            max={1000}
+            step={1}
+            value={[levels.linear_position_speed]}
+            onValueChange={(e) => handleLevels("linear_position_speed", e[0])}
+            onValueCommit={handleCommit}
+          />
+          <div className="text-right">{levels.linear_position_speed}</div>
+        </>
+      )}
       <TooltipLabel
         text="Flip Input"
         tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
@@ -151,6 +145,7 @@ export default function FeatureForm({
         step={0.01}
         value={[levels.idle_level]}
         onValueChange={(e) => handleLevels("idle_level", e[0])}
+        onValueCommit={handleCommit}
       />
       <div className="text-right">{round0.format(levels.idle_level * 100)}</div>
       <TooltipLabel
@@ -176,6 +171,7 @@ export default function FeatureForm({
             };
           });
         }}
+        onValueCommit={handleCommit}
       />
       <div className="text-right">
         {round0.format(levels.minimum_level * 100)}
@@ -200,7 +196,7 @@ export default function FeatureForm({
             max={1}
             step={0.01}
             value={[simulateLevel]}
-            onValueChange={(e) => simulateLevelHandler(e[0])}
+            onValueCommit={(e) => simulateLevelHandler(e[0])}
           />
           <div className="text-right">{round0.format(simulateLevel * 100)}</div>
         </>

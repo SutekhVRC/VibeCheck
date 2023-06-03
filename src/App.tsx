@@ -18,6 +18,14 @@ export default function App() {
   const toys: FeVCToy[] = [];
   Object.values(onlineToys).forEach((t) => toys.push(t));
   Object.values(offlineToys).forEach((t) => toys.push(t));
+  if (
+    selectedToy &&
+    !toys.some(
+      (t) =>
+        t.toy_name == selectedToy.toy_name && t.sub_id == selectedToy.sub_id
+    )
+  )
+    setSelectedToy(null); // selection is no longer valid
   const { isScanning, toggleScan } = useCoreEventContext();
 
   return (
@@ -75,6 +83,7 @@ export default function App() {
             {selectedToy != null && (
               <Toy
                 toy={selectedToy}
+                setToy={setSelectedToy}
                 key={`${selectedToy.toy_name} ${selectedToy.sub_id}`}
               />
             )}

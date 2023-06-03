@@ -10,10 +10,16 @@ import { invoke } from "@tauri-apps/api";
 import { useToastContext } from "../context/ToastContext";
 import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import classNames from "classnames";
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 
-export default function Toy({ toy }: { toy: FeVCToy }) {
-  const [selectedFeature, setSelectedFeature] = useState<FeVCToyFeature | null>(
+export default function Toy({
+  toy,
+  setToy,
+}: {
+  toy: FeVCToy;
+  setToy: Dispatch<SetStateAction<FeVCToy | null>>;
+}) {
+  const [selectedFeature, setSelectedFeature] = useState<FeVCToyFeature>(
     toy.features[0]
   );
   const nameInfo = NameInfo(toy.toy_name);
@@ -30,14 +36,16 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
           mutate: { Disconnected: newToy },
         });
       }
+      setToy(newToy);
     } catch (e) {
       toast.createToast("Could not alter toy!", JSON.stringify(e), "error");
     }
   }
 
   function handleFeatureAlter(newFeature: FeVCToyFeature) {
-    toy.features[newFeature.feature_index] = newFeature;
-    handleToyAlter(toy);
+    const newFeatures = [...toy.features];
+    newFeatures[newFeature.feature_index] = newFeature;
+    handleToyAlter({ ...toy, features: newFeatures });
   }
 
   return (
