@@ -101,6 +101,7 @@ export default function FeatureForm({
         two={
           <Switch
             size="small"
+            disabled={feature.rate_enabled}
             checked={feature.smooth_enabled}
             onChange={(checked: boolean) =>
               handleBool(checked, "smooth_enabled")
@@ -119,6 +120,22 @@ export default function FeatureForm({
           />
         }
         four={<div className="text-right">{levels.smooth_rate}</div>}
+      />
+      <FourPanel
+        one={
+          <TooltipLabel
+            text="Rate Mode"
+            tooltip="Cannot use rate mode and smoothing at the same time."
+          />
+        }
+        two={
+          <Switch
+            size="small"
+            disabled={feature.smooth_enabled}
+            checked={feature.rate_enabled}
+            onChange={(checked: boolean) => handleBool(checked, "rate_enabled")}
+          />
+        }
       />
       {feature.feature_type == "Linear" && (
         <FourPanel
