@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
 import type { FeVCFeatureType } from "../../src-tauri/bindings/FeVCFeatureType";
-import { DEBOUNCE_TIME, SIMULATE_TOY_FEATURE } from "../data/constants";
+import { SIMULATE_TOY_FEATURE } from "../data/constants";
 import { useToastContext } from "../context/ToastContext";
 
 export default function useSimulate(
@@ -21,24 +21,29 @@ export default function useSimulate(
   const [simulateLevel, setSimulateLevel] = useState(0.5);
   const toast = useToastContext();
 
-  function simulateHandler() {
-    setSimulate((b) => !b);
+  function simulateOnChange() {
+    setSimulate((b) => {
+      const newEnableState = !b;
+      if (newEnableState) invokeSimulation(simulateLevel);
+      else invokeSimulation(0);
+      return !b;
+    });
   }
 
-  function simulateLevelHandler(e: number) {
+  function simulateOnValueChange(e: number) {
     setSimulateLevel(e);
   }
 
+  function simulateOnValueCommit() {
+    if (simulate) invokeSimulation(simulateLevel);
+    else invokeSimulation(0);
+  }
+
   useEffect(() => {
-    if (simulate) {
-      const t = setTimeout(() => {
-        invokeSimulation(simulateLevel);
-      }, DEBOUNCE_TIME);
-      return () => clearTimeout(t);
-    } else {
+    return () => {
       invokeSimulation(0);
-    }
-  }, [simulate, simulateLevel]);
+    };
+  }, []);
 
   async function invokeSimulation(floatLevel: number) {
     try {
@@ -57,5 +62,11 @@ export default function useSimulate(
     }
   }
 
-  return { simulate, simulateHandler, simulateLevel, simulateLevelHandler };
+  return {
+    simulate,
+    simulateLevel,
+    simulateOnChange,
+    simulateOnValueChange,
+    simulateOnValueCommit,
+  };
 }

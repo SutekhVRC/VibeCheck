@@ -211,7 +211,7 @@ export default function FeatureForm({
             <Switch
               size="small"
               checked={simulate}
-              onChange={simulateHandler}
+              onChange={simulateOnChange}
             />
           }
           three={
@@ -221,7 +221,8 @@ export default function FeatureForm({
               max={1}
               step={0.01}
               value={[simulateLevel]}
-              onValueCommit={(e) => simulateLevelHandler(e[0])}
+              onValueChange={(e) => simulateOnValueChange(e[0])}
+              onValueCommit={() => simulateOnValueCommit()}
             />
           }
           four={round0.format(simulateLevel * 100)}
