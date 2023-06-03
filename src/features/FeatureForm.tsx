@@ -126,6 +126,17 @@ export default function FeatureForm({
             onChange={(checked: boolean) => handleBool(checked, "rate_enabled")}
           />
         }
+        three={
+          <Slider
+            min={0.01}
+            max={1}
+            step={0.01}
+            value={[levels.rate_tune]}
+            onValueChange={(e) => handleLevels("rate_tune", e[0])}
+            onValueCommit={handleCommit}
+          />
+        }
+        four={levels.rate_tune.toString()}
       />
       {feature.feature_type == "Linear" && (
         <FourPanel
