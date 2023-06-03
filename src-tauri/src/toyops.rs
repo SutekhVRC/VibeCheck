@@ -3,7 +3,7 @@ use log::{warn, info, error as logerr, debug};
 use serde::{Serialize, Deserialize};
 use ts_rs::TS;
 use core::fmt;
-use std::{collections::HashMap, sync::Arc, fs};
+use std::{collections::HashMap, sync::Arc, fs, time::{Instant, Duration}};
 
 use crate::{config::toy::{VCToyConfig, VCToyAnatomy}, frontend_types::{FeVCToyFeature, FeVCFeatureType, FeLevelTweaks}, util::{file_exists, get_config_dir}, vcerror};
 
@@ -217,17 +217,21 @@ pub struct VCToyFeature {
     pub feature_levels: LevelTweaks,
 
     pub smooth_enabled: bool,
-    pub smooth_entries: Vec<f64>,
+    #[serde(skip)]
+    pub smooth_queue: Vec<f64>,
 
-    //pub rate_enabled: bool,
-    //pub rate_hertz: u64,
+    pub rate_enabled: bool,
+    #[serde(skip)]
+    pub rate_queue: Vec<f64>,
+    #[serde(skip)]
+    pub rate_timestamp: Option<Instant>,
 
     //pub saved: bool,
 }
 
 impl VCToyFeature {
     fn new(osc_parameter: String, feature_index: u32, feature_type: VCFeatureType) -> Self {
-        VCToyFeature { feature_enabled: true, feature_type, osc_parameter, feature_index, flip_input_float: false, feature_levels: LevelTweaks::default(), smooth_enabled: true, smooth_entries: Vec::new() }
+        VCToyFeature { feature_enabled: true, feature_type, osc_parameter, feature_index, flip_input_float: false, feature_levels: LevelTweaks::default(), smooth_enabled: true, smooth_queue: vec![], rate_enabled: false, rate_queue: vec![], rate_timestamp: None }
     }
 
     pub fn from_fe(&mut self, fe_feature: FeVCToyFeature) {
@@ -239,6 +243,7 @@ impl VCToyFeature {
         self.osc_parameter = fe_feature.osc_parameter;
         self.feature_levels.from_fe(fe_feature.feature_levels);
         self.smooth_enabled = fe_feature.smooth_enabled;
+        self.rate_enabled = fe_feature.rate_enabled;
     }
 }
 
@@ -383,7 +388,7 @@ impl FeatureParamMap {
         }
     }
 
-    pub fn get_features_from_param(&mut self, param: &String) -> Option<Vec<(VCFeatureType, u32, bool, LevelTweaks, bool, &mut Vec<f64>)>> {
+    pub fn get_features_from_param(&mut self, param: &String) -> Option<Vec<(VCFeatureType, u32, bool, LevelTweaks, bool, &mut Vec<f64>, bool, &mut Vec<f64>, &mut Option<Instant>)>> {
         
         let mut parsed_features = vec![];
 
@@ -391,7 +396,17 @@ impl FeatureParamMap {
         for f in &mut self.features {
             if f.feature_enabled {
                 if f.osc_parameter == *param {
-                    parsed_features.push((f.feature_type, f.feature_index, f.flip_input_float, f.feature_levels, f.smooth_enabled, &mut f.smooth_entries));
+                    parsed_features.push((
+                        f.feature_type,
+                        f.feature_index,
+                        f.flip_input_float,
+                        f.feature_levels,
+                        f.smooth_enabled,
+                        &mut f.smooth_queue,
+                        f.rate_enabled,
+                        &mut f.rate_queue,
+                        &mut f.rate_timestamp,
+                    ));
                 }
             }
         }
@@ -435,6 +450,7 @@ impl FeatureParamMap {
                 flip_input_float: f.flip_input_float,
                 feature_levels: f.feature_levels.to_fe(),
                 smooth_enabled: f.smooth_enabled,
+                rate_enabled: f.rate_enabled,
             });
         });
 

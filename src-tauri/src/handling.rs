@@ -21,6 +21,7 @@ use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
+use std::time::Instant;
 use tokio::runtime::Runtime;
 use tokio::sync::{
     self,
@@ -232,7 +233,12 @@ pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, s
         if scalar_level != 0.0 && scalar_level >= feature_levels.minimum_level && scalar_level <= feature_levels.maximum_level {
         
             info!("SENDING FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, scalar_level);
-            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (scalar_level, actuator_type))]))).await;
+            match dev.scalar(&ScalarMap(HashMap::from([(feature_index, (scalar_level, actuator_type))]))).await {
+                Ok(()) => {},
+                Err(e) => {
+                    logerr!("Send scalar to device error: {}", e);
+                }
+            }
         
         } else if scalar_level == 0.0 {// if level is 0 put at idle
 
@@ -271,6 +277,97 @@ pub fn flip_float64(orig: f64) -> f64 {
     ((1.00 - orig) * 100.0).round() / 100.0
 }
 
+enum SmoothParser {
+    Smoothed,
+    SkipZero,
+    Smoothing,
+}
+
+#[inline]
+fn parse_smoothing(smooth_queue: &mut Vec<f64>, feature_levels: LevelTweaks, float_level: &mut f64, flip_float: bool) -> SmoothParser {
+    debug!("!flip_float && *float_level == 0.0: [{}] || [{}] flip_float && *float_level == 1.0\nCOMBINED: [{}]", !flip_float && *float_level == 0.0, flip_float && *float_level == 1.0,
+    smooth_queue.len() == feature_levels.smooth_rate as usize && (!flip_float && *float_level == 0.0 || flip_float && *float_level == 1.0)
+);
+    // Reached smooth rate maximum and not a 0 value
+    if smooth_queue.len() == feature_levels.smooth_rate as usize {
+        debug!("smooth_queue: {}", smooth_queue.len());
+        if !flip_float && *float_level == 0.0 || flip_float && *float_level == 1.0 {
+
+            // Don't return just set to 0
+            debug!("float level is 0 but will be forgotten!");
+
+            // Clear smooth queue bc restarting from 0
+            smooth_queue.clear();
+
+        } else {
+            debug!("Setting float_level with smoothed float");
+            // Get Mean of all numbers in smoothing rate and then round to hundredths and cast as f64
+            *float_level = ((smooth_queue.iter().sum::<f64>() as f64 / smooth_queue.len() as f64 * 100.0).round() / 100.0) as f64;
+            smooth_queue.clear();
+
+            smooth_queue.push(*float_level);
+            return SmoothParser::Smoothed;   
+        }
+
+    // Have not reached smoothing maximum
+    }
+
+    // Maybe move this to be before queue is full check?
+    if !flip_float && *float_level == 0.0 || flip_float && *float_level == 1.0 {
+        debug!("Bypassing smoother: {:.5}", float_level);
+        // let 0 through
+        return SmoothParser::SkipZero;
+    }                              
+
+    debug!("Adding float {} to smoothing.. queue size: {}", *float_level, smooth_queue.len());
+    smooth_queue.push(*float_level);
+    // Continue receiving smooth floats
+    SmoothParser::Smoothing
+}
+
+enum RateParser {
+    RateDone,
+    RateCalculating,
+    SkipZero,
+}
+
+#[inline]
+fn parse_rate(rate_queue: &mut Vec<f64>, rate_timestamp: &mut Option<Instant>, float_level: &mut f64, flip_float: bool) -> RateParser {
+    /*
+     * If value is 0.1 greater/less than last value add to queue
+     * Once queue is 3 values average them then do rate equation
+     * rate equation: toy_motor_speed = avg_value_after_N_parameter_changes / time_since_last_rate_submission (seconds)
+     */
+
+    // If 
+    if rate_queue.len() == 3 {
+        let elapsed_time = rate_timestamp.as_ref().unwrap().elapsed().as_secs_f64();
+
+        // Sample time = 0.5
+        if elapsed_time > 0.5 {
+            let avg_increment_input = ((rate_queue.iter().sum::<f64>() as f64 / rate_queue.len() as f64 * 100.0).round() / 100.0) as f64;
+            *float_level = avg_increment_input / elapsed_time;
+            rate_queue.clear();
+            return RateParser::RateDone;
+        }
+    }
+
+    if *float_level == 0.0 || flip_float && *float_level == 1.0 {
+        debug!("Bypassing rate input");
+
+        return RateParser::SkipZero;
+    }
+
+    if !rate_queue.is_empty() {
+        if *float_level > (rate_queue.last().unwrap() + 0.1).clamp(0.0, 1.0) || *float_level < (rate_queue.last().unwrap() - 0.1).clamp(0.0, 1.0) {
+
+        } 
+    } else {
+        rate_queue.push(*float_level)
+    }
+    RateParser::RateCalculating
+}
+
 /*
     This handler will send and receive updates to toys
     - communicate ToyUpdate to and from main thread SEND/RECV (Toys will be indexed on the main thread) (Connects and disconnect toy updates are handled by client event handler)
@@ -291,10 +388,10 @@ pub async fn toy_management_handler(
         // Read toy config here?
         async move {
 
-            // Put smooth_entries here
+            // Put smooth_queue here
             // Put rate tracking here
             // Time tracking here?
-            
+
             while dev.connected() {
                 //trace!("Toy recv loop start");
                 match toy_bcst_rx.recv().await {
@@ -321,33 +418,28 @@ pub async fn toy_management_handler(
                                         //debug!("Received and cast float lvl: {:.5}", float_level);
 
                                         // Iterate through features enumerated from OSC param
-                                        for (feature_type, feature_index, flip_float, feature_levels, smooth_enabled, smooth_entries) in features {
+                                        for (feature_type, feature_index, flip_float, feature_levels, smooth_enabled, smooth_queue, rate_enabled, rate_queue, rate_timestamp) in features {
                                             
                                             // Smoothing enabled
-                                            if smooth_enabled {
-
-                                                // Reached smooth rate maximum and not a 0 value
-                                                if smooth_entries.len() == feature_levels.smooth_rate as usize && float_level != 0.0 {
-
-                                                    // Get Mean of all numbers in smoothing rate and then round to hundreths and cast as f64
-                                                    float_level = ((smooth_entries.iter().sum::<f64>() as f64 / smooth_entries.len() as f64 * 100.0).round() / 100.0) as f64;
-                                                    smooth_entries.clear();
-    
-                                                // Value is not 0 and have not reached smoothing maximum
-                                                } else {
-    
-                                                    if float_level == 0.0 || flip_float && float_level == 1.0 {
-                                                        debug!("Bypassing smoother: {:.5}", float_level);
-                                                        // let 0 through
-                                                    } else {                                                
-                                                        smooth_entries.push(float_level);
-                                                        continue;
-                                                    }
+                                            if smooth_enabled && !rate_enabled {
+                                                trace!("parse_moothing()");
+                                                match parse_smoothing(smooth_queue, feature_levels, &mut float_level, flip_float) {
+                                                    SmoothParser::SkipZero | SmoothParser::Smoothed => command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await,
+                                                    SmoothParser::Smoothing => continue,
                                                 }
+                                            } else if rate_enabled && !smooth_enabled {
+                                                trace!("parse_rate()");
+                                                match parse_rate(rate_queue, rate_timestamp, &mut float_level, flip_float) {
+                                                    RateParser::SkipZero => command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await,
+                                                    RateParser::RateDone => {
+                                                        *rate_timestamp = Some(Instant::now());
+                                                        command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await;
+                                                    },
+                                                    RateParser::RateCalculating => continue,
+                                                }
+                                            } else {
+                                                command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await;
                                             }
-
-                                            command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await;
-
                                         }
                                     }
                                 }
@@ -855,7 +947,7 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
                 trace!("Sending OSC data for toy: {}", toy.toy_name);
 
                 let battery_level_msg = encoder::encode(&OscPacket::Message(OscMessage {
-                    addr: format!("/avatar/parameters/{}/{}/battery", toy.toy_name.replace("Lovense Connect", "lovense").replace(" ", "_").to_lowercase(), toy.sub_id),
+                    addr: format!("/avatar/parameters/vibecheck/osc_data/{}/{}/battery", toy.toy_name.replace("Lovense Connect", "lovense").replace(" ", "_").to_lowercase(), toy.sub_id),
                     args: vec![OscType::Float(b_level.unwrap_or(0.0) as f32)]
                 })).unwrap();
 

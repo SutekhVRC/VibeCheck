@@ -126,6 +126,7 @@ pub struct FeVCToyFeature {
     pub flip_input_float: bool,
     pub feature_levels: FeLevelTweaks,
     pub smooth_enabled: bool,
+    pub rate_enabled: bool,
 }
 
 #[derive(Debug, Deserialize, TS)]
