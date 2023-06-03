@@ -1,4 +1,4 @@
-import { Switch as HeadlessSwitch } from "@headlessui/react";
+import { Switch as HeadlessSwitch, SwitchProps } from "@headlessui/react";
 import classNames from "classnames";
 
 const themeColors = {
@@ -30,35 +30,32 @@ const sizes = {
   },
 };
 
-export default function Switch({
-  isEnabled,
-  toggleIsEnabled,
-  theme = "white-cyan",
-  size = "medium",
-}: {
-  isEnabled: boolean;
-  toggleIsEnabled: (checked: boolean) => void;
-  theme?: keyof typeof themeColors;
-  size?: keyof typeof sizes;
-}) {
+export default function Switch(
+  props: SwitchProps<"button"> & {
+    theme?: keyof typeof themeColors;
+    size?: keyof typeof sizes;
+  }
+) {
+  const theme = props.theme ?? "white-cyan";
+  const size = props.size ?? "medium";
   const selectedTheme = themeColors[theme];
   return (
     <HeadlessSwitch
-      checked={isEnabled}
-      onChange={toggleIsEnabled}
+      {...props}
       className={classNames(
-        isEnabled ? selectedTheme.active : selectedTheme.inactive,
+        props.checked ? selectedTheme.active : selectedTheme.inactive,
         sizes[size].container,
-        "relative inline-flex cursor-pointer rounded-full border-transparent transition-colors duration-200 ease-in-out"
+        "relative inline-flex cursor-pointer rounded-full border-transparent transition-colors duration-200 ease-in-out disabled:bg-gray-700 disabled:cursor-not-allowed"
       )}
     >
       <span className="sr-only">Enable</span>
       <span
         aria-hidden="true"
         className={classNames(
-          isEnabled ? sizes[size].translateLeft : "translate-x-0",
+          props.checked ? sizes[size].translateLeft : "translate-x-0",
           sizes[size].switch,
-          "inline-block rounded-full bg-white transition duration-200 ease-in-out"
+          props.disabled ? "bg-gray-600" : "bg-white",
+          "inline-block rounded-full transition duration-200 ease-in-out"
         )}
       />
     </HeadlessSwitch>

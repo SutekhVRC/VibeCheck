@@ -62,10 +62,8 @@ export default function FeatureForm({
       <TooltipLabel text="Enabled" tooltip="Enable/Disable this feature." />
       <Switch
         size="small"
-        isEnabled={feature.feature_enabled}
-        toggleIsEnabled={(checked: boolean) =>
-          handleBool(checked, "feature_enabled")
-        }
+        checked={feature.feature_enabled}
+        onChange={(checked: boolean) => handleBool(checked, "feature_enabled")}
       />
       <div></div>
       <div></div>
@@ -87,10 +85,8 @@ export default function FeatureForm({
       />
       <Switch
         size="small"
-        isEnabled={feature.smooth_enabled}
-        toggleIsEnabled={(checked: boolean) =>
-          handleBool(checked, "smooth_enabled")
-        }
+        checked={feature.smooth_enabled}
+        onChange={(checked: boolean) => handleBool(checked, "smooth_enabled")}
       />
       <Slider
         disabled={!feature.smooth_enabled}
@@ -126,10 +122,8 @@ export default function FeatureForm({
       />
       <Switch
         size="small"
-        isEnabled={feature.flip_input_float}
-        toggleIsEnabled={(checked: boolean) =>
-          handleBool(checked, "flip_input_float")
-        }
+        checked={feature.flip_input_float}
+        onChange={(checked: boolean) => handleBool(checked, "flip_input_float")}
       />
       <div></div>
       <div></div>
@@ -185,11 +179,7 @@ export default function FeatureForm({
           <div />
           <div />
           <TooltipLabel text="Simulate" tooltip="Test feature power level." />
-          <Switch
-            size="small"
-            isEnabled={simulate}
-            toggleIsEnabled={simulateHandler}
-          />
+          <Switch size="small" checked={simulate} onChange={simulateHandler} />
           <Slider
             disabled={!simulate}
             min={0}

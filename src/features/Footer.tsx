@@ -49,8 +49,8 @@ export function Footer() {
         )}
         <Switch
           theme="red-green"
-          isEnabled={isEnabled}
-          toggleIsEnabled={toggleIsEnabled}
+          checked={isEnabled}
+          onChange={toggleIsEnabled}
         />
       </div>
       {version}

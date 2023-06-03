@@ -150,8 +150,8 @@ export default function Config({
             />
           )}
           <Switch
-            isEnabled={newConfig.lc_override != null}
-            toggleIsEnabled={handleLcOverride}
+            checked={newConfig.lc_override != null}
+            onChange={handleLcOverride}
             size="small"
           />
           <TooltipLabel
@@ -160,8 +160,8 @@ export default function Config({
           />
           <div />
           <Switch
-            isEnabled={newConfig.scan_on_disconnect}
-            toggleIsEnabled={(checked: boolean) =>
+            checked={newConfig.scan_on_disconnect}
+            onChange={(checked: boolean) =>
               onCheckSwitch(checked, "scan_on_disconnect")
             }
             size="small"
@@ -172,8 +172,8 @@ export default function Config({
           />
           <div />
           <Switch
-            isEnabled={newConfig.minimize_on_exit}
-            toggleIsEnabled={(checked: boolean) =>
+            checked={newConfig.minimize_on_exit}
+            onChange={(checked: boolean) =>
               onCheckSwitch(checked, "minimize_on_exit")
             }
             size="small"
@@ -184,8 +184,8 @@ export default function Config({
           />
           <div />
           <Switch
-            isEnabled={newConfig.desktop_notifications}
-            toggleIsEnabled={(checked: boolean) =>
+            checked={newConfig.desktop_notifications}
+            onChange={(checked: boolean) =>
               onCheckSwitch(checked, "desktop_notifications")
             }
             size="small"

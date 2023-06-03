@@ -40,8 +40,8 @@ export default function ToySettings({
         <label>OSC Data</label>
         <Switch
           size="small"
-          isEnabled={toy.osc_data}
-          toggleIsEnabled={(e) => handleToyAlter({ ...toy, osc_data: e })}
+          checked={toy.osc_data}
+          onChange={(e) => handleToyAlter({ ...toy, osc_data: e })}
         />
         <div />
         <div />
