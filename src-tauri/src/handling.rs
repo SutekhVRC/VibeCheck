@@ -326,46 +326,82 @@ fn parse_smoothing(smooth_queue: &mut Vec<f64>, feature_levels: LevelTweaks, flo
 }
 
 enum RateParser {
-    RateDone,
-    RateCalculating,
+    RateCalculated(bool),
+    //TimerReset,
     SkipZero,
 }
 
 #[inline]
-fn parse_rate(rate_queue: &mut Vec<f64>, rate_timestamp: &mut Option<Instant>, float_level: &mut f64, flip_float: bool) -> RateParser {
+fn parse_rate(rate_saved_level: &mut f64, rate_timestamp: &mut Option<Instant>, decrement_rate: f64, float_level: &mut f64, flip_float: bool) -> RateParser {
     /*
      * If value is 0.1 greater/less than last value add to queue
      * Once queue is 3 values average them then do rate equation
      * rate equation: toy_motor_speed = avg_value_after_N_parameter_changes / time_since_last_rate_submission (seconds)
      */
 
-    // If 
-    if rate_queue.len() == 3 {
-        let elapsed_time = rate_timestamp.as_ref().unwrap().elapsed().as_secs_f64();
+    // Maybe just keep state of float level and modify it for an increment (probably much more stable)
+    /*
+     * For each packet input increase by 0.01
+     * Have an adjustable decrease rate that uses the rate_timestamp
+     * If gets 0 stop motor
+     * 
+     */
 
-        // Sample time = 0.5
-        if elapsed_time > 0.5 {
-            let avg_increment_input = ((rate_queue.iter().sum::<f64>() as f64 / rate_queue.len() as f64 * 100.0).round() / 100.0) as f64;
-            *float_level = avg_increment_input / elapsed_time;
-            rate_queue.clear();
-            return RateParser::RateDone;
+    //
+
+    debug!("Current rate level: {}", rate_saved_level);
+
+    if !flip_float && *float_level <= 0.0 || flip_float && *float_level >= 1.0 {
+        debug!("Bypassing rate input");
+        return RateParser::SkipZero;
+
+    } else {
+        trace!("float level rate increased");
+        *float_level = (*rate_saved_level + 0.01).clamp(0.01, 1.0);
+        *rate_saved_level = *float_level;
+    }
+
+    if let Some(instant) = rate_timestamp {
+
+        // Decrease dynamic tick
+        if instant.elapsed().as_secs_f64() > 0.7 {
+            // This decrease rate should be tuneable
+            *float_level = (*rate_saved_level - decrement_rate).clamp(0.01, 1.0);
+            *rate_saved_level = *float_level;
+            trace!("decrease timer reset");
+            return RateParser::RateCalculated(true);
         }
     }
 
-    if *float_level == 0.0 || flip_float && *float_level == 1.0 {
-        debug!("Bypassing rate input");
+    RateParser::RateCalculated(false)
 
-        return RateParser::SkipZero;
+/*
+    //debug!("rate_queue length: {}", rate_queue.len());
+
+    // If 3 floats indexed parse count over time.
+    if rate_queue.len() == 3 {
+        let elapsed_time = rate_timestamp.as_ref().unwrap().elapsed().as_secs_f64();
+        debug!("Elapsed time: {}s", elapsed_time);
+        // Sample time = 0.2
+        if elapsed_time > 0.2 {
+            let avg_increment_input = rate_queue.len();// ((rate_queue.iter().sum::<f64>() as f64 / rate_queue.len() as f64 * 100.0).round() / 100.0) as f64;
+            *float_level = (avg_increment_input as f64 / elapsed_time).clamp(0.0, 1.0);
+            debug!("Rate set float_level to: {}", float_level);
+            rate_queue.clear();
+            return RateParser::RateDone;
+        } else {
+            return RateParser::RateCalculating;
+        }
     }
 
     if !rate_queue.is_empty() {
-        if *float_level > (rate_queue.last().unwrap() + 0.1).clamp(0.0, 1.0) || *float_level < (rate_queue.last().unwrap() - 0.1).clamp(0.0, 1.0) {
-
-        } 
+        //if *float_level >= (rate_queue.last().unwrap() + 0.1).clamp(0.0, 1.0) || *float_level <= (rate_queue.last().unwrap() - 0.1).clamp(0.0, 1.0) {
+            rate_queue.push(*float_level);
+        //} 
     } else {
         rate_queue.push(*float_level)
     }
-    RateParser::RateCalculating
+    RateParser::RateCalculating*/
 }
 
 /*
@@ -391,6 +427,7 @@ pub async fn toy_management_handler(
             // Put smooth_queue here
             // Put rate tracking here
             // Time tracking here?
+            // Async runtime wrapped in Option for rate updating here????
 
             while dev.connected() {
                 //trace!("Toy recv loop start");
@@ -418,24 +455,30 @@ pub async fn toy_management_handler(
                                         //debug!("Received and cast float lvl: {:.5}", float_level);
 
                                         // Iterate through features enumerated from OSC param
-                                        for (feature_type, feature_index, flip_float, feature_levels, smooth_enabled, smooth_queue, rate_enabled, rate_queue, rate_timestamp) in features {
+                                        for (feature_type, feature_index, flip_float, feature_levels, smooth_enabled, smooth_queue, rate_enabled, rate_saved_level, rate_timestamp) in features {
                                             
                                             // Smoothing enabled
                                             if smooth_enabled && !rate_enabled {
-                                                trace!("parse_moothing()");
+                                                //trace!("parse_moothing()");
                                                 match parse_smoothing(smooth_queue, feature_levels, &mut float_level, flip_float) {
                                                     SmoothParser::SkipZero | SmoothParser::Smoothed => command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await,
                                                     SmoothParser::Smoothing => continue,
                                                 }
                                             } else if rate_enabled && !smooth_enabled {
-                                                trace!("parse_rate()");
-                                                match parse_rate(rate_queue, rate_timestamp, &mut float_level, flip_float) {
+
+                                                //trace!("parse_rate()");
+                                                // Need to set rate_timestamp when feature enabled
+                                                if let None = rate_timestamp {
+                                                    *rate_timestamp = Some(Instant::now());
+                                                }
+                                                match parse_rate(rate_saved_level, rate_timestamp, feature_levels.rate_tune, &mut float_level, flip_float) {
                                                     RateParser::SkipZero => command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await,
-                                                    RateParser::RateDone => {
-                                                        *rate_timestamp = Some(Instant::now());
+                                                    RateParser::RateCalculated(reset_timer) => {
+                                                        if reset_timer {
+                                                            *rate_timestamp = Some(Instant::now())
+                                                        }
                                                         command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await;
                                                     },
-                                                    RateParser::RateCalculating => continue,
                                                 }
                                             } else {
                                                 command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await;
