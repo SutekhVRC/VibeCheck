@@ -1,52 +1,16 @@
-import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import lovenseLogo from "../assets/Lovense.png";
 import lovenseConnectLogo from "../assets/Lovense_Connect.png";
 import FeatureForm from "./FeatureForm";
 import ToySettings from "./ToySettings";
 import Tooltip from "../layout/Tooltip";
 import BatteryIcon from "../components/BatteryIcon";
-import { ALTER_TOY } from "../data/constants";
-import { invoke } from "@tauri-apps/api";
-import { useToastContext } from "../context/ToastContext";
-import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import classNames from "classnames";
-import { Dispatch, SetStateAction, useState } from "react";
+import { useState } from "react";
+import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 
-export default function Toy({
-  toy,
-  setToy,
-}: {
-  toy: FeVCToy;
-  setToy: Dispatch<SetStateAction<FeVCToy | null>>;
-}) {
-  const [selectedFeature, setSelectedFeature] = useState<FeVCToyFeature>(
-    toy.features[0]
-  );
+export default function Toy({ toy }: { toy: FeVCToy }) {
+  const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
   const nameInfo = NameInfo(toy.toy_name);
-  const toast = useToastContext();
-
-  async function handleToyAlter(newToy: FeVCToy) {
-    try {
-      if (newToy.toy_connected) {
-        await invoke(ALTER_TOY, {
-          mutate: { Connected: newToy },
-        });
-      } else {
-        await invoke(ALTER_TOY, {
-          mutate: { Disconnected: newToy },
-        });
-      }
-      setToy(newToy);
-    } catch (e) {
-      toast.createToast("Could not alter toy!", JSON.stringify(e), "error");
-    }
-  }
-
-  function handleFeatureAlter(newFeature: FeVCToyFeature) {
-    const newFeatures = [...toy.features];
-    newFeatures[newFeature.feature_index] = newFeature;
-    handleToyAlter({ ...toy, features: newFeatures });
-  }
 
   return (
     <div className="w-full">
@@ -59,32 +23,27 @@ export default function Toy({
         </div>
         <ToyInfo nameInfo={nameInfo} battery={toy.battery_level} />
       </div>
-      <ToySettings toy={toy} handleToyAlter={handleToyAlter} />
-      <div className="flex">
-        {toy.features.map((feature) => (
-          <button
-            key={`${feature.feature_type} ${feature.feature_index}`}
-            onClick={() => setSelectedFeature(feature)}
-            className={classNames(
-              feature.feature_type == selectedFeature?.feature_type &&
-                feature.feature_index == selectedFeature.feature_index &&
-                "outline",
-              feature.feature_enabled ? "text-gray-200" : "text-gray-500",
-              "rounded-md bg-gray-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-cyan-500"
-            )}
-          >
-            {feature.feature_type} {feature.feature_index}
-          </button>
-        ))}
+      <div className="m-4">
+        <ToySettings toy={toy} />
+        <div className="flex">
+          {toy.features.map((feature) => (
+            <button
+              key={`${feature.feature_type} ${feature.feature_index}`}
+              onClick={() => setSelectedFeatureIndex(feature.feature_index)}
+              className={classNames(
+                feature.feature_index == selectedFeatureIndex && "outline",
+                feature.feature_enabled ? "text-gray-200" : "text-gray-500",
+                "rounded-md bg-gray-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-cyan-500"
+              )}
+            >
+              {feature.feature_type} {feature.feature_index}
+            </button>
+          ))}
+        </div>
+        {selectedFeatureIndex != null && (
+          <FeatureForm toy={toy} selectedIndex={selectedFeatureIndex} />
+        )}
       </div>
-      {selectedFeature != null && (
-        <FeatureForm
-          key={`${selectedFeature.feature_type} ${selectedFeature.feature_index}`}
-          handleFeatureAlter={handleFeatureAlter}
-          toyId={toy.toy_id}
-          oldFeature={selectedFeature}
-        />
-      )}
     </div>
   );
 }

@@ -6,14 +6,10 @@ import Button from "../layout/Button";
 import { ToyAnatomyArray } from "../data/stringArrayTypes";
 import { FeVCToyAnatomy } from "../../src-tauri/bindings/FeVCToyAnatomy";
 import FourPanel from "../components/FourPanel";
+import { useToys } from "../hooks/useToys";
 
-export default function ToySettings({
-  toy,
-  handleToyAlter,
-}: {
-  toy: FeVCToy;
-  handleToyAlter: (newToy: FeVCToy) => void;
-}) {
+export default function ToySettings({ toy }: { toy: FeVCToy }) {
+  const { handleToyAlter } = useToys();
   const toast = useToastContext();
 
   const parsed_toy_name = toy.toy_name

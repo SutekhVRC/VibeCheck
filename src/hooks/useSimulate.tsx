@@ -9,14 +9,6 @@ export default function useSimulate(
   featureIndex: number,
   featureType: FeVCFeatureType
 ) {
-  if (toyId == null)
-    return {
-      simulate: null,
-      simulateHandler: () => null,
-      simulateLevel: null,
-      simulateLevelHandler: () => null,
-    };
-
   const [simulate, setSimulate] = useState(false);
   const [simulateLevel, setSimulateLevel] = useState(0.5);
   const toast = useToastContext();
@@ -40,12 +32,23 @@ export default function useSimulate(
   }
 
   useEffect(() => {
+    setSimulate(false);
+    setSimulateLevel(0.5);
     return () => {
       invokeSimulation(0);
     };
-  }, []);
+  }, [toyId, featureType, featureIndex]);
+
+  if (toyId == null)
+    return {
+      simulate: null,
+      simulateHandler: () => null,
+      simulateLevel: null,
+      simulateLevelHandler: () => null,
+    };
 
   async function invokeSimulation(floatLevel: number) {
+    if (toyId == null) return;
     try {
       await invoke(SIMULATE_TOY_FEATURE, {
         toyId,

@@ -85,7 +85,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ createToast }}>
       {children}
       <div className="flex flex-col-reverse w-screen h-screen top-0 right-0 fixed pointer-events-none">
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {toasts.map((toast) => (
             <motion.div
               key={toast.guid}

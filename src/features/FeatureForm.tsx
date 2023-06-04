@@ -1,4 +1,4 @@
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { OSC_PARAM_PREFIX } from "../data/constants";
 import { round0 } from "../utils";
 import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
@@ -7,28 +7,41 @@ import useSimulate from "../hooks/useSimulate";
 import Switch from "../layout/Switch";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
 import FourPanel from "../components/FourPanel";
+import { useToys } from "../hooks/useToys";
+import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 
 type ToyFeatureFormProps = {
-  handleFeatureAlter: (newFeature: FeVCToyFeature) => void;
-  toyId: number | null;
-  oldFeature: FeVCToyFeature;
+  toy: FeVCToy;
+  selectedIndex: number;
 };
 
 export default function FeatureForm({
-  handleFeatureAlter,
-  toyId,
-  oldFeature,
+  toy,
+  selectedIndex,
 }: ToyFeatureFormProps) {
-  const [feature, setToyFeature] = useState(oldFeature);
+  const { handleFeatureAlter } = useToys();
+  const [feature, setToyFeature] = useState(toy.features[selectedIndex] ?? 0);
   const levels = feature.feature_levels;
 
-  const handleBool = (checked: boolean, name: keyof FeVCToyFeature) => {
+  useEffect(() => {
+    setToyFeature(toy.features[selectedIndex] ?? 0);
+  }, [toy, selectedIndex]);
+
+  const {
+    simulate,
+    simulateLevel,
+    simulateOnChange,
+    simulateOnValueChange,
+    simulateOnValueCommit,
+  } = useSimulate(toy.toy_id, feature.feature_index, feature.feature_type);
+
+  function handleBool(checked: boolean, name: keyof FeVCToyFeature) {
     setToyFeature((f) => {
       const newF = { ...f, [name]: checked };
-      handleFeatureAlter(newF);
+      handleFeatureAlter(toy, newF);
       return newF;
     });
-  };
+  }
 
   function handleOscParam(e: ChangeEvent<HTMLInputElement>) {
     setToyFeature((f) => {
@@ -36,7 +49,7 @@ export default function FeatureForm({
         ...f,
         [e.target.name]: `${OSC_PARAM_PREFIX}${e.target.value}`,
       };
-      handleFeatureAlter(newF);
+      handleFeatureAlter(toy, newF);
       return newF;
     });
   }
@@ -51,16 +64,8 @@ export default function FeatureForm({
   }
 
   function handleCommit() {
-    handleFeatureAlter(feature);
+    handleFeatureAlter(toy, feature);
   }
-
-  const {
-    simulate,
-    simulateLevel,
-    simulateOnChange,
-    simulateOnValueChange,
-    simulateOnValueCommit,
-  } = useSimulate(toyId, feature.feature_index, feature.feature_type);
 
   return (
     <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 p-4">
