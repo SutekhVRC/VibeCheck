@@ -120,7 +120,7 @@ pub async fn client_event_handler(
                     let mut toy = VCToy {
                         toy_id: dev.index(),
                         toy_name: dev.name().clone(),
-                        battery_level: battery_level,
+                        battery_level,
                         toy_connected: dev.connected(),
                         toy_features: dev.message_attributes().clone(),
                         param_feature_map: FeatureParamMap::new(),
@@ -272,6 +272,7 @@ pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, s
     }
 }
 
+#[inline]
 pub fn flip_float64(orig: f64) -> f64 {
     //1.00 - orig
     ((1.00 - orig) * 100.0).round() / 100.0
@@ -327,81 +328,67 @@ fn parse_smoothing(smooth_queue: &mut Vec<f64>, feature_levels: LevelTweaks, flo
 
 enum RateParser {
     RateCalculated(bool),
-    //TimerReset,
     SkipZero,
 }
 
 #[inline]
-fn parse_rate(rate_saved_level: &mut f64, rate_timestamp: &mut Option<Instant>, decrement_rate: f64, float_level: &mut f64, flip_float: bool) -> RateParser {
-    /*
-     * If value is 0.1 greater/less than last value add to queue
-     * Once queue is 3 values average them then do rate equation
-     * rate equation: toy_motor_speed = avg_value_after_N_parameter_changes / time_since_last_rate_submission (seconds)
-     */
+fn parse_rate(rate_internal_level: &mut f64, rate_saved_osc_input: &mut f64, rate_timestamp: &mut Option<Instant>, decrement_rate: f64, float_level: &mut f64, flip_float: bool) -> RateParser {
 
-    // Maybe just keep state of float level and modify it for an increment (probably much more stable)
-    /*
-     * For each packet input increase by 0.01
-     * Have an adjustable decrease rate that uses the rate_timestamp
-     * If gets 0 stop motor
-     * 
-     */
-
-    //
-
-    debug!("Current rate level: {}", rate_saved_level);
-
+    // Skip because got 0 value to stop toy.
     if !flip_float && *float_level <= 0.0 || flip_float && *float_level >= 1.0 {
         debug!("Bypassing rate input");
+        *rate_internal_level = *float_level;
+        *rate_saved_osc_input = *float_level;
         return RateParser::SkipZero;
 
-    } else {
+    } else {// Increase toy level
+        
+        // Store new input then get the distance of the new input from the last input
+        // Add that distance to the internal float level
+        
+        // get distance between newest input and last input
+        // Set the distance between as the new motor speed
+        if *rate_saved_osc_input > *float_level {
+            *rate_internal_level += (*rate_saved_osc_input - *float_level).clamp(0.01, 1.0);
+        } else {
+            *rate_internal_level += (*float_level - *rate_saved_osc_input).clamp(0.01, 1.0);
+        }
+
+        // Dont let internal level go over 1.0
+        *rate_internal_level = rate_internal_level.clamp(0.01, 1.00);
+
+        // Set the newest input as the recent input
+        *rate_saved_osc_input = *float_level;
+        
+        // Set the internal rate state to the float level
+        *float_level = *rate_internal_level;
+
+        // Save the internal motor speed
+        //*rate_internal_level += *float_level;
+
         trace!("float level rate increased");
-        *float_level = (*rate_saved_level + 0.01).clamp(0.01, 1.0);
-        *rate_saved_level = *float_level;
     }
 
+    // Decrement testing
     if let Some(instant) = rate_timestamp {
 
-        // Decrease dynamic tick
-        if instant.elapsed().as_secs_f64() > 0.7 {
+        // Decrease tick
+        if instant.elapsed().as_secs_f64() >= 0.2 {
+
+            // Decrease the internal rate level
             // This decrease rate should be tuneable
-            *float_level = (*rate_saved_level - decrement_rate).clamp(0.01, 1.0);
-            *rate_saved_level = *float_level;
+            *rate_internal_level = (*rate_internal_level - decrement_rate).clamp(0.01, 1.0);
+            debug!("internal level after decrement: {}", rate_internal_level);
+            
+            // Set float level to decremented internal rate
+            *float_level = *rate_internal_level;
+            
             trace!("decrease timer reset");
             return RateParser::RateCalculated(true);
         }
     }
 
     RateParser::RateCalculated(false)
-
-/*
-    //debug!("rate_queue length: {}", rate_queue.len());
-
-    // If 3 floats indexed parse count over time.
-    if rate_queue.len() == 3 {
-        let elapsed_time = rate_timestamp.as_ref().unwrap().elapsed().as_secs_f64();
-        debug!("Elapsed time: {}s", elapsed_time);
-        // Sample time = 0.2
-        if elapsed_time > 0.2 {
-            let avg_increment_input = rate_queue.len();// ((rate_queue.iter().sum::<f64>() as f64 / rate_queue.len() as f64 * 100.0).round() / 100.0) as f64;
-            *float_level = (avg_increment_input as f64 / elapsed_time).clamp(0.0, 1.0);
-            debug!("Rate set float_level to: {}", float_level);
-            rate_queue.clear();
-            return RateParser::RateDone;
-        } else {
-            return RateParser::RateCalculating;
-        }
-    }
-
-    if !rate_queue.is_empty() {
-        //if *float_level >= (rate_queue.last().unwrap() + 0.1).clamp(0.0, 1.0) || *float_level <= (rate_queue.last().unwrap() - 0.1).clamp(0.0, 1.0) {
-            rate_queue.push(*float_level);
-        //} 
-    } else {
-        rate_queue.push(*float_level)
-    }
-    RateParser::RateCalculating*/
 }
 
 /*
@@ -455,7 +442,7 @@ pub async fn toy_management_handler(
                                         //debug!("Received and cast float lvl: {:.5}", float_level);
 
                                         // Iterate through features enumerated from OSC param
-                                        for (feature_type, feature_index, flip_float, feature_levels, smooth_enabled, smooth_queue, rate_enabled, rate_saved_level, rate_timestamp) in features {
+                                        for (feature_type, feature_index, flip_float, feature_levels, smooth_enabled, smooth_queue, rate_enabled, rate_saved_level, rate_saved_osc_input, rate_timestamp) in features {
                                             
                                             // Smoothing enabled
                                             if smooth_enabled && !rate_enabled {
@@ -471,7 +458,7 @@ pub async fn toy_management_handler(
                                                 if let None = rate_timestamp {
                                                     *rate_timestamp = Some(Instant::now());
                                                 }
-                                                match parse_rate(rate_saved_level, rate_timestamp, feature_levels.rate_tune, &mut float_level, flip_float) {
+                                                match parse_rate(rate_saved_level, rate_saved_osc_input, rate_timestamp, feature_levels.rate_tune, &mut float_level, flip_float) {
                                                     RateParser::SkipZero => command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await,
                                                     RateParser::RateCalculated(reset_timer) => {
                                                         if reset_timer {
@@ -895,6 +882,7 @@ pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OS
     }
 }
 
+#[inline]
 pub fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
     let mut buf = [0u8; rosc::decoder::MTU];
 

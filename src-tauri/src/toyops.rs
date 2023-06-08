@@ -225,14 +225,14 @@ pub struct VCToyFeature {
     #[serde(skip)]
     pub rate_saved_level: f64,
     #[serde(skip)]
+    pub rate_saved_osc_input: f64,
+    #[serde(skip)]
     pub rate_timestamp: Option<Instant>,
-
-    //pub saved: bool,
 }
 
 impl VCToyFeature {
     fn new(osc_parameter: String, feature_index: u32, feature_type: VCFeatureType) -> Self {
-        VCToyFeature { feature_enabled: true, feature_type, osc_parameter, feature_index, flip_input_float: false, feature_levels: LevelTweaks::default(), smooth_enabled: true, smooth_queue: vec![], rate_enabled: false, rate_tune: 0.05, rate_saved_level: 0., rate_timestamp: None }
+        VCToyFeature { feature_enabled: true, feature_type, osc_parameter, feature_index, flip_input_float: false, feature_levels: LevelTweaks::default(), smooth_enabled: true, smooth_queue: vec![], rate_enabled: false, rate_tune: 0.05, rate_saved_level: 0., rate_saved_osc_input: 0., rate_timestamp: None }
     }
 
     pub fn from_fe(&mut self, fe_feature: FeVCToyFeature) {
@@ -392,7 +392,7 @@ impl FeatureParamMap {
         }
     }
 
-    pub fn get_features_from_param(&mut self, param: &String) -> Option<Vec<(VCFeatureType, u32, bool, LevelTweaks, bool, &mut Vec<f64>, bool, &mut f64, &mut Option<Instant>)>> {
+    pub fn get_features_from_param(&mut self, param: &String) -> Option<Vec<(VCFeatureType, u32, bool, LevelTweaks, bool, &mut Vec<f64>, bool, &mut f64, &mut f64, &mut Option<Instant>)>> {
         
         let mut parsed_features = vec![];
 
@@ -408,8 +408,8 @@ impl FeatureParamMap {
                         f.smooth_enabled,
                         &mut f.smooth_queue,
                         f.rate_enabled,
-                        //f.rate_tune,
                         &mut f.rate_saved_level,
+                        &mut f.rate_saved_osc_input,
                         &mut f.rate_timestamp,
                     ));
                 }
