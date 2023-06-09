@@ -349,13 +349,13 @@ fn parse_rate(rate_internal_level: &mut f64, rate_saved_osc_input: &mut f64, rat
         // get distance between newest input and last input
         // Set the distance between as the new motor speed
         if *rate_saved_osc_input > *float_level {
-            *rate_internal_level += (*rate_saved_osc_input - *float_level).clamp(0.01, 1.0);
+            *rate_internal_level += (*rate_saved_osc_input - *float_level).clamp(0.00, 1.0);
         } else {
-            *rate_internal_level += (*float_level - *rate_saved_osc_input).clamp(0.01, 1.0);
+            *rate_internal_level += (*float_level - *rate_saved_osc_input).clamp(0.00, 1.0);
         }
 
         // Dont let internal level go over 1.0
-        *rate_internal_level = rate_internal_level.clamp(0.01, 1.00);
+        *rate_internal_level = rate_internal_level.clamp(0.00, 1.00);
 
         // Set the newest input as the recent input
         *rate_saved_osc_input = *float_level;
@@ -377,7 +377,7 @@ fn parse_rate(rate_internal_level: &mut f64, rate_saved_osc_input: &mut f64, rat
 
             // Decrease the internal rate level
             // This decrease rate should be tuneable
-            *rate_internal_level = (*rate_internal_level - decrement_rate).clamp(0.01, 1.0);
+            *rate_internal_level = (*rate_internal_level - decrement_rate).clamp(0.00, 1.0);
             debug!("internal level after decrement: {}", rate_internal_level);
             
             // Set float level to decremented internal rate
