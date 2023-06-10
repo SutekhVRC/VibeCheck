@@ -4,7 +4,7 @@ import { ALTER_TOY, OFFLINE_SYNC, TOY_EVENT } from "../data/constants";
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import type { FeToyEvent } from "../../src-tauri/bindings/FeToyEvent";
 import { assertExhaustive } from "../utils";
-import { useToastContext } from "../context/ToastContext";
+import { createToast } from "../components/Toast";
 import { invoke } from "@tauri-apps/api";
 import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 
@@ -14,7 +14,6 @@ type ToyMap = {
 
 export function useToys() {
   const [toys, setToys] = useState<ToyMap>({});
-  const toast = useToastContext();
 
   useEffect(() => {
     async function getOfflinetoys() {
@@ -27,11 +26,7 @@ export function useToys() {
           }, {} as ToyMap)
         );
       } catch (e) {
-        toast.createToast(
-          "Could not load offline toys",
-          JSON.stringify(e),
-          "error"
-        );
+        createToast("error", "Could not load offline toys", JSON.stringify(e));
       }
     }
     getOfflinetoys();
@@ -66,10 +61,10 @@ export function useToys() {
             (t) => t.toy_id == payload.data
           );
           if (onlineToOfflineToy == undefined) {
-            toast.createToast(
+            createToast(
+              "warn",
               "Remove Toy",
-              `Could not find toy with id ${payload.data}`,
-              "warn"
+              `Could not find toy with id ${payload.data}`
             );
             return toys;
           }
@@ -105,7 +100,7 @@ export function useToys() {
         });
       }
     } catch (e) {
-      toast.createToast("Could not alter toy!", JSON.stringify(e), "error");
+      createToast("error", "Could not alter toy!", JSON.stringify(e));
     }
   }
 

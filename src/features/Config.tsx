@@ -6,17 +6,16 @@ import { CLEAR_OSC_CONFIG, SET_CONFIG } from "../data/constants";
 import UpdateButton from "../components/UpdateButton";
 import { TooltipLabel } from "../layout/Tooltip";
 import Switch from "../layout/Switch";
-import { useToastContext } from "../context/ToastContext";
 import Button from "../layout/Button";
 import { useUpdate } from "../hooks/useUpdate";
 import { useCoreEventContext } from "../context/CoreEventContext";
+import { createToast } from "../components/Toast";
 
 export default function Config() {
   const { config, refreshConfig } = useCoreEventContext();
   if (config == null) return null;
   const [newConfig, setNewConfig] = useState<FeVibeCheckConfig>(config);
   const { canUpdate } = useUpdate();
-  const toast = useToastContext();
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
     setNewConfig({ ...newConfig, [e.target.name]: e.target.value });
@@ -45,25 +44,25 @@ export default function Config() {
   async function saveConfig() {
     try {
       await invoke(SET_CONFIG, { feVcConfig: newConfig });
-      toast.createToast("Saved config", "", "info");
+      createToast("info", "Saved config");
     } catch (e) {
-      toast.createToast("Could not set config!", JSON.stringify(e), "error");
+      createToast("error", "Could not set config!", JSON.stringify(e));
     }
   }
 
   async function clearOsc() {
     try {
       await invoke(CLEAR_OSC_CONFIG);
-      toast.createToast(
+      createToast(
+        "info",
         "Cleared avatar OSC configs",
-        "Removed AppData\\LocalLow\\VRChat\\VRChat\\OSC",
-        "info"
+        "Removed AppData\\LocalLow\\VRChat\\VRChat\\OSC"
       );
     } catch (e) {
-      toast.createToast(
+      createToast(
+        "error",
         "Could not clear avatar OSC configs!",
-        JSON.stringify(e),
-        "error"
+        JSON.stringify(e)
       );
     }
   }

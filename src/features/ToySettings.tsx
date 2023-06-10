@@ -1,16 +1,15 @@
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import { OSC_DATA_PREFIX } from "../data/constants";
 import Switch from "../layout/Switch";
-import { useToastContext } from "../context/ToastContext";
 import Button from "../layout/Button";
 import { ToyAnatomyArray } from "../data/stringArrayTypes";
 import { FeVCToyAnatomy } from "../../src-tauri/bindings/FeVCToyAnatomy";
 import FourPanel from "../components/FourPanel";
 import { useToys } from "../hooks/useToys";
+import { createToast } from "../components/Toast";
 
 export default function ToySettings({ toy }: { toy: FeVCToy }) {
   const { handleToyAlter } = useToys();
-  const toast = useToastContext();
 
   const parsed_toy_name = toy.toy_name
     .replace("Lovense Connect", "Lovense")
@@ -21,13 +20,9 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(osc_data_addr);
-      toast.createToast("Copied to clipboard", osc_data_addr, "info");
+      createToast("info", "Copied to clipboard", osc_data_addr);
     } catch (e) {
-      toast.createToast(
-        "Could not copy to clipboard!",
-        JSON.stringify(e),
-        "error"
-      );
+      createToast("error", "Could not copy to clipboard!", JSON.stringify(e));
     }
   }
 
