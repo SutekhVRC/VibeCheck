@@ -8,7 +8,6 @@ import { useCoreEventContext } from "./context/CoreEventContext";
 import Loading from "./components/Loading";
 import { useState } from "react";
 import { FeVCToy } from "../src-tauri/bindings/FeVCToy";
-import classNames from "classnames";
 import Config from "./features/Config";
 import { useUpdate } from "./hooks/useUpdate";
 import { useVersion } from "./hooks/useVersion";
@@ -20,6 +19,7 @@ import DiscordLogo from "./assets/discord-mark-white.svg";
 import GithubLogo from "./assets/GitHub-Mark-Light-64px.png";
 import "./App.css";
 import Switch from "./layout/Switch";
+import { cn } from "./utils";
 
 type Selection = ToySelection | ConfigSelection | null;
 
@@ -81,7 +81,7 @@ export default function App() {
                     <button
                       key={`${toy.toy_name} ${toy.sub_id}`}
                       onClick={() => setToy(toy)}
-                      className={classNames(
+                      className={cn(
                         selection?.type == "Toy" &&
                           `${toy.toy_name} ${toy.sub_id}` == selection.toyKey &&
                           "outline",
@@ -122,8 +122,8 @@ export default function App() {
           <div className="flex justify-around items-center">
             <UpdatePing canUpdate={canUpdate}>
               <Cog6ToothIcon
-                className={classNames(
-                  selection?.type == "Config" && "rotate-45",
+                className={cn(
+                  { "rotate-45": selection?.type == "Config" },
                   "h-10 cursor-pointer transform duration-300 ease-in-out"
                 )}
                 onClick={() => setConfig()}

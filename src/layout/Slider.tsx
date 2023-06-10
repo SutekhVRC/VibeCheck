@@ -1,10 +1,10 @@
 import * as RadixSlider from "@radix-ui/react-slider";
-import classNames from "classnames";
+import { cn } from "../utils";
 
 export default function Slider(props: RadixSlider.SliderProps) {
   return (
     <RadixSlider.Root
-      className={classNames(
+      className={cn(
         "relative flex items-center",
         !props.disabled && "cursor-ew-resize"
       )}

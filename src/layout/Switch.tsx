@@ -1,5 +1,5 @@
 import { Switch as HeadlessSwitch, SwitchProps } from "@headlessui/react";
-import classNames from "classnames";
+import { cn } from "../utils";
 
 const themeColors = {
   "white-cyan": {
@@ -42,7 +42,7 @@ export default function Switch(
   return (
     <HeadlessSwitch
       {...props}
-      className={classNames(
+      className={cn(
         props.checked ? selectedTheme.active : selectedTheme.inactive,
         sizes[size].container,
         "relative inline-flex cursor-pointer rounded-full border-transparent transition-colors duration-200 ease-in-out disabled:bg-gray-700 disabled:cursor-not-allowed"
@@ -51,7 +51,7 @@ export default function Switch(
       <span className="sr-only">Enable</span>
       <span
         aria-hidden="true"
-        className={classNames(
+        className={cn(
           props.checked ? sizes[size].translateLeft : "translate-x-0",
           sizes[size].switch,
           props.disabled ? "bg-gray-600" : "bg-white",

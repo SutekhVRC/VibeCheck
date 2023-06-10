@@ -4,9 +4,9 @@ import FeatureForm from "./FeatureForm";
 import ToySettings from "./ToySettings";
 import Tooltip from "../layout/Tooltip";
 import BatteryIcon from "../components/BatteryIcon";
-import classNames from "classnames";
 import { useState } from "react";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
+import { cn } from "../utils";
 
 export default function Toy({ toy }: { toy: FeVCToy }) {
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
@@ -30,7 +30,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
             <button
               key={`${feature.feature_type} ${feature.feature_index}`}
               onClick={() => setSelectedFeatureIndex(feature.feature_index)}
-              className={classNames(
+              className={cn(
                 feature.feature_index == selectedFeatureIndex && "outline",
                 feature.feature_enabled ? "text-gray-200" : "text-gray-500",
                 "rounded-md bg-gray-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-cyan-500"

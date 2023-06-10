@@ -1,4 +1,3 @@
-import classNames from "classnames";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   createContext,
@@ -8,7 +7,7 @@ import {
   useState,
   useCallback,
 } from "react";
-import { assertExhaustive } from "../utils";
+import { assertExhaustive, cn } from "../utils";
 
 type Toast = {
   title: string;
@@ -89,7 +88,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           {toasts.map((toast) => (
             <motion.div
               key={toast.guid}
-              className={classNames(
+              className={cn(
                 toast.type == "info" && "bg-blue-400",
                 toast.type == "warn" && "bg-amber-400",
                 toast.type == "error" && "bg-red-400",
