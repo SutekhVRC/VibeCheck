@@ -51,6 +51,8 @@ export default function App() {
   const { version } = useVersion();
 
   function setToy(toy: FeVCToy) {
+    const newKey = `${toy.toy_name} ${toy.sub_id}`;
+    if (selection?.type == "Toy" && selection.toyKey == newKey) return;
     setSelection({
       type: "Toy",
       toyKey: `${toy.toy_name} ${toy.sub_id}`,
@@ -58,7 +60,8 @@ export default function App() {
   }
 
   function setConfig() {
-    setSelection({ type: "Config" });
+    if (selection?.type == "Config") setSelection(null);
+    else setSelection({ type: "Config" });
   }
 
   return (
