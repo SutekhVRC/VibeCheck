@@ -46,7 +46,7 @@ impl ToyManager {
 
     }
 */
-    fn populate_configs(&mut self) {
+    pub fn populate_configs(&mut self) {
         
         let toy_config_dir = match read_dir(
             format!(
