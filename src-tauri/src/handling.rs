@@ -136,7 +136,14 @@ pub async fn client_event_handler(
                         Ok(()) => info!("Toy config loaded successfully."),
                         Err(e) => warn!("Toy config failed to load: {:?}", e),
                     }
-                    toy.populate_toy_config();
+
+                    if let None = toy.config { // First time toy load
+                        toy.populate_toy_config();
+                        let mut vc_lock = vibecheck_state_pointer.lock();
+                        vc_lock.core_toy_manager.as_mut().unwrap().populate_configs();
+                    } else {
+                        toy.populate_toy_config();
+                    }
                     
                     {
                         let mut vc_lock = vibecheck_state_pointer.lock();
@@ -145,7 +152,7 @@ pub async fn client_event_handler(
                     trace!("Toy inserted into VibeCheckState toys");
 
                     tme_send.send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone()))).unwrap();
-                    
+
                     let _ = app_handle.emit_all("fe_toy_event",
                         FeToyEvent::Add ({
                             FeVCToy {
