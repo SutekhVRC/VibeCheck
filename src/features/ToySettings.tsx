@@ -5,12 +5,10 @@ import Button from "../layout/Button";
 import { ToyAnatomyArray } from "../data/stringArrayTypes";
 import { FeVCToyAnatomy } from "../../src-tauri/bindings/FeVCToyAnatomy";
 import FourPanel from "../components/FourPanel";
-import { useToys } from "../hooks/useToys";
+import { handleToyAlter } from "../hooks/useToys";
 import { createToast } from "../components/Toast";
 
 export default function ToySettings({ toy }: { toy: FeVCToy }) {
-  const { handleToyAlter } = useToys();
-
   const parsed_toy_name = toy.toy_name
     .replace("Lovense Connect", "Lovense")
     .replaceAll(" ", "_")

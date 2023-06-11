@@ -7,7 +7,7 @@ import useSimulate from "../hooks/useSimulate";
 import Switch from "../layout/Switch";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
 import FourPanel from "../components/FourPanel";
-import { useToys } from "../hooks/useToys";
+import { handleFeatureAlter } from "../hooks/useToys";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 
 type ToyFeatureFormProps = {
@@ -19,7 +19,6 @@ export default function FeatureForm({
   toy,
   selectedIndex,
 }: ToyFeatureFormProps) {
-  const { handleFeatureAlter } = useToys();
   const [feature, setToyFeature] = useState(toy.features[selectedIndex] ?? 0);
   const levels = feature.feature_levels;
 

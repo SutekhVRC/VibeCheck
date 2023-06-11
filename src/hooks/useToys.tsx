@@ -12,6 +12,31 @@ type ToyMap = {
   [id: string]: FeVCToy;
 };
 
+export async function handleToyAlter(newToy: FeVCToy) {
+  try {
+    if (newToy.toy_connected) {
+      await invoke(ALTER_TOY, {
+        mutate: { Connected: newToy },
+      });
+    } else {
+      await invoke(ALTER_TOY, {
+        mutate: { Disconnected: newToy },
+      });
+    }
+  } catch (e) {
+    createToast("error", "Could not alter toy!", JSON.stringify(e));
+  }
+}
+
+export async function handleFeatureAlter(
+  newToy: FeVCToy,
+  newFeature: FeVCToyFeature
+) {
+  const newFeatures = [...newToy.features];
+  newFeatures[newFeature.feature_index] = newFeature;
+  await handleToyAlter({ ...newToy, features: newFeatures });
+}
+
 export function useToys() {
   const [toys, setToys] = useState<ToyMap>({});
 
@@ -88,28 +113,6 @@ export function useToys() {
     }
   }
 
-  async function handleToyAlter(newToy: FeVCToy) {
-    try {
-      if (newToy.toy_connected) {
-        await invoke(ALTER_TOY, {
-          mutate: { Connected: newToy },
-        });
-      } else {
-        await invoke(ALTER_TOY, {
-          mutate: { Disconnected: newToy },
-        });
-      }
-    } catch (e) {
-      createToast("error", "Could not alter toy!", JSON.stringify(e));
-    }
-  }
-
-  function handleFeatureAlter(newToy: FeVCToy, newFeature: FeVCToyFeature) {
-    const newFeatures = [...newToy.features];
-    newFeatures[newFeature.feature_index] = newFeature;
-    handleToyAlter({ ...newToy, features: newFeatures });
-  }
-
   useEffect(() => {
     const unlistenPromise = listen<FeToyEvent>(TOY_EVENT, (event) =>
       handleToyEvent(event.payload)
@@ -120,5 +123,5 @@ export function useToys() {
     };
   }, []);
 
-  return { toys, handleToyAlter, handleFeatureAlter };
+  return { toys };
 }
