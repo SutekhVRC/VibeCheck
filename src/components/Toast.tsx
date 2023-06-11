@@ -5,7 +5,11 @@ import "react-toastify/dist/ReactToastify.css";
 
 type MessageType = "info" | "warn" | "error";
 
-export function createToast(type:MessageType, title: string, message?: string) {
+export function createToast(
+  type: MessageType,
+  title: string,
+  message?: string
+) {
   const messageCombo = message ? `${title}\n${message}` : title;
 
   switch (type) {
