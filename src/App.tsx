@@ -94,7 +94,7 @@ export default function App() {
       className="w-screen h-screen p-4"
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div className="grid grid-cols-[1fr,_4fr] h-[calc(100%-16px)] gap-3">
+      <div className="grid grid-cols-[1fr,_4fr] grid-rows-[1fr,_6fr,_1fr] h-[calc(100vh-46px)] gap-3">
         <div className="flex flex-col gap-4">
           <img className="h-14 object-contain" src={VibecheckLogo} />
           <div>
@@ -116,59 +116,59 @@ export default function App() {
               />
             </div>
           </div>
-          <div className=" bg-gray-800 rounded-md justify-between flex flex-col max-h-fit flex-grow">
-            <div className="flex flex-col overflow-y-scroll pl-2 scrollbar whitespace-nowrap overflow-auto">
-              <AnimatePresence>
-                {toysList.map((sidebarToy) => (
-                  <button
-                    key={`${sidebarToy.toy_name} ${sidebarToy.sub_id}`}
-                    onClick={() => setToy(sidebarToy)}
-                    className={cn(
-                      selection?.type == "Toy" &&
-                        `${sidebarToy.toy_name} ${sidebarToy.sub_id}` ==
-                          selection.toyKey &&
-                        "outline",
-                      sidebarToy.toy_connected
-                        ? "text-gray-200"
-                        : "text-gray-500",
-                      "bg-gray-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400"
-                    )}
-                  >
-                    {sidebarToy.toy_name}
-                  </button>
-                ))}
-              </AnimatePresence>
-            </div>
-            <Button onClick={toggleScan}>
-              {isScanning ? (
-                <div className="flex justify-center">
-                  <div>Scanning</div>
-                  <Loading />
-                </div>
-              ) : (
-                <div>Look for toys</div>
-              )}
-            </Button>
-          </div>
-          <div className="flex justify-around items-center">
-            <UpdatePing canUpdate={canUpdate}>
-              <Cog6ToothIcon
-                className={cn(
-                  selection?.type == "Config" && "rotate-45",
-                  "h-10 cursor-pointer transform duration-300 ease-in-out"
-                )}
-                onClick={() => setConfig()}
-              />
-            </UpdatePing>
-            <Switch
-              theme="red-green"
-              checked={isEnabled}
-              onChange={toggleIsEnabled}
-            />
-          </div>
         </div>
-        <div className="bg-gray-800 rounded-lg">
+        <div className="bg-gray-800 rounded-lg row-span-3">
           <div className="flex justify-between p-4 h-full">{mainPanel}</div>
+        </div>
+        <div className=" bg-gray-800 rounded-md justify-between flex flex-col max-h-fit flex-grow">
+          <div className="flex flex-col overflow-y-scroll pl-2 scrollbar whitespace-nowrap overflow-auto">
+            <AnimatePresence>
+              {toysList.map((sidebarToy) => (
+                <button
+                  key={`${sidebarToy.toy_name} ${sidebarToy.sub_id}`}
+                  onClick={() => setToy(sidebarToy)}
+                  className={cn(
+                    selection?.type == "Toy" &&
+                      `${sidebarToy.toy_name} ${sidebarToy.sub_id}` ==
+                        selection.toyKey &&
+                      "outline",
+                    sidebarToy.toy_connected
+                      ? "text-gray-200"
+                      : "text-gray-500",
+                    "bg-gray-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400"
+                  )}
+                >
+                  {sidebarToy.toy_name}
+                </button>
+              ))}
+            </AnimatePresence>
+          </div>
+          <Button onClick={toggleScan}>
+            {isScanning ? (
+              <div className="flex justify-center">
+                <div>Scanning</div>
+                <Loading />
+              </div>
+            ) : (
+              <div>Look for toys</div>
+            )}
+          </Button>
+        </div>
+        <div className="flex justify-around items-center row-span-2">
+          <UpdatePing canUpdate={canUpdate}>
+            <Cog6ToothIcon
+              className={cn(
+                selection?.type == "Config" && "rotate-45",
+                "h-10 cursor-pointer transform duration-300 ease-in-out"
+              )}
+              onClick={() => setConfig()}
+            />
+          </UpdatePing>
+          <Switch
+            theme="red-green"
+            checked={isEnabled}
+            onChange={toggleIsEnabled}
+          />
         </div>
       </div>
       <div className="m-1 text-center">{version}</div>
