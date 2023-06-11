@@ -9,6 +9,8 @@ import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
 import FourPanel from "../components/FourPanel";
 import { handleFeatureAlter } from "../hooks/useToys";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
+import { Select } from "../layout/Select";
+import { TooltipLabel } from "../layout/Tooltip";
 
 type ToyFeatureFormProps = {
   toy: FeVCToy;
@@ -21,6 +23,9 @@ export default function FeatureForm({
 }: ToyFeatureFormProps) {
   const [feature, setToyFeature] = useState(toy.features[selectedIndex] ?? 0);
   const levels = feature.feature_levels;
+
+  const modeOptions = ["None", "Smooth", "Rate"] as const;
+  type modeOption = (typeof modeOptions)[number];
 
   useEffect(() => {
     setToyFeature(toy.features[selectedIndex] ?? 0);
@@ -36,7 +41,21 @@ export default function FeatureForm({
 
   function handleBool(checked: boolean, name: keyof FeVCToyFeature) {
     setToyFeature((f) => {
-      const newF = { ...f, [name]: checked };
+      const newF = { ...f, [name]: checked } as FeVCToyFeature;
+      handleFeatureAlter(toy, newF);
+      return newF;
+    });
+  }
+
+  function handleMode(option: modeOption) {
+    const smooth_enabled = option == "Smooth";
+    const rate_enabled = option == "Rate";
+    setToyFeature((f) => {
+      const newF = {
+        ...f,
+        smooth_enabled,
+        rate_enabled,
+      } as FeVCToyFeature;
       handleFeatureAlter(toy, newF);
       return newF;
     });
@@ -67,7 +86,7 @@ export default function FeatureForm({
   }
 
   return (
-    <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 p-4">
+    <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 gap-x-2 p-4">
       <FourPanel
         text="Enabled"
         tooltip="Enable/Disable this feature."
@@ -93,56 +112,65 @@ export default function FeatureForm({
           />
         }
       />
-      <FourPanel
-        text="Smoothing"
-        tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
-        two={
-          <Switch
-            size="small"
-            disabled={feature.rate_enabled}
-            checked={feature.smooth_enabled}
-            onChange={(checked: boolean) =>
-              handleBool(checked, "smooth_enabled")
-            }
-          />
+      {feature.smooth_enabled ? (
+        <TooltipLabel
+          text="Mode"
+          tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
+        />
+      ) : feature.rate_enabled ? (
+        <TooltipLabel
+          text="Mode"
+          tooltip="This uses rate mode on the float input."
+        />
+      ) : (
+        <TooltipLabel
+          text="Mode"
+          tooltip="No additional mode options will be applied to the float input."
+        />
+      )}
+      <Select
+        defaultValue={
+          feature.rate_enabled
+            ? "Rate"
+            : feature.smooth_enabled
+            ? "Smooth"
+            : "None"
         }
-        three={
-          <Slider
-            disabled={!feature.smooth_enabled}
-            min={1}
-            max={20}
-            step={1}
-            value={[levels.smooth_rate]}
-            onValueChange={(e) => handleLevels("smooth_rate", e[0])}
-            onValueCommit={handleCommit}
-          />
-        }
-        four={levels.smooth_rate.toString()}
+        onChange={(e) => {
+          handleMode(e.target.value as modeOption);
+        }}
+        options={modeOptions}
       />
-      <FourPanel
-        text="Rate Mode"
-        tooltip="Cannot use rate mode and smoothing at the same time."
-        two={
-          <Switch
-            size="small"
-            disabled={feature.smooth_enabled}
-            checked={feature.rate_enabled}
-            onChange={(checked: boolean) => handleBool(checked, "rate_enabled")}
-          />
-        }
-        three={
-          <Slider
-            disabled={!feature.rate_enabled}
-            min={0.01}
-            max={1}
-            step={0.01}
-            value={[levels.rate_tune]}
-            onValueChange={(e) => handleLevels("rate_tune", e[0])}
-            onValueCommit={handleCommit}
-          />
-        }
-        four={levels.rate_tune.toString()}
-      />
+      {feature.smooth_enabled ? (
+        <Slider
+          disabled={!feature.smooth_enabled}
+          min={1}
+          max={20}
+          step={1}
+          value={[levels.smooth_rate]}
+          onValueChange={(e) => handleLevels("smooth_rate", e[0])}
+          onValueCommit={handleCommit}
+        />
+      ) : feature.rate_enabled ? (
+        <Slider
+          disabled={!feature.rate_enabled}
+          min={0.01}
+          max={1}
+          step={0.01}
+          value={[levels.rate_tune]}
+          onValueChange={(e) => handleLevels("rate_tune", e[0])}
+          onValueCommit={handleCommit}
+        />
+      ) : (
+        <div />
+      )}
+      <div>
+        {feature.smooth_enabled
+          ? levels.smooth_rate.toString()
+          : feature.rate_enabled
+          ? levels.rate_tune.toString()
+          : null}
+      </div>
       {feature.feature_type == "Linear" && (
         <FourPanel
           text="Linear Speed"

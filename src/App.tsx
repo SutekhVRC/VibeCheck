@@ -40,11 +40,6 @@ export default function App() {
       ? toys[selection.toyKey]
       : null;
   const toysList = Object.values(toys);
-  if (
-    selection?.type == "Toy" &&
-    !toysList.some((t) => `${t.toy_name} ${t.sub_id}` == selection.toyKey)
-  )
-    setSelection(null); // selection is no longer valid
   const {
     isScanning,
     toggleScan,
@@ -55,6 +50,12 @@ export default function App() {
   } = useCoreEvents();
   const { canUpdate } = useUpdate();
   const { version } = useVersion();
+
+  if (
+    selection?.type == "Toy" &&
+    !toysList.some((t) => `${t.toy_name} ${t.sub_id}` == selection.toyKey)
+  )
+    setSelection(null); // selection is no longer valid
 
   const mainPanel =
     selection?.type == "Toy" && toy != null ? (
@@ -97,19 +98,22 @@ export default function App() {
             ) : (
               <div className="flex flex-col overflow-y-scroll pl-2 scrollbar whitespace-nowrap">
                 <AnimatePresence>
-                  {toysList.map((toy) => (
+                  {toysList.map((sidebarToy) => (
                     <button
-                      key={`${toy.toy_name} ${toy.sub_id}`}
-                      onClick={() => setToy(toy)}
+                      key={`${sidebarToy.toy_name} ${sidebarToy.sub_id}`}
+                      onClick={() => setToy(sidebarToy)}
                       className={cn(
                         selection?.type == "Toy" &&
-                          `${toy.toy_name} ${toy.sub_id}` == selection.toyKey &&
+                          `${sidebarToy.toy_name} ${sidebarToy.sub_id}` ==
+                            selection.toyKey &&
                           "outline",
-                        toy.toy_connected ? "text-gray-200" : "text-gray-500",
+                        sidebarToy.toy_connected
+                          ? "text-gray-200"
+                          : "text-gray-500",
                         "bg-gray-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400"
                       )}
                     >
-                      {toy.toy_name}
+                      {sidebarToy.toy_name}
                     </button>
                   ))}
                 </AnimatePresence>
@@ -137,7 +141,7 @@ export default function App() {
             <UpdatePing canUpdate={canUpdate}>
               <Cog6ToothIcon
                 className={cn(
-                  { "rotate-45": selection?.type == "Config" },
+                  selection?.type == "Config" && "rotate-45",
                   "h-10 cursor-pointer transform duration-300 ease-in-out"
                 )}
                 onClick={() => setConfig()}
