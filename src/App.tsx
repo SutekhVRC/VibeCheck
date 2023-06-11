@@ -34,7 +34,7 @@ type ConfigSelection = {
 
 export default function App() {
   const [selection, setSelection] = useState<Selection>(null);
-  const { toys } = useToys();
+  const { toys, hasOnlineToys } = useToys();
   const toy =
     selection?.type == "Toy" && selection.toyKey in toys
       ? toys[selection.toyKey]
@@ -66,6 +66,13 @@ export default function App() {
         refreshConfig={refreshConfig}
         canUpdate={canUpdate}
       />
+    ) : !hasOnlineToys ? (
+      <div className="flex-grow flex justify-center">
+        <div className="flex flex-col justify-center items-center -mt-20">
+          <img src={cryingAnimeGirl} />
+          <div>No Online Toys</div>
+        </div>
+      </div>
     ) : null;
 
   function setToy(toy: FeVCToy) {
@@ -110,37 +117,28 @@ export default function App() {
             </div>
           </div>
           <div className=" bg-gray-800 rounded-md justify-between flex flex-col max-h-fit flex-grow">
-            {toysList.length === 0 ? (
-              <div className="flex-grow flex justify-center">
-                <div className="flex flex-col justify-center items-center -mt-20">
-                  <img src={cryingAnimeGirl} />
-                  <div>No Toys</div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col overflow-y-scroll pl-2 scrollbar whitespace-nowrap">
-                <AnimatePresence>
-                  {toysList.map((sidebarToy) => (
-                    <button
-                      key={`${sidebarToy.toy_name} ${sidebarToy.sub_id}`}
-                      onClick={() => setToy(sidebarToy)}
-                      className={cn(
-                        selection?.type == "Toy" &&
-                          `${sidebarToy.toy_name} ${sidebarToy.sub_id}` ==
-                            selection.toyKey &&
-                          "outline",
-                        sidebarToy.toy_connected
-                          ? "text-gray-200"
-                          : "text-gray-500",
-                        "bg-gray-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400"
-                      )}
-                    >
-                      {sidebarToy.toy_name}
-                    </button>
-                  ))}
-                </AnimatePresence>
-              </div>
-            )}
+            <div className="flex flex-col overflow-y-scroll pl-2 scrollbar whitespace-nowrap">
+              <AnimatePresence>
+                {toysList.map((sidebarToy) => (
+                  <button
+                    key={`${sidebarToy.toy_name} ${sidebarToy.sub_id}`}
+                    onClick={() => setToy(sidebarToy)}
+                    className={cn(
+                      selection?.type == "Toy" &&
+                        `${sidebarToy.toy_name} ${sidebarToy.sub_id}` ==
+                          selection.toyKey &&
+                        "outline",
+                      sidebarToy.toy_connected
+                        ? "text-gray-200"
+                        : "text-gray-500",
+                      "bg-gray-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400"
+                    )}
+                  >
+                    {sidebarToy.toy_name}
+                  </button>
+                ))}
+              </AnimatePresence>
+            </div>
             <Button onClick={toggleScan}>
               {isScanning ? (
                 <div className="flex justify-center">

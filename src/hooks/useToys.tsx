@@ -123,5 +123,5 @@ export function useToys() {
     };
   }, []);
 
-  return { toys };
+  return { toys, hasOnlineToys: Object.values(onlineToys).length > 0 };
 }
