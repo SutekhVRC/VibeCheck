@@ -94,7 +94,7 @@ export default function App() {
       className="w-screen h-screen p-4"
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div className="grid grid-cols-[1fr,_4fr] grid-rows-[1fr,_6fr,_1fr] h-[calc(100vh-46px)] gap-3">
+      <div className="grid grid-cols-[1.5fr,_4fr] grid-rows-[1fr,_6fr,_1fr] h-[calc(100vh-46px)] gap-3">
         <div className="flex flex-col gap-4">
           <img className="h-14 object-contain" src={VibecheckLogo} />
           <div>
@@ -120,8 +120,8 @@ export default function App() {
         <div className="bg-gray-800 rounded-lg row-span-3">
           <div className="flex justify-between p-4 h-full">{mainPanel}</div>
         </div>
-        <div className=" bg-gray-800 rounded-md justify-between flex flex-col max-h-fit flex-grow">
-          <div className="flex flex-col overflow-y-scroll pl-2 scrollbar whitespace-nowrap overflow-auto">
+        <div className=" bg-gray-800 rounded-md justify-between flex flex-col overflow-hidden">
+          <div className="flex flex-col overflow-y-scroll pl-2 scrollbar overflow-auto">
             <AnimatePresence>
               {toysList.map((sidebarToy) => (
                 <button
@@ -143,16 +143,18 @@ export default function App() {
               ))}
             </AnimatePresence>
           </div>
-          <Button onClick={toggleScan}>
-            {isScanning ? (
-              <div className="flex justify-center">
-                <div>Scanning</div>
-                <Loading />
-              </div>
-            ) : (
-              <div>Look for toys</div>
-            )}
-          </Button>
+          <div>
+            <Button onClick={toggleScan}>
+              {isScanning ? (
+                <div className="flex justify-center">
+                  <div>Scanning</div>
+                  <Loading />
+                </div>
+              ) : (
+                <div>Look for toys</div>
+              )}
+            </Button>
+          </div>
         </div>
         <div className="flex justify-around items-center row-span-2">
           <UpdatePing canUpdate={canUpdate}>
