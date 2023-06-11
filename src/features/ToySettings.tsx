@@ -27,7 +27,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
 
   return (
     <div className="pb-4 text-sm">
-      <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 gap-x-2 p-4">
+      <div className="grid grid-cols-[minmax(4rem,_1fr)_1fr_minmax(4rem,_3fr)_minmax(2.5rem,_1fr)] text-sm text-justify p-4 gap-y-1 gap-x-2 md:gap-x-8">
         <FourPanel
           text="OSC Data"
           two={

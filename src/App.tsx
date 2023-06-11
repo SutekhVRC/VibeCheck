@@ -84,9 +84,28 @@ export default function App() {
 
   return (
     <div className="w-screen h-screen p-4">
-      <div className="grid grid-cols-[1fr,_4fr] h-[calc(100%-40px)] gap-3">
-        <div className="flex flex-col gap-2">
-          <img className="h-16 object-contain" src={VibecheckLogo} />
+      <div className="grid grid-cols-[1fr,_4fr] h-[calc(100%-16px)] gap-3">
+        <div className="flex flex-col gap-4">
+          <img className="h-14 object-contain" src={VibecheckLogo} />
+          <div>
+            <div className="flex justify-around items-center">
+              <ExternalLogo
+                src={VrchatLogo}
+                link="VRChatGroup"
+                tooltip="Vibecheck VRChat Group"
+              />
+              <ExternalLogo
+                src={DiscordLogo}
+                link="Discord"
+                tooltip="Vibecheck Discord"
+              />
+              <ExternalLogo
+                src={GithubLogo}
+                link="Github"
+                tooltip="Vibecheck Github"
+              />
+            </div>
+          </div>
           <div className=" bg-gray-800 rounded-md justify-between flex flex-col max-h-fit flex-grow">
             {toysList.length === 0 ? (
               <div className="flex-grow flex justify-center">
@@ -130,13 +149,6 @@ export default function App() {
               )}
             </Button>
           </div>
-        </div>
-        <div className="bg-gray-800 rounded-lg">
-          <div className="flex justify-between p-4 h-full">{mainPanel}</div>
-        </div>
-      </div>
-      <div className="m-2">
-        <div className="grid grid-cols-3 items-center">
           <div className="flex justify-around items-center">
             <UpdatePing canUpdate={canUpdate}>
               <Cog6ToothIcon
@@ -153,26 +165,12 @@ export default function App() {
               onChange={toggleIsEnabled}
             />
           </div>
-          {version}
-          <div className="flex justify-around items-center">
-            <ExternalLogo
-              src={VrchatLogo}
-              link="VRChatGroup"
-              tooltip="Vibecheck VRChat Group"
-            />
-            <ExternalLogo
-              src={DiscordLogo}
-              link="Discord"
-              tooltip="Vibecheck Discord"
-            />
-            <ExternalLogo
-              src={GithubLogo}
-              link="Github"
-              tooltip="Vibecheck Github"
-            />
-          </div>
+        </div>
+        <div className="bg-gray-800 rounded-lg">
+          <div className="flex justify-between p-4 h-full">{mainPanel}</div>
         </div>
       </div>
+      <div className="m-1 text-center">{version}</div>
     </div>
   );
 }

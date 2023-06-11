@@ -86,7 +86,7 @@ export default function FeatureForm({
   }
 
   return (
-    <div className="grid grid-cols-[minmax(6rem,_1fr)_1fr_minmax(6rem,_3fr)_1fr] text-sm text-justify gap-y-1 gap-x-2 p-4">
+    <div className="grid grid-cols-[minmax(4rem,_1fr)_1fr_minmax(4rem,_3fr)_minmax(2.5rem,_1fr)] text-sm text-justify p-4 gap-y-1 gap-x-2 md:gap-x-8">
       <FourPanel
         text="Enabled"
         tooltip="Enable/Disable this feature."
@@ -101,7 +101,7 @@ export default function FeatureForm({
         }
       />
       <FourPanel
-        text="OSC Parameter"
+        text="Parameter"
         tooltip="The float OSC parameter to control this feature's motor."
         three={
           <input
@@ -164,7 +164,7 @@ export default function FeatureForm({
       ) : (
         <div />
       )}
-      <div>
+      <div className="text-right">
         {feature.smooth_enabled
           ? levels.smooth_rate.toString()
           : feature.rate_enabled
@@ -242,7 +242,7 @@ export default function FeatureForm({
             onValueCommit={handleCommit}
           />
         }
-        four={`${round0.format(levels.minimum_level * 100)} - ${round0.format(
+        four={`${round0.format(levels.minimum_level * 100)}-${round0.format(
           levels.maximum_level * 100
         )}`}
       />

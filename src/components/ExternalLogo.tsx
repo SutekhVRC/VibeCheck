@@ -24,7 +24,7 @@ export default function ExternalLogo({
   }
   return (
     <Tooltip text={tooltip}>
-      <img className="max-h-8 cursor-pointer" src={src} onClick={openBrowser} />
+      <img className="h-6 cursor-pointer" src={src} onClick={openBrowser} />
     </Tooltip>
   );
 }
