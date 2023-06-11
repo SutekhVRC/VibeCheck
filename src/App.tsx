@@ -4,7 +4,7 @@ import cryingAnimeGirl from "./assets/menhera_chan.gif";
 import Toy from "./features/Toy";
 import { AnimatePresence } from "framer-motion";
 import Button from "./layout/Button";
-import { useCoreEventContext } from "./context/CoreEventContext";
+import { useCoreEvents } from "./hooks/useCoreEvents";
 import Loading from "./components/Loading";
 import { useState } from "react";
 import { FeVCToy } from "../src-tauri/bindings/FeVCToy";
@@ -45,10 +45,27 @@ export default function App() {
     !toysList.some((t) => `${t.toy_name} ${t.sub_id}` == selection.toyKey)
   )
     setSelection(null); // selection is no longer valid
-  const { isScanning, toggleScan, isEnabled, toggleIsEnabled } =
-    useCoreEventContext();
+  const {
+    isScanning,
+    toggleScan,
+    isEnabled,
+    toggleIsEnabled,
+    config,
+    refreshConfig,
+  } = useCoreEvents();
   const { canUpdate } = useUpdate();
   const { version } = useVersion();
+
+  const mainPanel =
+    selection?.type == "Toy" && toy != null ? (
+      <Toy toy={toy} />
+    ) : selection?.type == "Config" && config != null ? (
+      <Config
+        config={config}
+        refreshConfig={refreshConfig}
+        canUpdate={canUpdate}
+      />
+    ) : null;
 
   function setToy(toy: FeVCToy) {
     const newKey = `${toy.toy_name} ${toy.sub_id}`;
@@ -111,13 +128,7 @@ export default function App() {
           </div>
         </div>
         <div className="bg-gray-800 rounded-lg">
-          <div className="flex justify-between p-4 h-full">
-            {toy != null ? (
-              <Toy toy={toy} />
-            ) : selection?.type == "Config" ? (
-              <Config />
-            ) : null}
-          </div>
+          <div className="flex justify-between p-4 h-full">{mainPanel}</div>
         </div>
       </div>
       <div className="m-2">

@@ -7,15 +7,18 @@ import UpdateButton from "../components/UpdateButton";
 import { TooltipLabel } from "../layout/Tooltip";
 import Switch from "../layout/Switch";
 import Button from "../layout/Button";
-import { useUpdate } from "../hooks/useUpdate";
-import { useCoreEventContext } from "../context/CoreEventContext";
 import { createToast } from "../components/Toast";
 
-export default function Config() {
-  const { config, refreshConfig } = useCoreEventContext();
-  if (config == null) return null;
+export default function Config({
+  config,
+  refreshConfig,
+  canUpdate,
+}: {
+  config: FeVibeCheckConfig;
+  refreshConfig: () => void;
+  canUpdate: boolean;
+}) {
   const [newConfig, setNewConfig] = useState<FeVibeCheckConfig>(config);
-  const { canUpdate } = useUpdate();
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
     setNewConfig({ ...newConfig, [e.target.name]: e.target.value });
