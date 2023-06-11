@@ -97,6 +97,7 @@ export function useToys() {
 
         break;
       case "Remove":
+        getOfflinetoys(); // Ensure sync
         setOnlineToys((curOnlineToys) => {
           const filtered = Object.values(curOnlineToys).filter(
             (t) => t.toy_id != payload.data
@@ -106,7 +107,6 @@ export function useToys() {
             return acc;
           }, {} as ToyMap);
         });
-        getOfflinetoys(); // Ensure sync
         break;
       default:
         assertExhaustive(payload);
