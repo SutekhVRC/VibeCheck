@@ -4,13 +4,17 @@ import FeatureForm from "./FeatureForm";
 import ToySettings from "./ToySettings";
 import Tooltip from "../layout/Tooltip";
 import BatteryIcon from "../components/BatteryIcon";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import { cn } from "../utils";
 
 export default function Toy({ toy }: { toy: FeVCToy }) {
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
   const nameInfo = NameInfo(toy.toy_name);
+
+  useEffect(() => {
+    if (selectedFeatureIndex >= toy.features.length) setSelectedFeatureIndex(0);
+  }, [toy]);
 
   return (
     <div className="w-full">
@@ -40,9 +44,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
             </button>
           ))}
         </div>
-        {selectedFeatureIndex != null && (
-          <FeatureForm toy={toy} selectedIndex={selectedFeatureIndex} />
-        )}
+        <FeatureForm toy={toy} selectedIndex={selectedFeatureIndex} />
       </div>
     </div>
   );

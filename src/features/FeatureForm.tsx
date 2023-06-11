@@ -21,14 +21,16 @@ export default function FeatureForm({
   toy,
   selectedIndex,
 }: ToyFeatureFormProps) {
-  const [feature, setToyFeature] = useState(toy.features[selectedIndex] ?? 0);
+  const [feature, setToyFeature] = useState(
+    toy.features[selectedIndex] ?? toy.features[0]
+  );
   const levels = feature.feature_levels;
 
   const modeOptions = ["None", "Smooth", "Rate"] as const;
   type modeOption = (typeof modeOptions)[number];
 
   useEffect(() => {
-    setToyFeature(toy.features[selectedIndex] ?? 0);
+    setToyFeature(toy.features[selectedIndex] ?? toy.features[0]);
   }, [toy, selectedIndex]);
 
   const {
