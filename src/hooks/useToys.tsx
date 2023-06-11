@@ -38,75 +38,75 @@ export async function handleFeatureAlter(
 }
 
 export function useToys() {
-  const [toys, setToys] = useState<ToyMap>({});
+  const [offlineToys, setOfflineToys] = useState<ToyMap>({});
+  const [onlineToys, setOnlineToys] = useState<ToyMap>({});
+  const toys = {} as ToyMap;
+  const onlineToyNames = new Set();
+  Object.values(onlineToys).forEach((t) => {
+    onlineToyNames.add(t.toy_name);
+    toys[`${t.toy_name} ${t.sub_id}`] = t;
+  });
+  Object.values(offlineToys).forEach((t) => {
+    if (!onlineToyNames.has(t.toy_name)) toys[`${t.toy_name} ${t.sub_id}`] = t;
+  });
+
+  async function getOfflinetoys() {
+    try {
+      const offlineToys = await invoke<FeVCToy[]>(OFFLINE_SYNC);
+      setOfflineToys(
+        offlineToys.reduce((acc, val) => {
+          acc[`${val.toy_name} ${val.sub_id}`] = val;
+          return acc;
+        }, {} as ToyMap)
+      );
+    } catch (e) {
+      createToast("error", "Could not load offline toys", JSON.stringify(e));
+    }
+  }
 
   useEffect(() => {
-    async function getOfflinetoys() {
-      try {
-        const offlineToys = await invoke<FeVCToy[]>(OFFLINE_SYNC);
-        setToys(
-          offlineToys.reduce((acc, val) => {
-            acc[`${val.toy_name} ${val.sub_id}`] = val;
-            return acc;
-          }, {} as ToyMap)
-        );
-      } catch (e) {
-        createToast("error", "Could not load offline toys", JSON.stringify(e));
-      }
-    }
     getOfflinetoys();
   }, []);
 
   function handleToyEvent(payload: FeToyEvent): void {
     switch (payload.kind) {
       case "Add":
-        setToys((toys) => {
-          const {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            [`${payload.data.toy_name} 255`]: _,
-            ...toysWithOfflineCopyRemoved
-          } = toys;
+        setOnlineToys((curOnlineToys) => {
           return {
-            ...toysWithOfflineCopyRemoved,
+            ...curOnlineToys,
             [`${payload.data.toy_name} ${payload.data.sub_id}`]: payload.data,
           };
         });
         break;
       case "Update":
-        setToys((toys) => {
-          return {
-            ...toys,
-            [`${payload.data.toy_name} ${payload.data.sub_id}`]: payload.data,
-          };
-        });
+        if (payload.data.toy_connected) {
+          setOnlineToys((curOnlineToys) => {
+            return {
+              ...curOnlineToys,
+              [`${payload.data.toy_name} ${payload.data.sub_id}`]: payload.data,
+            };
+          });
+        } else {
+          setOfflineToys((curOfflineToys) => {
+            return {
+              ...curOfflineToys,
+              [`${payload.data.toy_name} ${payload.data.sub_id}`]: payload.data,
+            };
+          });
+        }
+
         break;
       case "Remove":
-        setToys((toys) => {
-          const onlineToOfflineToy = Object.values(toys).find(
-            (t) => t.toy_id == payload.data
+        setOnlineToys((curOnlineToys) => {
+          const filtered = Object.values(curOnlineToys).filter(
+            (t) => t.toy_id != payload.data
           );
-          if (onlineToOfflineToy == undefined) {
-            createToast(
-              "warn",
-              "Remove Toy",
-              `Could not find toy with id ${payload.data}`
-            );
-            return toys;
-          }
-          const {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            [`${onlineToOfflineToy.toy_name} ${onlineToOfflineToy.sub_id}`]: _,
-            ...newToys
-          } = toys;
-          onlineToOfflineToy.toy_id = null;
-          onlineToOfflineToy.sub_id = 255;
-          onlineToOfflineToy.toy_connected = false;
-          onlineToOfflineToy.battery_level = null;
-          return {
-            ...newToys,
-            [`${onlineToOfflineToy.toy_name} 255`]: onlineToOfflineToy,
-          };
+          return filtered.reduce((acc, val) => {
+            acc[`${val.toy_name} ${val.sub_id}`] = val;
+            return acc;
+          }, {} as ToyMap);
         });
+        getOfflinetoys(); // Ensure sync
         break;
       default:
         assertExhaustive(payload);
