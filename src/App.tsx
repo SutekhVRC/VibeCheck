@@ -83,7 +83,10 @@ export default function App() {
   }
 
   return (
-    <div className="w-screen h-screen p-4">
+    <div
+      className="w-screen h-screen p-4"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div className="grid grid-cols-[1fr,_4fr] h-[calc(100%-16px)] gap-3">
         <div className="flex flex-col gap-4">
           <img className="h-14 object-contain" src={VibecheckLogo} />
