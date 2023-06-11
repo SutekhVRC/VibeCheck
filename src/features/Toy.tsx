@@ -30,12 +30,12 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
       <div className="m-4">
         <ToySettings toy={toy} />
         <div className="flex">
-          {toy.features.map((feature) => (
+          {toy.features.map((feature, featureArrayIndex) => (
             <button
               key={`${feature.feature_type} ${feature.feature_index}`}
-              onClick={() => setSelectedFeatureIndex(feature.feature_index)}
+              onClick={() => setSelectedFeatureIndex(featureArrayIndex)}
               className={cn(
-                feature.feature_index == selectedFeatureIndex && "outline",
+                featureArrayIndex == selectedFeatureIndex && "outline",
                 feature.feature_enabled ? "text-gray-200" : "text-gray-500",
                 "rounded-md bg-gray-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-cyan-500"
               )}
