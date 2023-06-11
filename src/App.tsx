@@ -117,7 +117,7 @@ export default function App() {
             </div>
           </div>
           <div className=" bg-gray-800 rounded-md justify-between flex flex-col max-h-fit flex-grow">
-            <div className="flex flex-col overflow-y-scroll pl-2 scrollbar whitespace-nowrap">
+            <div className="flex flex-col overflow-y-scroll pl-2 scrollbar whitespace-nowrap overflow-auto">
               <AnimatePresence>
                 {toysList.map((sidebarToy) => (
                   <button
