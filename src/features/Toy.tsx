@@ -17,7 +17,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
   }, [toy]);
 
   return (
-    <div className="w-full">
+    <div className="w-fit overflow-hidden">
       <div className="text-4xl flex justify-between items-center px-6">
         <div className="flex items-end gap-2">
           <div>{nameInfo.shortName}</div>
@@ -27,9 +27,9 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
         </div>
         <ToyInfo nameInfo={nameInfo} battery={toy.battery_level} />
       </div>
-      <div className="m-4">
+      <div className="m-4 overflow-hidden">
         <ToySettings toy={toy} />
-        <div className="flex">
+        <div className="flex overflow-x-scroll scrollbar select-none">
           {toy.features.map((feature, featureArrayIndex) => (
             <button
               key={`${feature.feature_type} ${feature.feature_index}`}
@@ -37,7 +37,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
               className={cn(
                 featureArrayIndex == selectedFeatureIndex && "outline",
                 feature.feature_enabled ? "text-gray-200" : "text-gray-500",
-                "rounded-md bg-gray-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-cyan-500"
+                "rounded-md bg-gray-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-cyan-500 whitespace-nowrap"
               )}
             >
               {feature.feature_type} {feature.feature_index}

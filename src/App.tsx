@@ -94,7 +94,7 @@ export default function App() {
       className="w-screen h-screen p-4"
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div className="grid grid-cols-[1.5fr,_4fr] grid-rows-[1fr,_6fr,_1fr] h-[calc(100vh-46px)] gap-3">
+      <div className="grid grid-cols-[minmax(10rem,_2fr),_4fr] grid-rows-[1fr,_6fr,_1fr] h-[calc(100vh-46px)] gap-3">
         <div className="flex flex-col gap-4">
           <img className="h-14 object-contain" src={VibecheckLogo} />
           <div>
@@ -117,11 +117,11 @@ export default function App() {
             </div>
           </div>
         </div>
-        <div className="bg-gray-800 rounded-lg row-span-3">
-          <div className="flex justify-between p-4 h-full">{mainPanel}</div>
+        <div className="bg-gray-800 rounded-lg row-span-3 overflow-hidden">
+          <div className="flex justify-between p-4">{mainPanel}</div>
         </div>
         <div className=" bg-gray-800 rounded-md justify-between flex flex-col overflow-hidden">
-          <div className="flex flex-col overflow-y-scroll pl-2 scrollbar overflow-auto">
+          <div className="flex flex-col pl-2 select-none overflow-y-scroll scrollbar">
             <AnimatePresence>
               {toysList.map((sidebarToy) => (
                 <button
