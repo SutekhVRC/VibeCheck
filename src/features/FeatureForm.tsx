@@ -156,7 +156,7 @@ export default function FeatureForm({
       ) : feature.rate_enabled ? (
         <Slider
           disabled={!feature.rate_enabled}
-          min={0.01}
+          min={0.1}
           max={1}
           step={0.01}
           value={[levels.rate_tune]}
