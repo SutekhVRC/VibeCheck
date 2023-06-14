@@ -380,7 +380,7 @@ fn parse_rate(rate_internal_level: &mut f64, rate_saved_osc_input: &mut f64, rat
     if let Some(instant) = rate_timestamp {
 
         // Decrease tick
-        if instant.elapsed().as_secs_f64() >= 0.2 {
+        if instant.elapsed().as_secs_f64() >= 0.15 {
 
             // Decrease the internal rate level
             // This decrease rate should be tuneable
