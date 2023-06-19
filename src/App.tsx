@@ -67,11 +67,9 @@ export default function App() {
         canUpdate={canUpdate}
       />
     ) : !hasOnlineToys ? (
-      <div className="flex-grow flex justify-center">
-        <div className="flex flex-col justify-center items-center -mt-20">
-          <img src={cryingAnimeGirl} />
-          <div>No Online Toys</div>
-        </div>
+      <div className="flex flex-col justify-center items-center w-full">
+        <img src={cryingAnimeGirl} />
+        <div>No Online Toys</div>
       </div>
     ) : null;
 
@@ -118,7 +116,7 @@ export default function App() {
           </div>
         </div>
         <div className="bg-gray-800 rounded-lg row-span-3 overflow-hidden">
-          <div className="flex justify-between p-4">{mainPanel}</div>
+          <div className="flex p-4 h-full">{mainPanel}</div>
         </div>
         <div className=" bg-gray-800 rounded-md justify-between flex flex-col overflow-hidden">
           <div className="flex flex-col pl-2 select-none overflow-y-scroll scrollbar">
