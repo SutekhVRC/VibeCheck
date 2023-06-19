@@ -33,7 +33,23 @@ export async function handleFeatureAlter(
   newFeature: FeVCToyFeature
 ) {
   const newFeatures = [...newToy.features];
-  newFeatures[newFeature.feature_index] = newFeature;
+  // We need to find the array index because feature_index is not unique
+  // And it is completely separate from the array index
+  const newFeatureArrayIndex = newFeatures
+    .map((f, i) => {
+      return {
+        arrayIndex: i,
+        feature_type: f.feature_type,
+        feature_index: f.feature_index,
+      };
+    })
+    .find(
+      (f) =>
+        f.feature_index == newFeature.feature_index &&
+        f.feature_type == newFeature.feature_type
+    )?.arrayIndex;
+  if (newFeatureArrayIndex == null) return; // newFeature [type + index] does not exist in feature array
+  newFeatures[newFeatureArrayIndex] = newFeature;
   await handleToyAlter({ ...newToy, features: newFeatures });
 }
 
