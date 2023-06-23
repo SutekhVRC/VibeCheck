@@ -176,7 +176,7 @@ export default function FeatureForm({
       {feature.feature_type == "Linear" && (
         <FourPanel
           text="Linear Speed"
-          tooltip="Speed is determined by the toy itself, so this is only requested speed."
+          tooltip="Linear positional duration speed in milliseconds. Speed is determined by the toy itself, this is only requested speed."
           three={
             <Slider
               min={10}
