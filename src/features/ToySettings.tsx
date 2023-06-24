@@ -48,7 +48,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
           text="Anatomy"
           three={
             <Select
-              defaultValue={toy.toy_anatomy}
+              value={toy.toy_anatomy}
               onChange={(e) =>
                 handleToyAlter({
                   ...toy,

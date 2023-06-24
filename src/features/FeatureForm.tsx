@@ -131,7 +131,7 @@ export default function FeatureForm({
         />
       )}
       <Select
-        defaultValue={
+        value={
           feature.rate_enabled
             ? "Rate"
             : feature.smooth_enabled

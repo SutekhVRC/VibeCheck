@@ -1,18 +1,18 @@
 import { ChangeEventHandler } from "react";
 
 export function Select({
-  defaultValue,
+  value,
   onChange,
   options,
 }: {
-  defaultValue: string;
+  value: string;
   onChange: ChangeEventHandler<HTMLSelectElement>;
   options: readonly string[];
 }) {
   return (
     <select
       className="outline-none text-zinc-800 px-2 rounded-sm"
-      defaultValue={defaultValue}
+      value={value}
       onChange={onChange}
     >
       {options.map((a) => (
