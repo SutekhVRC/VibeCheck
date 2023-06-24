@@ -234,49 +234,37 @@ pub async fn client_event_handler(
 }
 
 // Parse scalar levels and logic for level tweaks
+#[inline]
 pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, scalar_level: f64, feature_index: u32, actuator_type: ActuatorType, flip_float: bool, feature_levels: LevelTweaks) {
 
-    if !flip_float {
-        if scalar_level != 0.0 && scalar_level >= feature_levels.minimum_level && scalar_level <= feature_levels.maximum_level {
-        
-            info!("SENDING FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, scalar_level);
-            match dev.scalar(&ScalarMap(HashMap::from([(feature_index, (scalar_level, actuator_type))]))).await {
-                Ok(()) => {},
-                Err(e) => {
-                    logerr!("Send scalar to device error: {}", e);
-                }
-            }
-        
-        } else if scalar_level == 0.0 {// if level is 0 put at idle
-
-            info!("IDLE FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, feature_levels.idle_level);
-            let _e = dev.scalar(&buttplug::client::ScalarCommand::ScalarMap(HashMap::from([(feature_index, (feature_levels.idle_level, actuator_type))]))).await;
-
-        } else if scalar_level > feature_levels.maximum_level {
-            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (feature_levels.maximum_level, actuator_type))]))).await;
-        } else if scalar_level < feature_levels.minimum_level {
-            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (feature_levels.minimum_level, actuator_type))]))).await;
-        }
-    } else {// FLOAT FLIPPED
-        
-        let flipped_lvl = flip_float64(scalar_level);
-        //debug!("Flipped: {:.5}", flipped_lvl);
-        // Reverse logic here for flipped float
-        if flipped_lvl != 1.0 && flipped_lvl <= flip_float64(feature_levels.minimum_level) && flipped_lvl >= flip_float64(feature_levels.maximum_level) {
-
-            info!("SENDING FI[{}] AT[{}] SL[{:.5}]", feature_index, actuator_type, flipped_lvl);
-            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (flipped_lvl, actuator_type))]))).await;
-
-        } else if flipped_lvl == 1.0 {// if flipped level is 1.0 put at idle
-
-            info!("IDLE FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, flip_float64(feature_levels.idle_level));
-            let _e = dev.scalar(&buttplug::client::ScalarCommand::ScalarMap(HashMap::from([(feature_index, (flip_float64(feature_levels.idle_level), actuator_type))]))).await;
-        } else if flipped_lvl < flip_float64(feature_levels.maximum_level) {
-            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (flip_float64(feature_levels.maximum_level), actuator_type))]))).await;
-        } else if flipped_lvl > flip_float64(feature_levels.minimum_level) {
-            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (flip_float64(feature_levels.minimum_level), actuator_type))]))).await;
+    let new_level = clamp_and_flip(scalar_level, flip_float, feature_levels);
+    #[cfg(debug_assertions)] {
+        let message_prefix = if scalar_level == 0.0 { "IDLE" } else { "SENDING" };
+        info!("{} FI[{}] AT[{}] SL[{}]", message_prefix, feature_index, actuator_type, new_level);
+    }
+    match dev.scalar(&ScalarMap(HashMap::from([(feature_index, (new_level, actuator_type))]))).await {
+        Ok(()) => {},
+        Err(e) => {
+            logerr!("Send scalar to device error: {}", e);
         }
     }
+
+}
+
+#[inline]
+fn clamp_and_flip(value: f64, flip: bool, levels: LevelTweaks) -> f64 {
+
+    let mut new_value;
+    if value == 0.0 {
+        new_value  = levels.idle_level;
+    } else {
+        new_value  = value.clamp(levels.minimum_level, levels.maximum_level);
+    }
+    if flip {
+        new_value = flip_float64(new_value)
+    }
+    return new_value
+
 }
 
 #[inline]
@@ -715,33 +703,9 @@ pub async fn command_toy(
         // We handle Rotator differently because it is not included in the Scalar feature set
         VCFeatureType::Rotator => {
 
-            // I think im going to convert this to match
-            if !flip_float {
-                if float_level != 0.0 && float_level >= feature_levels.minimum_level && float_level <= feature_levels.maximum_level {
-                    // Do normal input
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (float_level, true))]))).await;
-                } else if float_level == 0.0 {// if level is 0 put at idle
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (feature_levels.idle_level, true))]))).await;
-                } else if float_level > feature_levels.maximum_level {
-                    // Do max
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (feature_levels.maximum_level, true))]))).await;
-                } else if float_level < feature_levels.minimum_level {
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (feature_levels.minimum_level, true))]))).await;
-                }
-            } else {// FLOAT FLIPPED
-                
-                let flipped_lvl = flip_float64(float_level);
-                // Reverse logic here for flipped float
-                if flipped_lvl != 1.0 && flipped_lvl <= flip_float64(feature_levels.minimum_level) && flipped_lvl >= flip_float64(feature_levels.maximum_level) {
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flipped_lvl, true))]))).await;
-                } else if flipped_lvl == 1.0 {// if flipped level is 1.0 put at idle
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flip_float64(feature_levels.idle_level), true))]))).await;
-                } else if flipped_lvl < flip_float64(feature_levels.maximum_level) {
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flip_float64(feature_levels.maximum_level), true))]))).await;
-                } else if flipped_lvl > flip_float64(feature_levels.minimum_level) {
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flip_float64(feature_levels.minimum_level), true))]))).await;
-                }
-            }
+            let new_level = clamp_and_flip(float_level, flip_float, feature_levels);
+            let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (new_level, true))]))).await;
+
         },
         VCFeatureType::Constrict => {
             scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Constrict, flip_float, feature_levels).await;
@@ -758,30 +722,9 @@ pub async fn command_toy(
         // We handle Linear differently because it is not included in the Scalar feature set
         VCFeatureType::Linear => {
 
-            if !flip_float {
-                if float_level != 0.0 && float_level >= feature_levels.minimum_level && float_level <= feature_levels.maximum_level {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, float_level))]))).await;
-                } else if float_level == 0.0 {// if level is 0 put at idle
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, feature_levels.idle_level))]))).await;
-                } else if float_level > feature_levels.maximum_level {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, feature_levels.maximum_level))]))).await;
-                } else if float_level < feature_levels.minimum_level {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, feature_levels.minimum_level))]))).await;
-                }
-            } else {// FLOAT FLIPPED
-                
-                let flipped_lvl = flip_float64(float_level);
-                // Reverse logic here for flipped float
-                if flipped_lvl != 1.0 && flipped_lvl <= flip_float64(feature_levels.minimum_level) && flipped_lvl >= flip_float64(feature_levels.maximum_level) {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, flip_float64(float_level)))]))).await;
-                } else if flipped_lvl == 1.0 {// if flipped level is 1.0 put at idle
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, flip_float64(feature_levels.idle_level)))]))).await;
-                } else if flipped_lvl < flip_float64(feature_levels.maximum_level) {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, flip_float64(feature_levels.maximum_level)))]))).await;
-                } else if flipped_lvl > flip_float64(feature_levels.minimum_level) {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, flip_float64(feature_levels.minimum_level)))]))).await;
-                }
-            }
+            let new_level = clamp_and_flip(float_level, flip_float, feature_levels);
+            let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, new_level))]))).await;
+
         }
         VCFeatureType::ScalarRotator => {
             scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Rotate, flip_float, feature_levels).await;
