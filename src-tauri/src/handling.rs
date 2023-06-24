@@ -234,11 +234,14 @@ pub async fn client_event_handler(
 }
 
 // Parse scalar levels and logic for level tweaks
+#[inline]
 pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, scalar_level: f64, feature_index: u32, actuator_type: ActuatorType, flip_float: bool, feature_levels: LevelTweaks) {
 
     let new_level = clamp_and_flip(scalar_level, flip_float, feature_levels);
-    let message_prefix = if scalar_level == 0.0 { "IDLE" } else { "SENDING" };
-    info!("{} FI[{}] AT[{}] SL[{}]", message_prefix, feature_index, actuator_type, new_level);
+    #[cfg(debug_assertions)] {
+        let message_prefix = if scalar_level == 0.0 { "IDLE" } else { "SENDING" };
+        info!("{} FI[{}] AT[{}] SL[{}]", message_prefix, feature_index, actuator_type, new_level);
+    }
     match dev.scalar(&ScalarMap(HashMap::from([(feature_index, (new_level, actuator_type))]))).await {
         Ok(()) => {},
         Err(e) => {
@@ -248,6 +251,7 @@ pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, s
 
 }
 
+#[inline]
 fn clamp_and_flip(value: f64, flip: bool, levels: LevelTweaks) -> f64 {
 
     let mut new_value;
