@@ -1,4 +1,4 @@
-import * as SwitchPrimative from "@radix-ui/react-switch";
+import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { SwitchProps } from "@radix-ui/react-switch";
 import { cn } from "../utils";
 
@@ -41,7 +41,7 @@ export default function Switch(
   const size = props.size ?? "medium";
   const selectedTheme = themeColors[theme];
   return (
-    <SwitchPrimative.Root
+    <SwitchPrimitive.Root
       {...props}
       className={cn(
         props.checked ? selectedTheme.active : selectedTheme.inactive,
@@ -49,7 +49,7 @@ export default function Switch(
         "relative inline-flex cursor-pointer rounded-full border-transparent transition-all duration-200 ease-in-out disabled:bg-gray-700 disabled:cursor-not-allowed"
       )}
     >
-      <SwitchPrimative.Thumb
+      <SwitchPrimitive.Thumb
         className={cn(
           props.checked ? sizes[size].translateLeft : "translate-x-0",
           sizes[size].switch,
@@ -57,6 +57,6 @@ export default function Switch(
           "inline-block rounded-full transition duration-200 ease-in-out"
         )}
       />
-    </SwitchPrimative.Root>
+    </SwitchPrimitive.Root>
   );
 }
