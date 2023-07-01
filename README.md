@@ -8,7 +8,7 @@ An app to connect bluetooth sex toys to your VRChat avatar using VRChat's OSC im
 [![GitHub all releases](https://img.shields.io/github/downloads/SutekhVRC/VibeCheck/total?color=pink&logoColor=pink&style=for-the-badge)](https://github.com/SutekhVRC/VibeCheck/releases/latest)
 [![Discord](https://img.shields.io/discord/1031167339246407721?color=pink&label=Discord&logo=discord&logoColor=pink&style=for-the-badge)](https://discord.gg/g6kUFtMtpw)
 
-## Getting started with the Wiki!
+## Get started with the Wiki!
 
 1. [Get a Buttplug IO Supported Toy](https://iostindex.com/?filter0ButtplugSupport=4)
 2. [Setup toy connection](https://github.com/SutekhVRC/VibeCheck/wiki/Connecting-Toys) for Bluetooth or Lovense Connect.
