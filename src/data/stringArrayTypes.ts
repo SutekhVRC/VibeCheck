@@ -35,6 +35,7 @@ export const ToyAnatomyArray = [
   "Penis",
   "Perineum",
   "Testicles",
+  "Thighs",
   "Vagina",
   "Vulva",
   "Wrist",
