@@ -16,7 +16,7 @@ use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink,
  */
 #[tauri::command]
 pub fn vibecheck_version(app_handle: tauri::AppHandle) -> String {
-    format!("{} beta windows", app_handle.package_info().version)
+    format!("{} windows", app_handle.package_info().version)
 }
 
 /*
