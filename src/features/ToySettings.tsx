@@ -9,6 +9,7 @@ import { createToast } from "../components/Toast";
 import { Select } from "../layout/Select";
 import { ClipboardIcon } from "@heroicons/react/24/solid";
 import FourPanelContainer from "../components/FourPanelContainer";
+import { TooltipLabel } from "../layout/Tooltip";
 
 export default function ToySettings({ toy }: { toy: FeVCToy }) {
   const parsed_toy_name = toy.toy_name
@@ -30,7 +31,10 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
     <div className="pb-4 text-sm">
       <FourPanelContainer>
         <div className="flex items-center gap-1">
-          OSC Data
+          <TooltipLabel
+            text="OSC Data"
+            tooltip="If vibecheck should use OSC data"
+          />
           {toy.toy_connected && (
             <ClipboardIcon
               onClick={handleCopy}
@@ -47,6 +51,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
         <div></div>
         <FourPanel
           text="Anatomy"
+          tooltip="Anatomy types can be used as a category filter to turn on/off multiple toys at the same time"
           three={
             <Select
               value={toy.toy_anatomy}
