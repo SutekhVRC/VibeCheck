@@ -7,7 +7,6 @@ export default function Slider(
   props: RadixSlider.SliderProps & { multiply?: number }
 ) {
   const [hover, setHover] = useState(false);
-  const mult = props.multiply ?? 1;
   const first = props.value?.at(0);
   const second = props.value?.at(1);
   // This is really dumb right now
@@ -38,7 +37,7 @@ export default function Slider(
                 sideOffset={10}
                 key={first} // force update with key
               >
-                {round0.format(first * mult)}
+                {props.multiply ? round0.format(first * props.multiply) : first}
               </RadixTooltip.Content>
             </RadixTooltip.Portal>
           </RadixTooltip.Root>
@@ -56,7 +55,9 @@ export default function Slider(
                 sideOffset={10}
                 key={second} // force update with key
               >
-                {round0.format(second * mult)}
+                {props.multiply
+                  ? round0.format(second * props.multiply)
+                  : second}
               </RadixTooltip.Content>
             </RadixTooltip.Portal>
           </RadixTooltip.Root>

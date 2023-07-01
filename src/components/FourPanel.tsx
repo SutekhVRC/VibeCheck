@@ -32,9 +32,9 @@ export default function FourPanel({
       ) : (
         label
       )}
-      {two ?? <div></div>}
-      {three ?? <div></div>}
-      {four ? <div className="text-right">{four}</div> : <div></div>}
+      <div>{two}</div>
+      <div className="text-right w-full col-span-2 md:col-span-1">{three}</div>
+      <div className="text-right hidden md:inline">{four}</div>
     </>
   );
 }

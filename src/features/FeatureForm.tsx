@@ -11,6 +11,7 @@ import { handleFeatureAlter } from "../hooks/useToys";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import { Select } from "../layout/Select";
 import { TooltipLabel } from "../layout/Tooltip";
+import FourPanelContainer from "../components/FourPanelContainer";
 
 type ToyFeatureFormProps = {
   toy: FeVCToy;
@@ -88,7 +89,7 @@ export default function FeatureForm({
   }
 
   return (
-    <div className="grid grid-cols-[minmax(5rem,_1fr)_1fr_minmax(4rem,_6fr)_minmax(2.5rem,_1fr)] text-sm text-justify p-4 gap-y-1 gap-x-2">
+    <FourPanelContainer>
       <FourPanel
         text="Enabled"
         tooltip="Enable/Disable this feature."
@@ -107,7 +108,7 @@ export default function FeatureForm({
         tooltip="The float OSC parameter to control this feature's motor."
         three={
           <input
-            className="text-zinc-800 px-4 rounded-sm outline-none"
+            className="text-zinc-800 px-4 rounded-sm outline-none w-full"
             name="osc_parameter"
             value={feature.osc_parameter.replace(OSC_PARAM_PREFIX, "")}
             onChange={handleOscParam} // Not debounced because :shrug:
@@ -143,30 +144,30 @@ export default function FeatureForm({
         }}
         options={modeOptions}
       />
-      {feature.smooth_enabled ? (
-        <Slider
-          disabled={!feature.smooth_enabled}
-          min={1}
-          max={20}
-          step={1}
-          value={[levels.smooth_rate]}
-          onValueChange={(e) => handleLevels("smooth_rate", e[0])}
-          onValueCommit={handleCommit}
-        />
-      ) : feature.rate_enabled ? (
-        <Slider
-          disabled={!feature.rate_enabled}
-          min={0.1}
-          max={1}
-          step={0.01}
-          value={[levels.rate_tune]}
-          onValueChange={(e) => handleLevels("rate_tune", e[0])}
-          onValueCommit={handleCommit}
-        />
-      ) : (
-        <div />
-      )}
-      <div className="text-right">
+      <div className="col-span-2 md:col-span-1">
+        {feature.smooth_enabled ? (
+          <Slider
+            disabled={!feature.smooth_enabled}
+            min={1}
+            max={20}
+            step={1}
+            value={[levels.smooth_rate]}
+            onValueChange={(e) => handleLevels("smooth_rate", e[0])}
+            onValueCommit={handleCommit}
+          />
+        ) : feature.rate_enabled ? (
+          <Slider
+            disabled={!feature.rate_enabled}
+            min={0.1}
+            max={1}
+            step={0.01}
+            value={[levels.rate_tune]}
+            onValueChange={(e) => handleLevels("rate_tune", e[0])}
+            onValueCommit={handleCommit}
+          />
+        ) : null}
+      </div>
+      <div className="text-right hidden md:block">
         {feature.smooth_enabled
           ? levels.smooth_rate.toString()
           : feature.rate_enabled
@@ -209,6 +210,7 @@ export default function FeatureForm({
         flipped={feature.flip_input_float}
         three={
           <Slider
+            multiply={100}
             min={0}
             max={1}
             step={0.01}
@@ -225,6 +227,7 @@ export default function FeatureForm({
         flipped={feature.flip_input_float}
         three={
           <Slider
+            multiply={100}
             min={0}
             max={1}
             step={0.01}
@@ -274,6 +277,6 @@ export default function FeatureForm({
           four={round0.format(simulateLevel * 100)}
         />
       )}
-    </div>
+    </FourPanelContainer>
   );
 }

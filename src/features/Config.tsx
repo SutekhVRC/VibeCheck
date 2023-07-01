@@ -77,13 +77,13 @@ export default function Config({
   }
 
   return (
-    <div className="w-full h-full pb-6">
+    <div className="w-full h-full">
       <div className="text-4xl flex justify-between items-center px-6">
         <div className="flex items-end gap-2">Config</div>
       </div>
-      <div className="flex flex-col justify-between h-full">
+      <div className="flex flex-col justify-between w-full">
         <form id="config" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-[minmax(10rem,4fr)_1fr_minmax(6rem,_4fr)] text-sm text-justify gap-y-1 gap-x-2 my-4 mx-8">
+          <div className="grid grid-cols-[minmax(10rem,4fr)_1fr_minmax(4rem,_4fr)] text-sm text-justify gap-1 my-4 mx-8">
             <TooltipLabel text="OSC Bind" tooltip="OSC Receive Port" />
             <div />
             <input

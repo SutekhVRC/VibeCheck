@@ -89,59 +89,52 @@ export default function App() {
 
   return (
     <div
-      className="w-screen h-screen p-4"
+      className="w-full h-screen p-4"
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div className="grid grid-cols-[minmax(10rem,_2fr),_4fr] grid-rows-[1fr,_6fr,_1fr] h-[calc(100vh-46px)] gap-3">
-        <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-[12rem,_1fr] gap-3">
+        <div className="flex flex-col gap-1">
           <img className="h-14 object-contain" src={VibecheckLogo} />
-          <div>
-            <div className="flex justify-around items-center">
-              <ExternalLogo
-                src={VrchatLogo}
-                link="VRChatGroup"
-                tooltip="Vibecheck VRChat Group"
-              />
-              <ExternalLogo
-                src={DiscordLogo}
-                link="Discord"
-                tooltip="Vibecheck Discord"
-              />
-              <ExternalLogo
-                src={GithubLogo}
-                link="Github"
-                tooltip="Vibecheck Github"
-              />
+          <div className="flex justify-around items-center mt-2 mb-1">
+            <ExternalLogo
+              src={VrchatLogo}
+              link="VRChatGroup"
+              tooltip="Vibecheck VRChat Group"
+            />
+            <ExternalLogo
+              src={DiscordLogo}
+              link="Discord"
+              tooltip="Vibecheck Discord"
+            />
+            <ExternalLogo
+              src={GithubLogo}
+              link="Github"
+              tooltip="Vibecheck Github"
+            />
+          </div>
+          <div className="bg-gray-800 rounded-md justify-between flex flex-col overflow-hidden h-[calc(100vh-185px)]">
+            <div className="flex flex-col pl-2 select-none overflow-y-scroll scrollbar">
+              <AnimatePresence>
+                {toysList.map((sidebarToy) => (
+                  <button
+                    key={`${sidebarToy.toy_name} ${sidebarToy.sub_id}`}
+                    onClick={() => setToy(sidebarToy)}
+                    className={cn(
+                      selection?.type == "Toy" &&
+                        `${sidebarToy.toy_name} ${sidebarToy.sub_id}` ==
+                          selection.toyKey &&
+                        "outline",
+                      sidebarToy.toy_connected
+                        ? "text-gray-200"
+                        : "text-gray-500",
+                      "bg-gray-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400"
+                    )}
+                  >
+                    {sidebarToy.toy_name}
+                  </button>
+                ))}
+              </AnimatePresence>
             </div>
-          </div>
-        </div>
-        <div className="bg-gray-800 rounded-lg row-span-3 overflow-hidden">
-          <div className="flex p-4 h-full">{mainPanel}</div>
-        </div>
-        <div className=" bg-gray-800 rounded-md justify-between flex flex-col overflow-hidden">
-          <div className="flex flex-col pl-2 select-none overflow-y-scroll scrollbar">
-            <AnimatePresence>
-              {toysList.map((sidebarToy) => (
-                <button
-                  key={`${sidebarToy.toy_name} ${sidebarToy.sub_id}`}
-                  onClick={() => setToy(sidebarToy)}
-                  className={cn(
-                    selection?.type == "Toy" &&
-                      `${sidebarToy.toy_name} ${sidebarToy.sub_id}` ==
-                        selection.toyKey &&
-                      "outline",
-                    sidebarToy.toy_connected
-                      ? "text-gray-200"
-                      : "text-gray-500",
-                    "bg-gray-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400"
-                  )}
-                >
-                  {sidebarToy.toy_name}
-                </button>
-              ))}
-            </AnimatePresence>
-          </div>
-          <div>
             <Button onClick={toggleScan}>
               {isScanning ? (
                 <div className="flex justify-center">
@@ -153,25 +146,28 @@ export default function App() {
               )}
             </Button>
           </div>
-        </div>
-        <div className="flex justify-around items-center row-span-2">
-          <UpdatePing canUpdate={canUpdate}>
-            <Cog6ToothIcon
-              className={cn(
-                selection?.type == "Config" && "rotate-45",
-                "h-10 cursor-pointer transform duration-300 ease-in-out"
-              )}
-              onClick={() => setConfig()}
+          <div className="flex justify-around items-center">
+            <UpdatePing canUpdate={canUpdate}>
+              <Cog6ToothIcon
+                className={cn(
+                  selection?.type == "Config" && "rotate-45",
+                  "h-10 cursor-pointer transform duration-300 ease-in-out"
+                )}
+                onClick={() => setConfig()}
+              />
+            </UpdatePing>
+            <Switch
+              theme="red-green"
+              checked={isEnabled}
+              onChange={toggleIsEnabled}
             />
-          </UpdatePing>
-          <Switch
-            theme="red-green"
-            checked={isEnabled}
-            onChange={toggleIsEnabled}
-          />
+          </div>
+        </div>
+        <div className="bg-gray-800 rounded-lg">
+          <div className="flex p-4">{mainPanel}</div>
         </div>
       </div>
-      <div className="m-1 text-center">{version}</div>
+      {version}
     </div>
   );
 }

@@ -17,7 +17,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
   }, [toy]);
 
   return (
-    <div className="w-fit overflow-hidden">
+    <div className="overflow-hidden w-full">
       <div className="text-4xl flex justify-between items-center px-6">
         <div className="flex items-end gap-2">
           <div>{nameInfo.shortName}</div>
@@ -29,7 +29,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
       </div>
       <div className="m-4 overflow-hidden">
         <ToySettings toy={toy} />
-        <div className="flex overflow-x-scroll scrollbar select-none">
+        <div className="flex overflow-x-scroll scrollbar select-none w-[calc(100vw-300px)]">
           {toy.features.map((feature, featureArrayIndex) => (
             <button
               key={`${feature.feature_type} ${feature.feature_index}`}

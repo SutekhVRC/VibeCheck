@@ -8,6 +8,7 @@ import { handleToyAlter } from "../hooks/useToys";
 import { createToast } from "../components/Toast";
 import { Select } from "../layout/Select";
 import { ClipboardIcon } from "@heroicons/react/24/solid";
+import FourPanelContainer from "../components/FourPanelContainer";
 
 export default function ToySettings({ toy }: { toy: FeVCToy }) {
   const parsed_toy_name = toy.toy_name
@@ -27,7 +28,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
 
   return (
     <div className="pb-4 text-sm">
-      <div className="grid grid-cols-[minmax(5rem,_1fr)_1fr_minmax(4rem,_6fr)_minmax(2.5rem,_1fr)] text-sm text-justify p-4 gap-y-1 gap-x-2">
+      <FourPanelContainer>
         <div className="flex items-center gap-1">
           OSC Data
           {toy.toy_connected && (
@@ -59,7 +60,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
             />
           }
         />
-      </div>
+      </FourPanelContainer>
     </div>
   );
 }
