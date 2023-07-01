@@ -18,6 +18,7 @@ import VrchatLogo from "./assets/vrchat-192x192.png";
 import DiscordLogo from "./assets/discord-mark-white.svg";
 import GithubLogo from "./assets/GitHub-Mark-Light-64px.png";
 import Switch from "./layout/Switch";
+import Tooltip from "./layout/Tooltip";
 import { cn } from "./utils";
 import "./App.css";
 
@@ -158,11 +159,16 @@ export default function App() {
                 onClick={() => setConfig()}
               />
             </UpdatePing>
-            <Switch
-              theme="red-green"
-              checked={isEnabled}
-              onCheckedChange={toggleIsEnabled}
-            />
+            <Tooltip
+              text={isEnabled ? "Disable OSC" : "Enable OSC"}
+              asChild={false}
+            >
+              <Switch
+                theme="red-green"
+                checked={isEnabled}
+                onCheckedChange={toggleIsEnabled}
+              />
+            </Tooltip>
           </div>
         </div>
         <div className="bg-gray-800 rounded-lg">
