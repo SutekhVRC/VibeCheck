@@ -9,7 +9,7 @@ import { createToast } from "../components/Toast";
 import { Select } from "../layout/Select";
 import { ClipboardIcon } from "@heroicons/react/24/solid";
 import FourPanelContainer from "../components/FourPanelContainer";
-import { TooltipLabel } from "../layout/Tooltip";
+import Tooltip, { TooltipLabel } from "../layout/Tooltip";
 
 export default function ToySettings({ toy }: { toy: FeVCToy }) {
   const parsed_toy_name = toy.toy_name
@@ -36,10 +36,12 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
             tooltip="If vibecheck should send OSC data to VRChat"
           />
           {toy.toy_connected && (
-            <ClipboardIcon
-              onClick={handleCopy}
-              className="h-4 cursor-pointer"
-            />
+            <Tooltip text="Copy osc data address to clipboard">
+              <ClipboardIcon
+                onClick={handleCopy}
+                className="h-4 cursor-pointer"
+              />
+            </Tooltip>
           )}
         </div>
         <Switch
