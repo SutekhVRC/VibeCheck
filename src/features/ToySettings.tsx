@@ -33,7 +33,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
         <div className="flex items-center gap-1">
           <TooltipLabel
             text="OSC Data"
-            tooltip="If vibecheck should use OSC data"
+            tooltip="If vibecheck should send OSC data to VRChat"
           />
           {toy.toy_connected && (
             <ClipboardIcon
@@ -53,7 +53,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
         <div></div>
         <FourPanel
           text="Anatomy"
-          tooltip="Anatomy types can be used as a category filter to turn on/off multiple toys at the same time"
+          tooltip="Anatomy types can be used as a category filter to disable/enable multiple toys at the same time from VRChat using the VibeCheck OSC API"
           three={
             <Select
               value={toy.toy_anatomy}
