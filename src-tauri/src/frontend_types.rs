@@ -87,6 +87,7 @@ pub enum FeVCToyAnatomy {
     Penis,
     Perineum,
     Testicles,
+    Thighs,
     Vagina,
     Vulva,
     Wrist,
