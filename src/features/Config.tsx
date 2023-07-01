@@ -124,7 +124,7 @@ export default function Config({
             />
             <Switch
               checked={newConfig.lc_override != null}
-              onChange={handleLcOverride}
+              onCheckedChange={handleLcOverride}
               size="small"
             />
             {newConfig.lc_override == null ? (
@@ -152,7 +152,7 @@ export default function Config({
             />
             <Switch
               checked={newConfig.scan_on_disconnect}
-              onChange={(checked: boolean) =>
+              onCheckedChange={(checked) =>
                 onCheckSwitch(checked, "scan_on_disconnect")
               }
               size="small"
@@ -164,7 +164,7 @@ export default function Config({
             />
             <Switch
               checked={newConfig.minimize_on_exit}
-              onChange={(checked: boolean) =>
+              onCheckedChange={(checked) =>
                 onCheckSwitch(checked, "minimize_on_exit")
               }
               size="small"
@@ -176,7 +176,7 @@ export default function Config({
             />
             <Switch
               checked={newConfig.desktop_notifications}
-              onChange={(checked: boolean) =>
+              onCheckedChange={(checked) =>
                 onCheckSwitch(checked, "desktop_notifications")
               }
               size="small"

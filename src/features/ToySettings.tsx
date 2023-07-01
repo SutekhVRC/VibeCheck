@@ -45,7 +45,9 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
         <Switch
           size="small"
           checked={toy.osc_data}
-          onChange={(e) => handleToyAlter({ ...toy, osc_data: e })}
+          onCheckedChange={(checked) =>
+            handleToyAlter({ ...toy, osc_data: checked })
+          }
         />
         <div></div>
         <div></div>

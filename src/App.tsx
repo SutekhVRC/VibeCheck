@@ -17,9 +17,9 @@ import ExternalLogo from "./components/ExternalLogo";
 import VrchatLogo from "./assets/vrchat-192x192.png";
 import DiscordLogo from "./assets/discord-mark-white.svg";
 import GithubLogo from "./assets/GitHub-Mark-Light-64px.png";
-import "./App.css";
 import Switch from "./layout/Switch";
 import { cn } from "./utils";
+import "./App.css";
 
 type Selection = ToySelection | ConfigSelection | null;
 
@@ -86,6 +86,8 @@ export default function App() {
     if (selection?.type == "Config") setSelection(null);
     else setSelection({ type: "Config" });
   }
+
+  console.log("EN", isEnabled);
 
   return (
     <div
@@ -159,7 +161,7 @@ export default function App() {
             <Switch
               theme="red-green"
               checked={isEnabled}
-              onChange={toggleIsEnabled}
+              onCheckedChange={toggleIsEnabled}
             />
           </div>
         </div>

@@ -97,7 +97,7 @@ export default function FeatureForm({
           <Switch
             size="small"
             checked={feature.feature_enabled}
-            onChange={(checked: boolean) =>
+            onCheckedChange={(checked) =>
               handleBool(checked, "feature_enabled")
             }
           />
@@ -198,7 +198,7 @@ export default function FeatureForm({
           <Switch
             size="small"
             checked={feature.flip_input_float}
-            onChange={(checked: boolean) =>
+            onCheckedChange={(checked) =>
               handleBool(checked, "flip_input_float")
             }
           />
@@ -260,7 +260,7 @@ export default function FeatureForm({
             <Switch
               size="small"
               checked={simulate}
-              onChange={simulateOnChange}
+              onCheckedChange={simulateOnChange}
             />
           }
           three={

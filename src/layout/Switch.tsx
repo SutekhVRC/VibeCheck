@@ -1,4 +1,5 @@
-import { Switch as HeadlessSwitch, SwitchProps } from "@headlessui/react";
+import * as SwitchPrimative from "@radix-ui/react-switch";
+import { SwitchProps } from "@radix-ui/react-switch";
 import { cn } from "../utils";
 
 const themeColors = {
@@ -31,7 +32,7 @@ const sizes = {
 };
 
 export default function Switch(
-  props: SwitchProps<"button"> & {
+  props: SwitchProps & {
     theme?: keyof typeof themeColors;
     size?: keyof typeof sizes;
   }
@@ -40,17 +41,15 @@ export default function Switch(
   const size = props.size ?? "medium";
   const selectedTheme = themeColors[theme];
   return (
-    <HeadlessSwitch
+    <SwitchPrimative.Root
       {...props}
       className={cn(
         props.checked ? selectedTheme.active : selectedTheme.inactive,
         sizes[size].container,
-        "relative inline-flex cursor-pointer rounded-full border-transparent transition-colors duration-200 ease-in-out disabled:bg-gray-700 disabled:cursor-not-allowed"
+        "relative inline-flex cursor-pointer rounded-full border-transparent transition-all duration-200 ease-in-out disabled:bg-gray-700 disabled:cursor-not-allowed"
       )}
     >
-      <span className="sr-only">Enable</span>
-      <span
-        aria-hidden="true"
+      <SwitchPrimative.Thumb
         className={cn(
           props.checked ? sizes[size].translateLeft : "translate-x-0",
           sizes[size].switch,
@@ -58,6 +57,6 @@ export default function Switch(
           "inline-block rounded-full transition duration-200 ease-in-out"
         )}
       />
-    </HeadlessSwitch>
+    </SwitchPrimative.Root>
   );
 }
