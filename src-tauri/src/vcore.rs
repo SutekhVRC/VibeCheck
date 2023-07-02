@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
-use log::{warn, error as logerr, info, trace};
+use log::{warn, error as logerr, info, trace, debug};
 //use rosc::{OscMessage, encoder, OscPacket, OscType};
 use tauri::{AppHandle, Manager};
 use tokio::runtime::Runtime;
@@ -684,7 +684,7 @@ pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
     return Ok(());
 }
 
-pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, feature_index: u32, feature_type: FeVCFeatureType, float_level: f64) {
+pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, feature_index: u32, feature_type: FeVCFeatureType, float_level: f64, stop: bool) {
     
     let vc_toys = {
         let vc_lock = vc_state.0.lock();
@@ -705,7 +705,13 @@ pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, 
             let handle_clone = toy.device_handle.clone();
             {
                 let vc_lock = vc_state.0.lock();
-                vc_lock.async_rt.spawn(command_toy(handle_clone, feature.feature_type, float_level, feature.feature_index, feature.flip_input_float, feature.feature_levels));
+                // Add stop flag bc FE invoke simulation: diff between stop & idle.
+                if stop {
+                    debug!("Stopping Idle Simulate");
+                    handle_clone.stop();
+                } else {
+                    vc_lock.async_rt.spawn(command_toy(handle_clone, feature.feature_type, float_level, feature.feature_index, feature.flip_input_float, feature.feature_levels));
+                }
             }
             return;
         }

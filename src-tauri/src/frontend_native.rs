@@ -207,12 +207,12 @@ pub fn clear_osc_config() -> Result<(), backend::VibeCheckFSError>{
 
 /* 
  * Injects motor test values into a device feature directly.
- * Args: toy_id: u32, toy_sub_id: u8, feature_index: u32, float_level: f64
+ * Args: toy_id: u32, toy_sub_id: u8, feature_index: u32, float_level: f64, stop: bool
  */
 #[tauri::command(async)]
-pub fn simulate_device_feature(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, feature_index: u32, feature_type: FeVCFeatureType, float_level: f64) {
+pub fn simulate_device_feature(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, feature_index: u32, feature_type: FeVCFeatureType, float_level: f64, stop: bool) {
     trace!("simulate_device_feature");
-    vcore::native_simulate_device_feature(vc_state, toy_id, feature_index, feature_type, float_level)
+    vcore::native_simulate_device_feature(vc_state, toy_id, feature_index, feature_type, float_level, stop)
 }
 
 /*

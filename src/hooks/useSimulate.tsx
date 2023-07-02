@@ -38,6 +38,10 @@ export default function useSimulate(
     };
   }, [toyId, featureType, featureIndex]);
 
+  useEffect(() => {
+    invokeSimulation(simulateLevel);
+  }, [simulate]);
+
   if (toyId == null)
     return {
       simulate: null,
@@ -54,6 +58,7 @@ export default function useSimulate(
         featureIndex,
         featureType,
         floatLevel,
+        stop:!simulate,
       });
     } catch (e) {
       createToast(
