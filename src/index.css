@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  overflow-y: hidden;
+  overflow: hidden;
 
   --text-color: rgba(255, 255, 255, 0.87);
   --background-color: #18181b;

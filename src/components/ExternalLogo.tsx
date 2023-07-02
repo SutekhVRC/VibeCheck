@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api";
 import type { FeSocialLink } from "../../src-tauri/bindings/FeSocialLink";
 import { OPEN_BROWSER } from "../data/constants";
 import Tooltip from "../layout/Tooltip";
+import { createToast } from "./Toast";
 
 type ExternalLogoProps = {
   src: string;
@@ -15,11 +16,15 @@ export default function ExternalLogo({
   tooltip,
 }: ExternalLogoProps) {
   async function openBrowser() {
-    await invoke(OPEN_BROWSER, { link: link });
+    try {
+      await invoke(OPEN_BROWSER, { link: link });
+    } catch (e) {
+      createToast("error", "Could not open browser", JSON.stringify(e));
+    }
   }
   return (
     <Tooltip text={tooltip}>
-      <img className="max-h-8 cursor-pointer" src={src} onClick={openBrowser} />
+      <img className="h-6 cursor-pointer" src={src} onClick={openBrowser} />
     </Tooltip>
   );
 }

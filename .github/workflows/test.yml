@@ -1,6 +1,7 @@
 name: test
 
 on:
+  push:
   pull_request:
     branches: [main]
 
@@ -20,6 +21,7 @@ jobs:
 
   test-build:
     needs: check-frontend
+    if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
       fail-fast: false
     runs-on: [windows-latest]

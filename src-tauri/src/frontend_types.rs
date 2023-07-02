@@ -31,6 +31,7 @@ pub enum FeToyEvent {
     Add(FeVCToy),
     Remove(u32),
     Update(FeVCToy),
+    //OfflineSyncAll(Vec<FeVCToy>),
 }
 
 #[derive(Serialize, Clone, TS)]
@@ -63,12 +64,42 @@ pub enum FeSocialLink {
     Discord,
 }
 
-#[derive(Serialize, Clone, TS)]
+#[derive(Serialize, Deserialize, Clone, TS, Debug)]
+#[ts(export)]
+pub enum FeVCToyAnatomy {
+    Anus,
+    //Any, I forgot what the point of this was?
+    Breasts,
+    Buttocks,
+    Chest,
+    Clitoris,
+    Face,
+    Feet,
+    FootL,
+    FootR,
+    HandLeft,
+    HandRight,
+    Hands,
+    Labia,
+    Mouth,
+    NA,
+    Nipples,
+    Penis,
+    Perineum,
+    Testicles,
+    Thighs,
+    Vagina,
+    Vulva,
+    Wrist,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, TS)]
 #[ts(export)]
 pub struct FeVCToy {
-    pub toy_id: u32,
+    pub toy_id: Option<u32>,
     pub toy_name: String,
-    pub battery_level: f64,
+    pub toy_anatomy: FeVCToyAnatomy,
+    pub battery_level: Option<f64>,
     pub toy_connected: bool,
     pub features: Vec<FeVCToyFeature>,
     pub listening: bool,
@@ -83,6 +114,8 @@ pub struct FeLevelTweaks {
     pub maximum_level: f64,
     pub idle_level: f64,
     pub smooth_rate: f64,
+    pub linear_position_speed: u32,
+    pub rate_tune: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
@@ -95,13 +128,19 @@ pub struct FeVCToyFeature {
     pub flip_input_float: bool,
     pub feature_levels: FeLevelTweaks,
     pub smooth_enabled: bool,
+    pub rate_enabled: bool,
 }
 
 #[derive(Debug, Deserialize, TS)]
 #[ts(export)]
 pub enum FeToyAlter {
-    Feature(FeVCToyFeature),
-    OSCData(bool),
+    Connected(FeVCToy),
+    Disconnected(FeVCToy),
+    //Feature(FeVCToyFeature),
+    //Feature((u32, FeVCToyFeature)),
+    //OSCData((u32, bool)),
+    //Anatomy((u32, FeVCToyAnatomy)),
+    //Offline(OfflineToy),
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, TS)]
@@ -116,6 +155,20 @@ pub enum FeVCFeatureType {
     Position = 6,
     // Note no ScalarRotator bc conversion is done in vcore
 }
+/*
+impl FeVCFeatureType {
+    pub fn to_be(&self) -> VCFeatureType {
+        match self {
+            Self::Vibrator => VCFeatureType::Vibrator,
+            Self::Rotator => VCFeatureType::Rotator,
+            Self::Linear => VCFeatureType::Linear,
+            Self::Oscillate => VCFeatureType::Oscillate,
+            Self::Constrict => VCFeatureType::Constrict,
+            Self::Inflate => VCFeatureType::Inflate,
+            Self::Position => VCFeatureType::Position,
+        }
+    }
+}*/
 
 impl PartialEq<VCFeatureType> for FeVCFeatureType {
     fn eq(&self, other: &VCFeatureType) -> bool {

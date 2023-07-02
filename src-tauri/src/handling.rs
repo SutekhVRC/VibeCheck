@@ -21,6 +21,7 @@ use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
+use std::time::Instant;
 use tokio::runtime::Runtime;
 use tokio::sync::{
     self,
@@ -33,6 +34,8 @@ use crate::frontend_types::FeCoreEvent;
 use crate::frontend_types::FeToyEvent;
 use crate::frontend_types::FeVCToy;
 use crate::frontend_types::FeScanEvent;
+use crate::osc_api::osc_api::vibecheck_osc_api;
+use crate::toy_manager::ToyManager;
 use crate::toyops::LevelTweaks;
 use crate::toyops::VCFeatureType;
 use crate::toyops::{VCToy, FeatureParamMap};
@@ -81,15 +84,31 @@ pub async fn client_event_handler(
             match event {
                 ButtplugClientEvent::DeviceAdded(dev) => {
                     Delay::new(Duration::from_secs(3)).await;
-                    let battery_level = match dev.battery_level().await {
-                        Ok(battery_lvl) => battery_lvl,
-                        Err(_e) => 0.0,
+                    let battery_level: Option<f64> = match dev.battery_level().await {
+                        Ok(battery_lvl) => Some(battery_lvl),
+                        Err(_e) => {
+                            warn!("Device battery_level error: {:?}", _e);
+                            match _e {
+                                buttplug::client::ButtplugClientError::ButtplugError(bpe) => {
+                                    match bpe {
+                                        buttplug::core::errors::ButtplugError::ButtplugDeviceError(bde) => {
+                                            match bde {
+                                                buttplug::core::errors::ButtplugDeviceError::MessageNotSupported(_) => None,
+                                                _ => Some(0.0)// Not Message not supported error
+                                            }// msg not supported
+                                        },// buttplug device error
+                                        _ => Some(0.0)// Not device error
+                                    }// buttplug error
+                                },// buttplug error
+                                _ => Some(0.0),
+                            }
+                        },
                     };
 
                     let sub_id = {
                         let vc_lock = vibecheck_state_pointer.lock();
                         let mut toy_dup_count = 0;
-                        vc_lock.toys.iter().for_each(|toy| {
+                        vc_lock.core_toy_manager.as_ref().unwrap().online_toys.iter().for_each(|toy| {
                             if &toy.1.toy_name == dev.name() {
                                 toy_dup_count += 1;
                             }
@@ -117,22 +136,30 @@ pub async fn client_event_handler(
                         Ok(()) => info!("Toy config loaded successfully."),
                         Err(e) => warn!("Toy config failed to load: {:?}", e),
                     }
-                    toy.populate_toy_config();
+
+                    if let None = toy.config { // First time toy load
+                        toy.populate_toy_config();
+                        let mut vc_lock = vibecheck_state_pointer.lock();
+                        vc_lock.core_toy_manager.as_mut().unwrap().populate_configs();
+                    } else {
+                        toy.populate_toy_config();
+                    }
                     
                     {
                         let mut vc_lock = vibecheck_state_pointer.lock();
-                        vc_lock.toys.insert(toy.toy_id, toy.clone());
+                        vc_lock.core_toy_manager.as_mut().unwrap().online_toys.insert(toy.toy_id, toy.clone());
                     }
                     trace!("Toy inserted into VibeCheckState toys");
 
                     tme_send.send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone()))).unwrap();
-                    
+
                     let _ = app_handle.emit_all("fe_toy_event",
                         FeToyEvent::Add ({
                             FeVCToy {
-                                toy_id: toy.toy_id,
+                                toy_id: Some(toy.toy_id),
                                 toy_name: toy.toy_name.clone(),
-                                battery_level: toy.battery_level,
+                                toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
+                                battery_level,
                                 toy_connected: toy.toy_connected,
                                 features: toy.param_feature_map.to_fe(),
                                 listening: toy.listening,
@@ -147,7 +174,7 @@ pub async fn client_event_handler(
                         if vc_lock.config.desktop_notifications {
                             let _ = Notification::new(identifier.clone())
                             .title("Toy Connected")
-                            .body(format!("{} ({}%)", toy.toy_name, (100.0 * toy.battery_level)).as_str())
+                            .body(format!("{} ({}%)", toy.toy_name, (100.0 * toy.battery_level.unwrap_or(0.0))).as_str())
                             .show();
                         }
                     }
@@ -159,10 +186,10 @@ pub async fn client_event_handler(
                     // Get scan on disconnect and toy
                     let (sod, toy) = {
                         let mut vc_lock = vibecheck_state_pointer.lock();
-                        (vc_lock.config.scan_on_disconnect, vc_lock.toys.remove(&dev.index()))
+                        (vc_lock.config.scan_on_disconnect, vc_lock.core_toy_manager.as_mut().unwrap().online_toys.remove(&dev.index()))
                     };
                     
-                    // Check is toy is valid
+                    // Check if toy is valid
                     if let Some(toy) = toy {
                         trace!("Removed toy from VibeCheckState toys");
                         tme_send.send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(dev.index()))).unwrap();
@@ -207,49 +234,156 @@ pub async fn client_event_handler(
 }
 
 // Parse scalar levels and logic for level tweaks
+#[inline]
 pub async fn scalar_parse_levels_send_toy_cmd(dev: &Arc<ButtplugClientDevice>, scalar_level: f64, feature_index: u32, actuator_type: ActuatorType, flip_float: bool, feature_levels: LevelTweaks) {
 
-    if !flip_float {
-        if scalar_level != 0.0 && scalar_level >= feature_levels.minimum_level && scalar_level <= feature_levels.maximum_level {
-        
-            info!("SENDING FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, scalar_level);
-            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (scalar_level, actuator_type))]))).await;
-        
-        } else if scalar_level == 0.0 {// if level is 0 put at idle
-
-            info!("IDLE FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, feature_levels.idle_level);
-            let _e = dev.scalar(&buttplug::client::ScalarCommand::ScalarMap(HashMap::from([(feature_index, (feature_levels.idle_level, actuator_type))]))).await;
-
-        } else if scalar_level > feature_levels.maximum_level {
-            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (feature_levels.maximum_level, actuator_type))]))).await;
-        } else if scalar_level < feature_levels.minimum_level {
-            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (feature_levels.minimum_level, actuator_type))]))).await;
-        }
-    } else {// FLOAT FLIPPED
-        
-        let flipped_lvl = flip_float64(scalar_level);
-        //debug!("Flipped: {:.5}", flipped_lvl);
-        // Reverse logic here for flipped float
-        if flipped_lvl != 1.0 && flipped_lvl <= flip_float64(feature_levels.minimum_level) && flipped_lvl >= flip_float64(feature_levels.maximum_level) {
-
-            info!("SENDING FI[{}] AT[{}] SL[{:.5}]", feature_index, actuator_type, flipped_lvl);
-            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (flipped_lvl, actuator_type))]))).await;
-
-        } else if flipped_lvl == 1.0 {// if flipped level is 1.0 put at idle
-
-            info!("IDLE FI[{}] AT[{}] SL[{}]", feature_index, actuator_type, flip_float64(feature_levels.idle_level));
-            let _e = dev.scalar(&buttplug::client::ScalarCommand::ScalarMap(HashMap::from([(feature_index, (flip_float64(feature_levels.idle_level), actuator_type))]))).await;
-        } else if flipped_lvl < flip_float64(feature_levels.maximum_level) {
-            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (flip_float64(feature_levels.maximum_level), actuator_type))]))).await;
-        } else if flipped_lvl > flip_float64(feature_levels.minimum_level) {
-            let _e = dev.scalar(&ScalarMap(HashMap::from([(feature_index, (flip_float64(feature_levels.minimum_level), actuator_type))]))).await;
+    let new_level = clamp_and_flip(scalar_level, flip_float, feature_levels);
+    #[cfg(debug_assertions)] {
+        let message_prefix = if scalar_level == 0.0 { "IDLE" } else { "SENDING" };
+        info!("{} FI[{}] AT[{}] SL[{}]", message_prefix, feature_index, actuator_type, new_level);
+    }
+    match dev.scalar(&ScalarMap(HashMap::from([(feature_index, (new_level, actuator_type))]))).await {
+        Ok(()) => {},
+        Err(e) => {
+            logerr!("Send scalar to device error: {}", e);
         }
     }
+
 }
 
+#[inline]
+fn clamp_and_flip(value: f64, flip: bool, levels: LevelTweaks) -> f64 {
+
+    let mut new_value;
+    if value == 0.0 {
+        new_value  = levels.idle_level;
+    } else {
+        new_value  = value.clamp(levels.minimum_level, levels.maximum_level);
+    }
+    if flip {
+        new_value = flip_float64(new_value)
+    }
+    return new_value
+
+}
+
+#[inline]
 pub fn flip_float64(orig: f64) -> f64 {
     //1.00 - orig
     ((1.00 - orig) * 100.0).round() / 100.0
+}
+
+enum SmoothParser {
+    Smoothed,
+    SkipZero,
+    Smoothing,
+}
+
+#[inline]
+fn parse_smoothing(smooth_queue: &mut Vec<f64>, feature_levels: LevelTweaks, float_level: &mut f64, flip_float: bool) -> SmoothParser {
+    debug!("!flip_float && *float_level == 0.0: [{}] || [{}] flip_float && *float_level == 1.0\nCOMBINED: [{}]", !flip_float && *float_level == 0.0, flip_float && *float_level == 1.0,
+    smooth_queue.len() == feature_levels.smooth_rate as usize && (!flip_float && *float_level == 0.0 || flip_float && *float_level == 1.0)
+);
+    // Reached smooth rate maximum and not a 0 value
+    if smooth_queue.len() == feature_levels.smooth_rate as usize {
+        debug!("smooth_queue: {}", smooth_queue.len());
+        if !flip_float && *float_level == 0.0 || flip_float && *float_level == 1.0 {
+
+            // Don't return just set to 0
+            debug!("float level is 0 but will be forgotten!");
+
+            // Clear smooth queue bc restarting from 0
+            smooth_queue.clear();
+
+        } else {
+            debug!("Setting float_level with smoothed float");
+            // Get Mean of all numbers in smoothing rate and then round to hundredths and cast as f64
+            *float_level = ((smooth_queue.iter().sum::<f64>() as f64 / smooth_queue.len() as f64 * 100.0).round() / 100.0) as f64;
+            smooth_queue.clear();
+
+            smooth_queue.push(*float_level);
+            return SmoothParser::Smoothed;   
+        }
+
+    // Have not reached smoothing maximum
+    }
+
+    // Maybe move this to be before queue is full check?
+    if !flip_float && *float_level == 0.0 || flip_float && *float_level == 1.0 {
+        debug!("Bypassing smoother: {:.5}", float_level);
+        // let 0 through
+        return SmoothParser::SkipZero;
+    }                              
+
+    debug!("Adding float {} to smoothing.. queue size: {}", *float_level, smooth_queue.len());
+    smooth_queue.push(*float_level);
+    // Continue receiving smooth floats
+    SmoothParser::Smoothing
+}
+
+enum RateParser {
+    RateCalculated(bool),
+    SkipZero,
+}
+
+#[inline]
+fn parse_rate(rate_internal_level: &mut f64, rate_saved_osc_input: &mut f64, rate_timestamp: &mut Option<Instant>, decrement_rate: f64, float_level: &mut f64, flip_float: bool) -> RateParser {
+
+    // Skip because got 0 value to stop toy.
+    if !flip_float && *float_level <= 0.0 || flip_float && *float_level >= 1.0 {
+        debug!("Bypassing rate input");
+        *rate_internal_level = *float_level;
+        *rate_saved_osc_input = *float_level;
+        return RateParser::SkipZero;
+
+    } else {// Increase toy level
+        
+        // Store new input then get the distance of the new input from the last input
+        // Add that distance to the internal float level
+        
+        // get distance between newest input and last input
+        // Set the distance between as the new motor speed
+        if *rate_saved_osc_input > *float_level {
+            *rate_internal_level += (*rate_saved_osc_input - *float_level).clamp(0.00, 1.0);
+        } else {
+            *rate_internal_level += (*float_level - *rate_saved_osc_input).clamp(0.00, 1.0);
+        }
+
+        // Dont let internal level go over 1.0
+        *rate_internal_level = rate_internal_level.clamp(0.00, 1.00);
+
+        // Set the newest input as the recent input
+        *rate_saved_osc_input = *float_level;
+        
+        // Set the internal rate state to the float level
+        *float_level = *rate_internal_level;
+
+        // Save the internal motor speed
+        //*rate_internal_level += *float_level;
+
+        trace!("float level rate increased");
+    }
+
+    // Decrement testing
+    if let Some(instant) = rate_timestamp {
+
+        // Decrease tick
+        if instant.elapsed().as_secs_f64() >= 0.15 {
+
+            // Decrease the internal rate level
+            // This decrease rate should be tuneable
+            *rate_internal_level = (*rate_internal_level - decrement_rate).clamp(0.00, 1.0);
+            debug!("internal level after decrement: {}", rate_internal_level);
+            
+            // Set float level to decremented internal rate
+            *float_level = *rate_internal_level;
+            
+            trace!("decrease timer reset");
+            return RateParser::RateCalculated(true);
+        }
+    }
+
+    RateParser::RateCalculated(false)
 }
 
 /*
@@ -262,7 +396,7 @@ pub fn flip_float64(orig: f64) -> f64 {
 pub async fn toy_management_handler(
     tme_send: UnboundedSender<ToyManagementEvent>,
     mut tme_recv: UnboundedReceiver<ToyManagementEvent>,
-    mut toys: HashMap<u32, VCToy>,
+    mut core_toy_manager: ToyManager,
     mut vc_config: OSCNetworking,
     app_handle: AppHandle,
 ) {
@@ -271,7 +405,12 @@ pub async fn toy_management_handler(
              mut feature_map: FeatureParamMap| {
         // Read toy config here?
         async move {
-            
+
+            // Put smooth_queue here
+            // Put rate tracking here
+            // Time tracking here?
+            // Async runtime wrapped in Option for rate updating here????
+
             while dev.connected() {
                 //trace!("Toy recv loop start");
                 match toy_bcst_rx.recv().await {
@@ -298,33 +437,34 @@ pub async fn toy_management_handler(
                                         //debug!("Received and cast float lvl: {:.5}", float_level);
 
                                         // Iterate through features enumerated from OSC param
-                                        for (feature_type, feature_index, flip_float, feature_levels, smooth_enabled, smooth_entries) in features {
+                                        for (feature_type, feature_index, flip_float, feature_levels, smooth_enabled, smooth_queue, rate_enabled, rate_saved_level, rate_saved_osc_input, rate_timestamp) in features {
                                             
                                             // Smoothing enabled
-                                            if smooth_enabled {
-
-                                                // Reached smooth rate maximum and not a 0 value
-                                                if smooth_entries.len() == feature_levels.smooth_rate as usize && float_level != 0.0 {
-
-                                                    // Get Mean of all numbers in smoothing rate and then round to hundreths and cast as f64
-                                                    float_level = ((smooth_entries.iter().sum::<f64>() as f64 / smooth_entries.len() as f64 * 100.0).round() / 100.0) as f64;
-                                                    smooth_entries.clear();
-    
-                                                // Value is not 0 and have not reached smoothing maximum
-                                                } else {
-    
-                                                    if float_level == 0.0 || flip_float && float_level == 1.0 {
-                                                        debug!("Bypassing smoother: {:.5}", float_level);
-                                                        // let 0 through
-                                                    } else {                                                
-                                                        smooth_entries.push(float_level);
-                                                        continue;
-                                                    }
+                                            if smooth_enabled && !rate_enabled {
+                                                //trace!("parse_moothing()");
+                                                match parse_smoothing(smooth_queue, feature_levels, &mut float_level, flip_float) {
+                                                    SmoothParser::SkipZero | SmoothParser::Smoothed => command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await,
+                                                    SmoothParser::Smoothing => continue,
                                                 }
+                                            } else if rate_enabled && !smooth_enabled {
+
+                                                //trace!("parse_rate()");
+                                                // Need to set rate_timestamp when feature enabled
+                                                if let None = rate_timestamp {
+                                                    *rate_timestamp = Some(Instant::now());
+                                                }
+                                                match parse_rate(rate_saved_level, rate_saved_osc_input, rate_timestamp, feature_levels.rate_tune, &mut float_level, flip_float) {
+                                                    RateParser::SkipZero => command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await,
+                                                    RateParser::RateCalculated(reset_timer) => {
+                                                        if reset_timer {
+                                                            *rate_timestamp = Some(Instant::now())
+                                                        }
+                                                        command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await;
+                                                    },
+                                                }
+                                            } else {
+                                                command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await;
                                             }
-
-                                            command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await;
-
                                         }
                                     }
                                 }
@@ -364,13 +504,13 @@ pub async fn toy_management_handler(
                     // Handle Toy Update Signals
                     ToyManagementEvent::Tu(tu) => match tu {
                         ToyUpdate::AddToy(toy) => {
-                            toys.insert(toy.toy_id, toy);
+                            core_toy_manager.online_toys.insert(toy.toy_id, toy);
                         }
                         ToyUpdate::RemoveToy(id) => {
-                            toys.remove(&id);
+                            core_toy_manager.online_toys.remove(&id);
                         }
                         ToyUpdate::AlterToy(toy) => {
-                            toys.insert(toy.toy_id, toy);
+                            core_toy_manager.online_toys.insert(toy.toy_id, toy);
                         }
                     },
                     // Handle Management Signals
@@ -411,7 +551,7 @@ pub async fn toy_management_handler(
                 sync::broadcast::channel(1024);
 
             // Create toy threads
-            for toy in &toys {
+            for toy in &core_toy_manager.online_toys {
                 let f_run = f(
                     toy.1.device_handle.clone(),
                     toy_bcst_tx.subscribe(),
@@ -444,7 +584,7 @@ pub async fn toy_management_handler(
                             ToyManagementEvent::Tu(tu) => {
                                 match tu {
                                     ToyUpdate::AddToy(toy) => {
-                                        toys.insert(toy.toy_id, toy.clone());
+                                        core_toy_manager.online_toys.insert(toy.toy_id, toy.clone());
                                         let f_run = f(
                                             toy.device_handle,
                                             toy_bcst_tx.subscribe(),
@@ -468,7 +608,7 @@ pub async fn toy_management_handler(
                                             }
                                             info!("[TOY ID: {}] Stopped listening. (ToyUpdate::RemoveToy)", id);
                                             running_toy_ths.remove(&id);
-                                            toys.remove(&id);
+                                            core_toy_manager.online_toys.remove(&id);
                                         }
                                     }
                                     ToyUpdate::AlterToy(toy) => {
@@ -478,7 +618,7 @@ pub async fn toy_management_handler(
                                             Ok(receivers) => info!("Sent ToyUpdate broadcast to {} toys", receivers-1),
                                             Err(e) => logerr!("Failed to send UpdateToy: {}", e),
                                         }
-                                        toys.insert(toy.toy_id, toy);
+                                        core_toy_manager.online_toys.insert(toy.toy_id, toy);
                                     }
                                 }
                             }
@@ -507,7 +647,7 @@ pub async fn toy_management_handler(
                                         drop(_toy_bcst_rx); // Causes OSC listener to die
                                         toy_async_rt.shutdown_background();
                                         listening = false;
-                                        info!("Toys: {}", toys.len());
+                                        info!("Toys: {}", core_toy_manager.online_toys.len());
                                         break;//Stop Listening
                                     },
                                     TmSig::TMHReset => {
@@ -529,7 +669,7 @@ pub async fn toy_management_handler(
                                         drop(_toy_bcst_rx); // Causes OSC listener to die
                                         toy_async_rt.shutdown_background();
                                         listening = false;
-                                        info!("Toys: {}", toys.len());
+                                        info!("Toys: {}", core_toy_manager.online_toys.len());
                                         break;//Stop Listening
                                     }
                                     _ => {},
@@ -563,33 +703,9 @@ pub async fn command_toy(
         // We handle Rotator differently because it is not included in the Scalar feature set
         VCFeatureType::Rotator => {
 
-            // I think im going to convert this to match
-            if !flip_float {
-                if float_level != 0.0 && float_level >= feature_levels.minimum_level && float_level <= feature_levels.maximum_level {
-                    // Do normal input
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (float_level, true))]))).await;
-                } else if float_level == 0.0 {// if level is 0 put at idle
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (feature_levels.idle_level, true))]))).await;
-                } else if float_level > feature_levels.maximum_level {
-                    // Do max
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (feature_levels.maximum_level, true))]))).await;
-                } else if float_level < feature_levels.minimum_level {
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (feature_levels.minimum_level, true))]))).await;
-                }
-            } else {// FLOAT FLIPPED
-                
-                let flipped_lvl = flip_float64(float_level);
-                // Reverse logic here for flipped float
-                if flipped_lvl != 1.0 && flipped_lvl <= flip_float64(feature_levels.minimum_level) && flipped_lvl >= flip_float64(feature_levels.maximum_level) {
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flipped_lvl, true))]))).await;
-                } else if flipped_lvl == 1.0 {// if flipped level is 1.0 put at idle
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flip_float64(feature_levels.idle_level), true))]))).await;
-                } else if flipped_lvl < flip_float64(feature_levels.maximum_level) {
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flip_float64(feature_levels.maximum_level), true))]))).await;
-                } else if flipped_lvl > flip_float64(feature_levels.minimum_level) {
-                    let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (flip_float64(feature_levels.minimum_level), true))]))).await;
-                }
-            }
+            let new_level = clamp_and_flip(float_level, flip_float, feature_levels);
+            let _ = dev.rotate(&RotateMap(HashMap::from([(feature_index, (new_level, true))]))).await;
+
         },
         VCFeatureType::Constrict => {
             scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Constrict, flip_float, feature_levels).await;
@@ -606,30 +722,9 @@ pub async fn command_toy(
         // We handle Linear differently because it is not included in the Scalar feature set
         VCFeatureType::Linear => {
 
-            if !flip_float {
-                if float_level != 0.0 && float_level >= feature_levels.minimum_level && float_level <= feature_levels.maximum_level {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, float_level))]))).await;
-                } else if float_level == 0.0 {// if level is 0 put at idle
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, feature_levels.idle_level))]))).await;
-                } else if float_level > feature_levels.maximum_level {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, feature_levels.maximum_level))]))).await;
-                } else if float_level < feature_levels.minimum_level {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, feature_levels.minimum_level))]))).await;
-                }
-            } else {// FLOAT FLIPPED
-                
-                let flipped_lvl = flip_float64(float_level);
-                // Reverse logic here for flipped float
-                if flipped_lvl != 1.0 && flipped_lvl <= flip_float64(feature_levels.minimum_level) && flipped_lvl >= flip_float64(feature_levels.maximum_level) {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(float_level)))]))).await;
-                } else if flipped_lvl == 1.0 {// if flipped level is 1.0 put at idle
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(feature_levels.idle_level)))]))).await;
-                } else if flipped_lvl < flip_float64(feature_levels.maximum_level) {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(feature_levels.maximum_level)))]))).await;
-                } else if flipped_lvl > flip_float64(feature_levels.minimum_level) {
-                    let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (500, flip_float64(feature_levels.minimum_level)))]))).await;
-                }
-            }
+            let new_level = clamp_and_flip(float_level, flip_float, feature_levels);
+            let _ = dev.linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from([(feature_index, (feature_levels.linear_position_speed, new_level))]))).await;
+
         }
         VCFeatureType::ScalarRotator => {
             scalar_parse_levels_send_toy_cmd(&dev, float_level, feature_index, ActuatorType::Rotate, flip_float, feature_levels).await;
@@ -665,38 +760,10 @@ fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: UnboundedSender<Toy
         // Send address and arg to broadcast channel
         // Die when channel disconnects
 
-        match recv_osc_cmd(&bind_sock) {
-            Some(mut msg) => {
-                if msg.addr == "/avatar/parameters/vibecheck/state" {
-                    if let Some(state_bool) = msg.args.pop().unwrap().bool() {
-                        if !state_bool {
-                            info!("State false: Sending Disable event");
-                            let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::Disable));
-                        }
-                    }
-                } else if msg.addr.starts_with("/avatar/change") {
-                    info!("Avatar Changed: Halting toy actions");
-                    {
-                        let vc_pointer = app_handle.state::<super::vcore::VCStateMutex>().0.clone();
-                        let vc_lock = vc_pointer.lock();
-                        let _ = vc_lock.async_rt.block_on(async {vc_lock.bp_client.as_ref().unwrap().stop_all_devices().await}).unwrap();
-                    }
-                    //let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::Disable));
-                } else {// Not a vibecheck OSC command, broadcast to toys
-                    if let Err(_) = toy_bcst_tx.send(ToySig::OSCMsg(msg)) {
-                        info!("BCST TX is disconnected. Shutting down toy input routine!");
-                        return; // Shutting down handler_routine
-                    }
-                }
-            }
-            None => {
-                if toy_bcst_tx.receiver_count() == 0 {
-                    info!(
-                        "BCST TX is disconnected (RECV C=0). Shutting down toy input routine!"
-                    );
-                    return;
-                }
-            }
+        if vibecheck_osc_api(&bind_sock, &app_handle, &toy_bcst_tx) {
+            continue;
+        } else {
+            return;
         }
     }
 }
@@ -765,7 +832,8 @@ pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OS
     }
 }
 
-fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
+#[inline]
+pub fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
     let mut buf = [0u8; rosc::decoder::MTU];
 
     let (br, _a) = match sock.recv_from(&mut buf) {
@@ -812,13 +880,13 @@ fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
 pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, app_handle: AppHandle) {
 
     loop {
-        Delay::new(Duration::from_secs(60)).await;
+        Delay::new(Duration::from_secs(15)).await;
 
 
         let (toys, remote) = {
             let vc_lock = vibecheck_state_pointer.lock();
-            if !vc_lock.toys.is_empty() {
-                (vc_lock.toys.clone(), vc_lock.config.networking.remote)
+            if !vc_lock.core_toy_manager.as_ref().unwrap().online_toys.is_empty() {
+                (vc_lock.core_toy_manager.as_ref().unwrap().online_toys.clone(), vc_lock.config.networking.remote)
             } else {
                 continue;
             }
@@ -829,11 +897,11 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
         sock.connect(remote).await.unwrap();
         for (.., mut toy) in toys {
 
-            let b_level = match toy.device_handle.battery_level().await {
-                Ok(battery_lvl) => battery_lvl,
+            let b_level: Option<f64> = match toy.device_handle.battery_level().await {
+                Ok(battery_lvl) => Some(battery_lvl),
                 Err(_e) => {
                     warn!("Failed to get battery for toy: {}", toy.toy_name);
-                    0.0
+                    None
                 },
             };
 
@@ -842,9 +910,10 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
             let _ = app_handle.emit_all("fe_toy_event",
                         FeToyEvent::Update ({
                             FeVCToy {
-                                toy_id: toy.toy_id,
+                                toy_id: Some(toy.toy_id),
                                 toy_name: toy.toy_name.clone(),
-                                battery_level: toy.battery_level,
+                                toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
+                                battery_level: b_level,
                                 toy_connected: toy.toy_connected,
                                 features: toy.param_feature_map.to_fe(),
                                 listening: toy.listening,
@@ -859,13 +928,13 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
                 trace!("Sending OSC data for toy: {}", toy.toy_name);
 
                 let battery_level_msg = encoder::encode(&OscPacket::Message(OscMessage {
-                    addr: format!("/avatar/parameters/{}/{}/battery", toy.toy_name.replace("Lovense Connect", "lovense").replace(" ", "_").to_lowercase(), toy.sub_id),
-                    args: vec![OscType::Float(b_level as f32)]
+                    addr: format!("/avatar/parameters/vibecheck/osc_data/{}/{}/battery", toy.toy_name.replace("Lovense Connect", "lovense").replace(" ", "_").to_lowercase(), toy.sub_id),
+                    args: vec![OscType::Float(b_level.unwrap_or(0.0) as f32)]
                 })).unwrap();
 
                 let batt_send_err = sock.send(&battery_level_msg).await;
                 if batt_send_err.is_err(){warn!("Failed to send battery_level to {}", remote.to_string());}
-                else{info!("Sent battery_level: {} to {}", b_level, toy.toy_name);}
+                else{info!("Sent battery_level: {} to {}", b_level.unwrap_or(0.0) as f32, toy.toy_name);}
             } else {
                 trace!("OSC data disabled for toy {}", toy.toy_name);
             }

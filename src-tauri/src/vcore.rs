@@ -1,11 +1,10 @@
-use std::collections::HashMap;
 use std::fs;
 use std::net::{SocketAddrV4, Ipv4Addr};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
-use log::{warn, error as logerr, info, trace};
+use log::{warn, error as logerr, info, trace, debug};
 //use rosc::{OscMessage, encoder, OscPacket, OscType};
 use tauri::{AppHandle, Manager};
 use tokio::runtime::Runtime;
@@ -13,7 +12,8 @@ use tokio::task::JoinHandle;
 use parking_lot::Mutex;
 use crate::bluetooth;
 use crate::handling::{HandlerErr, toy_refresh, vc_disabled_osc_command_listen, command_toy};
-use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyAlter, FeToyEvent, FeVCFeatureType};
+use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyEvent, FeVCFeatureType};
+use crate::toy_manager::ToyManager;
 use crate::toyops::VCFeatureType;
 use crate::util::{get_config_dir, get_user_home_dir};
 use crate::vcerror::{backend, frontend};
@@ -48,7 +48,8 @@ pub struct VibeCheckState {
     pub bp_client: Option<ButtplugClient>,
 
     pub running: RunningState,
-    pub toys: HashMap<u32, VCToy>,
+    pub core_toy_manager: Option<ToyManager>,
+    //pub offline_toys: OfflineToys,
     //================================================
     // Handlers error recvr
     //inner_channels: Arc<RwLock<innerChannels>>,
@@ -90,7 +91,7 @@ impl VibeCheckState {
     pub fn new(config: VibeCheckConfig) -> Self {
 
         // Toys hashmap
-        let toys = HashMap::new();
+        //let core_toy_manager = ToyHandler::new();
 
         // Create error handling/passig channels
         let (error_tx, error_rx): (Sender<VCError>, Receiver<VCError>) = mpsc::channel();
@@ -101,7 +102,7 @@ impl VibeCheckState {
         // Setup channels
         let (tme_recv_tx, tme_recv_rx): (UnboundedSender<ToyManagementEvent>, UnboundedReceiver<ToyManagementEvent>) = unbounded_channel();
         let (tme_send_tx, tme_send_rx): (UnboundedSender<ToyManagementEvent>, UnboundedReceiver<ToyManagementEvent>) = unbounded_channel();
-        
+
         Self {
 
             app_handle: None,
@@ -110,8 +111,7 @@ impl VibeCheckState {
             //connection_modes,
             bp_client: None,
             running: RunningState::Stopped,
-            toys,
-
+            core_toy_manager: None,
             //======================================
             // Error channels
             error_rx,
@@ -156,10 +156,16 @@ impl VibeCheckState {
             logerr!("start_tmh() called but no app_handle was set");
             return;
         }
+
+        if self.core_toy_manager.is_none() {
+            logerr!("start_tmh() called but no core_toy_manager was set");
+            return;
+        }
+
         self.toy_management_h_thread = Some(self.async_rt.spawn(toy_management_handler(
             self.tme_recv_tx.take().unwrap(),
             self.tme_send_rx.take().unwrap(),
-            self.toys.clone(),
+            self.core_toy_manager.as_ref().unwrap().clone(),
             self.config.networking.clone(),
             self.app_handle.as_ref().unwrap().clone(),
         )));
@@ -198,6 +204,9 @@ impl VibeCheckState {
     }
     pub fn set_app_handle(&mut self, app_handle: AppHandle) {
         self.app_handle = Some(app_handle);
+    }
+    pub fn init_toy_manager(&mut self) {
+        self.core_toy_manager = Some(ToyManager::new(self.app_handle.as_ref().unwrap().clone()));
     }
 
     pub fn init_ceh(&mut self) {
@@ -607,39 +616,11 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::Vi
     Ok(())
 }
 
-pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: tauri::AppHandle, toy_id: u32, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
+pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: tauri::AppHandle, altered: VCToy) -> Result<(), backend::ToyAlterError> {
 
-    let altered = {
-        let mut vc_lock = vc_state.0.lock();
-        if let Some(toy) = vc_lock.toys.get_mut(&toy_id) {
-
-            match mutate {
-                FeToyAlter::Feature(f) => {
-                    if !toy.param_feature_map.from_fe(f) {
-                        logerr!("Failed to convert FeVCToyFeature to VCToyFeature");
-                        return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
-                    } else {
-                        // If altering feature map suceeds write the data to the config
-                        toy.config.as_mut().unwrap().features = toy.param_feature_map.clone();
-                    }
-                },
-                FeToyAlter::OSCData(osc_data) => {
-                    toy.osc_data = osc_data;
-                    // Write the data to config
-                    toy.config.as_mut().unwrap().osc_data = osc_data;
-                }
-            }
-            // Return altered toy
-            toy.clone()
-        } else {
-            return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoToyIndex));
-        }
-    };
-
-    //save_toy_config(&altered.toy_name, altered.param_feature_map.clone());
     let alter_clone = altered.clone();
-    info!("Altered toy: {:?}", altered);
     altered.save_toy_config();
+    info!("Altered toy config: {:?}", altered);
 
     let send_res = {
         let vc_lock = vc_state.0.lock();
@@ -649,8 +630,9 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
     let _ = app_handle.emit_all("fe_toy_event",
         FeToyEvent::Update ({
             FeVCToy {
-                toy_id: alter_clone.toy_id,
+                toy_id: Some(alter_clone.toy_id),
                 toy_name: alter_clone.toy_name,
+                toy_anatomy: alter_clone.config.as_ref().unwrap().anatomy.to_fe(),
                 battery_level: alter_clone.battery_level,
                 toy_connected: alter_clone.toy_connected,
                 features: alter_clone.param_feature_map.to_fe(),
@@ -663,7 +645,7 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
 
     match send_res {
         Ok(()) => Ok(()),
-        Err(_e) => Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::TMESendFailure)),
+        Err(_e) => Err(backend::ToyAlterError::TMESendFailure),
     }
 }
 
@@ -702,11 +684,11 @@ pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
     return Ok(());
 }
 
-pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, feature_index: u32, feature_type: FeVCFeatureType, float_level: f64) {
+pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, feature_index: u32, feature_type: FeVCFeatureType, float_level: f64, stop: bool) {
     
     let vc_toys = {
         let vc_lock = vc_state.0.lock();
-        vc_lock.toys.clone()
+        vc_lock.core_toy_manager.as_ref().unwrap().online_toys.clone()
     };
     
     let toy = match vc_toys.get(&toy_id) {
@@ -723,7 +705,13 @@ pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, 
             let handle_clone = toy.device_handle.clone();
             {
                 let vc_lock = vc_state.0.lock();
-                vc_lock.async_rt.spawn(command_toy(handle_clone, feature.feature_type, float_level, feature.feature_index, feature.flip_input_float, feature.feature_levels));
+                // Add stop flag bc FE invoke simulation: diff between stop & idle.
+                if stop {
+                    debug!("Stopping Idle Simulate");
+                    handle_clone.stop();
+                } else {
+                    vc_lock.async_rt.spawn(command_toy(handle_clone, feature.feature_type, float_level, feature.feature_index, feature.flip_input_float, feature.feature_levels));
+                }
             }
             return;
         }

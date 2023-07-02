@@ -17,16 +17,20 @@ mod vcore;
 mod util;
 mod toyops;
 mod bluetooth;
+mod osc_api;
+mod toy_manager;
 mod frontend_types;
 mod vcerror;
 
 fn main() {
 
     //tracing_subscriber::fmt::init();
-    
-    //let mut log_builder = env_logger::builder();
-    //log_builder.filter(None, log::LevelFilter::Trace);
-    //log_builder.init();
+    #[cfg(debug_assertions)]
+    {
+        let mut log_builder = env_logger::builder();
+        log_builder.filter(None, log::LevelFilter::Trace);
+        log_builder.init();
+    }
 
     let vibecheck_state_pointer = Arc::new(
         Mutex::new(
@@ -104,6 +108,7 @@ fn main() {
             frontend_native::open_default_browser,
             frontend_native::clear_osc_config,
             frontend_native::simulate_device_feature,
+            frontend_native::sync_offline_toys,
             //frontend_native::simulate_feature_osc_input,
             ]
     )
@@ -121,6 +126,8 @@ fn main() {
         trace!("State pointer set");
         vc_state.set_app_handle(app.app_handle());
         trace!("App handle set");
+        vc_state.init_toy_manager();
+        trace!("ToyManager initialized");
         vc_state.identifier = identifier;
         trace!("App Identifier set");
         vc_state.start_tmh();
@@ -168,6 +175,9 @@ fn main() {
         },
         tauri::RunEvent::Ready => {
             info!("App Ready");
+
+            // Sync offline toys to frontend
+            //_app_handle.state::<vcore::VCStateMutex>().0.lock().core_toy_manager.as_ref().unwrap().sync_frontend();
         },
         tauri::RunEvent::Updater(updater_event) => {
             match updater_event {

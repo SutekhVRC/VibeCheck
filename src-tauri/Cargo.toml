@@ -1,6 +1,6 @@
 [package]
 name = "vibecheck"
-version = "0.2.9"
+version = "0.3.0"
 edition = "2021"
 authors = ["SutekhVRC"]
 rust-version = "1.57"
@@ -10,7 +10,7 @@ tauri-build = { version = "1.2.1", features = [] }
 
 [dependencies]
 buttplug = {git = "https://github.com/SutekhVRC/buttplug", branch = "vibecheck"}
-#buttplug = {path = "../../../buttplug/buttplug"}
+#buttplug = {path = "../../../vibecheck-dev-buttplug/buttplug/buttplug"}
 tokio = {version = "1.17.0", features = ["rt-multi-thread", "sync", "macros", "io-std", "time"] }
 futures-util = "0.3.21"
 tracing-subscriber = "0.3.9"

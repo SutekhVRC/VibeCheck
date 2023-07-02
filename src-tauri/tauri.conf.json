@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "VibeCheck",
-    "version": "0.2.9"
+    "version": "0.3.0"
   },
   "tauri": {
     "systemTray": {
@@ -58,7 +58,10 @@
     },
     "updater": {
       "active": true,
-      "dialog": false,
+      "dialog": true,
+      "windows": {
+        "installMode": "passive"
+      },
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZFNUE0MUZBQjdCNDQ3OTcKUldTWFI3UzMra0ZhL3FkNk9QcFdNS3kwaVRhU0xEcnd1eDV4RnFzb2dHcE96UERIaGFDQmZaSjgK",
       "endpoints": [
         "https://github.com/SutekhVRC/VibeCheck/releases/latest/download/latest.json"
@@ -67,10 +70,12 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 800,
-        "resizable": false,
+        "resizable": true,
         "title": "VibeCheck",
-        "width": 600
+        "width": 900,
+        "height": 600,
+        "minWidth": 600,
+        "minHeight": 600
       }
     ]
   }

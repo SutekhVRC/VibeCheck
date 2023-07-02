@@ -1,36 +1,37 @@
-import type { ChangeEvent, FormEvent } from "react";
-import { useEffect } from "react";
+import { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api";
-
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 import { CLEAR_OSC_CONFIG, SET_CONFIG } from "../data/constants";
-import Modal from "../layout/Modal";
 import UpdateButton from "../components/UpdateButton";
-import TooltipLabel from "../layout/Tooltip/TooltipLabel";
-import Tooltip from "../layout/Tooltip";
-
-type settingsDialogProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  config: FeVibeCheckConfig;
-  canUpdate: boolean;
-};
+import { TooltipLabel } from "../layout/Tooltip";
+import Switch from "../layout/Switch";
+import Button from "../layout/Button";
+import { createToast } from "../components/Toast";
 
 export default function Config({
-  isOpen,
-  onClose,
   config,
+  refreshConfig,
   canUpdate,
-}: settingsDialogProps) {
+}: {
+  config: FeVibeCheckConfig;
+  refreshConfig: () => void;
+  canUpdate: boolean;
+}) {
   const [newConfig, setNewConfig] = useState<FeVibeCheckConfig>(config);
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
     setNewConfig({ ...newConfig, [e.target.name]: e.target.value });
   };
 
-  const onCheck = (e: ChangeEvent<HTMLInputElement>) => {
-    setNewConfig({ ...newConfig, [e.target.name]: e.target.checked });
+  const onCheckSwitch = (checked: boolean, name: keyof FeVibeCheckConfig) => {
+    setNewConfig({ ...newConfig, [name]: checked });
+  };
+
+  const handleLcOverride = () => {
+    if (newConfig.lc_override == null)
+      setNewConfig({ ...newConfig, lc_override: "127.0.0.1" });
+    else setNewConfig({ ...newConfig, lc_override: null });
   };
 
   const onChangeNetworking = (e: ChangeEvent<HTMLInputElement>) => {
@@ -44,84 +45,94 @@ export default function Config({
   };
 
   async function saveConfig() {
-    await invoke(SET_CONFIG, { feVcConfig: newConfig });
+    try {
+      await invoke(SET_CONFIG, { feVcConfig: newConfig });
+      createToast("info", "Saved config");
+    } catch (e) {
+      createToast("error", "Could not set config!", JSON.stringify(e));
+    }
   }
 
-  async function refreshConfig() {
-    await invoke(CLEAR_OSC_CONFIG)
-      .then(() => alert("Avatar OSC configs have been cleared."))
-      .catch(() => alert("Failed to clear avatar OSC configs!"));
+  async function clearOsc() {
+    try {
+      await invoke(CLEAR_OSC_CONFIG);
+      createToast(
+        "info",
+        "Cleared avatar OSC configs",
+        "Removed AppData\\LocalLow\\VRChat\\VRChat\\OSC"
+      );
+    } catch (e) {
+      createToast(
+        "error",
+        "Could not clear avatar OSC configs!",
+        JSON.stringify(e)
+      );
+    }
   }
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    saveConfig();
-    onClose();
+    await saveConfig();
+    refreshConfig();
   }
-
-  useEffect(() => {
-    // onOpen refresh to backend config
-    if (!isOpen) return;
-    setNewConfig(config);
-  }, [isOpen]);
 
   return (
-    <Modal title="Config" isOpen={isOpen} onClose={onClose}>
-      <form id="config" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-2 gap-y-2 justify-items-end my-4">
-          <TooltipLabel text="OSC Bind" tooltip="OSC Receive Port" />
-          <input
-            name="bind"
-            className="text-zinc-800"
-            value={newConfig.networking.bind}
-            onChange={onChangeNetworking}
-            pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}
-            onInvalid={(e) =>
-              (e.target as HTMLInputElement).setCustomValidity(
-                "Enter valid IP:HOST"
-              )
-            }
-            onInput={(e) =>
-              (e.target as HTMLInputElement).setCustomValidity("")
-            }
-          />
-          <TooltipLabel text="OSC Remote" tooltip="OSC Send Port" />
-          <input
-            name="remote"
-            className="text-zinc-800"
-            value={newConfig.networking.remote}
-            onChange={onChangeNetworking}
-            pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}
-            onInvalid={(e) =>
-              (e.target as HTMLInputElement).setCustomValidity(
-                "Enter valid IP:HOST"
-              )
-            }
-            onInput={(e) =>
-              (e.target as HTMLInputElement).setCustomValidity("")
-            }
-          />
-          <TooltipLabel
-            text="Lovense Connect Override"
-            tooltip="Override and force the Lovense Connect host to connect to."
-          />
-          <div className="">
+    <div className="w-full h-full">
+      <div className="text-4xl flex justify-between items-center px-6">
+        <div className="flex items-end gap-2">Config</div>
+      </div>
+      <div className="flex flex-col justify-between w-full">
+        <form id="config" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-[minmax(10rem,4fr)_1fr_minmax(4rem,_4fr)] text-sm text-justify gap-1 my-4 mx-8">
+            <TooltipLabel text="OSC Bind" tooltip="OSC Receive Port" />
+            <div />
             <input
-              type="checkbox"
-              checked={newConfig.lc_override != null}
-              onChange={(e) =>
-                setNewConfig((v) => {
-                  return {
-                    ...v,
-                    lc_override: e.target.checked ? "127.0.0.1" : null,
-                  };
-                })
+              name="bind"
+              className="text-zinc-800 px-1 rounded-sm outline-none"
+              value={newConfig.networking.bind}
+              onChange={onChangeNetworking}
+              pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}
+              onInvalid={(e) =>
+                (e.target as HTMLInputElement).setCustomValidity(
+                  "Enter valid IP:HOST"
+                )
+              }
+              onInput={(e) =>
+                (e.target as HTMLInputElement).setCustomValidity("")
               }
             />
-            {newConfig.lc_override != null && (
+            <TooltipLabel text="OSC Remote" tooltip="OSC Send Port" />
+            <div />
+            <input
+              name="remote"
+              className="text-zinc-800 px-1 rounded-sm outline-none"
+              value={newConfig.networking.remote}
+              onChange={onChangeNetworking}
+              pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}
+              onInvalid={(e) =>
+                (e.target as HTMLInputElement).setCustomValidity(
+                  "Enter valid IP:HOST"
+                )
+              }
+              onInput={(e) =>
+                (e.target as HTMLInputElement).setCustomValidity("")
+              }
+            />
+            <TooltipLabel
+              text="Lovense Connect Override"
+              tooltip="Override and force the Lovense Connect host to connect to."
+            />
+            <Switch
+              checked={newConfig.lc_override != null}
+              onCheckedChange={handleLcOverride}
+              size="small"
+            />
+            {newConfig.lc_override == null ? (
+              <div />
+            ) : (
               <input
                 name="lc_override"
-                className="text-zinc-800 ml-2"
+                className="text-zinc-800 px-1"
                 value={newConfig.lc_override}
                 onChange={onChange}
                 pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$`}
@@ -135,57 +146,52 @@ export default function Config({
                 }
               />
             )}
+            <TooltipLabel
+              text="Scan On Disconnect"
+              tooltip="Automatically start scanning when a toy disconnects."
+            />
+            <Switch
+              checked={newConfig.scan_on_disconnect}
+              onCheckedChange={(checked) =>
+                onCheckSwitch(checked, "scan_on_disconnect")
+              }
+              size="small"
+            />
+            <div />
+            <TooltipLabel
+              text="Minimize On Exit"
+              tooltip="Minimize VibeCheck instead of exiting."
+            />
+            <Switch
+              checked={newConfig.minimize_on_exit}
+              onCheckedChange={(checked) =>
+                onCheckSwitch(checked, "minimize_on_exit")
+              }
+              size="small"
+            />
+            <div />
+            <TooltipLabel
+              text="Desktop Notifications"
+              tooltip="Notifications for toy connect and disconnect."
+            />
+            <Switch
+              checked={newConfig.desktop_notifications}
+              onCheckedChange={(checked) =>
+                onCheckSwitch(checked, "desktop_notifications")
+              }
+              size="small"
+            />
+            <div />
           </div>
-          <TooltipLabel
-            text="Scan On Disconnect"
-            tooltip="Automatically start scanning when a toy disconnects."
-          />
-          <input
-            name="scan_on_disconnect"
-            type="checkbox"
-            checked={newConfig.scan_on_disconnect}
-            onChange={onCheck}
-          />
-          <TooltipLabel
-            text="Minimize On Exit"
-            tooltip="Minimize VibeCheck instead of exiting."
-          />
-          <input
-            name="minimize_on_exit"
-            type="checkbox"
-            checked={newConfig.minimize_on_exit}
-            onChange={onCheck}
-          />
-          <TooltipLabel
-            text="Desktop Notifications"
-            tooltip="Notifications for toy connect and disconnect."
-          />
-          <input
-            name="desktop_notifications"
-            type="checkbox"
-            checked={newConfig.desktop_notifications}
-            onChange={onCheck}
-          />
+        </form>
+        <div className="flex justify-around">
+          <Button type="submit" form="config">
+            Save
+          </Button>
+          <Button onClick={clearOsc}>Refresh OSC</Button>
+          <UpdateButton enabled={canUpdate} />
         </div>
-      </form>
-      <div className="flex justify-around">
-        <button
-          type="submit"
-          form="config"
-          className="rounded-md bg-zinc-100 px-4 text-zinc-900 hover:bg-zinc-200"
-        >
-          Save
-        </button>
-        <Tooltip text="Force refresh OSC avatar parameters by deleting VRChat OSC config folders. The in-game button does not work.">
-          <button
-            className="rounded-md bg-zinc-100 px-4 text-zinc-900 hover:bg-zinc-200"
-            onClick={refreshConfig}
-          >
-            Refresh OSC
-          </button>
-        </Tooltip>
-        <UpdateButton enabled={canUpdate} />
       </div>
-    </Modal>
+    </div>
   );
 }

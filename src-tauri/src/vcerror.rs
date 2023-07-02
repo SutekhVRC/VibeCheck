@@ -27,16 +27,20 @@ pub mod frontend {
         UnsetLCOverrideFailure,
         SetLCOverrideFailure,
         InvalidLCHost,
+
+        ToyManagerNotReady,
     }
 
     #[derive(Serialize)]
     pub enum ToyAlterError {
         NoFeatureIndex,
         NoToyIndex,
-        TMESendFailure
+        TMESendFailure,
+        ToyConnected,
+        ToyDisconnected,
+        OfflineToyNotExist,
+        OfflineToyNoFeatureIndex,
     }
-
-    
 }
 
 pub mod backend {
@@ -54,6 +58,7 @@ pub mod backend {
     pub enum VibeCheckToyConfigError {
         //ReadFailure,
         DeserializeError,
+        OfflineToyConfigNotFound,
         //SerializeError,
         //WriteFailure,
     }
@@ -63,5 +68,11 @@ pub mod backend {
         ReadDirFailure,
         ReadDirPathFailure,
         RemoveDirsFailure,
+    }
+
+    pub enum ToyAlterError {
+        //NoFeatureIndex,
+        //NoToyIndex,
+        TMESendFailure
     }
 }
