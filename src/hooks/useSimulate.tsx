@@ -58,7 +58,7 @@ export default function useSimulate(
         featureIndex,
         featureType,
         floatLevel,
-        stop:!simulate,
+        stop: !simulate,
       });
     } catch (e) {
       createToast(
