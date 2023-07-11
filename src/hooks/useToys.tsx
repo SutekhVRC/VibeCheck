@@ -53,14 +53,23 @@ export async function handleFeatureAlter(
   await handleToyAlter({ ...newToy, features: newFeatures });
 }
 
+function parseName(s: string) {
+  return s.replace("Lovense Connect ", "Lovense ");
+}
+
+export function toyKey(t: FeVCToy) {
+  return `${parseName(t.toy_name)} ${t.sub_id}`;
+}
+
 export function useToys() {
   const [offlineToys, setOfflineToys] = useState<ToyMap>({});
   const [onlineToys, setOnlineToys] = useState<ToyMap>({});
   const toys = {} as ToyMap;
   const onlineToyNames = new Set();
   Object.values(onlineToys).forEach((t) => {
-    onlineToyNames.add(t.toy_name);
-    toys[`${t.toy_name} ${t.sub_id}`] = t;
+    const name = parseName(t.toy_name);
+    onlineToyNames.add(name);
+    toys[toyKey(t)] = t;
   });
   Object.values(offlineToys).forEach((t) => {
     if (!onlineToyNames.has(t.toy_name)) toys[`${t.toy_name} ${t.sub_id}`] = t;
@@ -71,7 +80,9 @@ export function useToys() {
       const offlineToys = await invoke<FeVCToy[]>(OFFLINE_SYNC);
       setOfflineToys(
         offlineToys.reduce((acc, val) => {
-          acc[`${val.toy_name} ${val.sub_id}`] = val;
+          // Set the actual name so that if a toy is connected first with LC, we don't show it with a LC logo and with long name in sidebar when offline
+          val.toy_name = parseName(val.toy_name);
+          acc[toyKey(val)] = val;
           return acc;
         }, {} as ToyMap)
       );
@@ -90,7 +101,7 @@ export function useToys() {
         setOnlineToys((curOnlineToys) => {
           return {
             ...curOnlineToys,
-            [`${payload.data.toy_name} ${payload.data.sub_id}`]: payload.data,
+            [toyKey(payload.data)]: payload.data,
           };
         });
         break;
@@ -99,14 +110,14 @@ export function useToys() {
           setOnlineToys((curOnlineToys) => {
             return {
               ...curOnlineToys,
-              [`${payload.data.toy_name} ${payload.data.sub_id}`]: payload.data,
+              [toyKey(payload.data)]: payload.data,
             };
           });
         } else {
           setOfflineToys((curOfflineToys) => {
             return {
               ...curOfflineToys,
-              [`${payload.data.toy_name} ${payload.data.sub_id}`]: payload.data,
+              [toyKey(payload.data)]: payload.data,
             };
           });
         }
@@ -119,7 +130,7 @@ export function useToys() {
             (t) => t.toy_id != payload.data
           );
           return filtered.reduce((acc, val) => {
-            acc[`${val.toy_name} ${val.sub_id}`] = val;
+            acc[toyKey(val)] = val;
             return acc;
           }, {} as ToyMap);
         });

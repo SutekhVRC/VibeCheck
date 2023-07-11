@@ -1,4 +1,4 @@
-import { useToys } from "./hooks/useToys";
+import { toyKey, useToys } from "./hooks/useToys";
 import VibecheckLogo from "./assets/VibeCheck_logo.png";
 import cryingAnimeGirl from "./assets/menhera_chan.gif";
 import Toy from "./features/Toy";
@@ -54,7 +54,7 @@ export default function App() {
 
   if (
     selection?.type == "Toy" &&
-    !toysList.some((t) => `${t.toy_name} ${t.sub_id}` == selection.toyKey)
+    !toysList.some((t) => toyKey(t) == selection.toyKey)
   )
     setSelection(null); // selection is no longer valid
 
@@ -75,11 +75,11 @@ export default function App() {
     ) : null;
 
   function setToy(toy: FeVCToy) {
-    const newKey = `${toy.toy_name} ${toy.sub_id}`;
+    const newKey = toyKey(toy);
     if (selection?.type == "Toy" && selection.toyKey == newKey) return;
     setSelection({
       type: "Toy",
-      toyKey: `${toy.toy_name} ${toy.sub_id}`,
+      toyKey: newKey,
     });
   }
 
@@ -118,12 +118,11 @@ export default function App() {
               <AnimatePresence>
                 {toysList.map((sidebarToy) => (
                   <button
-                    key={`${sidebarToy.toy_name} ${sidebarToy.sub_id}`}
+                    key={toyKey(sidebarToy)}
                     onClick={() => setToy(sidebarToy)}
                     className={cn(
                       selection?.type == "Toy" &&
-                        `${sidebarToy.toy_name} ${sidebarToy.sub_id}` ==
-                          selection.toyKey &&
+                        toyKey(sidebarToy) == selection.toyKey &&
                         "outline",
                       sidebarToy.toy_connected
                         ? "text-gray-200"
