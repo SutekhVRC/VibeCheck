@@ -88,8 +88,6 @@ export default function App() {
     else setSelection({ type: "Config" });
   }
 
-  console.log("EN", isEnabled);
-
   return (
     <div
       className="w-full h-screen p-4"

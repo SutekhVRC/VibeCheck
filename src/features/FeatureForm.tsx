@@ -35,12 +35,12 @@ export default function FeatureForm({
   }, [toy, selectedIndex]);
 
   const {
-    simulate,
+    simulateEnabled,
     simulateLevel,
-    simulateOnChange,
+    toggleSimulate,
     simulateOnValueChange,
     simulateOnValueCommit,
-  } = useSimulate(toy.toy_id, feature.feature_index, feature.feature_type);
+  } = useSimulate(toy.toy_id, feature);
 
   function handleBool(checked: boolean, name: keyof FeVCToyFeature) {
     setToyFeature((f) => {
@@ -251,7 +251,7 @@ export default function FeatureForm({
           levels.maximum_level * 100
         )}`}
       />
-      {simulate != null && (
+      {simulateEnabled != null && (
         <FourPanel
           text="Simulate"
           tooltip="Test feature power level."
@@ -259,13 +259,14 @@ export default function FeatureForm({
           two={
             <Switch
               size="small"
-              checked={simulate}
-              onCheckedChange={simulateOnChange}
+              checked={simulateEnabled}
+              onCheckedChange={toggleSimulate}
             />
           }
           three={
             <Slider
-              disabled={!simulate}
+              multiply={100}
+              disabled={!simulateEnabled}
               min={0}
               max={1}
               step={0.01}

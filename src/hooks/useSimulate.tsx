@@ -1,64 +1,57 @@
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
-import type { FeVCFeatureType } from "../../src-tauri/bindings/FeVCFeatureType";
 import { SIMULATE_TOY_FEATURE } from "../data/constants";
 import { createToast } from "../components/Toast";
+import { useUpdateEffect } from "./useUpdateEffect";
+import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 
 export default function useSimulate(
   toyId: number | null,
-  featureIndex: number,
-  featureType: FeVCFeatureType
+  feature: FeVCToyFeature
 ) {
-  const [simulate, setSimulate] = useState(false);
-  const [simulateLevel, setSimulateLevel] = useState(0.5);
+  const [simulateEnabled, setSimulateEnabled] = useState(false);
+  const [level, setLevel] = useState(0.5);
 
-  function simulateOnChange() {
-    setSimulate((b) => {
-      const newEnableState = !b;
-      if (newEnableState) invokeSimulation(simulateLevel);
-      else invokeSimulation(0);
-      return !b;
-    });
+  function toggleSimulate() {
+    setSimulateEnabled((b) => !b);
   }
 
   function simulateOnValueChange(e: number) {
-    setSimulateLevel(e);
+    setLevel(e);
   }
 
   function simulateOnValueCommit() {
-    if (simulate) invokeSimulation(simulateLevel);
-    else invokeSimulation(0);
+    if (feature.feature_levels.idle_level == 0) {
+      invokeSimulation(level);
+    }
   }
 
   useEffect(() => {
-    setSimulate(false);
-    setSimulateLevel(0.5);
+    setSimulateEnabled(false);
+    setLevel(0.5);
     return () => {
-      invokeSimulation(0);
+      if (feature.feature_levels.idle_level == 0) {
+        invokeSimulation(0);
+      }
     };
-  }, [toyId, featureType, featureIndex]);
+  }, [toyId, feature]);
 
-  useEffect(() => {
-    invokeSimulation(simulateLevel);
-  }, [simulate]);
-
-  if (toyId == null)
-    return {
-      simulate: null,
-      simulateHandler: () => null,
-      simulateLevel: null,
-      simulateLevelHandler: () => null,
-    };
+  useUpdateEffect(() => {
+    if (feature.feature_levels.idle_level == 0) {
+      if (simulateEnabled) invokeSimulation(level);
+      else invokeSimulation(0);
+    }
+  }, [simulateEnabled, level]);
 
   async function invokeSimulation(floatLevel: number) {
     if (toyId == null) return;
     try {
       await invoke(SIMULATE_TOY_FEATURE, {
         toyId,
-        featureIndex,
-        featureType,
+        featureIndex: feature.feature_index,
+        featureType: feature.feature_type,
         floatLevel,
-        stop: !simulate,
+        stop: false,
       });
     } catch (e) {
       createToast(
@@ -69,11 +62,20 @@ export default function useSimulate(
     }
   }
 
-  return {
-    simulate,
-    simulateLevel,
-    simulateOnChange,
-    simulateOnValueChange,
-    simulateOnValueCommit,
-  };
+  if (toyId == null || feature.feature_levels.idle_level > 0)
+    return {
+      simulateEnabled: null,
+      simulateLevel: null,
+      toggleSimulate: () => null,
+      simultaeOnValueChange: () => null,
+      simultaeOnValueCommit: () => null,
+    };
+  else
+    return {
+      simulateEnabled,
+      simulateLevel: level,
+      toggleSimulate,
+      simulateOnValueChange,
+      simulateOnValueCommit,
+    };
 }
