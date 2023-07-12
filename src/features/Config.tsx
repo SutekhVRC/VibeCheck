@@ -13,10 +13,12 @@ export default function Config({
   config,
   refreshConfig,
   canUpdate,
+  disableOnPortChange,
 }: {
   config: FeVibeCheckConfig;
-  refreshConfig: () => void;
+  refreshConfig: () => Promise<void>;
   canUpdate: boolean;
+  disableOnPortChange: () => Promise<void>;
 }) {
   const [newConfig, setNewConfig] = useState<FeVibeCheckConfig>(config);
 
@@ -46,6 +48,12 @@ export default function Config({
 
   async function saveConfig() {
     try {
+      if (
+        newConfig.networking.bind != config.networking.bind ||
+        newConfig.networking.remote != config.networking.remote
+      ) {
+        await disableOnPortChange();
+      }
       await invoke(SET_CONFIG, { feVcConfig: newConfig });
       createToast("info", "Saved config");
     } catch (e) {
@@ -73,7 +81,7 @@ export default function Config({
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     await saveConfig();
-    refreshConfig();
+    await refreshConfig();
   }
 
   return (
