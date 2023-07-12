@@ -84,7 +84,7 @@ export default function Config({
       <div className="flex flex-col justify-between w-full">
         <form id="config" onSubmit={handleSubmit}>
           <div className="grid grid-cols-[minmax(10rem,4fr)_1fr_minmax(4rem,_4fr)] text-sm text-justify gap-1 my-4 mx-8">
-            <TooltipLabel text="OSC Bind" tooltip="OSC Receive Port" />
+            <TooltipLabel text="OSC Bind" tooltip="OSC Receive Port (Default: 127.0.0.1:9001)" />
             <div />
             <input
               name="bind"
@@ -101,7 +101,7 @@ export default function Config({
                 (e.target as HTMLInputElement).setCustomValidity("")
               }
             />
-            <TooltipLabel text="OSC Remote" tooltip="OSC Send Port" />
+            <TooltipLabel text="OSC Remote" tooltip="OSC Send Port (Default: 127.0.0.1:9000)" />
             <div />
             <input
               name="remote"
