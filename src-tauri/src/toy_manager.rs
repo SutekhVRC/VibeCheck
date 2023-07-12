@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use log::{debug, trace};
+use log::{debug, trace, info};
 use tauri::{api::dir::read_dir, AppHandle};
 
 use crate::{config::toy::VCToyConfig, util::{get_config_dir, file_exists}, toyops::VCToy, frontend_types::FeVCToy};
@@ -86,13 +86,20 @@ impl ToyManager {
 
     }
 
-    pub fn sync_frontend(&self) -> Vec<FeVCToy> {
+    pub fn sync_frontend(&mut self, refresh_toys: bool) -> Vec<FeVCToy> {
         /*
         let _res = self.app_handle.emit_all("fe_toy_event",
             FeToyEvent::OfflineSyncAll({
                 offline_fetoy_vec
             }),
         );*/
+
+        if refresh_toys {
+            info!("Clearing toy manager configs map and repopulating from disk..");
+            self.configs.clear();
+            self.populate_configs();
+        }
+
         trace!("Generating offline toy sync..");
         self.fetoy_vec_from_offline_toys()
     }
