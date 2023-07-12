@@ -58,7 +58,7 @@
     },
     "updater": {
       "active": true,
-      "dialog": true,
+      "dialog": false,
       "windows": {
         "installMode": "passive"
       },
