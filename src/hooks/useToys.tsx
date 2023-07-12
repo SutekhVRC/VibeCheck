@@ -53,7 +53,7 @@ export async function handleFeatureAlter(
   await handleToyAlter({ ...newToy, features: newFeatures });
 }
 
-function parseName(s: string) {
+export function parseName(s: string) {
   return s.replace("Lovense Connect ", "Lovense ");
 }
 
@@ -72,16 +72,17 @@ export function useToys() {
     toys[toyKey(t)] = t;
   });
   Object.values(offlineToys).forEach((t) => {
-    if (!onlineToyNames.has(t.toy_name)) toys[`${t.toy_name} ${t.sub_id}`] = t;
+    const name = parseName(t.toy_name);
+    if (!onlineToyNames.has(name)) toys[toyKey(t)] = t;
   });
 
-  async function getOfflinetoys() {
+  async function syncOfflineToys() {
     try {
-      const offlineToys = await invoke<FeVCToy[]>(OFFLINE_SYNC);
+      const offlineToys = await invoke<FeVCToy[]>(OFFLINE_SYNC, {
+        refreshToys: true,
+      });
       setOfflineToys(
         offlineToys.reduce((acc, val) => {
-          // Set the actual name so that if a toy is connected first with LC, we don't show it with a LC logo and with long name in sidebar when offline
-          val.toy_name = parseName(val.toy_name);
           acc[toyKey(val)] = val;
           return acc;
         }, {} as ToyMap)
@@ -92,10 +93,10 @@ export function useToys() {
   }
 
   useEffect(() => {
-    getOfflinetoys();
+    syncOfflineToys();
   }, []);
 
-  function handleToyEvent(payload: FeToyEvent): void {
+  async function handleToyEvent(payload: FeToyEvent) {
     switch (payload.kind) {
       case "Add":
         setOnlineToys((curOnlineToys) => {
@@ -124,7 +125,7 @@ export function useToys() {
 
         break;
       case "Remove":
-        getOfflinetoys(); // Ensure sync
+        await syncOfflineToys();
         setOnlineToys((curOnlineToys) => {
           const filtered = Object.values(curOnlineToys).filter(
             (t) => t.toy_id != payload.data

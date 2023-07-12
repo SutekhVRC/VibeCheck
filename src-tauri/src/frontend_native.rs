@@ -231,9 +231,9 @@ pub fn simulate_feature_osc_input(vc_state: tauri::State<'_, vcore::VCStateMutex
  * 
  */
 #[tauri::command(async)]
-pub fn sync_offline_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<Vec<FeVCToy>, frontend::VCFeError> {
-    if let Some(toy_manager) = vc_state.0.lock().core_toy_manager.as_ref() {
-        Ok(toy_manager.sync_frontend())
+pub fn sync_offline_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>, refresh_toys: bool) -> Result<Vec<FeVCToy>, frontend::VCFeError> {
+    if let Some(toy_manager) = vc_state.0.lock().core_toy_manager.as_mut() {
+        Ok(toy_manager.sync_frontend(refresh_toys))
     } else {
         Err(frontend::VCFeError::ToyManagerNotReady)
     }

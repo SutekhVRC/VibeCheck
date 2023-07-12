@@ -1,4 +1,4 @@
-import { toyKey, useToys } from "./hooks/useToys";
+import { parseName, toyKey, useToys } from "./hooks/useToys";
 import VibecheckLogo from "./assets/VibeCheck_logo.png";
 import cryingAnimeGirl from "./assets/menhera_chan.gif";
 import Toy from "./features/Toy";
@@ -52,6 +52,12 @@ export default function App() {
   const { canUpdate } = useUpdate();
   const { version } = useVersion();
 
+  async function disableOnPortChange() {
+    if (isEnabled) {
+      await toggleIsEnabled();
+    }
+  }
+
   if (
     selection?.type == "Toy" &&
     !toysList.some((t) => toyKey(t) == selection.toyKey)
@@ -66,6 +72,7 @@ export default function App() {
         config={config}
         refreshConfig={refreshConfig}
         canUpdate={canUpdate}
+        disableOnPortChange={disableOnPortChange}
       />
     ) : !hasOnlineToys ? (
       <div className="flex flex-col justify-center items-center w-full">
@@ -130,7 +137,7 @@ export default function App() {
                       "bg-gray-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400"
                     )}
                   >
-                    {sidebarToy.toy_name}
+                    {parseName(sidebarToy.toy_name)}
                   </button>
                 ))}
               </AnimatePresence>

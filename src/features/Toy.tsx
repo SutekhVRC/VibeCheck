@@ -10,7 +10,7 @@ import { cn } from "../utils";
 
 export default function Toy({ toy }: { toy: FeVCToy }) {
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
-  const nameInfo = NameInfo(toy.toy_name);
+  const nameInfo = NameInfo(toy);
 
   useEffect(() => {
     if (selectedFeatureIndex >= toy.features.length) setSelectedFeatureIndex(0);
@@ -56,7 +56,18 @@ type NameInfo = {
   logo: string | undefined;
 };
 
-function NameInfo(name: string): NameInfo {
+function NameInfo(toy: FeVCToy): NameInfo {
+  const name = toy.toy_name;
+
+  if (!toy.toy_connected)
+    return {
+      fullName: name,
+      // "Normalized" since Lovense toy_names are saved with whatever first connection method was
+      shortName: name.replace("Lovense Connect ", "Lovense "),
+      logo: undefined,
+    };
+
+  // Shorten everything else since we have the badge
   if (name.startsWith("Lovense Connect")) {
     return {
       fullName: name,
