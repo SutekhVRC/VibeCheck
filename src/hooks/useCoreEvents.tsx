@@ -41,7 +41,11 @@ export function useCoreEvents() {
   }
 
   async function toggleIsEnabled() {
-    isEnabled ? stopScanAndDisable() : enable();
+    if (isEnabled) {
+      await stopScanAndDisable();
+    } else {
+      await enable();
+    }
   }
 
   async function enableAndStartScan() {
@@ -63,8 +67,12 @@ export function useCoreEvents() {
     }
   }
 
-  function toggleScan() {
-    isScanning ? stopScan() : enableAndStartScan();
+  async function toggleScan() {
+    if (isScanning) {
+      await stopScan();
+    } else {
+      await enableAndStartScan();
+    }
   }
 
   useEffect(() => {

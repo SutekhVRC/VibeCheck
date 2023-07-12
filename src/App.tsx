@@ -52,6 +52,12 @@ export default function App() {
   const { canUpdate } = useUpdate();
   const { version } = useVersion();
 
+  async function disableOnPortChange() {
+    if (isEnabled) {
+      await toggleIsEnabled();
+    }
+  }
+
   if (
     selection?.type == "Toy" &&
     !toysList.some((t) => toyKey(t) == selection.toyKey)
@@ -66,6 +72,7 @@ export default function App() {
         config={config}
         refreshConfig={refreshConfig}
         canUpdate={canUpdate}
+        disableOnPortChange={disableOnPortChange}
       />
     ) : !hasOnlineToys ? (
       <div className="flex flex-col justify-center items-center w-full">
