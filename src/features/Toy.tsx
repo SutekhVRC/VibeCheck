@@ -5,11 +5,12 @@ import ToySettings from "./ToySettings";
 import Tooltip from "../layout/Tooltip";
 import BatteryIcon from "../components/BatteryIcon";
 import { useEffect, useState } from "react";
-import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
+import { type FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import { cn } from "../utils";
 
 export default function Toy({ toy }: { toy: FeVCToy }) {
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
+  const maybeSelectedFeature = toy.features[selectedFeatureIndex];
   const nameInfo = NameInfo(toy);
 
   useEffect(() => {
@@ -44,7 +45,9 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
             </button>
           ))}
         </div>
-        <FeatureForm toy={toy} selectedIndex={selectedFeatureIndex} />
+        {maybeSelectedFeature && (
+          <FeatureForm toy={toy} feature={maybeSelectedFeature} />
+        )}
       </div>
     </div>
   );
@@ -53,7 +56,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
 type NameInfo = {
   shortName: string;
   fullName: string;
-  logo: string | undefined;
+  logo?: { src: string; tooltip: string } | undefined;
 };
 
 function NameInfo(toy: FeVCToy): NameInfo {
@@ -64,7 +67,6 @@ function NameInfo(toy: FeVCToy): NameInfo {
       fullName: name,
       // "Normalized" since Lovense toy_names are saved with whatever first connection method was
       shortName: name.replace("Lovense Connect ", "Lovense "),
-      logo: undefined,
     };
 
   // Shorten everything else since we have the badge
@@ -72,19 +74,18 @@ function NameInfo(toy: FeVCToy): NameInfo {
     return {
       fullName: name,
       shortName: name.replace("Lovense Connect ", ""),
-      logo: lovenseConnectLogo,
+      logo: { src: lovenseConnectLogo, tooltip: "Lovense Connect" },
     };
   } else if (name.startsWith("Lovense")) {
     return {
       fullName: name,
       shortName: name.replace("Lovense ", ""),
-      logo: lovenseLogo,
+      logo: { src: lovenseLogo, tooltip: "Lovense" },
     };
   }
   return {
     shortName: name,
     fullName: name,
-    logo: undefined,
   };
 }
 
@@ -97,9 +98,12 @@ function ToyInfo({
 }) {
   return (
     <div className="flex gap-x-4 items-center">
-      {nameInfo.logo != undefined && (
-        <Tooltip text={nameInfo.fullName}>
-          <img className="max-h-6 rounded-lg cursor-help" src={nameInfo.logo} />
+      {nameInfo.logo && (
+        <Tooltip text={nameInfo.logo.tooltip}>
+          <img
+            className="max-h-6 rounded-lg cursor-help"
+            src={nameInfo.logo.src}
+          />
         </Tooltip>
       )}
       <BatteryIcon battery={battery} />
