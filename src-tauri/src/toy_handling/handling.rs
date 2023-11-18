@@ -33,6 +33,7 @@ use crate::frontend::frontend_types::FeVCToy;
 use crate::frontend::frontend_types::FeScanEvent;
 
 use crate::osc::logic::toy_input_routine;
+use crate::toy_handling::ToySig;
 use crate::toy_handling::toy_manager::ToyManager;
 use crate::toy_handling::toyops::LevelTweaks;
 use crate::toy_handling::toyops::VCFeatureType;
@@ -44,17 +45,9 @@ use tokio::sync::mpsc::UnboundedSender;
 use tauri::api::notification::Notification;
 use log::{error as logerr, warn, info, trace};
 
-pub struct HandlerErr {
-    pub id: i32,
-    pub msg: String,
-}
+use super::RateParser;
+use super::SmoothParser;
 
-#[derive(Clone, Debug)]
-pub enum ToySig {
-    //ToyCommand(ToyFeature),
-    UpdateToy(ToyUpdate),
-    OSCMsg(rosc::OscMessage),
-}
 
 /*
     This handler will handle the adding and removal of toys
@@ -271,11 +264,7 @@ pub fn flip_float64(orig: f64) -> f64 {
     ((1.00 - orig) * 100.0).round() / 100.0
 }
 
-enum SmoothParser {
-    Smoothed,
-    SkipZero,
-    Smoothing,
-}
+
 
 #[inline(always)]
 fn parse_smoothing(smooth_queue: &mut Vec<f64>, feature_levels: LevelTweaks, float_level: &mut f64, flip_float: bool) -> SmoothParser {
@@ -319,10 +308,7 @@ fn parse_smoothing(smooth_queue: &mut Vec<f64>, feature_levels: LevelTweaks, flo
     SmoothParser::Smoothing
 }
 
-enum RateParser {
-    RateCalculated(bool),
-    SkipZero,
-}
+
 
 #[inline(always)]
 fn parse_rate(rate_internal_level: &mut f64, rate_saved_osc_input: &mut f64, rate_timestamp: &mut Option<Instant>, decrement_rate: f64, float_level: &mut f64, flip_float: bool) -> RateParser {

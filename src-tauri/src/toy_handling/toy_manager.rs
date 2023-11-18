@@ -44,7 +44,8 @@ impl ToyManager {
                 "{}\\ToyConfigs",
                 get_config_dir()
             ),
-        false) {
+            false
+        ) {
             Ok(config_paths) => config_paths,
             // Doesn't populate
             Err(_e) => return,

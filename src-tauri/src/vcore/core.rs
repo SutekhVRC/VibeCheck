@@ -12,7 +12,7 @@ use tokio::task::JoinHandle;
 use parking_lot::Mutex;
 use crate::osc::logic::{vc_disabled_osc_command_listen, toy_refresh};
 use crate::util::bluetooth;
-use crate::toy_handling::handling::{HandlerErr, command_toy};
+use crate::toy_handling::{handling::command_toy, errors::HandlerErr};
 use crate::frontend::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyEvent, FeVCFeatureType};
 use crate::toy_handling::toy_manager::ToyManager;
 use crate::toy_handling::toyops::VCFeatureType;
@@ -321,7 +321,7 @@ pub enum ToyManagementEvent {
 }
 
 pub enum VCError {
-    HandlingErr(crate::toy_handling::handling::HandlerErr),
+    HandlingErr(crate::toy_handling::errors::HandlerErr),
 }
 
 pub enum RunningState {

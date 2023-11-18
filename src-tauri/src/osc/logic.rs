@@ -21,7 +21,7 @@ use crate::frontend::frontend_types::FeCoreEvent;
 use crate::frontend::frontend_types::FeToyEvent;
 use crate::frontend::frontend_types::FeVCToy;
 use crate::osc_api::osc_api::vibecheck_osc_api;
-use crate::toy_handling::handling::ToySig;
+use crate::toy_handling::ToySig;
 use crate::vcore::config::OSCNetworking;
 use crate::vcore::core::TmSig;
 use crate::vcore::core::ToyManagementEvent;
