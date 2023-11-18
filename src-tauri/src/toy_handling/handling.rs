@@ -75,26 +75,20 @@ pub async fn client_event_handler(
             match event {
                 ButtplugClientEvent::DeviceAdded(dev) => {
                     Delay::new(Duration::from_secs(3)).await;
-                    let battery_level: Option<f64> = match dev.battery_level().await {
-                        Ok(battery_lvl) => Some(battery_lvl),
-                        Err(_e) => {
-                            warn!("Device battery_level error: {:?}", _e);
-                            match _e {
-                                buttplug::client::ButtplugClientError::ButtplugError(bpe) => {
-                                    match bpe {
-                                        buttplug::core::errors::ButtplugError::ButtplugDeviceError(bde) => {
-                                            match bde {
-                                                buttplug::core::errors::ButtplugDeviceError::MessageNotSupported(_) => None,
-                                                _ => Some(0.0)// Not Message not supported error
-                                            }// msg not supported
-                                        },// buttplug device error
-                                        _ => Some(0.0)// Not device error
-                                    }// buttplug error
-                                },// buttplug error
-                                _ => Some(0.0),
-                            }
-                        },
-                    };
+
+                    let mut battery_level: Option<f64> = None;
+                    
+                    // Can use this to differ between toys with batteries and toys without!
+                    if dev.has_battery_level() {
+                        battery_level = 
+                        match dev.battery_level().await {
+                            Ok(battery_lvl) => Some(battery_lvl),
+                            Err(_e) => {
+                                warn!("Device battery_level error: {:?}", _e);
+                                Some(0.0)
+                            },
+                        };
+                    }
 
                     let sub_id = {
                         let vc_lock = vibecheck_state_pointer.lock();
