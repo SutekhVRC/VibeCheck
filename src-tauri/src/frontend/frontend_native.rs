@@ -6,7 +6,7 @@
 
  use log::{error as logerr, trace};
 use tauri::Manager;
-use crate::{vcore, frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink, FeVCFeatureType, FeVCToy, FeToyEvent}, vcerror::{frontend, backend}, config::toy::VCToyConfig};
+use crate::{vcore::core, frontend::frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink, FeVCFeatureType, FeVCToy, FeToyEvent}, vcore::vcerror::{frontend, backend}, config::toy::VCToyConfig};
 
 /*
  * vibecheck_version
@@ -26,9 +26,9 @@ pub fn vibecheck_version(app_handle: tauri::AppHandle) -> String {
  * Return: Result<Ok, Err(VCFeError)>
  */
 #[tauri::command]
-pub fn vibecheck_enable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
+pub fn vibecheck_enable(vc_state: tauri::State<'_, core::VCStateMutex>) -> Result<(), frontend::VCFeError> {
     trace!("vibecheck_enable");
-    tauri::async_runtime::block_on(async move {vcore::native_vibecheck_enable(vc_state).await})
+    tauri::async_runtime::block_on(async move {core::native_vibecheck_enable(vc_state).await})
 }
 
 /*
@@ -38,9 +38,9 @@ pub fn vibecheck_enable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Resu
  * Return: Result<Ok, Err(VCFeError)>
  */
 #[tauri::command]
-pub fn vibecheck_disable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
+pub fn vibecheck_disable(vc_state: tauri::State<'_, core::VCStateMutex>) -> Result<(), frontend::VCFeError> {
     trace!("vibecheck_disable");
-    tauri::async_runtime::block_on(async move {vcore::native_vibecheck_disable(vc_state).await})
+    tauri::async_runtime::block_on(async move {core::native_vibecheck_disable(vc_state).await})
 }
 
 /*
@@ -50,9 +50,9 @@ pub fn vibecheck_disable(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Res
  * Return: None
  */
 #[tauri::command]
-pub fn vibecheck_start_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
+pub fn vibecheck_start_bt_scan(vc_state: tauri::State<'_, core::VCStateMutex>) -> Result<(), frontend::VCFeError> {
     trace!("vibecheck_start_bt_scan");
-    tauri::async_runtime::block_on(async move {vcore::native_vibecheck_start_bt_scan(vc_state).await})
+    tauri::async_runtime::block_on(async move {core::native_vibecheck_start_bt_scan(vc_state).await})
 }
 
 /*
@@ -62,9 +62,9 @@ pub fn vibecheck_start_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) 
  * Return: None
  */
 #[tauri::command]
-pub fn vibecheck_stop_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> Result<(), frontend::VCFeError> {
+pub fn vibecheck_stop_bt_scan(vc_state: tauri::State<'_, core::VCStateMutex>) -> Result<(), frontend::VCFeError> {
     trace!("vibecheck_stop_bt_scan");
-    tauri::async_runtime::block_on(async move {vcore::native_vibecheck_stop_bt_scan(vc_state).await})
+    tauri::async_runtime::block_on(async move {core::native_vibecheck_stop_bt_scan(vc_state).await})
 }
 
 /*
@@ -77,9 +77,9 @@ pub fn vibecheck_stop_bt_scan(vc_state: tauri::State<'_, vcore::VCStateMutex>) -
  * port: string
  */
 #[tauri::command(async)]
-pub fn get_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> FeVibeCheckConfig {
+pub fn get_vibecheck_config(vc_state: tauri::State<'_, core::VCStateMutex>) -> FeVibeCheckConfig {
     trace!("get_vibecheck_config");
-    vcore::native_get_vibecheck_config(vc_state)
+    core::native_get_vibecheck_config(vc_state)
 }
 
 /*
@@ -91,9 +91,9 @@ pub fn get_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>) -> 
  * bind : HashMap<host, port>
  */
 #[tauri::command(async)]
-pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, fe_vc_config: FeVibeCheckConfig) -> Result<(), frontend::VCFeError>{
+pub fn set_vibecheck_config(vc_state: tauri::State<'_, core::VCStateMutex>, fe_vc_config: FeVibeCheckConfig) -> Result<(), frontend::VCFeError>{
     trace!("set_vibecheck_config({:?})", fe_vc_config);
-    vcore::native_set_vibecheck_config(vc_state, fe_vc_config)
+    core::native_set_vibecheck_config(vc_state, fe_vc_config)
 }
 
 /*
@@ -103,7 +103,7 @@ pub fn set_vibecheck_config(vc_state: tauri::State<'_, vcore::VCStateMutex>, fe_
  * Return: Result<Ok(()), Err(ToyAlterError)>
  */
 #[tauri::command(async)]
-pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: tauri::AppHandle, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
+pub fn alter_toy(vc_state: tauri::State<'_, core::VCStateMutex>, app_handle: tauri::AppHandle, mutate: FeToyAlter) -> Result<(), frontend::VCFeError> {
     trace!("alter_toy({:?})", mutate);
 
     match mutate {
@@ -138,7 +138,7 @@ pub fn alter_toy(vc_state: tauri::State<'_, vcore::VCStateMutex>, app_handle: ta
                     }
                 };
     
-                if vcore::native_alter_toy(vc_state, app_handle, altered).is_err() {
+                if core::native_alter_toy(vc_state, app_handle, altered).is_err() {
                     return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::TMESendFailure));
                 }
 
@@ -202,7 +202,7 @@ pub fn open_default_browser(link: FeSocialLink) {
 #[tauri::command(async)]
 pub fn clear_osc_config() -> Result<(), backend::VibeCheckFSError>{
     trace!("clear_osc_config");
-    vcore::native_clear_osc_config()
+    core::native_clear_osc_config()
 }
 
 /* 
@@ -210,9 +210,9 @@ pub fn clear_osc_config() -> Result<(), backend::VibeCheckFSError>{
  * Args: toy_id: u32, toy_sub_id: u8, feature_index: u32, float_level: f64, stop: bool
  */
 #[tauri::command(async)]
-pub fn simulate_device_feature(vc_state: tauri::State<'_, vcore::VCStateMutex>, toy_id: u32, feature_index: u32, feature_type: FeVCFeatureType, float_level: f64, stop: bool) {
+pub fn simulate_device_feature(vc_state: tauri::State<'_, core::VCStateMutex>, toy_id: u32, feature_index: u32, feature_type: FeVCFeatureType, float_level: f64, stop: bool) {
     trace!("simulate_device_feature");
-    vcore::native_simulate_device_feature(vc_state, toy_id, feature_index, feature_type, float_level, stop)
+    core::native_simulate_device_feature(vc_state, toy_id, feature_index, feature_type, float_level, stop)
 }
 
 /*
@@ -231,7 +231,7 @@ pub fn simulate_feature_osc_input(vc_state: tauri::State<'_, vcore::VCStateMutex
  * 
  */
 #[tauri::command(async)]
-pub fn sync_offline_toys(vc_state: tauri::State<'_, vcore::VCStateMutex>, refresh_toys: bool) -> Result<Vec<FeVCToy>, frontend::VCFeError> {
+pub fn sync_offline_toys(vc_state: tauri::State<'_, core::VCStateMutex>, refresh_toys: bool) -> Result<Vec<FeVCToy>, frontend::VCFeError> {
     if let Some(toy_manager) = vc_state.0.lock().core_toy_manager.as_mut() {
         Ok(toy_manager.sync_frontend(refresh_toys))
     } else {

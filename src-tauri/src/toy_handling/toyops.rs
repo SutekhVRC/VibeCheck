@@ -10,9 +10,9 @@ use ts_rs::TS;
 
 use crate::{
     config::toy::{VCToyAnatomy, VCToyConfig},
-    frontend_types::{FeLevelTweaks, FeVCFeatureType, FeVCToyFeature},
-    util::{file_exists, get_config_dir},
-    vcerror,
+    frontend::frontend_types::{FeLevelTweaks, FeVCFeatureType, FeVCToyFeature},
+    util::fs::{file_exists, get_config_dir},
+    vcore::vcerror,
 };
 
 #[derive(Clone, Debug)]

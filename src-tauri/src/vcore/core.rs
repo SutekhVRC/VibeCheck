@@ -10,22 +10,20 @@ use tauri::{AppHandle, Manager};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use parking_lot::Mutex;
-use crate::bluetooth;
-use crate::handling::{HandlerErr, toy_refresh, vc_disabled_osc_command_listen, command_toy};
-use crate::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyEvent, FeVCFeatureType};
-use crate::toy_manager::ToyManager;
-use crate::toyops::VCFeatureType;
-use crate::util::{get_config_dir, get_user_home_dir};
-use crate::vcerror::{backend, frontend};
+use crate::util::bluetooth;
+use crate::toy_handling::handling::{HandlerErr, toy_refresh, vc_disabled_osc_command_listen, command_toy};
+use crate::frontend::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyEvent, FeVCFeatureType};
+use crate::toy_handling::toy_manager::ToyManager;
+use crate::toy_handling::toyops::VCFeatureType;
+use crate::util::fs::{get_config_dir, get_user_home_dir};
+use crate::vcore::vcerror::{backend, frontend};
 use crate::{
-    handling::{client_event_handler, toy_management_handler},
+    toy_handling::handling::{client_event_handler, toy_management_handler},
     config::{
         VibeCheckConfig,
         OSCNetworking,
     },
-    toyops::{
-        VCToy,
-    },
+    toy_handling::toyops::VCToy,
 };
 
 use tokio::sync::{
@@ -322,7 +320,7 @@ pub enum ToyManagementEvent {
 }
 
 pub enum VCError {
-    HandlingErr(crate::handling::HandlerErr),
+    HandlingErr(crate::toy_handling::handling::HandlerErr),
 }
 
 pub enum RunningState {

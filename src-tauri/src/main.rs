@@ -8,19 +8,15 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use tauri::{Manager, SystemTrayMenu};
 use log::{info, trace, warn};
+
+use crate::{vcore::config, frontend::frontend_native};
 //use env_logger;
 
-mod config;
-mod handling;
-mod frontend_native;
+mod frontend;
 mod vcore;
 mod util;
-mod toyops;
-mod bluetooth;
 mod osc_api;
-mod toy_manager;
-mod frontend_types;
-mod vcerror;
+mod toy_handling;
 
 fn main() {
 
@@ -34,7 +30,7 @@ fn main() {
 
     let vibecheck_state_pointer = Arc::new(
         Mutex::new(
-            vcore::VibeCheckState::new(
+            vcore::core::VibeCheckState::new(
                 config::config_load())));
     trace!("VibeCheckState created");
 
@@ -94,7 +90,7 @@ fn main() {
         _ => {}
     })
     .manage(
-        vcore::VCStateMutex(vibecheck_state_pointer.clone()))
+        vcore::core::VCStateMutex(vibecheck_state_pointer.clone()))
     .invoke_handler(
         tauri::generate_handler![
             frontend_native::vibecheck_version,
@@ -145,7 +141,7 @@ fn main() {
             match event {
                 tauri::WindowEvent::CloseRequested { api, .. } => {
                     let minimize_on_exit = {
-                        _app_handle.state::<vcore::VCStateMutex>().0.lock().config.minimize_on_exit
+                        _app_handle.state::<vcore::core::VCStateMutex>().0.lock().config.minimize_on_exit
                     };
 
                     if minimize_on_exit {

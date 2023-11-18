@@ -4,7 +4,7 @@
 use serde::{Serialize, Deserialize};
 use ts_rs::TS;
 
-use crate::toyops::VCFeatureType;
+use crate::toy_handling::toyops::VCFeatureType;
 
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]

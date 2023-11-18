@@ -2,11 +2,11 @@ use std::{fs, net::{Ipv4Addr, SocketAddrV4}};
 use serde::{Deserialize, Serialize};
 use log::{info, trace, error as logerr, warn};
 
-use crate::{util::{
+use crate::util::fs::{
     file_exists,
     path_exists,
     get_config_dir,
-}};
+};
 
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -137,7 +137,7 @@ pub mod toy {
 
     use log::{warn, debug, info, error as logerr};
     use serde::{Serialize, Deserialize};
-    use crate::{toyops::FeatureParamMap, frontend_types::FeVCToyAnatomy, util::{get_config_dir, file_exists}, vcerror};
+    use crate::{toy_handling::toyops::FeatureParamMap, frontend::frontend_types::FeVCToyAnatomy, util::fs::{get_config_dir, file_exists}, vcore::vcerror};
 
     #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
     pub enum VCToyAnatomy {

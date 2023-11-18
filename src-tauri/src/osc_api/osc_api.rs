@@ -1,7 +1,7 @@
 use std::net::UdpSocket;
 use log::{info,trace};
 use tauri::{AppHandle, Manager};
-use crate::handling::{recv_osc_cmd, ToySig};
+use crate::toy_handling::handling::{recv_osc_cmd, ToySig};
 use tokio::sync::broadcast::Sender as BSender;
 
 use super::APIProcessor;
@@ -15,7 +15,7 @@ pub fn vibecheck_osc_api(bind_sock: &UdpSocket, app_handle: &AppHandle, toy_bcst
             if msg.addr.starts_with("/avatar/change") {
                 info!("Avatar Changed: Halting toy actions");
                 {
-                    let vc_pointer = app_handle.state::<crate::vcore::VCStateMutex>().0.clone();
+                    let vc_pointer = app_handle.state::<crate::vcore::core::VCStateMutex>().0.clone();
                     let vc_lock = vc_pointer.lock();
                     let _ = vc_lock.async_rt.block_on(async {vc_lock.bp_client.as_ref().unwrap().stop_all_devices().await}).unwrap();
                 }

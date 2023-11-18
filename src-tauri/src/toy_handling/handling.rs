@@ -30,18 +30,18 @@ use tokio::sync::{
 use tokio::task::JoinHandle;
 
 use crate::config::OSCNetworking;
-use crate::frontend_types::FeCoreEvent;
-use crate::frontend_types::FeToyEvent;
-use crate::frontend_types::FeVCToy;
-use crate::frontend_types::FeScanEvent;
+use crate::frontend::frontend_types::FeCoreEvent;
+use crate::frontend::frontend_types::FeToyEvent;
+use crate::frontend::frontend_types::FeVCToy;
+use crate::frontend::frontend_types::FeScanEvent;
 use crate::osc_api::osc_api::vibecheck_osc_api;
-use crate::toy_manager::ToyManager;
-use crate::toyops::LevelTweaks;
-use crate::toyops::VCFeatureType;
-use crate::toyops::{VCToy, FeatureParamMap};
-use crate::vcore::ToyManagementEvent;
-use crate::vcore::VibeCheckState;
-use crate::{vcore::TmSig, vcore::ToyUpdate, vcore::VCError};
+use crate::toy_handling::toy_manager::ToyManager;
+use crate::toy_handling::toyops::LevelTweaks;
+use crate::toy_handling::toyops::VCFeatureType;
+use crate::toy_handling::toyops::{VCToy, FeatureParamMap};
+use crate::vcore::core::ToyManagementEvent;
+use crate::vcore::core::VibeCheckState;
+use crate::{vcore::core::TmSig, vcore::core::ToyUpdate, vcore::core::VCError};
 use tokio::sync::mpsc::UnboundedSender;
 use tauri::api::notification::Notification;
 use log::{error as logerr, warn, info, trace};
@@ -279,7 +279,7 @@ enum SmoothParser {
     Smoothing,
 }
 
-#[inline]
+#[inline(always)]
 fn parse_smoothing(smooth_queue: &mut Vec<f64>, feature_levels: LevelTweaks, float_level: &mut f64, flip_float: bool) -> SmoothParser {
     debug!("!flip_float && *float_level == 0.0: [{}] || [{}] flip_float && *float_level == 1.0\nCOMBINED: [{}]", !flip_float && *float_level == 0.0, flip_float && *float_level == 1.0,
     smooth_queue.len() == feature_levels.smooth_rate as usize && (!flip_float && *float_level == 0.0 || flip_float && *float_level == 1.0)
@@ -326,7 +326,7 @@ enum RateParser {
     SkipZero,
 }
 
-#[inline]
+#[inline(always)]
 fn parse_rate(rate_internal_level: &mut f64, rate_saved_osc_input: &mut f64, rate_timestamp: &mut Option<Instant>, decrement_rate: f64, float_level: &mut f64, flip_float: bool) -> RateParser {
 
     // Skip because got 0 value to stop toy.
@@ -819,7 +819,7 @@ pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OS
                         if let Some(state_bool) = msg.args.pop().unwrap().bool() {
                             if state_bool {
                                 info!("Sending EnableAndScan event");
-                                let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend_types::FeStateEvent::EnableAndScan));
+                                let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend::frontend_types::FeStateEvent::EnableAndScan));
                             }
                         }
                     }

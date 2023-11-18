@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use log::{debug, trace, info};
 use tauri::{api::dir::read_dir, AppHandle};
 
-use crate::{config::toy::VCToyConfig, util::{get_config_dir, file_exists}, toyops::VCToy, frontend_types::FeVCToy};
+use crate::{config::toy::VCToyConfig, util::fs::{get_config_dir, file_exists}, toy_handling::toyops::VCToy, frontend::frontend_types::FeVCToy};
 
 #[derive(Clone)]
 pub struct ToyManager {
@@ -37,15 +37,6 @@ impl ToyManager {
         ot
     }
 
-/*
-    pub fn toy_disconnect(&mut self, toy_name: String) {
-
-    }
-
-    pub fn toy_connect(&mut self, toy_name: String) {
-
-    }
-*/
     pub fn populate_configs(&mut self) {
         
         let toy_config_dir = match read_dir(
