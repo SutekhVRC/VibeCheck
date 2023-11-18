@@ -31,20 +31,8 @@ pub struct VCToy {
 }
 
 impl VCToy {
-    // Populate if no config can be read for toy
-    fn populate_routine(&mut self) {
-        let features = self.toy_features.clone();
-        info!(
-            "Populating toy: {}",
-            self.toy_id,
-            //toy.toy_features.len()
-        );
-        // New algo: Check if exists then iterate
-        /*
-            - Check CMD type
-            - Check Scalar actuator type
-        */
 
+    fn populate_linears(&mut self, features: &ClientDeviceMessageAttributes) {
         // Populate Linears
         if features.linear_cmd().is_some() {
             let mut indexer = 0;
@@ -63,7 +51,9 @@ impl VCToy {
                 });
             info!("Populated {} linears", indexer);
         }
-
+    }
+    
+    fn populate_rotators(&mut self, features: &ClientDeviceMessageAttributes) {
         // Populate rotators
         if features.rotate_cmd().is_some() {
             let mut indexer = 0;
@@ -86,7 +76,9 @@ impl VCToy {
                 });
             info!("Populated {} rotators", indexer);
         }
+    }
 
+    fn populate_scalars(&mut self, features: &ClientDeviceMessageAttributes) {
         // Populate scalars
         if features.scalar_cmd().is_some() {
             let mut indexer = 0;
@@ -171,6 +163,21 @@ impl VCToy {
                 });
             info!("Populated {} scalars", indexer);
         }
+    }
+
+    // Populate if no config can be read for toy
+    fn populate_routine(&mut self) {
+        
+        info!(
+            "Populating toy: {}",
+            self.toy_id,
+        );
+
+        let features = self.toy_features.clone();
+
+        self.populate_linears(&features);
+        self.populate_rotators(&features);
+        self.populate_scalars(&features);
 
         self.config = Some(VCToyConfig {
             toy_name: self.toy_name.clone(),
