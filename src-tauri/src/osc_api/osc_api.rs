@@ -1,7 +1,7 @@
 use std::net::UdpSocket;
 use log::{info,trace};
 use tauri::{AppHandle, Manager};
-use crate::toy_handling::handling::{recv_osc_cmd, ToySig};
+use crate::{toy_handling::handling::ToySig, osc::logic::recv_osc_cmd};
 use tokio::sync::broadcast::Sender as BSender;
 
 use super::APIProcessor;

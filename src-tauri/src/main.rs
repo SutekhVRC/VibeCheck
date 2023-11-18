@@ -15,6 +15,7 @@ use crate::{vcore::config, frontend::frontend_native};
 mod frontend;
 mod vcore;
 mod util;
+mod osc;
 mod osc_api;
 mod toy_handling;
 
