@@ -6,7 +6,7 @@
 
  use log::{error as logerr, trace};
 use tauri::Manager;
-use crate::{vcore::core, frontend::frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink, FeVCFeatureType, FeVCToy, FeToyEvent}, vcore::vcerror::{frontend, backend}, config::toy::VCToyConfig};
+use crate::{vcore::core::{self, native_osc_query_start, native_osc_query_attempt_force, native_osc_query_stop}, frontend::frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink, FeVCFeatureType, FeVCToy, FeToyEvent}, vcore::vcerror::{frontend, backend}, config::toy::VCToyConfig};
 
 /*
  * vibecheck_version
@@ -122,12 +122,12 @@ pub fn alter_toy(vc_state: tauri::State<'_, core::VCStateMutex>, app_handle: tau
     
                         // Overwrite all features in the state handled toy.
                         for fe_feature in fe_toy.features {
-                            if !toy.param_feature_map.from_fe(fe_feature.clone()) {
+                            if !toy.parsed_toy_features.from_fe(fe_feature.clone()) {
                                 logerr!("Failed to convert FeVCToyFeature to VCToyFeature");
                                 return Err(frontend::VCFeError::AlterToyFailure(frontend::ToyAlterError::NoFeatureIndex));
                             } else {
                                 // If altering feature map succeeds write the data to the config
-                                toy.config.as_mut().unwrap().features = toy.param_feature_map.clone();
+                                toy.config.as_mut().unwrap().features = toy.parsed_toy_features.clone();
                             }
                         }
     
@@ -237,4 +237,19 @@ pub fn sync_offline_toys(vc_state: tauri::State<'_, core::VCStateMutex>, refresh
     } else {
         Err(frontend::VCFeError::ToyManagerNotReady)
     }
+}
+
+#[tauri::command(async)]
+pub fn osc_query_start(vc_state: tauri::State<'_, core::VCStateMutex>) -> Result<(), frontend::VCFeError> {
+    native_osc_query_start(vc_state)
+}
+
+#[tauri::command(async)]
+pub fn osc_query_stop(vc_state: tauri::State<'_, core::VCStateMutex>) -> Result<(), frontend::VCFeError> {
+    native_osc_query_stop(vc_state)
+}
+
+#[tauri::command(async)]
+pub fn osc_query_attempt_force_connect(vc_state: tauri::State<'_, core::VCStateMutex>) -> Result<(), frontend::VCFeError> {
+    native_osc_query_attempt_force(vc_state)
 }

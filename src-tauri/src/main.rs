@@ -106,6 +106,9 @@ fn main() {
             frontend_native::clear_osc_config,
             frontend_native::simulate_device_feature,
             frontend_native::sync_offline_toys,
+            frontend_native::osc_query_start,
+            frontend_native::osc_query_stop,
+            frontend_native::osc_query_attempt_force_connect,
             //frontend_native::simulate_feature_osc_input,
             ]
     )

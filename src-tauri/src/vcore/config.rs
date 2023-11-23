@@ -2,17 +2,18 @@ use std::{fs, net::{Ipv4Addr, SocketAddrV4}};
 use serde::{Deserialize, Serialize};
 use log::{info, trace, error as logerr, warn};
 
-use crate::util::fs::{
+use crate::{util::fs::{
     file_exists,
     path_exists,
     get_config_dir,
-};
+}, frontend::frontend_types::FeOSCNetworking};
 
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct OSCNetworking {
     pub bind: SocketAddrV4,
     pub remote: SocketAddrV4,
+    pub osc_query_enabled: bool,
 }
 
 impl Default for OSCNetworking {
@@ -20,9 +21,17 @@ impl Default for OSCNetworking {
         Self {
             bind: SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 9001),
             remote: SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 9000),
+            osc_query_enabled: true,
         }
     }
 }
+
+impl OSCNetworking {
+    pub fn to_fe(&self) -> FeOSCNetworking {
+        FeOSCNetworking { bind: self.bind.to_string(), remote: self.remote.to_string(), osc_query_enabled: self.osc_query_enabled }
+    }
+}
+
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct VibeCheckConfig {
@@ -137,7 +146,7 @@ pub mod toy {
 
     use log::{warn, debug, info, error as logerr};
     use serde::{Serialize, Deserialize};
-    use crate::{toy_handling::toyops::FeatureParamMap, frontend::frontend_types::FeVCToyAnatomy, util::fs::{get_config_dir, file_exists}, vcore::vcerror};
+    use crate::{toy_handling::toyops::VCToyFeatures, frontend::frontend_types::FeVCToyAnatomy, util::fs::{get_config_dir, file_exists}, vcore::vcerror};
 
     #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
     pub enum VCToyAnatomy {
@@ -262,7 +271,7 @@ pub mod toy {
     #[derive(Debug, Serialize, Deserialize, Clone, Default)]
     pub struct VCToyConfig {
         pub toy_name: String,
-        pub features: FeatureParamMap,
+        pub features: VCToyFeatures,
         pub osc_data: bool,
         pub anatomy: VCToyAnatomy,
     }

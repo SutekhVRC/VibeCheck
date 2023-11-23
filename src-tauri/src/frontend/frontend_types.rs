@@ -22,7 +22,9 @@ pub struct FeVibeCheckConfig {
 pub struct FeOSCNetworking {
     pub bind: String,
     pub remote: String,
+    pub osc_query_enabled: bool,
 }
+
 
 #[derive(Serialize, Clone, TS)]
 #[ts(export)]
