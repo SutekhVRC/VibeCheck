@@ -21,6 +21,7 @@ pub mod frontend {
         // Config Errors
         InvalidBindEndpoint,
         InvalidRemoteEndpoint,
+        OSCQueryFailure(&'static str),
         SerializeFailure,
         WriteFailure,
         //InvalidIpv4Host,
