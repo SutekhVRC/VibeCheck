@@ -303,7 +303,8 @@ impl VibeCheckState {
         let http_net = SocketAddrV4::new(Ipv4Addr::from(*self.config.networking.bind.ip()), available_tcp_port.unwrap());
         let osc_net = SocketAddrV4::new(Ipv4Addr::from(*self.config.networking.bind.ip()), available_udp_port.unwrap());
 
-        self.osc_query_handler = Some(OSCQuery::new("VibeCheck".to_string(), http_net, osc_net))
+        self.osc_query_handler = Some(OSCQuery::new("VibeCheck".to_string(), http_net, osc_net));
+        self.config.networking.bind.set_port(available_udp_port.unwrap());
     }
 
     pub fn osc_query_fini(&mut self) {
