@@ -10,13 +10,15 @@ use tauri::{AppHandle, Manager};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use parking_lot::Mutex;
+use vrcoscquery::OSCQuery;
 use crate::osc::logic::{vc_disabled_osc_command_listen, toy_refresh};
 use crate::util::bluetooth;
 use crate::toy_handling::{handling::command_toy, errors::HandlerErr};
-use crate::frontend::frontend_types::{FeVCToy, FeVibeCheckConfig, FeOSCNetworking, FeToyEvent, FeVCFeatureType};
+use crate::frontend::frontend_types::{FeVCToy, FeVibeCheckConfig, FeToyEvent, FeVCFeatureType};
 use crate::toy_handling::toy_manager::ToyManager;
 use crate::toy_handling::toyops::VCFeatureType;
 use crate::util::fs::{get_config_dir, get_user_home_dir};
+use crate::util::net::{find_available_tcp_port, find_available_udp_port};
 use crate::vcore::vcerror::{backend, frontend};
 use crate::{
     toy_handling::handling::{client_event_handler, toy_management_handler},
@@ -41,7 +43,7 @@ pub struct VibeCheckState {
     pub identifier: String,
 
     pub config: VibeCheckConfig,
-
+    pub osc_query_handler: Option<OSCQuery>,
     //pub connection_modes: ConnectionModes,
 
     pub bp_client: Option<ButtplugClient>,
@@ -107,6 +109,7 @@ impl VibeCheckState {
             app_handle: None,
             identifier: String::new(),
             config,
+            osc_query_handler: None,
             //connection_modes,
             bp_client: None,
             running: RunningState::Stopped,
@@ -291,6 +294,32 @@ impl VibeCheckState {
             Err(e) => warn!("TUH thread failed to reach completion: {}", e),
         }
     }
+
+    pub fn osc_query_init(&mut self) {
+    
+        let available_tcp_port = find_available_tcp_port(self.config.networking.bind.ip().to_string());
+        let available_udp_port = find_available_udp_port(self.config.networking.bind.ip().to_string());
+
+        let http_net = SocketAddrV4::new(Ipv4Addr::from(*self.config.networking.bind.ip()), available_tcp_port.unwrap());
+        let osc_net = SocketAddrV4::new(Ipv4Addr::from(*self.config.networking.bind.ip()), available_udp_port.unwrap());
+
+        self.osc_query_handler = Some(OSCQuery::new("VibeCheck".to_string(), http_net, osc_net))
+    }
+
+    pub fn osc_query_fini(&mut self) {
+        if self.osc_query_handler.is_some() {
+            let mut h = self.osc_query_handler.take().unwrap();            
+            h.stop_http_json();
+            h.unregister_mdns_service();
+            h.shutdown_mdns();
+        }
+    }
+
+    pub fn osc_query_associate(&self) {
+        if self.osc_query_handler.is_some() {
+            self.osc_query_handler.as_ref().unwrap().attempt_force_vrc_response_detect(10);
+        }
+    }
 }
 
 
@@ -449,6 +478,56 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
     }// tme recv
 }
 
+pub fn native_osc_query_start(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
+
+    let mut vc_lock = vc_state.0.lock();
+
+    if vc_lock.osc_query_handler.is_none() {
+        vc_lock.osc_query_init();
+    }
+
+    vc_lock.osc_query_handler.as_mut().unwrap().start_http_json();
+    vc_lock.osc_query_handler.as_ref().unwrap().register_mdns_service();
+    // This is only to attempt to auto-induce an mDNS response with separated answers.
+    vc_lock.osc_query_associate();
+
+    Ok(())
+}
+
+pub fn native_osc_query_stop(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
+    
+    let mut vc_lock = vc_state.0.lock();
+
+    if vc_lock.osc_query_handler.is_none() {
+        return Err(frontend::VCFeError::OSCQueryFailure("OSCQuery is not initialized"));
+    }
+
+    vc_lock.osc_query_fini();
+
+    Ok(())
+}
+
+pub fn native_osc_query_attempt_force(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
+
+    let vc_lock = vc_state.0.lock();
+
+    if vc_lock.osc_query_handler.is_none() {
+        return Err(frontend::VCFeError::OSCQueryFailure("OSCQuery is not initialized"));
+    }
+
+    // This is only to attempt to auto-induce an mDNS response with separated answers.
+    vc_lock.osc_query_associate();
+
+    Ok(())
+}
+
+pub fn osc_query_force_populate(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
+
+
+
+    Ok(())
+}
+
 pub async fn native_vibecheck_start_bt_scan(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError>{
     let vc_lock = vc_state.0.lock();
 
@@ -508,10 +587,7 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
     };
 
     FeVibeCheckConfig {
-        networking: FeOSCNetworking {
-            bind: config.networking.bind.to_string(),
-            remote: config.networking.remote.to_string(),
-        },
+        networking: config.networking.to_fe(),
         scan_on_disconnect: config.scan_on_disconnect,
         minimize_on_exit: config.minimize_on_exit,
         desktop_notifications: config.desktop_notifications,
@@ -634,7 +710,7 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
                 toy_anatomy: alter_clone.config.as_ref().unwrap().anatomy.to_fe(),
                 battery_level: alter_clone.battery_level,
                 toy_connected: alter_clone.toy_connected,
-                features: alter_clone.param_feature_map.to_fe(),
+                features: alter_clone.parsed_toy_features.to_fe(),
                 listening: alter_clone.listening,
                 osc_data: alter_clone.osc_data,
                 sub_id: alter_clone.sub_id,
@@ -696,7 +772,7 @@ pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, 
     }.clone();
 
     // Need to filter between ScalarCmd's and non ScalarCmd's
-    for feature in toy.param_feature_map.features {
+    for feature in toy.parsed_toy_features.features {
         // Check that feature index and feature type are the same.
         // Have to do this due to feature type separation between FE and BE. And buttplug IO mixing scalar rotator and normal rotator commands.
         // Could make this a bit simpler by creating ScalarTYPE types and converting their names in the frontend.
