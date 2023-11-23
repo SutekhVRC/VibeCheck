@@ -37,7 +37,7 @@ use crate::toy_handling::ToySig;
 use crate::toy_handling::toy_manager::ToyManager;
 use crate::toy_handling::toyops::LevelTweaks;
 use crate::toy_handling::toyops::VCFeatureType;
-use crate::toy_handling::toyops::{VCToy, FeatureParamMap};
+use crate::toy_handling::toyops::{VCToy, VCToyFeatures};
 use crate::vcore::core::ToyManagementEvent;
 use crate::vcore::core::VibeCheckState;
 use crate::{vcore::core::TmSig, vcore::core::ToyUpdate, vcore::core::VCError};
@@ -108,7 +108,7 @@ pub async fn client_event_handler(
                         battery_level,
                         toy_connected: dev.connected(),
                         toy_features: dev.message_attributes().clone(),
-                        param_feature_map: FeatureParamMap::new(),
+                        parsed_toy_features: VCToyFeatures::new(),
                         osc_data: false,
                         listening: false,
                         device_handle: dev.clone(),
@@ -146,7 +146,7 @@ pub async fn client_event_handler(
                                 toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
                                 battery_level,
                                 toy_connected: toy.toy_connected,
-                                features: toy.param_feature_map.to_fe(),
+                                features: toy.parsed_toy_features.to_fe(),
                                 listening: toy.listening,
                                 osc_data: toy.osc_data,
                                 sub_id: toy.sub_id,
@@ -380,7 +380,7 @@ pub async fn toy_management_handler(
 ) {
     let f = |dev: Arc<ButtplugClientDevice>,
              mut toy_bcst_rx: BReceiver<ToySig>,
-             mut feature_map: FeatureParamMap| {
+             mut vc_toy_features: VCToyFeatures| {
         // Read toy config here?
         async move {
 
@@ -389,6 +389,7 @@ pub async fn toy_management_handler(
             // Time tracking here?
             // Async runtime wrapped in Option for rate updating here????
 
+            // Lock this to a user-set HZ value
             while dev.connected() {
                 //trace!("Toy recv loop start");
                 match toy_bcst_rx.recv().await {
@@ -405,8 +406,13 @@ pub async fn toy_management_handler(
                                     - Iterate through each feature
                                 */
 
+                                /*
+                                 * Get feature objects that correspond to parameter.
+                                 * enum(Feature) ?
+                                 */
+
                                 if let Some(features) =
-                                    feature_map.get_features_from_param(&msg.addr)
+                                    vc_toy_features.get_features_from_param(&msg.addr)
                                 {
                                     if let Some(lvl) = msg.args.pop().unwrap().float() {
 
@@ -452,7 +458,7 @@ pub async fn toy_management_handler(
                                     // Update feature map while toy running!
                                     ToyUpdate::AlterToy(new_toy) => {
                                         if new_toy.toy_id == dev.index() {
-                                            feature_map = new_toy.param_feature_map;
+                                            vc_toy_features = new_toy.parsed_toy_features;
                                             info!("Altered toy: {}", new_toy.toy_id);
                                         }
                                     }
@@ -533,7 +539,7 @@ pub async fn toy_management_handler(
                 let f_run = f(
                     toy.1.device_handle.clone(),
                     toy_bcst_tx.subscribe(),
-                    toy.1.param_feature_map.clone(),
+                    toy.1.parsed_toy_features.clone(),
                 );
                 running_toy_ths.insert(
                     *toy.0,
@@ -566,7 +572,7 @@ pub async fn toy_management_handler(
                                         let f_run = f(
                                             toy.device_handle,
                                             toy_bcst_tx.subscribe(),
-                                            toy.param_feature_map.clone(),
+                                            toy.parsed_toy_features.clone(),
                                         );
                                         running_toy_ths.insert(
                                             toy.toy_id,

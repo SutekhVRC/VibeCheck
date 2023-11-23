@@ -22,7 +22,7 @@ pub struct VCToy {
     pub battery_level: Option<f64>,
     pub toy_connected: bool,
     pub toy_features: ClientDeviceMessageAttributes,
-    pub param_feature_map: FeatureParamMap,
+    pub parsed_toy_features: VCToyFeatures,
     pub osc_data: bool,
     pub listening: bool,
     pub device_handle: Arc<ButtplugClientDevice>,
@@ -42,7 +42,7 @@ impl VCToy {
                 .unwrap()
                 .iter()
                 .for_each(|_linear_feature| {
-                    self.param_feature_map.features.push(VCToyFeature::new(
+                    self.parsed_toy_features.features.push(VCToyFeature::new(
                         format!("/avatar/parameters/{:?}_{}", VCFeatureType::Linear, indexer),
                         indexer,
                         VCFeatureType::Linear,
@@ -63,7 +63,7 @@ impl VCToy {
                 .unwrap()
                 .iter()
                 .for_each(|_rotate_feature| {
-                    self.param_feature_map.features.push(VCToyFeature::new(
+                    self.parsed_toy_features.features.push(VCToyFeature::new(
                         format!(
                             "/avatar/parameters/{:?}_{}",
                             VCFeatureType::Rotator,
@@ -92,7 +92,7 @@ impl VCToy {
                     // Filter out Rotators
                     match scalar_feature.actuator_type() {
                         &ActuatorType::Rotate => {
-                            self.param_feature_map.features.push(VCToyFeature::new(
+                            self.parsed_toy_features.features.push(VCToyFeature::new(
                                 format!(
                                     "/avatar/parameters/{:?}_{}",
                                     VCFeatureType::Rotator,
@@ -103,7 +103,7 @@ impl VCToy {
                             ))
                         }
                         &ActuatorType::Vibrate => {
-                            self.param_feature_map.features.push(VCToyFeature::new(
+                            self.parsed_toy_features.features.push(VCToyFeature::new(
                                 format!(
                                     "/avatar/parameters/{:?}_{}",
                                     VCFeatureType::Vibrator,
@@ -114,7 +114,7 @@ impl VCToy {
                             ))
                         }
                         &ActuatorType::Constrict => {
-                            self.param_feature_map.features.push(VCToyFeature::new(
+                            self.parsed_toy_features.features.push(VCToyFeature::new(
                                 format!(
                                     "/avatar/parameters/{:?}_{}",
                                     VCFeatureType::Constrict,
@@ -125,7 +125,7 @@ impl VCToy {
                             ))
                         }
                         &ActuatorType::Inflate => {
-                            self.param_feature_map.features.push(VCToyFeature::new(
+                            self.parsed_toy_features.features.push(VCToyFeature::new(
                                 format!(
                                     "/avatar/parameters/{:?}_{}",
                                     VCFeatureType::Inflate,
@@ -136,7 +136,7 @@ impl VCToy {
                             ))
                         }
                         &ActuatorType::Oscillate => {
-                            self.param_feature_map.features.push(VCToyFeature::new(
+                            self.parsed_toy_features.features.push(VCToyFeature::new(
                                 format!(
                                     "/avatar/parameters/{:?}_{}",
                                     VCFeatureType::Oscillate,
@@ -147,7 +147,7 @@ impl VCToy {
                             ))
                         }
                         &ActuatorType::Position => {
-                            self.param_feature_map.features.push(VCToyFeature::new(
+                            self.parsed_toy_features.features.push(VCToyFeature::new(
                                 format!(
                                     "/avatar/parameters/{:?}_{}",
                                     VCFeatureType::Position,
@@ -181,7 +181,7 @@ impl VCToy {
 
         self.config = Some(VCToyConfig {
             toy_name: self.toy_name.clone(),
-            features: self.param_feature_map.clone(),
+            features: self.parsed_toy_features.clone(),
             osc_data: false,
             anatomy: VCToyAnatomy::default(),
         });
@@ -194,13 +194,13 @@ impl VCToy {
         match self.config {
             // If config is loaded check that its feature count matches the toy that loaded it. Then set the feature map to the one from the config.
             Some(ref conf) => {
-                // If feature count differs the user probably swapped between connection types
-                //let conn_toy_feature_len = self.toy_features.scalar_cmd().as_ref().unwrap().iter().len() + self.toy_features.rotate_cmd().as_ref().iter().len() + self.toy_features.linear_cmd().as_ref().iter().len();
 
-                let mut conn_toy_feature_len = 0;
+                // If feature count differs the user probably swapped between connection types (This used to be a bug when LC impl in bp-rs wasnt done for the Max2. This was fixed but I am keeping the feature count check in case it happens again)
+
+                let mut conn_toy_feature_count = 0;
 
                 if self.toy_features.scalar_cmd().is_some() {
-                    conn_toy_feature_len += self
+                    conn_toy_feature_count += self
                         .toy_features
                         .scalar_cmd()
                         .as_ref()
@@ -210,7 +210,7 @@ impl VCToy {
                 }
 
                 if self.toy_features.rotate_cmd().is_some() {
-                    conn_toy_feature_len += self
+                    conn_toy_feature_count += self
                         .toy_features
                         .rotate_cmd()
                         .as_ref()
@@ -220,7 +220,7 @@ impl VCToy {
                 }
 
                 if self.toy_features.linear_cmd().is_some() {
-                    conn_toy_feature_len += self
+                    conn_toy_feature_count += self
                         .toy_features
                         .linear_cmd()
                         .as_ref()
@@ -229,13 +229,13 @@ impl VCToy {
                         .len();
                 }
 
-                if conn_toy_feature_len != conf.features.features.len() {
+                if conn_toy_feature_count != conf.features.features.len() {
                     self.populate_routine();
                     return;
                 }
 
                 // Feature count is the same so its probably safe to assume the toy config is intact
-                self.param_feature_map = conf.features.clone();
+                self.parsed_toy_features = conf.features.clone();
                 self.osc_data = conf.osc_data;
                 info!("Populated toy with loaded config from file!");
             }
@@ -306,7 +306,7 @@ impl VCToy {
 
     pub fn mutate_state_by_anatomy(&mut self, anatomy_type: &VCToyAnatomy, value: bool) -> bool {
         if self.config.as_ref().unwrap().anatomy == *anatomy_type {
-            self.param_feature_map
+            self.parsed_toy_features
                 .features
                 .iter_mut()
                 .for_each(|feature| {
@@ -505,21 +505,20 @@ pub enum Linears {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, Default)]
-pub struct FeatureParamMap {
-    // Vec<(Feature, edit_state_bool)
+pub struct VCToyFeatures {
     pub features: Vec<VCToyFeature>,
 }
 
-impl fmt::Display for FeatureParamMap {
+impl fmt::Display for VCToyFeatures {
     #[allow(unused_must_use)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "")
     }
 }
 
-impl FeatureParamMap {
+impl VCToyFeatures {
     pub fn new() -> Self {
-        FeatureParamMap {
+        VCToyFeatures {
             features: Vec::new(),
         }
     }
