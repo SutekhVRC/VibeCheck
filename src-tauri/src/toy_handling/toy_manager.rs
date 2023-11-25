@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use log::{debug, trace, info};
 use tauri::{api::dir::read_dir, AppHandle};
-
+use crate::frontend::ToFrontend;
 use crate::{config::toy::VCToyConfig, util::fs::{get_config_dir, file_exists}, toy_handling::toyops::VCToy, frontend::frontend_types::FeVCToy};
 
 #[derive(Clone)]
@@ -122,7 +122,7 @@ impl ToyManager {
                     toy_anatomy: config.anatomy.to_fe(),
                     battery_level: None,
                     toy_connected: false,
-                    features: config.features.to_fe(),
+                    features: config.features.features.to_frontend(),
                     listening: false,
                     osc_data: config.osc_data,
                     sub_id: 255,

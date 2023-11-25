@@ -17,6 +17,7 @@ use std::net::UdpSocket;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::frontend::ToFrontend;
 use crate::frontend::frontend_types::FeCoreEvent;
 use crate::frontend::frontend_types::FeToyEvent;
 use crate::frontend::frontend_types::FeVCToy;
@@ -210,7 +211,7 @@ pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, ap
                                 toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
                                 battery_level: b_level,
                                 toy_connected: toy.toy_connected,
-                                features: toy.parsed_toy_features.to_fe(),
+                                features: toy.parsed_toy_features.features.to_frontend(),
                                 listening: toy.listening,
                                 osc_data: toy.osc_data,
                                 sub_id: toy.sub_id,

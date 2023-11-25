@@ -11,3 +11,13 @@ where F: TS, B: TS,
     fn to_frontend(&self, backend_type: B) -> F;
     fn to_backend(&self, frontend_type: F) -> B;
 }*/
+
+pub trait ToBackend<T> {
+    type OutputType;
+    fn to_backend(&self) -> T;
+}
+
+pub trait ToFrontend<T> {
+    type OutputType;
+    fn to_frontend(&self) -> T;
+}

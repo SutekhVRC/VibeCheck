@@ -6,7 +6,7 @@
 
  use log::{error as logerr, trace};
 use tauri::Manager;
-use crate::{vcore::core::{self, native_osc_query_start, native_osc_query_attempt_force, native_osc_query_stop}, frontend::frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink, FeVCFeatureType, FeVCToy, FeToyEvent}, vcore::vcerror::{frontend, backend}, config::toy::VCToyConfig};
+use crate::{vcore::core::{self, native_osc_query_start, native_osc_query_attempt_force, native_osc_query_stop}, frontend::{frontend_types::{FeVibeCheckConfig, FeToyAlter, FeSocialLink, FeVCFeatureType, FeVCToy, FeToyEvent}, ToFrontend}, vcore::vcerror::{frontend, backend}, config::toy::VCToyConfig};
 
 /*
  * vibecheck_version
@@ -166,7 +166,7 @@ pub fn alter_toy(vc_state: tauri::State<'_, core::VCStateMutex>, app_handle: tau
                     }
                 }
 
-                fe_toy.features = offline_toy_config.features.to_fe();
+                fe_toy.features = offline_toy_config.features.features.to_frontend();
                 fe_toy.osc_data = offline_toy_config.osc_data;
                 fe_toy.toy_anatomy = offline_toy_config.anatomy.to_fe();
 

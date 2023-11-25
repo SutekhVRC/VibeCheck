@@ -11,6 +11,7 @@ use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use parking_lot::Mutex;
 use vrcoscquery::OSCQuery;
+use crate::frontend::ToFrontend;
 use crate::osc::logic::{vc_disabled_osc_command_listen, toy_refresh};
 use crate::util::bluetooth;
 use crate::toy_handling::{handling::command_toy, errors::HandlerErr};
@@ -711,7 +712,7 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
                 toy_anatomy: alter_clone.config.as_ref().unwrap().anatomy.to_fe(),
                 battery_level: alter_clone.battery_level,
                 toy_connected: alter_clone.toy_connected,
-                features: alter_clone.parsed_toy_features.to_fe(),
+                features: alter_clone.parsed_toy_features.features.to_frontend(),
                 listening: alter_clone.listening,
                 osc_data: alter_clone.osc_data,
                 sub_id: alter_clone.sub_id,
