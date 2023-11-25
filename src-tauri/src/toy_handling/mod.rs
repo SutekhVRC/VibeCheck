@@ -2,6 +2,7 @@ pub mod errors;
 pub mod handling;
 pub mod toy_manager;
 pub mod toyops;
+pub mod penetration_systems;
 
 pub enum SmoothParser {
     Smoothed,

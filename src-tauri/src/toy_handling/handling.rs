@@ -27,6 +27,7 @@ use tokio::sync::{
 use tokio::task::JoinHandle;
 
 use crate::config::OSCNetworking;
+use crate::frontend::ToFrontend;
 use crate::frontend::frontend_types::FeCoreEvent;
 use crate::frontend::frontend_types::FeToyEvent;
 use crate::frontend::frontend_types::FeVCToy;
@@ -146,7 +147,7 @@ pub async fn client_event_handler(
                                 toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
                                 battery_level,
                                 toy_connected: toy.toy_connected,
-                                features: toy.parsed_toy_features.to_fe(),
+                                features: toy.parsed_toy_features.features.to_frontend(),
                                 listening: toy.listening,
                                 osc_data: toy.osc_data,
                                 sub_id: toy.sub_id,
@@ -421,33 +422,33 @@ pub async fn toy_management_handler(
                                         //debug!("Received and cast float lvl: {:.5}", float_level);
 
                                         // Iterate through features enumerated from OSC param
-                                        for (feature_type, feature_index, flip_float, feature_levels, smooth_enabled, smooth_queue, rate_enabled, rate_saved_level, rate_saved_osc_input, rate_timestamp) in features {
+                                        for feature in features {
                                             
                                             // Smoothing enabled
-                                            if smooth_enabled && !rate_enabled {
+                                            if feature.smooth_enabled && !feature.rate_enabled {
                                                 //trace!("parse_moothing()");
-                                                match parse_smoothing(smooth_queue, feature_levels, &mut float_level, flip_float) {
-                                                    SmoothParser::SkipZero | SmoothParser::Smoothed => command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await,
+                                                match parse_smoothing(&mut feature.smooth_queue, feature.feature_levels, &mut float_level, feature.flip_input_float) {
+                                                    SmoothParser::SkipZero | SmoothParser::Smoothed => command_toy(dev.clone(), feature.feature_type, float_level, feature.feature_index, feature.flip_input_float, feature.feature_levels).await,
                                                     SmoothParser::Smoothing => continue,
                                                 }
-                                            } else if rate_enabled && !smooth_enabled {
+                                            } else if feature.rate_enabled && !feature.smooth_enabled {
 
                                                 //trace!("parse_rate()");
                                                 // Need to set rate_timestamp when feature enabled
-                                                if let None = rate_timestamp {
-                                                    *rate_timestamp = Some(Instant::now());
+                                                if let None = feature.rate_timestamp {
+                                                    feature.rate_timestamp = Some(Instant::now());
                                                 }
-                                                match parse_rate(rate_saved_level, rate_saved_osc_input, rate_timestamp, feature_levels.rate_tune, &mut float_level, flip_float) {
-                                                    RateParser::SkipZero => command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await,
+                                                match parse_rate(&mut feature.rate_saved_level, &mut feature.rate_saved_osc_input, &mut feature.rate_timestamp, feature.feature_levels.rate_tune, &mut float_level, feature.flip_input_float) {
+                                                    RateParser::SkipZero => command_toy(dev.clone(), feature.feature_type, float_level, feature.feature_index, feature.flip_input_float, feature.feature_levels).await,
                                                     RateParser::RateCalculated(reset_timer) => {
                                                         if reset_timer {
-                                                            *rate_timestamp = Some(Instant::now())
+                                                            feature.rate_timestamp = Some(Instant::now())
                                                         }
-                                                        command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await;
+                                                        command_toy(dev.clone(), feature.feature_type, float_level, feature.feature_index, feature.flip_input_float, feature.feature_levels).await;
                                                     },
                                                 }
                                             } else {
-                                                command_toy(dev.clone(), feature_type, float_level, feature_index, flip_float, feature_levels).await;
+                                                command_toy(dev.clone(), feature.feature_type, float_level, feature.feature_index, feature.flip_input_float, feature.feature_levels).await;
                                             }
                                         }
                                     }

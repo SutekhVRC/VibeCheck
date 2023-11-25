@@ -4,7 +4,9 @@
 use serde::{Serialize, Deserialize};
 use ts_rs::TS;
 
-use crate::toy_handling::toyops::VCFeatureType;
+use crate::toy_handling::{toyops::{VCFeatureType, ToyParameter, ProcessingMode}, penetration_systems::PenetrationSystem};
+
+use super::ToBackend;
 
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]
@@ -121,11 +123,57 @@ pub struct FeLevelTweaks {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
+pub enum FeProcessingMode {
+    Raw,
+    Smooth,
+    Rate,
+    Constant,
+}
+
+impl ToBackend<ProcessingMode> for FeProcessingMode {
+
+    type OutputType = ProcessingMode;
+
+    fn to_backend(&self) -> Self::OutputType {
+        match self {
+            Self::Raw => ProcessingMode::Raw,
+            Self::Smooth => ProcessingMode::Smooth,
+            Self::Rate => ProcessingMode::Rate,
+            Self::Constant => ProcessingMode::Constant,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+pub struct FeToyParameter {
+    pub parameter: String,
+    pub processing_mode: FeProcessingMode,
+}
+
+impl ToBackend<Vec<ToyParameter>> for Vec<FeToyParameter> {
+
+    type OutputType = Vec<ToyParameter>;
+
+    fn to_backend(&self) -> Self::OutputType {
+
+        let mut out = Vec::new();
+
+            for tp in self {
+                out.push(ToyParameter { parameter: tp.parameter.clone(), processing_mode: tp.processing_mode.to_backend() })
+            }
+
+        out
+    }
+}
+
+
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct FeVCToyFeature {
     pub feature_enabled: bool,
     pub feature_type: FeVCFeatureType,
-    pub osc_parameter: String,
+    pub osc_parameters: Vec<FeToyParameter>,
+    pub penetration_system: PenetrationSystem,
     pub feature_index: u32,
     pub flip_input_float: bool,
     pub feature_levels: FeLevelTweaks,
