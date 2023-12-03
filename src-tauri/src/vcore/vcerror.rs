@@ -2,14 +2,11 @@
  * Splitting errors into fronted native call errors and backend errors
  */
 
-
 pub mod frontend {
     use serde::Serialize;
 
-
     #[derive(Serialize)]
     pub enum VCFeError {
-
         AlterToyFailure(ToyAlterError),
         // App State Errors
         EnableFailure,
@@ -74,6 +71,6 @@ pub mod backend {
     pub enum ToyAlterError {
         //NoFeatureIndex,
         //NoToyIndex,
-        TMESendFailure
+        TMESendFailure,
     }
 }

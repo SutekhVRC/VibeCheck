@@ -1,15 +1,17 @@
-use std::{path::Path, ffi::OsStr};
 use directories::BaseDirs;
-use tauri::{api::path::{resolve_path, BaseDirectory}, Env};
+use std::{ffi::OsStr, path::Path};
+use tauri::{
+    api::path::{resolve_path, BaseDirectory},
+    Env,
+};
 
 pub fn path_exists(p: &String) -> bool {
     Path::new(&p).is_dir()
 }
 
-
-
-pub fn file_exists<P>(p: &P) -> bool 
-where P: AsRef<OsStr> + ?Sized
+pub fn file_exists<P>(p: &P) -> bool
+where
+    P: AsRef<OsStr> + ?Sized,
 {
     Path::new(&p).is_file()
 }
@@ -35,5 +37,9 @@ pub fn get_config_dir() -> String {
         &Env::default(),
         "VibeCheck",
         Some(BaseDirectory::AppConfig),
-    ).unwrap().to_str().unwrap().to_string()
+    )
+    .unwrap()
+    .to_str()
+    .unwrap()
+    .to_string()
 }

@@ -1,8 +1,8 @@
 use futures_timer::Delay;
-use log::{error as logerr, warn, info, trace};
+use log::{error as logerr, info, trace, warn};
 use parking_lot::Mutex;
-use rosc::OscType;
 use rosc::encoder;
+use rosc::OscType;
 use rosc::{self, OscMessage, OscPacket};
 
 use tauri::AppHandle;
@@ -17,10 +17,10 @@ use std::net::UdpSocket;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::frontend::ToFrontend;
 use crate::frontend::frontend_types::FeCoreEvent;
 use crate::frontend::frontend_types::FeToyEvent;
 use crate::frontend::frontend_types::FeVCToy;
+use crate::frontend::ToFrontend;
 use crate::osc_api::osc_api::vibecheck_osc_api;
 use crate::toy_handling::ToySig;
 use crate::vcore::config::OSCNetworking;
@@ -34,18 +34,23 @@ use crate::vcore::core::VibeCheckState;
     receives OSC messages
     broadcasts the OSC messages to each toy
 */
-pub fn toy_input_routine(toy_bcst_tx: BSender<ToySig>, tme_send: UnboundedSender<ToyManagementEvent>, app_handle: AppHandle, vc_config: OSCNetworking) {
-
-    let bind_sock = match UdpSocket::bind(format!("{}:{}", vc_config.bind.ip(), vc_config.bind.port())) {
-        Ok(s) => {
-            let _ = tme_send.send(ToyManagementEvent::Sig(TmSig::Listening));
-            s
-        },
-        Err(_e) => {
-            let _ = tme_send.send(ToyManagementEvent::Sig(TmSig::BindError));
-            return;
-        }
-    };
+pub fn toy_input_routine(
+    toy_bcst_tx: BSender<ToySig>,
+    tme_send: UnboundedSender<ToyManagementEvent>,
+    app_handle: AppHandle,
+    vc_config: OSCNetworking,
+) {
+    let bind_sock =
+        match UdpSocket::bind(format!("{}:{}", vc_config.bind.ip(), vc_config.bind.port())) {
+            Ok(s) => {
+                let _ = tme_send.send(ToyManagementEvent::Sig(TmSig::Listening));
+                s
+            }
+            Err(_e) => {
+                let _ = tme_send.send(ToyManagementEvent::Sig(TmSig::BindError));
+                return;
+            }
+        };
     info!("Listen sock is bound");
     bind_sock.set_nonblocking(false).unwrap();
     let _ = bind_sock.set_read_timeout(Some(Duration::from_secs(1)));
@@ -69,22 +74,25 @@ pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OS
     let mut retries = 3;
     let sock;
     loop {
-    Delay::new(Duration::from_secs(1)).await;
-    match tUdpSocket::bind(format!("{}:{}", vc_config.bind.ip(), vc_config.bind.port())).await {
-        Ok(s) => {
-            info!("Listening while disabled");
-            sock = s;
-            break;
-        },
-        Err(_e) => {
-            logerr!("Failed to bind UDP socket for disabled cmd listening.. Retries remaining: {}", retries);
-            if retries == 0 {
-                return;
+        Delay::new(Duration::from_secs(1)).await;
+        match tUdpSocket::bind(format!("{}:{}", vc_config.bind.ip(), vc_config.bind.port())).await {
+            Ok(s) => {
+                info!("Listening while disabled");
+                sock = s;
+                break;
             }
-            retries -= 1;
-            continue;
-        }
-    };
+            Err(_e) => {
+                logerr!(
+                    "Failed to bind UDP socket for disabled cmd listening.. Retries remaining: {}",
+                    retries
+                );
+                if retries == 0 {
+                    return;
+                }
+                retries -= 1;
+                continue;
+            }
+        };
     }
 
     loop {
@@ -160,7 +168,6 @@ pub fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
     }
 }
 
-
 /* FUTURE MAYBE
  * Toy update loop every 1 sec maybe 5
  * How to do parameter structure
@@ -169,68 +176,100 @@ pub fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
  * 0 - 100: toy.battery_level
  * -1: connected
  * -2: disconnected
- * 
+ *
  * ATM this only sends a battery life OSC address/value.
  */
 
-pub async fn toy_refresh(vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>, app_handle: AppHandle) {
-
+pub async fn toy_refresh(
+    vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>,
+    app_handle: AppHandle,
+) {
     loop {
         Delay::new(Duration::from_secs(15)).await;
 
-
         let (toys, remote) = {
             let vc_lock = vibecheck_state_pointer.lock();
-            if !vc_lock.core_toy_manager.as_ref().unwrap().online_toys.is_empty() {
-                (vc_lock.core_toy_manager.as_ref().unwrap().online_toys.clone(), vc_lock.config.networking.remote)
+            if !vc_lock
+                .core_toy_manager
+                .as_ref()
+                .unwrap()
+                .online_toys
+                .is_empty()
+            {
+                (
+                    vc_lock
+                        .core_toy_manager
+                        .as_ref()
+                        .unwrap()
+                        .online_toys
+                        .clone(),
+                    vc_lock.config.networking.remote,
+                )
             } else {
                 continue;
             }
         };
 
         let sock = tUdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await.unwrap();
-        info!("Bound toy_refresh sender sock to {}", sock.local_addr().unwrap());
+        info!(
+            "Bound toy_refresh sender sock to {}",
+            sock.local_addr().unwrap()
+        );
         sock.connect(remote).await.unwrap();
         for (.., mut toy) in toys {
-
             let b_level: Option<f64> = match toy.device_handle.battery_level().await {
                 Ok(battery_lvl) => Some(battery_lvl),
                 Err(_e) => {
                     warn!("Failed to get battery for toy: {}", toy.toy_name);
                     None
-                },
+                }
             };
 
             toy.battery_level = b_level;
 
-            let _ = app_handle.emit_all("fe_toy_event",
-                        FeToyEvent::Update ({
-                            FeVCToy {
-                                toy_id: Some(toy.toy_id),
-                                toy_name: toy.toy_name.clone(),
-                                toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
-                                battery_level: b_level,
-                                toy_connected: toy.toy_connected,
-                                features: toy.parsed_toy_features.features.to_frontend(),
-                                listening: toy.listening,
-                                osc_data: toy.osc_data,
-                                sub_id: toy.sub_id,
-                            }
-                        }),
-                    );
-            
-            if toy.osc_data {
+            let _ = app_handle.emit_all(
+                "fe_toy_event",
+                FeToyEvent::Update({
+                    FeVCToy {
+                        toy_id: Some(toy.toy_id),
+                        toy_name: toy.toy_name.clone(),
+                        toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
+                        battery_level: b_level,
+                        toy_connected: toy.toy_connected,
+                        features: toy.parsed_toy_features.features.to_frontend(),
+                        listening: toy.listening,
+                        osc_data: toy.osc_data,
+                        sub_id: toy.sub_id,
+                    }
+                }),
+            );
 
+            if toy.osc_data {
                 trace!("Sending OSC data for toy: {}", toy.toy_name);
 
                 let battery_level_msg = encoder::encode(&OscPacket::Message(OscMessage {
-                    addr: format!("/avatar/parameters/vibecheck/osc_data/{}/{}/battery", toy.toy_name.replace("Lovense Connect", "lovense").replace(" ", "_").to_lowercase(), toy.sub_id),
-                    args: vec![OscType::Float(b_level.unwrap_or(0.0) as f32)]
-                })).unwrap();
+                    addr: format!(
+                        "/avatar/parameters/vibecheck/osc_data/{}/{}/battery",
+                        toy.toy_name
+                            .replace("Lovense Connect", "lovense")
+                            .replace(" ", "_")
+                            .to_lowercase(),
+                        toy.sub_id
+                    ),
+                    args: vec![OscType::Float(b_level.unwrap_or(0.0) as f32)],
+                }))
+                .unwrap();
 
                 let batt_send_err = sock.send(&battery_level_msg).await;
-                if batt_send_err.is_err(){warn!("Failed to send battery_level to {}", remote.to_string());}
-                else{info!("Sent battery_level: {} to {}", b_level.unwrap_or(0.0) as f32, toy.toy_name);}
+                if batt_send_err.is_err() {
+                    warn!("Failed to send battery_level to {}", remote.to_string());
+                } else {
+                    info!(
+                        "Sent battery_level: {} to {}",
+                        b_level.unwrap_or(0.0) as f32,
+                        toy.toy_name
+                    );
+                }
             } else {
                 trace!("OSC data disabled for toy {}", toy.toy_name);
             }

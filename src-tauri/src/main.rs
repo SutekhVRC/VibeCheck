@@ -5,22 +5,21 @@
 
 use std::sync::Arc;
 
+use log::{info, trace, warn};
 use parking_lot::Mutex;
 use tauri::{Manager, SystemTrayMenu};
-use log::{info, trace, warn};
 
-use crate::{vcore::config, frontend::frontend_native};
+use crate::{frontend::frontend_native, vcore::config};
 //use env_logger;
 
 mod frontend;
-mod vcore;
-mod util;
 mod osc;
 mod osc_api;
 mod toy_handling;
+mod util;
+mod vcore;
 
 fn main() {
-
     //tracing_subscriber::fmt::init();
     #[cfg(debug_assertions)]
     {
@@ -29,10 +28,9 @@ fn main() {
         log_builder.init();
     }
 
-    let vibecheck_state_pointer = Arc::new(
-        Mutex::new(
-            vcore::core::VibeCheckState::new(
-                config::config_load())));
+    let vibecheck_state_pointer = Arc::new(Mutex::new(vcore::core::VibeCheckState::new(
+        config::config_load(),
+    )));
     trace!("VibeCheckState created");
 
     let quit = tauri::CustomMenuItem::new("quit".to_string(), "Quit");
@@ -43,57 +41,53 @@ fn main() {
     //let disable_osc = tauri::CustomMenuItem::new("disable_osc".to_string(), "Disable");
 
     let tray_menu = SystemTrayMenu::new()
-    //.add_item(enable_osc)
-    //.add_item(disable_osc)
-    .add_native_item(tauri::SystemTrayMenuItem::Separator)
-    .add_item(hide_app)
-    .add_item(show_app)
-    .add_native_item(tauri::SystemTrayMenuItem::Separator)
-    .add_item(restart)
-    .add_item(quit);
+        //.add_item(enable_osc)
+        //.add_item(disable_osc)
+        .add_native_item(tauri::SystemTrayMenuItem::Separator)
+        .add_item(hide_app)
+        .add_item(show_app)
+        .add_native_item(tauri::SystemTrayMenuItem::Separator)
+        .add_item(restart)
+        .add_item(quit);
 
     let app = tauri::Builder::default()
-    .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-        warn!("Another {} process mutex created.. Showing already running app.", app.package_info().name);
-        let window = app.get_window("main").unwrap();
-        window.show().unwrap();
-    }))
-    .setup(|_app| {
-
-        Ok(())
-    })
-    .system_tray(tauri::SystemTray::new().with_menu(tray_menu))
-    .on_system_tray_event(|app, event| match event {
-        tauri::SystemTrayEvent::MenuItemClick { id, .. } => {
-            match id.as_str() {
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            warn!(
+                "Another {} process mutex created.. Showing already running app.",
+                app.package_info().name
+            );
+            let window = app.get_window("main").unwrap();
+            window.show().unwrap();
+        }))
+        .setup(|_app| Ok(()))
+        .system_tray(tauri::SystemTray::new().with_menu(tray_menu))
+        .on_system_tray_event(|app, event| match event {
+            tauri::SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
                 "quit" => {
                     app.exit(0);
-                },
+                }
                 "restart" => {
                     app.restart();
-                },
+                }
                 "hide" => {
                     let window = app.get_window("main").unwrap();
                     window.hide().unwrap();
-                },
+                }
                 "show" => {
                     let window = app.get_window("main").unwrap();
                     window.show().unwrap();
-                },
-                _ => {},
+                }
+                _ => {}
+            },
+            tauri::SystemTrayEvent::LeftClick { .. } => {
+                let window = app.get_window("main").unwrap();
+                trace!("Opening window: {}", window.label());
+                window.show().unwrap();
             }
-        },
-        tauri::SystemTrayEvent::LeftClick { .. } => {
-            let window = app.get_window("main").unwrap();
-            trace!("Opening window: {}", window.label());
-            window.show().unwrap();
-        }
-        _ => {}
-    })
-    .manage(
-        vcore::core::VCStateMutex(vibecheck_state_pointer.clone()))
-    .invoke_handler(
-        tauri::generate_handler![
+            _ => {}
+        })
+        .manage(vcore::core::VCStateMutex(vibecheck_state_pointer.clone()))
+        .invoke_handler(tauri::generate_handler![
             frontend_native::vibecheck_version,
             frontend_native::vibecheck_enable,
             frontend_native::vibecheck_disable,
@@ -110,10 +104,9 @@ fn main() {
             frontend_native::osc_query_stop,
             frontend_native::osc_query_attempt_force_connect,
             //frontend_native::simulate_feature_osc_input,
-            ]
-    )
-    .build(tauri::generate_context!())
-    .expect("Failed to generate Tauri context");
+        ])
+        .build(tauri::generate_context!())
+        .expect("Failed to generate Tauri context");
     trace!("Tauri app built");
 
     let identifier = app.config().tauri.bundle.identifier.clone();
@@ -139,57 +132,65 @@ fn main() {
     }
 
     app.run(|_app_handle, event| {
-
         match event {
-        tauri::RunEvent::WindowEvent { label, event, .. } => {
-            match event {
-                tauri::WindowEvent::CloseRequested { api, .. } => {
-                    let minimize_on_exit = {
-                        _app_handle.state::<vcore::core::VCStateMutex>().0.lock().config.minimize_on_exit
-                    };
+            tauri::RunEvent::WindowEvent { label, event, .. } => {
+                match event {
+                    tauri::WindowEvent::CloseRequested { api, .. } => {
+                        let minimize_on_exit = {
+                            _app_handle
+                                .state::<vcore::core::VCStateMutex>()
+                                .0
+                                .lock()
+                                .config
+                                .minimize_on_exit
+                        };
 
-                    if minimize_on_exit {
-                        let window = _app_handle.get_window(&label).unwrap();
-                        trace!("Closing window: {}", window.label());
-                        window.hide().unwrap();
-                        api.prevent_close();
-                    } else {
-                        // Let exit
+                        if minimize_on_exit {
+                            let window = _app_handle.get_window(&label).unwrap();
+                            trace!("Closing window: {}", window.label());
+                            window.hide().unwrap();
+                            api.prevent_close();
+                        } else {
+                            // Let exit
+                        }
                     }
-                }, _ => {}
+                    _ => {}
+                }
             }
-        },
-        tauri::RunEvent::ExitRequested { .. } => {
-            // On exit
-        },
-        tauri::RunEvent::MainEventsCleared => {
+            tauri::RunEvent::ExitRequested { .. } => {
+                // On exit
+            }
+            tauri::RunEvent::MainEventsCleared => {
 
-            /*
-            let state = _app_handle.state::<vcore::VCStateMutex>();
-            let vc_lock = state.0.lock();
-            
-            // Handle inter-thread data
-            // Problem: This does not continuously execute (When app is hidden does not execute)
-            handling::message_handling(vc_lock);*/
-            //info!("[+] State MainEventsCleared.");
-        },
-        tauri::RunEvent::Ready => {
-            info!("App Ready");
+                /*
+                let state = _app_handle.state::<vcore::VCStateMutex>();
+                let vc_lock = state.0.lock();
 
-            // Sync offline toys to frontend
-            //_app_handle.state::<vcore::VCStateMutex>().0.lock().core_toy_manager.as_ref().unwrap().sync_frontend();
-        },
-        tauri::RunEvent::Updater(updater_event) => {
-            match updater_event {
+                // Handle inter-thread data
+                // Problem: This does not continuously execute (When app is hidden does not execute)
+                handling::message_handling(vc_lock);*/
+                //info!("[+] State MainEventsCleared.");
+            }
+            tauri::RunEvent::Ready => {
+                info!("App Ready");
+
+                // Sync offline toys to frontend
+                //_app_handle.state::<vcore::VCStateMutex>().0.lock().core_toy_manager.as_ref().unwrap().sync_frontend();
+            }
+            tauri::RunEvent::Updater(updater_event) => match updater_event {
                 tauri::UpdaterEvent::Error(err) => {
                     log::error!("Update error: {}", err);
                 }
-                tauri::UpdaterEvent::UpdateAvailable { body: _, date: _, version } => {
+                tauri::UpdaterEvent::UpdateAvailable {
+                    body: _,
+                    date: _,
+                    version,
+                } => {
                     info!("Update available: {}", version);
-                },
-                _ => {},
-            }
+                }
+                _ => {}
+            },
+            _ => {}
         }
-        _ => {}
-    }});
+    });
 }

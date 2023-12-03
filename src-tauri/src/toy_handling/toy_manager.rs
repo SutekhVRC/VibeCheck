@@ -1,9 +1,14 @@
 use std::collections::HashMap;
 
-use log::{debug, trace, info};
-use tauri::{api::dir::read_dir, AppHandle};
 use crate::frontend::ToFrontend;
-use crate::{config::toy::VCToyConfig, util::fs::{get_config_dir, file_exists}, toy_handling::toyops::VCToy, frontend::frontend_types::FeVCToy};
+use crate::{
+    config::toy::VCToyConfig,
+    frontend::frontend_types::FeVCToy,
+    toy_handling::toyops::VCToy,
+    util::fs::{file_exists, get_config_dir},
+};
+use log::{debug, info, trace};
+use tauri::{api::dir::read_dir, AppHandle};
 
 #[derive(Clone)]
 pub struct ToyManager {
@@ -17,42 +22,38 @@ impl ToyManager {
         /*
          * Read all toy configs
          * Send update to frontend
-         * 
+         *
          * Create methods:
          * Method for a toy disconnecting
          * Method for a toy connecting
-         * 
+         *
          * This struct is the new toys handler / object
          */
 
-        let mut ot = Self { configs: HashMap::new(), online_toys: HashMap::new(), _app_handle: app_handle };
+        let mut ot = Self {
+            configs: HashMap::new(),
+            online_toys: HashMap::new(),
+            _app_handle: app_handle,
+        };
 
         ot.populate_configs();
         trace!("ToyManager config population complete!");
 
-/*
-        ot.sync_frontend();
-        trace!("ToyManager initialization sent frontend sync");
-*/
+        /*
+                ot.sync_frontend();
+                trace!("ToyManager initialization sent frontend sync");
+        */
         ot
     }
 
     pub fn populate_configs(&mut self) {
-        
-        let toy_config_dir = match read_dir(
-            format!(
-                "{}\\ToyConfigs",
-                get_config_dir()
-            ),
-            false
-        ) {
+        let toy_config_dir = match read_dir(format!("{}\\ToyConfigs", get_config_dir()), false) {
             Ok(config_paths) => config_paths,
             // Doesn't populate
             Err(_e) => return,
         };
 
         for f in toy_config_dir {
-            
             if !file_exists(&f.path) {
                 continue;
             }
@@ -61,7 +62,7 @@ impl ToyManager {
                 Ok(contents) => contents,
                 Err(_e) => continue,
             };
-        
+
             let config: VCToyConfig = match serde_json::from_str(&con) {
                 Ok(vc_toy_config) => vc_toy_config,
                 Err(_) => {
@@ -69,13 +70,15 @@ impl ToyManager {
                 }
             };
 
-            trace!("Loaded & parsed toy config [{}] successfully!", config.toy_name);
+            trace!(
+                "Loaded & parsed toy config [{}] successfully!",
+                config.toy_name
+            );
             let toy_name = config.toy_name.clone();
             self.configs.insert(toy_name, config);
         }
 
         debug!("Loaded {} Offline toy configs!", self.configs.len());
-
     }
 
     pub fn sync_frontend(&mut self, refresh_toys: bool) -> Vec<FeVCToy> {
@@ -106,26 +109,23 @@ impl ToyManager {
     }
 
     fn fetoy_vec_from_offline_toys(&self) -> Vec<FeVCToy> {
-
         let mut offline_toy_vec = Vec::new();
 
         for (_toy_key, config) in self.configs.iter() {
-            
             if self.check_toy_online(&config.toy_name) {
                 continue;
             }
 
-            offline_toy_vec.push(
-                FeVCToy {
-                    toy_id: None,
-                    toy_name: config.toy_name.clone(),
-                    toy_anatomy: config.anatomy.to_fe(),
-                    battery_level: None,
-                    toy_connected: false,
-                    features: config.features.features.to_frontend(),
-                    listening: false,
-                    osc_data: config.osc_data,
-                    sub_id: 255,
+            offline_toy_vec.push(FeVCToy {
+                toy_id: None,
+                toy_name: config.toy_name.clone(),
+                toy_anatomy: config.anatomy.to_fe(),
+                battery_level: None,
+                toy_connected: false,
+                features: config.features.features.to_frontend(),
+                listening: false,
+                osc_data: config.osc_data,
+                sub_id: 255,
             });
         }
 

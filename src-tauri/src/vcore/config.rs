@@ -1,13 +1,14 @@
-use std::{fs, net::{Ipv4Addr, SocketAddrV4}};
+use log::{error as logerr, info, trace, warn};
 use serde::{Deserialize, Serialize};
-use log::{info, trace, error as logerr, warn};
+use std::{
+    fs,
+    net::{Ipv4Addr, SocketAddrV4},
+};
 
-use crate::{util::fs::{
-    file_exists,
-    path_exists,
-    get_config_dir,
-}, frontend::frontend_types::FeOSCNetworking};
-
+use crate::{
+    frontend::frontend_types::FeOSCNetworking,
+    util::fs::{file_exists, get_config_dir, path_exists},
+};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct OSCNetworking {
@@ -28,10 +29,13 @@ impl Default for OSCNetworking {
 
 impl OSCNetworking {
     pub fn to_fe(&self) -> FeOSCNetworking {
-        FeOSCNetworking { bind: self.bind.to_string(), remote: self.remote.to_string(), osc_query_enabled: self.osc_query_enabled }
+        FeOSCNetworking {
+            bind: self.bind.to_string(),
+            remote: self.remote.to_string(),
+            osc_query_enabled: self.osc_query_enabled,
+        }
     }
 }
-
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct VibeCheckConfig {
@@ -44,7 +48,6 @@ pub struct VibeCheckConfig {
 }
 
 pub fn config_load() -> VibeCheckConfig {
-
     let vc_root_dir = get_config_dir();
 
     let vc_config_file = format!("{}\\Config.json", vc_root_dir);
@@ -87,15 +90,22 @@ pub fn config_load() -> VibeCheckConfig {
             Ok(o) => {
                 info!("Config Loaded Successfully!");
                 if let Some(h) = o.lc_override {
-                    std::env::set_var("VCLC_HOST_PORT", format!("{}:20010", h.to_string()).as_str());
-                    info!("Setting VCLC_HOST_PORT: {}", format!("{}:20010", h.to_string()));
+                    std::env::set_var(
+                        "VCLC_HOST_PORT",
+                        format!("{}:20010", h.to_string()).as_str(),
+                    );
+                    info!(
+                        "Setting VCLC_HOST_PORT: {}",
+                        format!("{}:20010", h.to_string())
+                    );
                 }
                 return o;
-            },
+            }
             Err(_e) => {
                 logerr!(
                     "Failed to parse json from file: {} [{}]",
-                    vc_config_file, _e
+                    vc_config_file,
+                    _e
                 );
                 warn!("Resetting to default config.");
 
@@ -107,11 +117,7 @@ pub fn config_load() -> VibeCheckConfig {
                     lc_override: None,
                 };
 
-                fs::write(
-                    &vc_config_file,
-                    serde_json::to_string(&def_conf).unwrap(),
-                )
-                .unwrap();
+                fs::write(&vc_config_file, serde_json::to_string(&def_conf).unwrap()).unwrap();
                 trace!("Wrote VibeCheck config file");
                 // If fail to parse config overwrite with new default
                 return def_conf;
@@ -120,7 +126,8 @@ pub fn config_load() -> VibeCheckConfig {
         Err(_e) => {
             logerr!(
                 "Could not parse bytes from file: {} [{}].. Skipping..",
-                vc_config_file, _e
+                vc_config_file,
+                _e
             );
             warn!("[*] Resetting to default config.");
             let def_conf = VibeCheckConfig {
@@ -130,23 +137,23 @@ pub fn config_load() -> VibeCheckConfig {
                 desktop_notifications: false,
                 lc_override: None,
             };
-            fs::write(
-                &vc_config_file,
-                serde_json::to_string(&def_conf).unwrap(),
-            )
-            .unwrap();
+            fs::write(&vc_config_file, serde_json::to_string(&def_conf).unwrap()).unwrap();
             trace!("Wrote VibeCheck config file");
             return def_conf;
         }
     }
 }
 
-
 pub mod toy {
 
-    use log::{warn, debug, info, error as logerr};
-    use serde::{Serialize, Deserialize};
-    use crate::{toy_handling::toyops::VCToyFeatures, frontend::frontend_types::FeVCToyAnatomy, util::fs::{get_config_dir, file_exists}, vcore::vcerror};
+    use crate::{
+        frontend::frontend_types::FeVCToyAnatomy,
+        toy_handling::toyops::VCToyFeatures,
+        util::fs::{file_exists, get_config_dir},
+        vcore::vcerror,
+    };
+    use log::{debug, error as logerr, info, warn};
+    use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
     pub enum VCToyAnatomy {
@@ -176,7 +183,7 @@ pub mod toy {
         Vulva,
         Wrist,
     }
-    
+
     impl VCToyAnatomy {
         pub fn get_anatomy(token: &String) -> Self {
             match token.to_lowercase().as_str() {
@@ -205,7 +212,10 @@ pub mod toy {
                 "vulva" => Self::Vulva,
                 "wrist" => Self::Wrist,
                 _ => {
-                    warn!("Got \"{}\" for anatomy token.. Defaulting to Self::NA", token);
+                    warn!(
+                        "Got \"{}\" for anatomy token.. Defaulting to Self::NA",
+                        token
+                    );
                     Self::NA
                 }
             }
@@ -277,22 +287,23 @@ pub mod toy {
     }
 
     impl VCToyConfig {
-        pub fn load_offline_toy_config(toy_name: String) -> Result<VCToyConfig, vcerror::backend::VibeCheckToyConfigError> {
-
+        pub fn load_offline_toy_config(
+            toy_name: String,
+        ) -> Result<VCToyConfig, vcerror::backend::VibeCheckToyConfigError> {
             // Generate config path
             // - Transform Lovense Connect toys to load lovense configs
-    
+
             let config_path = format!(
                 "{}\\ToyConfigs\\{}.json",
                 get_config_dir(),
                 toy_name.replace("Lovense Connect ", "Lovense "),
             );
-        
+
             if !file_exists(&config_path) {
                 return Err(vcerror::backend::VibeCheckToyConfigError::OfflineToyConfigNotFound);
             } else {
                 let con = std::fs::read_to_string(config_path).unwrap();
-        
+
                 let config: VCToyConfig = match serde_json::from_str(&con) {
                     Ok(vc_toy_config) => vc_toy_config,
                     Err(_) => {
@@ -305,7 +316,6 @@ pub mod toy {
         }
 
         pub fn save_offline_toy_config(&self) {
-
             let config_path = format!(
                 "{}\\ToyConfigs\\{}.json",
                 get_config_dir(),
@@ -313,25 +323,21 @@ pub mod toy {
             );
 
             info!("Saving toy config to: {}", config_path);
-        
+
             if let Ok(json_string) = serde_json::to_string(self) {
-                match std::fs::write(
-                    &config_path,
-                    json_string,
-                ) {
+                match std::fs::write(&config_path, json_string) {
                     Ok(()) => {
                         info!("Saved toy config: {}", self.toy_name);
                         return;
-                    },
+                    }
                     Err(e) => {
                         logerr!("Failed to write to file: {}", e);
                         return;
-                    },
+                    }
                 }
             } else {
                 warn!("Failed to serialize config to json");
             }
-
         }
     }
 }

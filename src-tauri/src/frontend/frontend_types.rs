@@ -1,13 +1,17 @@
+use std::collections::HashMap;
+
 /*
  * Frontend type binding generation
  */
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::toy_handling::{toyops::{VCFeatureType, ToyParameter, ProcessingMode}, penetration_systems::PenetrationSystem};
+use crate::toy_handling::{
+    input_processor::penetration_systems::PenetrationSystemType,
+    toyops::{ProcessingMode, VCFeatureType},
+};
 
 use super::ToBackend;
-
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]
 #[ts(export)]
@@ -27,10 +31,9 @@ pub struct FeOSCNetworking {
     pub osc_query_enabled: bool,
 }
 
-
 #[derive(Serialize, Clone, TS)]
 #[ts(export)]
-#[serde(tag="kind", content="data")]
+#[serde(tag = "kind", content = "data")]
 pub enum FeToyEvent {
     Add(FeVCToy),
     Remove(u32),
@@ -54,7 +57,7 @@ pub enum FeStateEvent {
 
 #[derive(Serialize, Clone, TS)]
 #[ts(export)]
-#[serde(tag="kind", content="data")]
+#[serde(tag = "kind", content = "data")]
 pub enum FeCoreEvent {
     Scan(FeScanEvent),
     State(FeStateEvent),
@@ -123,6 +126,7 @@ pub struct FeLevelTweaks {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub enum FeProcessingMode {
     Raw,
     Smooth,
@@ -131,7 +135,6 @@ pub enum FeProcessingMode {
 }
 
 impl ToBackend<ProcessingMode> for FeProcessingMode {
-
     type OutputType = ProcessingMode;
 
     fn to_backend(&self) -> Self::OutputType {
@@ -145,35 +148,37 @@ impl ToBackend<ProcessingMode> for FeProcessingMode {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct FeToyParameter {
     pub parameter: String,
     pub processing_mode: FeProcessingMode,
 }
 
-impl ToBackend<Vec<ToyParameter>> for Vec<FeToyParameter> {
-
-    type OutputType = Vec<ToyParameter>;
-
-    fn to_backend(&self) -> Self::OutputType {
-
-        let mut out = Vec::new();
-
-            for tp in self {
-                out.push(ToyParameter { parameter: tp.parameter.clone(), processing_mode: tp.processing_mode.to_backend() })
-            }
-
-        out
-    }
+#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct FePenetrationSystem {
+    pub pen_system_type: PenetrationSystemType,
+    pub pen_system_processing_mode: ProcessingMode,
 }
 
+impl ToBackend<(PenetrationSystemType, ProcessingMode)> for FePenetrationSystem {
+    type OutputType = (PenetrationSystemType, ProcessingMode);
+
+    fn to_backend(&self) -> Self::OutputType {
+        (
+            self.pen_system_type.clone(),
+            self.pen_system_processing_mode.clone(),
+        )
+    }
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct FeVCToyFeature {
     pub feature_enabled: bool,
     pub feature_type: FeVCFeatureType,
-    pub osc_parameters: Vec<FeToyParameter>,
-    pub penetration_system: PenetrationSystem,
+    pub osc_parameters: HashMap<String, FeToyParameter>,
+    pub penetration_system: FePenetrationSystem,
     pub feature_index: u32,
     pub flip_input_float: bool,
     pub feature_levels: FeLevelTweaks,
