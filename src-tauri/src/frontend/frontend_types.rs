@@ -158,7 +158,7 @@ pub struct FeToyParameter {
 #[ts(export)]
 pub struct FePenetrationSystem {
     pub pen_system_type: PenetrationSystemType,
-    pub pen_system_processing_mode: ProcessingMode,
+    pub pen_system_processing_mode: FeProcessingMode,
 }
 
 impl ToBackend<(PenetrationSystemType, ProcessingMode)> for FePenetrationSystem {
@@ -167,7 +167,7 @@ impl ToBackend<(PenetrationSystemType, ProcessingMode)> for FePenetrationSystem 
     fn to_backend(&self) -> Self::OutputType {
         (
             self.pen_system_type.clone(),
-            self.pen_system_processing_mode.clone(),
+            self.pen_system_processing_mode.to_backend(),
         )
     }
 }

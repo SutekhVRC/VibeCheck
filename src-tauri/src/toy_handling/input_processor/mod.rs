@@ -56,7 +56,7 @@ impl ToFrontend<FePenetrationSystem> for PenetrationSystem {
     fn to_frontend(&self) -> Self::OutputType {
         FePenetrationSystem {
             pen_system_type: self.pen_system_type.clone(),
-            pen_system_processing_mode: self.pen_system_processing_mode.clone(),
+            pen_system_processing_mode: self.pen_system_processing_mode.to_frontend(),
         }
     }
 }
