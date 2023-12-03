@@ -5,7 +5,7 @@ use buttplug::{
 use core::fmt;
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
-use std::{borrow::BorrowMut, collections::HashMap, fs, sync::Arc, time::Instant};
+use std::{collections::HashMap, fs, sync::Arc, time::Instant};
 use ts_rs::TS;
 
 use crate::{
