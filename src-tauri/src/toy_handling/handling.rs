@@ -733,12 +733,7 @@ pub async fn toy_management_handler(
                                         }
                                         OscType::Bool(b) => {
                                             // Boolean to float transformation here
-                                            let float_level;
-                                            if b {
-                                                float_level = 1.;
-                                            } else {
-                                                float_level = 0.;
-                                            }
+                                            let float_level = if b { 1. } else { 0. };
 
                                             for feature in features {
                                                 // Get ToyParameter here
