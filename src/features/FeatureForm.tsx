@@ -1,12 +1,7 @@
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import Button from "@/layout/Button";
 import { Select } from "@/layout/Select";
-import { XMarkIcon } from "@heroicons/react/24/solid";
+import { PlusIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import { ChangeEvent, useEffect, useState } from "react";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
@@ -33,6 +28,9 @@ export default function FeatureForm({
     toy.features[selectedIndex] ?? toy.features[0],
   );
   const levels = feature.feature_levels;
+  const submenuOptions = ["Parameters", "Advanced"] as const;
+  type SubmenuOptions = (typeof submenuOptions)[number];
+  const [subMenu, setSubMenu] = useState<SubmenuOptions>("Parameters");
 
   const modeOptions = ["Raw", "Smooth", "Rate", "Constant"] as const;
   type modeOption = (typeof modeOptions)[number];
@@ -145,51 +143,58 @@ export default function FeatureForm({
           }
         />
       </FourPanelContainer>
-      <Button onClick={() => addParam()}>Add Param</Button>
-      <ScrollArea className="h-[100px] rounded-md border">
-        <FourPanelContainer>
-          {Object.values(feature.osc_parameters).map((param) => {
-            return (
-              <FourPanel
-                key={param.parameter}
-                text="Parameter"
-                tooltip="The float OSC parameter to control this feature's motor."
-                two={
-                  <Select
-                    value={param.processing_mode}
-                    onChange={(e) => {
-                      handleMode(param.parameter, e.target.value as modeOption);
-                    }}
-                    options={modeOptions}
-                  />
-                }
-                three={
-                  <input
-                    className="text-zinc-800 px-4 rounded-sm outline-none w-full"
-                    name="osc_parameter"
-                    value={param.parameter.replace(OSC_PARAM_PREFIX, "")}
-                    onChange={handleOscParam} // Not debounced because :shrug:
-                  />
-                }
-                four={
-                  <button
-                    className="flex items-center"
-                    onClick={() => removeParam(param.parameter)}
-                  >
-                    <XMarkIcon className="h-5" />
-                  </button>
-                }
-              />
-            );
-          })}
-        </FourPanelContainer>
-      </ScrollArea>
-      <Collapsible>
-        <CollapsibleTrigger>
-          <Button>Advanced Settings</Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <ScrollArea className="h-[100px] rounded-md border">
+      <div className="flex gap-4 m-2">
+        <Button onClick={() => setSubMenu("Parameters")}>Parameters</Button>
+        <Button onClick={() => setSubMenu("Advanced")}>Advanced</Button>
+      </div>
+      <ScrollArea className="rounded-md border flex flex-grow flex-col">
+        <>
+          {subMenu == "Parameters" ? (
+            <div className="flex flex-grow flex-col">
+              <FourPanelContainer>
+                {Object.values(feature.osc_parameters).map((param) => {
+                  return (
+                    <FourPanel
+                      key={param.parameter}
+                      text="Parameter"
+                      tooltip="The float OSC parameter to control this feature's motor."
+                      two={
+                        <Select
+                          value={param.processing_mode}
+                          onChange={(e) => {
+                            handleMode(
+                              param.parameter,
+                              e.target.value as modeOption,
+                            );
+                          }}
+                          options={modeOptions}
+                        />
+                      }
+                      three={
+                        <input
+                          className="text-zinc-800 px-4 rounded-sm outline-none w-full"
+                          name="osc_parameter"
+                          value={param.parameter.replace(OSC_PARAM_PREFIX, "")}
+                          onChange={handleOscParam} // Not debounced because :shrug:
+                        />
+                      }
+                      four={
+                        <button
+                          className="flex items-center"
+                          onClick={() => removeParam(param.parameter)}
+                        >
+                          <XMarkIcon className="h-5" />
+                        </button>
+                      }
+                    />
+                  );
+                })}
+              </FourPanelContainer>
+              <Button onClick={() => addParam()}>
+                <PlusIcon className="h-6" />
+              </Button>
+            </div>
+          ) : (
             <FourPanelContainer>
               {feature.feature_type == "Linear" && (
                 <FourPanel
@@ -328,9 +333,9 @@ export default function FeatureForm({
                 />
               )}
             </FourPanelContainer>
-          </ScrollArea>
-        </CollapsibleContent>
-      </Collapsible>
+          )}
+        </>
+      </ScrollArea>
     </>
   );
 }

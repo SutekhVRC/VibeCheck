@@ -176,7 +176,7 @@ export default function App() {
           </div>
         </div>
         <div className="bg-zinc-800 rounded-lg">
-          <div className="flex p-4">{mainPanel}</div>
+          <div className="flex p-4 h-full">{mainPanel}</div>
         </div>
       </div>
       {version}
