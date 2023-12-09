@@ -20,7 +20,7 @@ use crate::{
     vcore::vcerror,
 };
 
-use crate::toy_handling::input_processor::PenetrationSystem;
+use crate::toy_handling::input_processor::penetration_systems::PenetrationSystem;
 
 #[derive(Clone, Debug)]
 pub struct VCToy {
