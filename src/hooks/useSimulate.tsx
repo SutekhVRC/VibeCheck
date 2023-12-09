@@ -1,13 +1,13 @@
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
-import { SIMULATE_TOY_FEATURE } from "../data/constants";
-import { createToast } from "../components/Toast";
-import { useUpdateEffect } from "./useUpdateEffect";
 import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
+import { createToast } from "../components/Toast";
+import { SIMULATE_TOY_FEATURE } from "../data/constants";
+import { useUpdateEffect } from "./useUpdateEffect";
 
 export default function useSimulate(
   toyId: number | null,
-  feature: FeVCToyFeature
+  feature: FeVCToyFeature,
 ) {
   const [simulateEnabled, setSimulateEnabled] = useState(false);
   const [level, setLevel] = useState(0.5);
@@ -57,7 +57,7 @@ export default function useSimulate(
       createToast(
         "error",
         "Could not simulate device feature!",
-        JSON.stringify(e)
+        JSON.stringify(e),
       );
     }
   }

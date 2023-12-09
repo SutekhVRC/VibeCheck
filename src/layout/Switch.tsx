@@ -35,7 +35,7 @@ export default function Switch(
   props: SwitchProps & {
     theme?: keyof typeof themeColors;
     size?: keyof typeof sizes;
-  }
+  },
 ) {
   const theme = props.theme ?? "white-cyan";
   const size = props.size ?? "medium";
@@ -46,7 +46,7 @@ export default function Switch(
       className={cn(
         props.checked ? selectedTheme.active : selectedTheme.inactive,
         sizes[size].container,
-        "relative inline-flex cursor-pointer rounded-full border-transparent transition-all duration-200 ease-in-out disabled:bg-gray-700 disabled:cursor-not-allowed"
+        "relative inline-flex cursor-pointer rounded-full border-transparent transition-all duration-200 ease-in-out disabled:bg-gray-700 disabled:cursor-not-allowed",
       )}
     >
       <SwitchPrimitive.Thumb
@@ -54,7 +54,7 @@ export default function Switch(
           props.checked ? sizes[size].translateLeft : "translate-x-0",
           sizes[size].switch,
           props.disabled ? "bg-gray-600" : "bg-white",
-          "inline-block rounded-full transition duration-200 ease-in-out"
+          "inline-block rounded-full transition duration-200 ease-in-out",
         )}
       />
     </SwitchPrimitive.Root>

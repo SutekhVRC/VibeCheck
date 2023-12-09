@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import type { ReactNode } from "react";
 
 export default function Tooltip({
   children,

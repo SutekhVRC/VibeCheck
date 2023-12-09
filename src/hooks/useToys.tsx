@@ -1,12 +1,12 @@
+import { invoke } from "@tauri-apps/api";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
-import { ALTER_TOY, OFFLINE_SYNC, TOY_EVENT } from "../data/constants";
-import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import type { FeToyEvent } from "../../src-tauri/bindings/FeToyEvent";
-import { assertExhaustive } from "../utils";
-import { createToast } from "../components/Toast";
-import { invoke } from "@tauri-apps/api";
+import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
+import { createToast } from "../components/Toast";
+import { ALTER_TOY, OFFLINE_SYNC, TOY_EVENT } from "../data/constants";
+import { assertExhaustive } from "../utils";
 
 type ToyMap = {
   [id: string]: FeVCToy;
@@ -30,7 +30,7 @@ export async function handleToyAlter(newToy: FeVCToy) {
 
 export async function handleFeatureAlter(
   newToy: FeVCToy,
-  newFeature: FeVCToyFeature
+  newFeature: FeVCToyFeature,
 ) {
   const newFeatures = [...newToy.features];
   // We need to find the array index because feature_index is not unique
@@ -46,7 +46,7 @@ export async function handleFeatureAlter(
     .find(
       (f) =>
         f.feature_index == newFeature.feature_index &&
-        f.feature_type == newFeature.feature_type
+        f.feature_type == newFeature.feature_type,
     )?.arrayIndex;
   if (newFeatureArrayIndex == null) return; // newFeature [type + index] does not exist in feature array
   newFeatures[newFeatureArrayIndex] = newFeature;
@@ -85,7 +85,7 @@ export function useToys() {
         offlineToys.reduce((acc, val) => {
           acc[toyKey(val)] = val;
           return acc;
-        }, {} as ToyMap)
+        }, {} as ToyMap),
       );
     } catch (e) {
       createToast("error", "Could not load offline toys", JSON.stringify(e));
@@ -128,7 +128,7 @@ export function useToys() {
         await syncOfflineToys();
         setOnlineToys((curOnlineToys) => {
           const filtered = Object.values(curOnlineToys).filter(
-            (t) => t.toy_id != payload.data
+            (t) => t.toy_id != payload.data,
           );
           return filtered.reduce((acc, val) => {
             acc[toyKey(val)] = val;
@@ -143,7 +143,7 @@ export function useToys() {
 
   useEffect(() => {
     const unlistenPromise = listen<FeToyEvent>(TOY_EVENT, (event) =>
-      handleToyEvent(event.payload)
+      handleToyEvent(event.payload),
     );
 
     return () => {

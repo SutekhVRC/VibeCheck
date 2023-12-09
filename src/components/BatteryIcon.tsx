@@ -4,9 +4,9 @@ import {
   Battery50Icon,
   BoltSlashIcon,
 } from "@heroicons/react/24/solid";
+import { CSSProperties } from "react";
 import Tooltip from "../layout/Tooltip";
 import { percent } from "../utils";
-import { CSSProperties } from "react";
 
 export default function Batteryicon({ battery }: { battery: number | null }) {
   let tooltipText = "";

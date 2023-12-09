@@ -1,6 +1,6 @@
+import { ArrowsRightLeftIcon } from "@heroicons/react/24/solid";
 import { ReactNode } from "react";
 import { TooltipLabel } from "../layout/Tooltip";
-import { ArrowsRightLeftIcon } from "@heroicons/react/24/solid";
 
 export default function FourPanel({
   text,

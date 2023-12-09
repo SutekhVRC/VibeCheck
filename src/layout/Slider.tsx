@@ -1,11 +1,11 @@
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
-import { round0 } from "../utils";
-import { cn } from "../lib/utils";
 import { useState } from "react";
+import { cn } from "../lib/utils";
+import { round0 } from "../utils";
 
 export default function Slider(
-  props: SliderPrimitive.SliderProps & { multiply?: number }
+  props: SliderPrimitive.SliderProps & { multiply?: number },
 ) {
   const [hover, setHover] = useState(false);
   const first = props.value?.at(0);
@@ -15,15 +15,15 @@ export default function Slider(
   return (
     <SliderPrimitive.Root
       className={cn(
-        "relative flex items-center",
-        !props.disabled && "cursor-ew-resize"
+        "relative items-center flex",
+        !props.disabled && "cursor-ew-resize",
       )}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       {...props}
       aria-label="Slider"
     >
-      <SliderPrimitive.Track className="relative bg-gray-700 flex-grow rounded-full h-2">
+      <SliderPrimitive.Track className="relative flex bg-gray-700 flex-grow rounded-full h-2">
         <SliderPrimitive.Range className="absolute bg-gray-100 rounded-full h-full data-[disabled]:bg-gray-600 transition-all" />
       </SliderPrimitive.Track>
       {first != undefined && (

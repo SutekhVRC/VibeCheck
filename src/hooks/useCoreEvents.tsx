@@ -1,6 +1,10 @@
 import { invoke } from "@tauri-apps/api";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
+import type { FeCoreEvent } from "../../src-tauri/bindings/FeCoreEvent";
+import { FeStateEvent } from "../../src-tauri/bindings/FeStateEvent";
+import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
+import { createToast } from "../components/Toast";
 import {
   CORE_EVENT,
   DISABLE,
@@ -11,10 +15,6 @@ import {
   STOP_SCAN,
 } from "../data/constants";
 import { assertExhaustive } from "../utils";
-import type { FeCoreEvent } from "../../src-tauri/bindings/FeCoreEvent";
-import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
-import { FeStateEvent } from "../../src-tauri/bindings/FeStateEvent";
-import { createToast } from "../components/Toast";
 
 export function useCoreEvents() {
   const [isEnabled, setIsEnabled] = useState(false);
@@ -109,7 +109,7 @@ export function useCoreEvents() {
 
   useEffect(() => {
     const unlistenPromise = listen<FeCoreEvent>(CORE_EVENT, (event) =>
-      handleCoreEvent(event.payload)
+      handleCoreEvent(event.payload),
     );
 
     return () => {

@@ -1,26 +1,26 @@
-import { parseName, toyKey, useToys } from "./hooks/useToys";
-import VibecheckLogo from "./assets/VibeCheck_logo.png";
-import cryingAnimeGirl from "./assets/menhera_chan.gif";
-import Toy from "./features/Toy";
+import { Cog6ToothIcon } from "@heroicons/react/24/solid";
 import { AnimatePresence } from "framer-motion";
-import Button from "./layout/Button";
-import { useCoreEvents } from "./hooks/useCoreEvents";
-import Loading from "./components/Loading";
 import { useState } from "react";
 import { FeVCToy } from "../src-tauri/bindings/FeVCToy";
+import "./App.css";
+import GithubLogo from "./assets/GitHub-Mark-Light-64px.png";
+import VibecheckLogo from "./assets/VibeCheck_logo.png";
+import DiscordLogo from "./assets/discord-mark-white.svg";
+import cryingAnimeGirl from "./assets/menhera_chan.gif";
+import VrchatLogo from "./assets/vrchat-192x192.png";
+import ExternalLogo from "./components/ExternalLogo";
+import Loading from "./components/Loading";
+import UpdatePing from "./components/UpdatePing";
 import Config from "./features/Config";
+import Toy from "./features/Toy";
+import { useCoreEvents } from "./hooks/useCoreEvents";
+import { parseName, toyKey, useToys } from "./hooks/useToys";
 import { useUpdate } from "./hooks/useUpdate";
 import { useVersion } from "./hooks/useVersion";
-import UpdatePing from "./components/UpdatePing";
-import { Cog6ToothIcon } from "@heroicons/react/24/solid";
-import ExternalLogo from "./components/ExternalLogo";
-import VrchatLogo from "./assets/vrchat-192x192.png";
-import DiscordLogo from "./assets/discord-mark-white.svg";
-import GithubLogo from "./assets/GitHub-Mark-Light-64px.png";
+import Button from "./layout/Button";
 import Switch from "./layout/Switch";
 import Tooltip from "./layout/Tooltip";
 import { cn } from "./lib/utils";
-import "./App.css";
 
 type Selection = ToySelection | ConfigSelection | null;
 
@@ -120,7 +120,7 @@ export default function App() {
               tooltip="Vibecheck Github"
             />
           </div>
-          <div className="bg-gray-800 rounded-md justify-between flex flex-col overflow-hidden h-[calc(100vh-185px)]">
+          <div className="bg-gray-800 rounded-md justify-between flex-col overflow-hidden h-[calc(100vh-185px)] flex">
             <div className="flex flex-col pl-2 select-none overflow-y-scroll scrollbar">
               <AnimatePresence>
                 {toysList.map((sidebarToy) => (
@@ -134,7 +134,7 @@ export default function App() {
                       sidebarToy.toy_connected
                         ? "text-gray-200"
                         : "text-gray-500",
-                      "bg-gray-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400"
+                      "bg-gray-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400",
                     )}
                   >
                     {parseName(sidebarToy.toy_name)}
@@ -158,7 +158,7 @@ export default function App() {
               <Cog6ToothIcon
                 className={cn(
                   selection?.type == "Config" && "rotate-45",
-                  "h-10 cursor-pointer transform duration-300 ease-in-out"
+                  "h-10 cursor-pointer transform duration-300 ease-in-out",
                 )}
                 onClick={() => setConfig()}
               />

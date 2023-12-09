@@ -1,17 +1,17 @@
 import { ChangeEvent, useEffect, useState } from "react";
-import { OSC_PARAM_PREFIX } from "../data/constants";
-import { round0 } from "../utils";
-import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
-import Slider from "../layout/Slider";
-import useSimulate from "../hooks/useSimulate";
-import Switch from "../layout/Switch";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
-import FourPanel from "../components/FourPanel";
-import { handleFeatureAlter } from "../hooks/useToys";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
-import { Select } from "../layout/Select";
-import { TooltipLabel } from "../layout/Tooltip";
+import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
+import FourPanel from "../components/FourPanel";
 import FourPanelContainer from "../components/FourPanelContainer";
+import { OSC_PARAM_PREFIX } from "../data/constants";
+import useSimulate from "../hooks/useSimulate";
+import { handleFeatureAlter } from "../hooks/useToys";
+import { Select } from "../layout/Select";
+import Slider from "../layout/Slider";
+import Switch from "../layout/Switch";
+import { TooltipLabel } from "../layout/Tooltip";
+import { round0 } from "../utils";
 
 type ToyFeatureFormProps = {
   toy: FeVCToy;
@@ -23,7 +23,7 @@ export default function FeatureForm({
   selectedIndex,
 }: ToyFeatureFormProps) {
   const [feature, setToyFeature] = useState(
-    toy.features[selectedIndex] ?? toy.features[0]
+    toy.features[selectedIndex] ?? toy.features[0],
   );
   const levels = feature.feature_levels;
 
@@ -141,8 +141,8 @@ export default function FeatureForm({
           feature.rate_enabled
             ? "Rate"
             : feature.smooth_enabled
-            ? "Smooth"
-            : "None"
+              ? "Smooth"
+              : "None"
         }
         onChange={(e) => {
           handleMode(e.target.value as modeOption);
@@ -176,8 +176,8 @@ export default function FeatureForm({
         {feature.smooth_enabled
           ? levels.smooth_rate.toString()
           : feature.rate_enabled
-          ? levels.rate_tune.toString()
-          : null}
+            ? levels.rate_tune.toString()
+            : null}
       </div>
       {feature.feature_type == "Linear" && (
         <FourPanel
@@ -253,7 +253,7 @@ export default function FeatureForm({
           />
         }
         four={`${round0.format(levels.minimum_level * 100)}-${round0.format(
-          levels.maximum_level * 100
+          levels.maximum_level * 100,
         )}`}
       />
       {simulateEnabled != null && (

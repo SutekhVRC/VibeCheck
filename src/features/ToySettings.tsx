@@ -1,14 +1,14 @@
+import { ClipboardIcon } from "@heroicons/react/24/solid";
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
-import { OSC_DATA_PREFIX } from "../data/constants";
-import Switch from "../layout/Switch";
-import { ToyAnatomyArray } from "../data/stringArrayTypes";
 import { FeVCToyAnatomy } from "../../src-tauri/bindings/FeVCToyAnatomy";
 import FourPanel from "../components/FourPanel";
-import { handleToyAlter } from "../hooks/useToys";
-import { createToast } from "../components/Toast";
-import { Select } from "../layout/Select";
-import { ClipboardIcon } from "@heroicons/react/24/solid";
 import FourPanelContainer from "../components/FourPanelContainer";
+import { createToast } from "../components/Toast";
+import { OSC_DATA_PREFIX } from "../data/constants";
+import { ToyAnatomyArray } from "../data/stringArrayTypes";
+import { handleToyAlter } from "../hooks/useToys";
+import { Select } from "../layout/Select";
+import Switch from "../layout/Switch";
 import Tooltip, { TooltipLabel } from "../layout/Tooltip";
 
 export default function ToySettings({ toy }: { toy: FeVCToy }) {

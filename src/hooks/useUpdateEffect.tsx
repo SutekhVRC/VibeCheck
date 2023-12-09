@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 
 export function useUpdateEffect(
   effect: () => void,
-  dependencyArray: unknown[]
+  dependencyArray: unknown[],
 ) {
   const isMountedRef = useRef(false);
 

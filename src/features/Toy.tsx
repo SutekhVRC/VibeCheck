@@ -1,12 +1,12 @@
-import lovenseLogo from "../assets/Lovense.png";
-import lovenseConnectLogo from "../assets/Lovense_Connect.png";
-import FeatureForm from "./FeatureForm";
-import ToySettings from "./ToySettings";
-import Tooltip from "../layout/Tooltip";
-import BatteryIcon from "../components/BatteryIcon";
 import { useEffect, useState } from "react";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
+import lovenseLogo from "../assets/Lovense.png";
+import lovenseConnectLogo from "../assets/Lovense_Connect.png";
+import BatteryIcon from "../components/BatteryIcon";
+import Tooltip from "../layout/Tooltip";
 import { cn } from "../lib/utils";
+import FeatureForm from "./FeatureForm";
+import ToySettings from "./ToySettings";
 
 export default function Toy({ toy }: { toy: FeVCToy }) {
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
@@ -37,7 +37,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
               className={cn(
                 featureArrayIndex == selectedFeatureIndex && "outline",
                 feature.feature_enabled ? "text-gray-200" : "text-gray-500",
-                "rounded-md bg-gray-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-cyan-500 whitespace-nowrap"
+                "rounded-md bg-gray-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-cyan-500 whitespace-nowrap",
               )}
             >
               {feature.feature_type} {feature.feature_index}

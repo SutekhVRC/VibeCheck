@@ -9,5 +9,5 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <ToastProvider>
       <App />
     </ToastProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );
