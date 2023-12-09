@@ -1,3 +1,12 @@
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import Button from "@/layout/Button";
+import { Select } from "@/layout/Select";
+import { XMarkIcon } from "@heroicons/react/24/solid";
 import { ChangeEvent, useEffect, useState } from "react";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
@@ -7,10 +16,8 @@ import FourPanelContainer from "../components/FourPanelContainer";
 import { OSC_PARAM_PREFIX } from "../data/constants";
 import useSimulate from "../hooks/useSimulate";
 import { handleFeatureAlter } from "../hooks/useToys";
-import { Select } from "../layout/Select";
 import Slider from "../layout/Slider";
 import Switch from "../layout/Switch";
-import { TooltipLabel } from "../layout/Tooltip";
 import { round0 } from "../utils";
 
 type ToyFeatureFormProps = {
@@ -27,7 +34,7 @@ export default function FeatureForm({
   );
   const levels = feature.feature_levels;
 
-  const modeOptions = ["None", "Smooth", "Rate"] as const;
+  const modeOptions = ["Raw", "Smooth", "Rate", "Constant"] as const;
   type modeOption = (typeof modeOptions)[number];
 
   useEffect(() => {
@@ -50,14 +57,47 @@ export default function FeatureForm({
     });
   }
 
-  function handleMode(option: modeOption) {
-    const smooth_enabled = option == "Smooth";
-    const rate_enabled = option == "Rate";
+  function handleMode(parameter: string, option: modeOption) {
     setToyFeature((f) => {
       const newF = {
         ...f,
-        smooth_enabled,
-        rate_enabled,
+        osc_parameters: {
+          ...f.osc_parameters,
+          [parameter]: {
+            parameter: parameter,
+            processing_mode: option,
+          },
+        },
+      };
+      handleFeatureAlter(toy, newF);
+      return newF;
+    });
+  }
+
+  function removeParam(parameter: string) {
+    setToyFeature((f) => {
+      const {
+        osc_parameters: { [parameter]: _, ...restNewParams },
+        ...restOuterFeature
+      } = f;
+      const newF = { ...restOuterFeature, osc_parameters: restNewParams };
+      handleFeatureAlter(toy, newF);
+      return newF;
+    });
+  }
+
+  function addParam() {
+    setToyFeature((f) => {
+      const newParam = `${OSC_PARAM_PREFIX}newParam`;
+      const newF = {
+        ...f,
+        osc_parameters: {
+          ...f.osc_parameters,
+          [newParam]: {
+            parameter: newParam,
+            processing_mode: "Raw",
+          },
+        },
       } as FeVCToyFeature;
       handleFeatureAlter(toy, newF);
       return newF;
@@ -89,200 +129,208 @@ export default function FeatureForm({
   }
 
   return (
-    <FourPanelContainer>
-      <FourPanel
-        text="Enabled"
-        tooltip="Enable/Disable this feature."
-        two={
-          <Switch
-            size="small"
-            checked={feature.feature_enabled}
-            onCheckedChange={(checked) =>
-              handleBool(checked, "feature_enabled")
-            }
-          />
-        }
-      />
-      {Object.values(feature.osc_parameters).map((param) => {
-        return (
-          <FourPanel
-            key={param.parameter}
-            text="Parameter"
-            tooltip="The float OSC parameter to control this feature's motor."
-            three={
-              <input
-                className="text-zinc-800 px-4 rounded-sm outline-none w-full"
-                name="osc_parameter"
-                value={param.parameter.replace(OSC_PARAM_PREFIX, "")}
-                onChange={handleOscParam} // Not debounced because :shrug:
-              />
-            }
-          />
-        );
-      })}
-      {feature.smooth_enabled ? (
-        <TooltipLabel
-          text="Mode"
-          tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
-        />
-      ) : feature.rate_enabled ? (
-        <TooltipLabel
-          text="Mode"
-          tooltip="This uses rate mode on the float input."
-        />
-      ) : (
-        <TooltipLabel
-          text="Mode"
-          tooltip="No additional mode options will be applied to the float input."
-        />
-      )}
-      <Select
-        value={
-          feature.rate_enabled
-            ? "Rate"
-            : feature.smooth_enabled
-              ? "Smooth"
-              : "None"
-        }
-        onChange={(e) => {
-          handleMode(e.target.value as modeOption);
-        }}
-        options={modeOptions}
-      />
-      <div className="col-span-2 md:col-span-1">
-        {feature.smooth_enabled ? (
-          <Slider
-            disabled={!feature.smooth_enabled}
-            min={1}
-            max={20}
-            step={1}
-            value={[levels.smooth_rate]}
-            onValueChange={(e) => handleLevels("smooth_rate", e[0])}
-            onValueCommit={handleCommit}
-          />
-        ) : feature.rate_enabled ? (
-          <Slider
-            disabled={!feature.rate_enabled}
-            min={0.1}
-            max={1}
-            step={0.01}
-            value={[levels.rate_tune]}
-            onValueChange={(e) => handleLevels("rate_tune", e[0])}
-            onValueCommit={handleCommit}
-          />
-        ) : null}
-      </div>
-      <div className="text-right hidden md:block">
-        {feature.smooth_enabled
-          ? levels.smooth_rate.toString()
-          : feature.rate_enabled
-            ? levels.rate_tune.toString()
-            : null}
-      </div>
-      {feature.feature_type == "Linear" && (
+    <>
+      <FourPanelContainer>
         <FourPanel
-          text="Linear Speed"
-          tooltip="Linear positional duration speed in milliseconds. Speed is determined by the toy itself, this is only requested speed."
-          three={
-            <Slider
-              min={10}
-              max={1000}
-              step={1}
-              value={[levels.linear_position_speed]}
-              onValueChange={(e) => handleLevels("linear_position_speed", e[0])}
-              onValueCommit={handleCommit}
-            />
-          }
-          four={levels.linear_position_speed.toString()}
-        />
-      )}
-      <FourPanel
-        text="Flip Input"
-        tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
-        two={
-          <Switch
-            size="small"
-            checked={feature.flip_input_float}
-            onCheckedChange={(checked) =>
-              handleBool(checked, "flip_input_float")
-            }
-          />
-        }
-      />
-      <FourPanel
-        text="Idle"
-        tooltip="Set the idle motor speed for this feature. Idle activates when there is no input. Your set idle speed won't activate until you send at least one float value in the valid min/max range you have set."
-        flipped={feature.flip_input_float}
-        three={
-          <Slider
-            multiply={100}
-            min={0}
-            max={1}
-            step={0.01}
-            value={[levels.idle_level]}
-            onValueChange={(e) => handleLevels("idle_level", e[0])}
-            onValueCommit={handleCommit}
-          />
-        }
-        four={round0.format(levels.idle_level * 100)}
-      />
-      <FourPanel
-        text="Range"
-        tooltip="The minimum/maximum motor speed that will be sent to the feature's motor."
-        flipped={feature.flip_input_float}
-        three={
-          <Slider
-            multiply={100}
-            min={0}
-            max={1}
-            step={0.01}
-            value={[levels.minimum_level, levels.maximum_level]}
-            onValueChange={(e) => {
-              setToyFeature((f) => {
-                return {
-                  ...f,
-                  feature_levels: {
-                    ...levels,
-                    minimum_level: e[0],
-                    maximum_level: e[1],
-                  },
-                };
-              });
-            }}
-            onValueCommit={handleCommit}
-          />
-        }
-        four={`${round0.format(levels.minimum_level * 100)}-${round0.format(
-          levels.maximum_level * 100,
-        )}`}
-      />
-      {simulateEnabled != null && (
-        <FourPanel
-          text="Simulate"
-          tooltip="Test feature power level."
-          flipped={feature.flip_input_float}
+          text="Enabled"
+          tooltip="Enable/Disable this feature."
           two={
             <Switch
               size="small"
-              checked={simulateEnabled}
-              onCheckedChange={toggleSimulate}
+              checked={feature.feature_enabled}
+              onCheckedChange={(checked) =>
+                handleBool(checked, "feature_enabled")
+              }
             />
           }
-          three={
-            <Slider
-              multiply={100}
-              disabled={!simulateEnabled}
-              min={0}
-              max={1}
-              step={0.01}
-              value={[simulateLevel]}
-              onValueChange={(e) => simulateOnValueChange(e[0])}
-              onValueCommit={() => simulateOnValueCommit()}
-            />
-          }
-          four={round0.format(simulateLevel * 100)}
         />
-      )}
-    </FourPanelContainer>
+      </FourPanelContainer>
+      <Button onClick={() => addParam()}>Add Param</Button>
+      <ScrollArea className="h-[100px] rounded-md border">
+        <FourPanelContainer>
+          {Object.values(feature.osc_parameters).map((param) => {
+            return (
+              <FourPanel
+                key={param.parameter}
+                text="Parameter"
+                tooltip="The float OSC parameter to control this feature's motor."
+                two={
+                  <Select
+                    value={param.processing_mode}
+                    onChange={(e) => {
+                      handleMode(param.parameter, e.target.value as modeOption);
+                    }}
+                    options={modeOptions}
+                  />
+                }
+                three={
+                  <input
+                    className="text-zinc-800 px-4 rounded-sm outline-none w-full"
+                    name="osc_parameter"
+                    value={param.parameter.replace(OSC_PARAM_PREFIX, "")}
+                    onChange={handleOscParam} // Not debounced because :shrug:
+                  />
+                }
+                four={
+                  <button
+                    className="flex items-center"
+                    onClick={() => removeParam(param.parameter)}
+                  >
+                    <XMarkIcon className="h-5" />
+                  </button>
+                }
+              />
+            );
+          })}
+        </FourPanelContainer>
+      </ScrollArea>
+      <Collapsible>
+        <CollapsibleTrigger>
+          <Button>Advanced Settings</Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <ScrollArea className="h-[100px] rounded-md border">
+            <FourPanelContainer>
+              {feature.feature_type == "Linear" && (
+                <FourPanel
+                  text="Linear Speed"
+                  tooltip="Linear positional duration speed in milliseconds. Speed is determined by the toy itself, this is only requested speed."
+                  three={
+                    <Slider
+                      min={10}
+                      max={1000}
+                      step={1}
+                      value={[levels.linear_position_speed]}
+                      onValueChange={(e) =>
+                        handleLevels("linear_position_speed", e[0])
+                      }
+                      onValueCommit={handleCommit}
+                    />
+                  }
+                  four={levels.linear_position_speed.toString()}
+                />
+              )}
+              <FourPanel
+                text="Rate Level"
+                tooltip="This uses rate mode on the float input."
+                three={
+                  <Slider
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={[levels.rate_tune]}
+                    onValueChange={(e) => handleLevels("rate_tune", e[0])}
+                    onValueCommit={handleCommit}
+                  />
+                }
+                four={levels.rate_tune.toString()}
+              />
+              <FourPanel
+                text="Smooth Level"
+                tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
+                three={
+                  <Slider
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={[levels.smooth_rate]}
+                    onValueChange={(e) => handleLevels("smooth_rate", e[0])}
+                    onValueCommit={handleCommit}
+                  />
+                }
+                four={levels.smooth_rate.toString()}
+              />
+              <FourPanel
+                text="Flip Input"
+                tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
+                two={
+                  <Switch
+                    size="small"
+                    checked={feature.flip_input_float}
+                    onCheckedChange={(checked) =>
+                      handleBool(checked, "flip_input_float")
+                    }
+                  />
+                }
+              />
+              <FourPanel
+                text="Idle"
+                tooltip="Set the idle motor speed for this feature. Idle activates when there is no input. Your set idle speed won't activate until you send at least one float value in the valid min/max range you have set."
+                flipped={feature.flip_input_float}
+                three={
+                  <Slider
+                    multiply={100}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={[levels.idle_level]}
+                    onValueChange={(e) => handleLevels("idle_level", e[0])}
+                    onValueCommit={handleCommit}
+                  />
+                }
+                four={round0.format(levels.idle_level * 100)}
+              />
+              <FourPanel
+                text="Range"
+                tooltip="The minimum/maximum motor speed that will be sent to the feature's motor."
+                flipped={feature.flip_input_float}
+                three={
+                  <Slider
+                    multiply={100}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={[levels.minimum_level, levels.maximum_level]}
+                    onValueChange={(e) => {
+                      setToyFeature((f) => {
+                        return {
+                          ...f,
+                          feature_levels: {
+                            ...levels,
+                            minimum_level: e[0],
+                            maximum_level: e[1],
+                          },
+                        };
+                      });
+                    }}
+                    onValueCommit={handleCommit}
+                  />
+                }
+                four={`${round0.format(
+                  levels.minimum_level * 100,
+                )}-${round0.format(levels.maximum_level * 100)}`}
+              />
+              {simulateEnabled != null && (
+                <FourPanel
+                  text="Simulate"
+                  tooltip="Test feature power level."
+                  flipped={feature.flip_input_float}
+                  two={
+                    <Switch
+                      size="small"
+                      checked={simulateEnabled}
+                      onCheckedChange={toggleSimulate}
+                    />
+                  }
+                  three={
+                    <Slider
+                      multiply={100}
+                      disabled={!simulateEnabled}
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      value={[simulateLevel]}
+                      onValueChange={(e) => simulateOnValueChange(e[0])}
+                      onValueCommit={() => simulateOnValueCommit()}
+                    />
+                  }
+                  four={round0.format(simulateLevel * 100)}
+                />
+              )}
+            </FourPanelContainer>
+          </ScrollArea>
+        </CollapsibleContent>
+      </Collapsible>
+    </>
   );
 }

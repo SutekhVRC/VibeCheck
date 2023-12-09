@@ -13,9 +13,9 @@ export default function FourPanel({
   text: string;
   tooltip?: string;
   flipped?: boolean;
-  two?: ReactNode | null;
-  three?: ReactNode | null;
-  four?: string | null;
+  two?: ReactNode;
+  three?: ReactNode;
+  four?: ReactNode;
 }) {
   const label = tooltip ? (
     <TooltipLabel text={text} tooltip={tooltip} />

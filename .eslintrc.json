@@ -8,7 +8,16 @@
     "plugin:react/recommended",
     "plugin:@typescript-eslint/recommended"
   ],
-  "overrides": [],
+  "overrides": [
+    // hack for shadcn https://github.com/shadcn-ui/ui/issues/120
+    {
+      "files": ["**/components/ui/*.tsx"],
+      "rules": {
+        "react/prop-types": [2, { "ignore": ["className", "orientation"] }],
+        "react-refresh/only-export-components": "off"
+      }
+    }
+  ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": "latest",
@@ -16,7 +25,15 @@
   },
   "plugins": ["react", "@typescript-eslint"],
   "rules": {
-    "react/react-in-jsx-scope": "off"
+    "react/react-in-jsx-scope": "off",
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "no-console": ["error", { "allow": ["warn", "error"] }]
   },
   "settings": {
     "react": {
