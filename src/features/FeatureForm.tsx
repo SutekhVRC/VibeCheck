@@ -3,6 +3,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select } from "@/layout/Select";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import { ChangeEvent, useEffect, useState } from "react";
+import { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
+import { FeToyParameter } from "src-tauri/bindings/FeToyParameter";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
@@ -33,7 +35,7 @@ export default function FeatureForm({
   const [subMenu, setSubMenu] = useState<SubmenuOptions>("Parameters");
 
   const modeOptions = ["Raw", "Smooth", "Rate", "Constant"] as const;
-  type modeOption = (typeof modeOptions)[number];
+  type ModeOption = (typeof modeOptions)[number];
 
   useEffect(() => {
     setToyFeature(toy.features[selectedIndex] ?? toy.features[0]);
@@ -55,58 +57,66 @@ export default function FeatureForm({
     });
   }
 
-  function handleMode(parameter: string, option: modeOption) {
+  function removeParam(parameter: string) {
     setToyFeature((f) => {
       const newF = {
         ...f,
-        osc_parameters: {
-          ...f.osc_parameters,
-          [parameter]: {
-            parameter: parameter,
-            processing_mode: option,
-          },
-        },
+        osc_parameters: f.osc_parameters.filter(
+          (param) => param.parameter != parameter,
+        ),
       };
       handleFeatureAlter(toy, newF);
       return newF;
     });
   }
 
-  function removeParam(parameter: string) {
-    setToyFeature((f) => {
-      const {
-        osc_parameters: { [parameter]: _, ...restNewParams },
-        ...restOuterFeature
-      } = f;
-      const newF = { ...restOuterFeature, osc_parameters: restNewParams };
-      handleFeatureAlter(toy, newF);
-      return newF;
-    });
+  function findParamName(params: FeToyParameter[]) {
+    // A bit overpowered for need but :shrug:
+    const seenSuffixes = params.reduce((acc, val) => {
+      const [_, suffix] = val.parameter.split("param-").map((c) => parseInt(c));
+      if (isNaN(suffix)) return acc;
+      acc.add(suffix);
+      return acc;
+    }, new Set<number>());
+    for (let i = 0; i < params.length; i++) if (!seenSuffixes.has(i)) return i;
+    return params.length;
   }
 
   function addParam() {
     setToyFeature((f) => {
-      const newParam = `${OSC_PARAM_PREFIX}newParam`;
+      const newParam = `${OSC_PARAM_PREFIX}param-${findParamName(
+        f.osc_parameters,
+      )}`;
       const newF = {
         ...f,
-        osc_parameters: {
+        osc_parameters: [
           ...f.osc_parameters,
-          [newParam]: {
+          {
             parameter: newParam,
-            processing_mode: "Raw",
+            processing_mode: "Raw" as FeProcessingMode,
           },
-        },
-      } as FeVCToyFeature;
+        ],
+      };
       handleFeatureAlter(toy, newF);
       return newF;
     });
   }
 
-  function handleOscParam(e: ChangeEvent<HTMLInputElement>) {
+  function handleOscParam(
+    e: ChangeEvent<HTMLInputElement> | ChangeEvent<HTMLSelectElement>,
+    paramIndex: number,
+  ) {
     setToyFeature((f) => {
+      const newParams = [...f.osc_parameters];
+      if (e.target.name == "osc_parameter") {
+        newParams[paramIndex].parameter =
+          `${OSC_PARAM_PREFIX}${e.target.value}`;
+      } else if (e.target.name == "osc_parameter_mode") {
+        newParams[paramIndex].processing_mode = e.target.value as ModeOption;
+      }
       const newF = {
         ...f,
-        [e.target.name]: `${OSC_PARAM_PREFIX}${e.target.value}`,
+        osc_parameters: newParams,
       };
       handleFeatureAlter(toy, newF);
       return newF;
@@ -147,52 +157,48 @@ export default function FeatureForm({
         <Button onClick={() => setSubMenu("Parameters")}>Parameters</Button>
         <Button onClick={() => setSubMenu("Advanced")}>Advanced</Button>
       </div>
-      <ScrollArea className="rounded-md border flex flex-grow flex-col">
+      <ScrollArea className="rounded-md border flex flex-grow flex-col h-[calc(100vh-410px)]">
         <>
           {subMenu == "Parameters" ? (
-            <div className="flex flex-grow flex-col">
-              <FourPanelContainer>
-                {Object.values(feature.osc_parameters).map((param) => {
-                  return (
-                    <FourPanel
-                      key={param.parameter}
-                      text="Parameter"
-                      tooltip="The float OSC parameter to control this feature's motor."
-                      two={
-                        <Select
-                          value={param.processing_mode}
-                          onChange={(e) => {
-                            handleMode(
-                              param.parameter,
-                              e.target.value as modeOption,
-                            );
-                          }}
-                          options={modeOptions}
-                        />
-                      }
-                      three={
+            <div className="flex flex-col justify-between gap-2">
+              <div className="h-[calc(100vh-470px)] overflow-y-scroll scrollbar">
+                <div className="grid grid-cols-[20fr,_6fr,_1fr] text-sm text-justify p-4 gap-y-2 gap-x-6 items-center">
+                  {feature.osc_parameters.map((param, paramIndex) => {
+                    // TODO this is an antipatern to use index, however there should only be a low number of params
+                    // This needs to be by index because we update directly from backend
+                    // If we key on param, it would change on every update when typing, and un-select after each char
+                    return (
+                      <>
                         <input
                           className="text-zinc-800 px-4 rounded-sm outline-none w-full"
                           name="osc_parameter"
                           value={param.parameter.replace(OSC_PARAM_PREFIX, "")}
-                          onChange={handleOscParam} // Not debounced because :shrug:
+                          onChange={(e) => handleOscParam(e, paramIndex)} // Not debounced because :shrug:
                         />
-                      }
-                      four={
+                        <Select
+                          name="osc_parameter_mode"
+                          value={param.processing_mode}
+                          onChange={(e) => {
+                            handleOscParam(e, paramIndex);
+                          }}
+                          options={modeOptions}
+                        />
                         <button
-                          className="flex items-center"
+                          className="flex justify-center"
                           onClick={() => removeParam(param.parameter)}
                         >
                           <XMarkIcon className="h-5" />
                         </button>
-                      }
-                    />
-                  );
-                })}
-              </FourPanelContainer>
-              <Button onClick={() => addParam()}>
-                <PlusIcon className="h-6" />
-              </Button>
+                      </>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex flex-col justify-center">
+                <Button onClick={() => addParam()}>
+                  <PlusIcon className="h-6" />
+                </Button>
+              </div>
             </div>
           ) : (
             <FourPanelContainer>
