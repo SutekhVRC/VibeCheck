@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 /*
  * Frontend type binding generation
  */
@@ -177,7 +175,7 @@ impl ToBackend<(PenetrationSystemType, ProcessingMode)> for FePenetrationSystem 
 pub struct FeVCToyFeature {
     pub feature_enabled: bool,
     pub feature_type: FeVCFeatureType,
-    pub osc_parameters: HashMap<String, FeToyParameter>,
+    pub osc_parameters: Vec<FeToyParameter>,
     pub penetration_system: FePenetrationSystem,
     pub feature_index: u32,
     pub flip_input_float: bool,

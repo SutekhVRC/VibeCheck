@@ -37,6 +37,7 @@ use crate::frontend::ToFrontend;
 use crate::osc::logic::toy_input_routine;
 use crate::toy_handling::toy_manager::ToyManager;
 use crate::toy_handling::toyops::LevelTweaks;
+use crate::toy_handling::toyops::ToyParameter;
 use crate::toy_handling::toyops::VCFeatureType;
 use crate::toy_handling::toyops::{VCToy, VCToyFeatures};
 use crate::toy_handling::ToySig;
@@ -704,31 +705,45 @@ pub async fn toy_management_handler(
                                             for feature in features {
                                                 // Get ToyParameter here
                                                 // We unwrap here because the call to get_features_from_param guarantees the parameter exists.
-                                                let toy_parameter = feature
+                                                let mut toy_parameter = feature
                                                     .osc_parameters
-                                                    .get_mut(&msg.addr)
-                                                    .unwrap();
+                                                    .iter_mut()
+                                                    .filter_map(|param| {
+                                                        if param.parameter == msg.addr {
+                                                            Some(param)
+                                                        } else {
+                                                            None
+                                                        }
+                                                    })
+                                                    .collect::<Vec<&mut ToyParameter>>();
 
-                                                if let Some(mode_processed_value) = mode_processor(
-                                                    ModeProcessorInput::RawInput(
-                                                        ModeProcessorInputType::Float(float_level),
-                                                        toy_parameter,
-                                                    ),
-                                                    feature.feature_levels,
-                                                    feature.flip_input_float,
-                                                )
-                                                .await
+                                                if let Some(first_toy_param) =
+                                                    toy_parameter.first_mut()
                                                 {
-                                                    command_toy(
-                                                        dev.clone(),
-                                                        feature.feature_type,
-                                                        mode_processed_value,
-                                                        feature.feature_index,
-                                                        feature.flip_input_float,
-                                                        feature.feature_levels,
-                                                    )
-                                                    .await;
-                                                }
+                                                    if let Some(mode_processed_value) =
+                                                        mode_processor(
+                                                            ModeProcessorInput::RawInput(
+                                                                ModeProcessorInputType::Float(
+                                                                    float_level,
+                                                                ),
+                                                                first_toy_param,
+                                                            ),
+                                                            feature.feature_levels,
+                                                            feature.flip_input_float,
+                                                        )
+                                                        .await
+                                                    {
+                                                        command_toy(
+                                                            dev.clone(),
+                                                            feature.feature_type,
+                                                            mode_processed_value,
+                                                            feature.feature_index,
+                                                            feature.flip_input_float,
+                                                            feature.feature_levels,
+                                                        )
+                                                        .await;
+                                                    }
+                                                } // If no matching toy parameter skip feature
                                             }
                                         }
                                         OscType::Bool(b) => {
@@ -738,30 +753,43 @@ pub async fn toy_management_handler(
                                             for feature in features {
                                                 // Get ToyParameter here
                                                 // We unwrap here because the call to get_features_from_param guarantees the parameter exists.
-                                                let toy_parameter = feature
+                                                let mut toy_parameter = feature
                                                     .osc_parameters
-                                                    .get_mut(&msg.addr)
-                                                    .unwrap();
+                                                    .iter_mut()
+                                                    .filter_map(|param| {
+                                                        if param.parameter == msg.addr {
+                                                            Some(param)
+                                                        } else {
+                                                            None
+                                                        }
+                                                    })
+                                                    .collect::<Vec<&mut ToyParameter>>();
 
-                                                if let Some(i) = mode_processor(
-                                                    ModeProcessorInput::RawInput(
-                                                        ModeProcessorInputType::Float(float_level),
-                                                        toy_parameter,
-                                                    ),
-                                                    feature.feature_levels,
-                                                    feature.flip_input_float,
-                                                )
-                                                .await
+                                                if let Some(first_toy_param) =
+                                                    toy_parameter.first_mut()
                                                 {
-                                                    command_toy(
-                                                        dev.clone(),
-                                                        feature.feature_type,
-                                                        i,
-                                                        feature.feature_index,
-                                                        feature.flip_input_float,
+                                                    if let Some(i) = mode_processor(
+                                                        ModeProcessorInput::RawInput(
+                                                            ModeProcessorInputType::Float(
+                                                                float_level,
+                                                            ),
+                                                            first_toy_param,
+                                                        ),
                                                         feature.feature_levels,
+                                                        feature.flip_input_float,
                                                     )
-                                                    .await;
+                                                    .await
+                                                    {
+                                                        command_toy(
+                                                            dev.clone(),
+                                                            feature.feature_type,
+                                                            i,
+                                                            feature.feature_index,
+                                                            feature.flip_input_float,
+                                                            feature.feature_levels,
+                                                        )
+                                                        .await;
+                                                    }
                                                 }
                                             }
                                         }

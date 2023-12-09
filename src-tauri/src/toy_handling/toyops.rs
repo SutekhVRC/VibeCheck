@@ -48,12 +48,8 @@ impl VCToy {
                 .unwrap()
                 .iter()
                 .for_each(|_linear_feature| {
-                    let mut hmap = HashMap::new();
-
-                    // This should ALWAYS be true
-                    if let None = hmap.insert(
-                        format!("/avatar/parameters/{:?}_{}", VCFeatureType::Linear, indexer),
-                        ToyParameter {
+                    self.parsed_toy_features.features.push(VCToyFeature::new(
+                        vec![ToyParameter {
                             parameter: format!(
                                 "/avatar/parameters/{:?}_{}",
                                 VCFeatureType::Linear,
@@ -61,15 +57,12 @@ impl VCToy {
                             ),
                             processing_mode: ProcessingMode::Raw,
                             processing_mode_values: ProcessingModeValues::default(),
-                        },
-                    ) {
-                        self.parsed_toy_features.features.push(VCToyFeature::new(
-                            hmap,
-                            indexer,
-                            VCFeatureType::Linear,
-                        ));
-                        indexer += 1;
-                    }
+                        }],
+                        indexer,
+                        VCFeatureType::Linear,
+                    ));
+
+                    indexer += 1;
                 });
             info!("Populated {} linears", indexer);
         }
@@ -85,32 +78,13 @@ impl VCToy {
                 .unwrap()
                 .iter()
                 .for_each(|_rotate_feature| {
-                    let mut hmap = HashMap::new();
+                    self.parsed_toy_features.features.push(VCToyFeature::new(
+                        vec![],
+                        indexer,
+                        VCFeatureType::Linear,
+                    ));
 
-                    // This should ALWAYS be true
-                    if let None = hmap.insert(
-                        format!(
-                            "/avatar/parameters/{:?}_{}",
-                            VCFeatureType::Rotator,
-                            indexer
-                        ),
-                        ToyParameter {
-                            parameter: format!(
-                                "/avatar/parameters/{:?}_{}",
-                                VCFeatureType::Rotator,
-                                indexer
-                            ),
-                            processing_mode: ProcessingMode::Raw,
-                            processing_mode_values: ProcessingModeValues::default(),
-                        },
-                    ) {
-                        self.parsed_toy_features.features.push(VCToyFeature::new(
-                            hmap,
-                            indexer,
-                            VCFeatureType::Rotator,
-                        ));
-                        indexer += 1;
-                    }
+                    indexer += 1;
                 });
             info!("Populated {} rotators", indexer);
         }
@@ -119,12 +93,7 @@ impl VCToy {
     fn populate_scalars(&mut self, features: &ClientDeviceMessageAttributes) {
         // Populate scalars
         if features.scalar_cmd().is_some() {
-            let mut scalar_rotate_indexer = 0;
-            let mut scalar_vibrate_indexer = 0;
-            let mut scalar_constrict_indexer = 0;
-            let mut scalar_inflate_indexer = 0;
-            let mut scalar_oscillate_indexer = 0;
-            let mut scalar_position_indexer = 0;
+            let mut indexer = 0;
 
             features
                 .scalar_cmd()
@@ -135,185 +104,63 @@ impl VCToy {
                     // Filter out Rotators
                     match scalar_feature.actuator_type() {
                         &ActuatorType::Rotate => {
-                            let mut hmap = HashMap::new();
+                            self.parsed_toy_features.features.push(VCToyFeature::new(
+                                vec![],
+                                indexer,
+                                VCFeatureType::ScalarRotator,
+                            ));
 
-                            // This should ALWAYS be true
-                            if let None = hmap.insert(
-                                format!(
-                                    "/avatar/parameters/{:?}_{}",
-                                    VCFeatureType::ScalarRotator,
-                                    scalar_rotate_indexer
-                                ),
-                                ToyParameter {
-                                    parameter: format!(
-                                        "/avatar/parameters/{:?}_{}",
-                                        VCFeatureType::ScalarRotator,
-                                        scalar_rotate_indexer
-                                    ),
-                                    processing_mode: ProcessingMode::Raw,
-                                    processing_mode_values: ProcessingModeValues::default(),
-                                },
-                            ) {
-                                self.parsed_toy_features.features.push(VCToyFeature::new(
-                                    hmap,
-                                    scalar_rotate_indexer,
-                                    VCFeatureType::ScalarRotator,
-                                ));
-                                scalar_rotate_indexer += 1;
-                            }
+                            indexer += 1;
                         }
                         &ActuatorType::Vibrate => {
-                            let mut hmap = HashMap::new();
+                            self.parsed_toy_features.features.push(VCToyFeature::new(
+                                vec![],
+                                indexer,
+                                VCFeatureType::Vibrator,
+                            ));
 
-                            // This should ALWAYS be true
-                            if let None = hmap.insert(
-                                format!(
-                                    "/avatar/parameters/{:?}_{}",
-                                    VCFeatureType::Vibrator,
-                                    scalar_vibrate_indexer
-                                ),
-                                ToyParameter {
-                                    parameter: format!(
-                                        "/avatar/parameters/{:?}_{}",
-                                        VCFeatureType::Vibrator,
-                                        scalar_rotate_indexer
-                                    ),
-                                    processing_mode: ProcessingMode::Raw,
-                                    processing_mode_values: ProcessingModeValues::default(),
-                                },
-                            ) {
-                                self.parsed_toy_features.features.push(VCToyFeature::new(
-                                    hmap,
-                                    scalar_vibrate_indexer,
-                                    VCFeatureType::Vibrator,
-                                ));
-                                scalar_vibrate_indexer += 1;
-                            }
+                            indexer += 1;
                         }
                         &ActuatorType::Constrict => {
-                            let mut hmap = HashMap::new();
+                            self.parsed_toy_features.features.push(VCToyFeature::new(
+                                vec![],
+                                indexer,
+                                VCFeatureType::Constrict,
+                            ));
 
-                            // This should ALWAYS be true
-                            if let None = hmap.insert(
-                                format!(
-                                    "/avatar/parameters/{:?}_{}",
-                                    VCFeatureType::Constrict,
-                                    scalar_constrict_indexer
-                                ),
-                                ToyParameter {
-                                    parameter: format!(
-                                        "/avatar/parameters/{:?}_{}",
-                                        VCFeatureType::Constrict,
-                                        scalar_constrict_indexer
-                                    ),
-                                    processing_mode: ProcessingMode::Raw,
-                                    processing_mode_values: ProcessingModeValues::default(),
-                                },
-                            ) {
-                                self.parsed_toy_features.features.push(VCToyFeature::new(
-                                    hmap,
-                                    scalar_constrict_indexer,
-                                    VCFeatureType::Constrict,
-                                ));
-                                scalar_constrict_indexer += 1;
-                            }
+                            indexer += 1;
                         }
                         &ActuatorType::Inflate => {
-                            let mut hmap = HashMap::new();
+                            self.parsed_toy_features.features.push(VCToyFeature::new(
+                                vec![],
+                                indexer,
+                                VCFeatureType::Inflate,
+                            ));
 
-                            // This should ALWAYS be true
-                            if let None = hmap.insert(
-                                format!(
-                                    "/avatar/parameters/{:?}_{}",
-                                    VCFeatureType::Inflate,
-                                    scalar_inflate_indexer
-                                ),
-                                ToyParameter {
-                                    parameter: format!(
-                                        "/avatar/parameters/{:?}_{}",
-                                        VCFeatureType::Inflate,
-                                        scalar_inflate_indexer
-                                    ),
-                                    processing_mode: ProcessingMode::Raw,
-                                    processing_mode_values: ProcessingModeValues::default(),
-                                },
-                            ) {
-                                self.parsed_toy_features.features.push(VCToyFeature::new(
-                                    hmap,
-                                    scalar_inflate_indexer,
-                                    VCFeatureType::Inflate,
-                                ));
-                                scalar_inflate_indexer += 1;
-                            }
+                            indexer += 1;
                         }
                         &ActuatorType::Oscillate => {
-                            let mut hmap = HashMap::new();
+                            self.parsed_toy_features.features.push(VCToyFeature::new(
+                                vec![],
+                                indexer,
+                                VCFeatureType::Oscillate,
+                            ));
 
-                            // This should ALWAYS be true
-                            if let None = hmap.insert(
-                                format!(
-                                    "/avatar/parameters/{:?}_{}",
-                                    VCFeatureType::Oscillate,
-                                    scalar_oscillate_indexer
-                                ),
-                                ToyParameter {
-                                    parameter: format!(
-                                        "/avatar/parameters/{:?}_{}",
-                                        VCFeatureType::Oscillate,
-                                        scalar_oscillate_indexer
-                                    ),
-                                    processing_mode: ProcessingMode::Raw,
-                                    processing_mode_values: ProcessingModeValues::default(),
-                                },
-                            ) {
-                                self.parsed_toy_features.features.push(VCToyFeature::new(
-                                    hmap,
-                                    scalar_oscillate_indexer,
-                                    VCFeatureType::Oscillate,
-                                ));
-                                scalar_oscillate_indexer += 1;
-                            }
+                            indexer += 1;
                         }
                         &ActuatorType::Position => {
-                            let mut hmap = HashMap::new();
+                            self.parsed_toy_features.features.push(VCToyFeature::new(
+                                vec![],
+                                indexer,
+                                VCFeatureType::Position,
+                            ));
 
-                            // This should ALWAYS be true
-                            if let None = hmap.insert(
-                                format!(
-                                    "/avatar/parameters/{:?}_{}",
-                                    VCFeatureType::Position,
-                                    scalar_position_indexer
-                                ),
-                                ToyParameter {
-                                    parameter: format!(
-                                        "/avatar/parameters/{:?}_{}",
-                                        VCFeatureType::Position,
-                                        scalar_position_indexer
-                                    ),
-                                    processing_mode: ProcessingMode::Raw,
-                                    processing_mode_values: ProcessingModeValues::default(),
-                                },
-                            ) {
-                                self.parsed_toy_features.features.push(VCToyFeature::new(
-                                    hmap,
-                                    scalar_position_indexer,
-                                    VCFeatureType::Position,
-                                ));
-                                scalar_position_indexer += 1;
-                            }
+                            indexer += 1;
                         }
                         &ActuatorType::Unknown => {}
                     }
                 });
-            info!(
-                "Populated {} scalars",
-                scalar_constrict_indexer
-                    + scalar_inflate_indexer
-                    + scalar_oscillate_indexer
-                    + scalar_position_indexer
-                    + scalar_rotate_indexer
-                    + scalar_vibrate_indexer
-            );
+            info!("Populated {} scalars", indexer);
         }
     }
 
@@ -579,7 +426,7 @@ pub struct VCToyFeature {
     // The type of feature
     pub feature_type: VCFeatureType,
     // Assigned OSC parameters with their respective processing modes
-    pub osc_parameters: HashMap<String, ToyParameter>,
+    pub osc_parameters: Vec<ToyParameter>,
     // The assigned penetration system to the feature
     pub penetration_system: PenetrationSystem,
     // Should toy input be flipped
@@ -594,7 +441,7 @@ pub struct VCToyFeature {
 
 impl VCToyFeature {
     fn new(
-        osc_parameters: HashMap<String, ToyParameter>,
+        osc_parameters: Vec<ToyParameter>,
         feature_index: u32,
         feature_type: VCFeatureType,
     ) -> Self {
@@ -616,7 +463,7 @@ impl VCToyFeature {
         // Implement parameter priority?
         if self.feature_enabled {
             for osc_param in &mut self.osc_parameters {
-                if osc_param.1.is_assigned_param(param) {
+                if osc_param.is_assigned_param(param) {
                     return Some(self);
                 }
             }
@@ -656,28 +503,25 @@ impl FromFrontend<FeVCToyFeature> for VCToyFeature {
     }
 }
 
-impl FromFrontend<HashMap<String, FeToyParameter>> for HashMap<String, ToyParameter> {
-    type OutputType = HashMap<String, ToyParameter>;
+impl FromFrontend<Vec<FeToyParameter>> for Vec<ToyParameter> {
+    type OutputType = bool;
 
-    fn from_frontend(
-        &mut self,
-        frontend_type: HashMap<String, FeToyParameter>,
-    ) -> Self::OutputType {
-        let mut backend_parameter_map = HashMap::new();
-        for (fep, ftp) in frontend_type {
-            backend_parameter_map.insert(
-                fep,
-                ToyParameter {
-                    parameter: ftp.parameter,
-                    processing_mode: ftp.processing_mode.to_backend(),
-                    processing_mode_values: ProcessingModeValues::new_from(
-                        ftp.processing_mode.to_backend(),
-                    ),
-                },
-            );
+    fn from_frontend(&mut self, frontend_type: Vec<FeToyParameter>) -> Self::OutputType {
+        // Remove make not shit
+        self.clear();
+
+        for toy_param in frontend_type {
+            info!("FTP: {:?}", toy_param);
+            self.push(ToyParameter {
+                parameter: toy_param.parameter,
+                processing_mode: toy_param.processing_mode.to_backend(),
+                processing_mode_values: ProcessingModeValues::new_from(
+                    toy_param.processing_mode.to_backend(),
+                ),
+            });
         }
 
-        backend_parameter_map
+        true
     }
 }
 
@@ -971,29 +815,29 @@ impl ToFrontend<Vec<FeVCToyFeature>> for Vec<VCToyFeature> {
 impl FromFrontend<FeVCToyFeature> for VCToyFeatures {
     type OutputType = bool;
 
-    fn from_frontend(&mut self, frontend_type: FeVCToyFeature) -> Self::OutputType {
+    fn from_frontend(&mut self, frontend_feature: FeVCToyFeature) -> Self::OutputType {
         let mut success = false;
         self.features.iter_mut().for_each(|f| {
             info!(
                 "Checking Loaded: [{}: {:?}] - Fe: [{}: {:?}]",
                 f.feature_index,
                 f.feature_type,
-                frontend_type.feature_index,
-                frontend_type.feature_type
+                frontend_feature.feature_index,
+                frontend_feature.feature_type
             );
             // Check that the index and type are the same
             // Note that here there is an OR for when the feature type is a ScalarRotator
             // May be a good idea in the future to create Scalar types and then convert the names in the frontend.
-            if f.feature_index == frontend_type.feature_index
-                && (f.feature_type == frontend_type.feature_type
+            if f.feature_index == frontend_feature.feature_index
+                && (f.feature_type == frontend_feature.feature_type
                     || f.feature_type == VCFeatureType::ScalarRotator
-                        && frontend_type.feature_type == FeVCFeatureType::Rotator)
+                        && frontend_feature.feature_type == FeVCFeatureType::Rotator)
             {
                 info!(
                     "FE Object and Loaded Object are Eq: {}: {:?}",
                     f.feature_index, f.feature_type
                 );
-                f.from_frontend(frontend_type.clone());
+                f.from_frontend(frontend_feature.clone());
                 success = true;
             }
         });
