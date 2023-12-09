@@ -14,9 +14,9 @@ use super::InputProcessor;
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub enum PenetrationSystemType {
-    NONE,
-    TPS,
-    SPS,
+    NONE, // No Input Processor
+    TPS,  // TPS Input Processor
+    SPS,  // SPS Input Processor
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
