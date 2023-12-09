@@ -6,7 +6,7 @@ import Tooltip from "../layout/Tooltip";
 import BatteryIcon from "../components/BatteryIcon";
 import { useEffect, useState } from "react";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
-import { cn } from "../utils";
+import { cn } from "../lib/utils";
 
 export default function Toy({ toy }: { toy: FeVCToy }) {
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);

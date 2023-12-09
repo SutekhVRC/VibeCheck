@@ -19,7 +19,7 @@ import DiscordLogo from "./assets/discord-mark-white.svg";
 import GithubLogo from "./assets/GitHub-Mark-Light-64px.png";
 import Switch from "./layout/Switch";
 import Tooltip from "./layout/Tooltip";
-import { cn } from "./utils";
+import { cn } from "./lib/utils";
 import "./App.css";
 
 type Selection = ToySelection | ConfigSelection | null;

@@ -1,6 +1,7 @@
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
-import { cn, round0 } from "../utils";
+import { round0 } from "../utils";
+import { cn } from "../lib/utils";
 import { useState } from "react";
 
 export default function Slider(
