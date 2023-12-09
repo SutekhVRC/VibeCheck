@@ -103,18 +103,23 @@ export default function FeatureForm({
           />
         }
       />
-      <FourPanel
-        text="Parameter"
-        tooltip="The float OSC parameter to control this feature's motor."
-        three={
-          <input
-            className="text-zinc-800 px-4 rounded-sm outline-none w-full"
-            name="osc_parameter"
-            value={feature.osc_parameter.replace(OSC_PARAM_PREFIX, "")}
-            onChange={handleOscParam} // Not debounced because :shrug:
+      {Object.values(feature.osc_parameters).map((param) => {
+        return (
+          <FourPanel
+            key={param.parameter}
+            text="Parameter"
+            tooltip="The float OSC parameter to control this feature's motor."
+            three={
+              <input
+                className="text-zinc-800 px-4 rounded-sm outline-none w-full"
+                name="osc_parameter"
+                value={param.parameter.replace(OSC_PARAM_PREFIX, "")}
+                onChange={handleOscParam} // Not debounced because :shrug:
+              />
+            }
           />
-        }
-      />
+        );
+      })}
       {feature.smooth_enabled ? (
         <TooltipLabel
           text="Mode"
