@@ -22,7 +22,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
         <div className="flex items-end gap-2">
           <div>{nameInfo.shortName}</div>
           {!toy.toy_connected && (
-            <div className="text-sm text-slate-400">offline</div>
+            <div className="text-sm text-zinc-400">offline</div>
           )}
         </div>
         <ToyInfo nameInfo={nameInfo} battery={toy.battery_level} />
@@ -36,8 +36,8 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
               onClick={() => setSelectedFeatureIndex(featureArrayIndex)}
               className={cn(
                 featureArrayIndex == selectedFeatureIndex && "outline",
-                feature.feature_enabled ? "text-gray-200" : "text-gray-500",
-                "rounded-md bg-gray-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-cyan-500 whitespace-nowrap",
+                feature.feature_enabled ? "text-zinc-200" : "text-zinc-500",
+                "rounded-md bg-zinc-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-cyan-500 whitespace-nowrap",
               )}
             >
               {feature.feature_type} {feature.feature_index}

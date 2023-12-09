@@ -23,8 +23,8 @@ export default function Slider(
       {...props}
       aria-label="Slider"
     >
-      <SliderPrimitive.Track className="relative flex bg-gray-700 flex-grow rounded-full h-2">
-        <SliderPrimitive.Range className="absolute bg-gray-100 rounded-full h-full data-[disabled]:bg-gray-600 transition-all" />
+      <SliderPrimitive.Track className="relative flex bg-zinc-700 flex-grow rounded-full h-2">
+        <SliderPrimitive.Range className="absolute bg-zinc-100 rounded-full h-full data-[disabled]:bg-zinc-600 transition-all" />
       </SliderPrimitive.Track>
       {first != undefined && (
         <TooltipPrimitive.Provider>
@@ -34,7 +34,7 @@ export default function Slider(
             </TooltipPrimitive.Trigger>
             <TooltipPrimitive.Portal>
               <TooltipPrimitive.Content
-                className="rounded-md text-gray-50 bg-gray-600 pl-3 pr-3 max-w-md"
+                className="rounded-md text-zinc-50 bg-zinc-600 pl-3 pr-3 max-w-md"
                 sideOffset={10}
                 key={first} // force update with key
               >
@@ -52,7 +52,7 @@ export default function Slider(
             </TooltipPrimitive.Trigger>
             <TooltipPrimitive.Portal>
               <TooltipPrimitive.Content
-                className="rounded-md text-gray-50 bg-gray-600 pl-3 pr-3 max-w-md"
+                className="rounded-md text-zinc-50 bg-zinc-600 pl-3 pr-3 max-w-md"
                 sideOffset={10}
                 key={second} // force update with key
               >

@@ -120,7 +120,7 @@ export default function App() {
               tooltip="Vibecheck Github"
             />
           </div>
-          <div className="bg-gray-800 rounded-md justify-between flex-col overflow-hidden h-[calc(100vh-185px)] flex">
+          <div className="bg-zinc-800 rounded-md justify-between flex-col overflow-hidden h-[calc(100vh-185px)] flex">
             <div className="flex flex-col pl-2 select-none overflow-y-scroll scrollbar">
               <AnimatePresence>
                 {toysList.map((sidebarToy) => (
@@ -132,9 +132,9 @@ export default function App() {
                         toyKey(sidebarToy) == selection.toyKey &&
                         "outline",
                       sidebarToy.toy_connected
-                        ? "text-gray-200"
-                        : "text-gray-500",
-                      "bg-gray-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400",
+                        ? "text-zinc-200"
+                        : "text-zinc-500",
+                      "bg-zinc-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400",
                     )}
                   >
                     {parseName(sidebarToy.toy_name)}
@@ -175,7 +175,7 @@ export default function App() {
             </Tooltip>
           </div>
         </div>
-        <div className="bg-gray-800 rounded-lg">
+        <div className="bg-zinc-800 rounded-lg">
           <div className="flex p-4">{mainPanel}</div>
         </div>
       </div>

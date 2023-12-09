@@ -20,11 +20,11 @@ export default function Tooltip({
         </TooltipPrimitive.Trigger>
         <TooltipPrimitive.Portal>
           <TooltipPrimitive.Content
-            className="rounded-md text-gray-50 bg-gray-600 pl-3 pr-3 max-w-md z-50 cursor-pointer pointer-events-none"
+            className="rounded-md text-zinc-50 bg-zinc-600 pl-3 pr-3 max-w-md z-50 cursor-pointer pointer-events-none"
             sideOffset={5}
           >
             {text}
-            <TooltipPrimitive.Arrow className="fill-gray-600" />
+            <TooltipPrimitive.Arrow className="fill-zinc-600" />
           </TooltipPrimitive.Content>
         </TooltipPrimitive.Portal>
       </TooltipPrimitive.Root>
