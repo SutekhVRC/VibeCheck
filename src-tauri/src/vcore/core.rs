@@ -748,7 +748,7 @@ pub fn native_alter_toy(
                 toy_id: Some(alter_clone.toy_id),
                 toy_name: alter_clone.toy_name,
                 toy_anatomy: alter_clone.config.as_ref().unwrap().anatomy.to_fe(),
-                battery_level: alter_clone.battery_level,
+                toy_power: alter_clone.toy_power,
                 toy_connected: alter_clone.toy_connected,
                 features: alter_clone.parsed_toy_features.features.to_frontend(),
                 listening: alter_clone.listening,

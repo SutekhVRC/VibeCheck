@@ -105,7 +105,7 @@ pub struct FeVCToy {
     pub toy_id: Option<u32>,
     pub toy_name: String,
     pub toy_anatomy: FeVCToyAnatomy,
-    pub battery_level: ToyPower,
+    pub toy_power: ToyPower,
     pub toy_connected: bool,
     pub features: Vec<FeVCToyFeature>,
     pub listening: bool,

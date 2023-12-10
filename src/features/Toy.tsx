@@ -21,7 +21,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
     <div className="w-full h-full">
       <div className="text-4xl flex justify-between items-center px-6">
         <div>{nameInfo.shortName}</div>
-        <ToyInfo nameInfo={nameInfo} toyPower={toy.battery_level} />
+        <ToyInfo nameInfo={nameInfo} toyPower={toy.toy_power} />
       </div>
       <div className="m-4 overflow-hidden h-full">
         <ToySettings toy={toy} />

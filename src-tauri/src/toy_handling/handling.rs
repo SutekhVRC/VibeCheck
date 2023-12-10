@@ -83,11 +83,11 @@ pub async fn client_event_handler(
                     Delay::new(Duration::from_secs(3)).await;
 
                     // Can use this to differ between toys with batteries and toys without!
-                    let battery_level = if dev.has_battery_level() {
+                    let toy_power = if dev.has_battery_level() {
                         match dev.battery_level().await {
                             Ok(battery_lvl) => ToyPower::Battery(battery_lvl),
                             Err(_e) => {
-                                warn!("Device battery_level error: {:?}", _e);
+                                warn!("Device battery_level() error: {:?}", _e);
                                 ToyPower::Pending
                             }
                         }
@@ -116,7 +116,7 @@ pub async fn client_event_handler(
                     let mut toy = VCToy {
                         toy_id: dev.index(),
                         toy_name: dev.name().clone(),
-                        battery_level: battery_level.clone(),
+                        toy_power: toy_power.clone(),
                         toy_connected: dev.connected(),
                         toy_features: dev.message_attributes().clone(),
                         parsed_toy_features: VCToyFeatures::new(),
@@ -168,7 +168,7 @@ pub async fn client_event_handler(
                                 toy_id: Some(toy.toy_id),
                                 toy_name: toy.toy_name.clone(),
                                 toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
-                                battery_level,
+                                toy_power,
                                 toy_connected: toy.toy_connected,
                                 features: toy.parsed_toy_features.features.to_frontend(),
                                 listening: toy.listening,
@@ -184,7 +184,7 @@ pub async fn client_event_handler(
                             let _ = Notification::new(identifier.clone())
                                 .title("Toy Connected")
                                 .body(
-                                    format!("{} ({})", toy.toy_name, toy.battery_level.to_string())
+                                    format!("{} ({})", toy.toy_name, toy.toy_power.to_string())
                                         .as_str(),
                                 )
                                 .show();
