@@ -1,6 +1,6 @@
+import { ArrowRightLeft } from "lucide-react";
 import { ReactNode } from "react";
 import { TooltipLabel } from "../layout/Tooltip";
-import { ArrowRightLeft } from "lucide-react";
 
 export default function FourPanel({
   text,
