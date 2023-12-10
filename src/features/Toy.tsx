@@ -20,12 +20,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
   return (
     <div className="w-full h-full">
       <div className="text-4xl flex justify-between items-center px-6">
-        <div className="flex items-end gap-2">
-          <div>{nameInfo.shortName}</div>
-          {!toy.toy_connected && (
-            <div className="text-sm text-zinc-400">offline</div>
-          )}
-        </div>
+        <div>{nameInfo.shortName}</div>
         <ToyInfo nameInfo={nameInfo} toyPower={toy.battery_level} />
       </div>
       <div className="m-4 overflow-hidden h-full">
