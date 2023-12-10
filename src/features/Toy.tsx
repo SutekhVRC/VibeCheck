@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ToyPower } from "src-tauri/bindings/ToyPower";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import lovenseLogo from "../assets/Lovense.png";
 import lovenseConnectLogo from "../assets/Lovense_Connect.png";
@@ -19,13 +20,8 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
   return (
     <div className="w-full h-full">
       <div className="text-4xl flex justify-between items-center px-6">
-        <div className="flex items-end gap-2">
-          <div>{nameInfo.shortName}</div>
-          {!toy.toy_connected && (
-            <div className="text-sm text-zinc-400">offline</div>
-          )}
-        </div>
-        <ToyInfo nameInfo={nameInfo} battery={toy.battery_level} />
+        <div>{nameInfo.shortName}</div>
+        <ToyInfo nameInfo={nameInfo} toyPower={toy.toy_power} />
       </div>
       <div className="m-4 overflow-hidden h-full">
         <ToySettings toy={toy} />
@@ -90,10 +86,10 @@ function NameInfo(toy: FeVCToy): NameInfo {
 
 function ToyInfo({
   nameInfo,
-  battery,
+  toyPower,
 }: {
   nameInfo: NameInfo;
-  battery: number | null;
+  toyPower: ToyPower;
 }) {
   return (
     <div className="flex gap-x-4 items-center">
@@ -102,7 +98,7 @@ function ToyInfo({
           <img className="max-h-6 rounded-lg cursor-help" src={nameInfo.logo} />
         </Tooltip>
       )}
-      <BatteryIcon battery={battery} />
+      <BatteryIcon toyPower={toyPower} />
     </div>
   );
 }

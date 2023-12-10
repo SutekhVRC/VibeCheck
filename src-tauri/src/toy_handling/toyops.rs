@@ -28,7 +28,7 @@ use super::ToyPower;
 pub struct VCToy {
     pub toy_id: u32,
     pub toy_name: String,
-    pub battery_level: ToyPower,
+    pub toy_power: ToyPower,
     pub toy_connected: bool,
     pub toy_features: ClientDeviceMessageAttributes,
     pub parsed_toy_features: VCToyFeatures,

@@ -82,13 +82,6 @@ impl ToyManager {
     }
 
     pub fn sync_frontend(&mut self, refresh_toys: bool) -> Vec<FeVCToy> {
-        /*
-        let _res = self.app_handle.emit_all("fe_toy_event",
-            FeToyEvent::OfflineSyncAll({
-                offline_fetoy_vec
-            }),
-        );*/
-
         if refresh_toys {
             info!("Clearing toy manager configs map and repopulating from disk..");
             self.configs.clear();
@@ -120,7 +113,7 @@ impl ToyManager {
                 toy_id: None,
                 toy_name: config.toy_name.clone(),
                 toy_anatomy: config.anatomy.to_fe(),
-                battery_level: super::ToyPower::Offline,
+                toy_power: super::ToyPower::Offline,
                 toy_connected: false,
                 features: config.features.features.to_frontend(),
                 listening: false,
@@ -131,28 +124,4 @@ impl ToyManager {
 
         offline_toy_vec
     }
-
-    /*
-    fn fetoy_vec_from_online_toys(&self) -> Vec<FeVCToy> {
-
-        let mut online_toy_vec = Vec::new();
-
-        self.online_toys.iter().for_each(|(_toy_id, online_toy)| {
-            online_toy_vec.push(
-                FeVCToy {
-                    toy_id: Some(online_toy.toy_id),
-                    toy_name: online_toy.toy_name.clone(),
-                    toy_anatomy: online_toy.config.as_ref().unwrap().anatomy.to_fe(),
-                    battery_level: online_toy.battery_level,
-                    toy_connected: online_toy.toy_connected,
-                    features: online_toy.param_feature_map.to_fe(),
-                    listening: online_toy.listening,
-                    osc_data: online_toy.osc_data,
-                    sub_id: online_toy.sub_id,
-                });
-        });
-
-        online_toy_vec
-    }
-    */
 }

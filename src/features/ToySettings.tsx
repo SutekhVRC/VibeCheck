@@ -1,4 +1,4 @@
-import { ClipboardIcon } from "@heroicons/react/24/solid";
+import { ClipboardCopy } from "lucide-react";
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import { FeVCToyAnatomy } from "../../src-tauri/bindings/FeVCToyAnatomy";
 import FourPanel from "../components/FourPanel";
@@ -37,7 +37,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
           />
           {toy.toy_connected && (
             <Tooltip text="Copy osc data address to clipboard">
-              <ClipboardIcon
+              <ClipboardCopy
                 onClick={handleCopy}
                 className="h-4 cursor-pointer"
               />

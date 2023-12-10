@@ -14,7 +14,6 @@
     "format:check": "prettier --check --end-of-line=auto \"./src/**/*.{cjs,js,jsx,ts,tsx,html,css,json}\""
   },
   "dependencies": {
-    "@heroicons/react": "^2.0.18",
     "@radix-ui/react-collapsible": "^1.0.3",
     "@radix-ui/react-scroll-area": "^1.0.5",
     "@radix-ui/react-slider": "^1.1.2",

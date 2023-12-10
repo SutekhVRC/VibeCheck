@@ -1,5 +1,5 @@
-import { Cog6ToothIcon } from "@heroicons/react/24/solid";
 import { AnimatePresence } from "framer-motion";
+import { Settings } from "lucide-react";
 import { useState } from "react";
 import { FeVCToy } from "../src-tauri/bindings/FeVCToy";
 import "./App.css";
@@ -155,7 +155,7 @@ export default function App() {
           </div>
           <div className="flex justify-around items-center">
             <UpdatePing canUpdate={canUpdate}>
-              <Cog6ToothIcon
+              <Settings
                 className={cn(
                   selection?.type == "Config" && "rotate-45",
                   "h-10 cursor-pointer transform duration-300 ease-in-out",

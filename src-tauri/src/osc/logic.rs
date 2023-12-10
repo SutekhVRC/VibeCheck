@@ -173,10 +173,6 @@ pub fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
  * Toy update loop every 1 sec maybe 5
  * How to do parameter structure
  * /avatar/parameters/toy_name
- * INT SIGS:
- * 0 - 100: toy.battery_level
- * -1: connected
- * -2: disconnected
  *
  * ATM this only sends a battery life OSC address/value.
  */
@@ -219,11 +215,11 @@ pub async fn toy_refresh(
         sock.connect(remote).await.unwrap();
         for (.., mut toy) in toys {
             // Can use this to differ between toys with batteries and toys without!
-            let battery_level = if toy.device_handle.has_battery_level() {
+            let toy_power = if toy.device_handle.has_battery_level() {
                 match toy.device_handle.battery_level().await {
                     Ok(battery_lvl) => ToyPower::Battery(battery_lvl),
                     Err(_e) => {
-                        warn!("Device battery_level error: {:?}", _e);
+                        warn!("Device battery_level() error: {:?}", _e);
                         ToyPower::Pending
                     }
                 }
@@ -231,7 +227,7 @@ pub async fn toy_refresh(
                 ToyPower::NoBattery
             };
 
-            toy.battery_level = battery_level.clone();
+            toy.toy_power = toy_power.clone();
 
             let _ = app_handle.emit_all(
                 "fe_toy_event",
@@ -240,7 +236,7 @@ pub async fn toy_refresh(
                         toy_id: Some(toy.toy_id),
                         toy_name: toy.toy_name.clone(),
                         toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
-                        battery_level: battery_level.clone(),
+                        toy_power: toy_power.clone(),
                         toy_connected: toy.toy_connected,
                         features: toy.parsed_toy_features.features.to_frontend(),
                         listening: toy.listening,
@@ -262,7 +258,7 @@ pub async fn toy_refresh(
                             .to_lowercase(),
                         toy.sub_id
                     ),
-                    args: vec![OscType::Float(battery_level.to_float() as f32)],
+                    args: vec![OscType::Float(toy_power.to_float() as f32)],
                 }))
                 .unwrap();
 
@@ -272,7 +268,7 @@ pub async fn toy_refresh(
                 } else {
                     info!(
                         "Sent battery_level: {} to {}",
-                        battery_level.to_float() as f32,
+                        toy_power.to_float() as f32,
                         toy.toy_name
                     );
                 }

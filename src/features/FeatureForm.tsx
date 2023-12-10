@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select } from "@/layout/Select";
-import { PlusIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { Plus, X } from "lucide-react";
 import { ChangeEvent, useEffect, useState } from "react";
 import { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
 import { FeToyParameter } from "src-tauri/bindings/FeToyParameter";
@@ -187,7 +187,7 @@ export default function FeatureForm({
                           className="flex justify-center"
                           onClick={() => removeParam(param.parameter)}
                         >
-                          <XMarkIcon className="h-5" />
+                          <X className="h-5" />
                         </button>
                       </>
                     );
@@ -196,7 +196,7 @@ export default function FeatureForm({
               </div>
               <div className="flex flex-col justify-center">
                 <Button onClick={() => addParam()}>
-                  <PlusIcon className="h-6" />
+                  <Plus className="h-6" />
                 </Button>
               </div>
             </div>
