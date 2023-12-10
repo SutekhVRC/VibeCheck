@@ -1,6 +1,6 @@
-import { ArrowsRightLeftIcon } from "@heroicons/react/24/solid";
 import { ReactNode } from "react";
 import { TooltipLabel } from "../layout/Tooltip";
+import { ArrowRightLeft } from "lucide-react";
 
 export default function FourPanel({
   text,
@@ -27,7 +27,7 @@ export default function FourPanel({
       {flipped ? (
         <div className="flex items-center gap-2">
           {label}
-          <ArrowsRightLeftIcon className="h-4" />
+          <ArrowRightLeft className="h-4" />
         </div>
       ) : (
         label
