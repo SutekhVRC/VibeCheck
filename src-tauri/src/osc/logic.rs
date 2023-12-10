@@ -22,6 +22,7 @@ use crate::frontend::frontend_types::FeToyEvent;
 use crate::frontend::frontend_types::FeVCToy;
 use crate::frontend::ToFrontend;
 use crate::osc_api::osc_api::vibecheck_osc_api;
+use crate::toy_handling::ToyPower;
 use crate::toy_handling::ToySig;
 use crate::vcore::config::OSCNetworking;
 use crate::vcore::core::TmSig;
@@ -217,15 +218,20 @@ pub async fn toy_refresh(
         );
         sock.connect(remote).await.unwrap();
         for (.., mut toy) in toys {
-            let b_level: Option<f64> = match toy.device_handle.battery_level().await {
-                Ok(battery_lvl) => Some(battery_lvl),
-                Err(_e) => {
-                    warn!("Failed to get battery for toy: {}", toy.toy_name);
-                    None
+            // Can use this to differ between toys with batteries and toys without!
+            let battery_level = if toy.device_handle.has_battery_level() {
+                match toy.device_handle.battery_level().await {
+                    Ok(battery_lvl) => ToyPower::Battery(battery_lvl),
+                    Err(_e) => {
+                        warn!("Device battery_level error: {:?}", _e);
+                        ToyPower::Pending
+                    }
                 }
+            } else {
+                ToyPower::NoBattery
             };
 
-            toy.battery_level = b_level;
+            toy.battery_level = battery_level.clone();
 
             let _ = app_handle.emit_all(
                 "fe_toy_event",
@@ -234,7 +240,7 @@ pub async fn toy_refresh(
                         toy_id: Some(toy.toy_id),
                         toy_name: toy.toy_name.clone(),
                         toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
-                        battery_level: b_level,
+                        battery_level: battery_level.clone(),
                         toy_connected: toy.toy_connected,
                         features: toy.parsed_toy_features.features.to_frontend(),
                         listening: toy.listening,
@@ -256,7 +262,7 @@ pub async fn toy_refresh(
                             .to_lowercase(),
                         toy.sub_id
                     ),
-                    args: vec![OscType::Float(b_level.unwrap_or(0.0) as f32)],
+                    args: vec![OscType::Float(battery_level.to_float() as f32)],
                 }))
                 .unwrap();
 
@@ -266,7 +272,7 @@ pub async fn toy_refresh(
                 } else {
                     info!(
                         "Sent battery_level: {} to {}",
-                        b_level.unwrap_or(0.0) as f32,
+                        battery_level.to_float() as f32,
                         toy.toy_name
                     );
                 }

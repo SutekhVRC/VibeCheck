@@ -40,6 +40,7 @@ use crate::toy_handling::toyops::LevelTweaks;
 use crate::toy_handling::toyops::ToyParameter;
 use crate::toy_handling::toyops::VCFeatureType;
 use crate::toy_handling::toyops::{VCToy, VCToyFeatures};
+use crate::toy_handling::ToyPower;
 use crate::toy_handling::ToySig;
 use crate::vcore::core::ToyManagementEvent;
 use crate::vcore::core::VibeCheckState;
@@ -81,18 +82,18 @@ pub async fn client_event_handler(
                 ButtplugClientEvent::DeviceAdded(dev) => {
                     Delay::new(Duration::from_secs(3)).await;
 
-                    let mut battery_level: Option<f64> = None;
-
                     // Can use this to differ between toys with batteries and toys without!
-                    if dev.has_battery_level() {
-                        battery_level = match dev.battery_level().await {
-                            Ok(battery_lvl) => Some(battery_lvl),
+                    let battery_level = if dev.has_battery_level() {
+                        match dev.battery_level().await {
+                            Ok(battery_lvl) => ToyPower::Battery(battery_lvl),
                             Err(_e) => {
                                 warn!("Device battery_level error: {:?}", _e);
-                                Some(0.0)
+                                ToyPower::Pending
                             }
-                        };
-                    }
+                        }
+                    } else {
+                        ToyPower::NoBattery
+                    };
 
                     let sub_id = {
                         let vc_lock = vibecheck_state_pointer.lock();
@@ -115,7 +116,7 @@ pub async fn client_event_handler(
                     let mut toy = VCToy {
                         toy_id: dev.index(),
                         toy_name: dev.name().clone(),
-                        battery_level,
+                        battery_level: battery_level.clone(),
                         toy_connected: dev.connected(),
                         toy_features: dev.message_attributes().clone(),
                         parsed_toy_features: VCToyFeatures::new(),
@@ -183,12 +184,8 @@ pub async fn client_event_handler(
                             let _ = Notification::new(identifier.clone())
                                 .title("Toy Connected")
                                 .body(
-                                    format!(
-                                        "{} ({}%)",
-                                        toy.toy_name,
-                                        (100.0 * toy.battery_level.unwrap_or(0.0))
-                                    )
-                                    .as_str(),
+                                    format!("{} ({})", toy.toy_name, toy.battery_level.to_string())
+                                        .as_str(),
                                 )
                                 .show();
                         }

@@ -22,11 +22,13 @@ use crate::{
 
 use crate::toy_handling::input_processor::penetration_systems::PenetrationSystem;
 
+use super::ToyPower;
+
 #[derive(Clone, Debug)]
 pub struct VCToy {
     pub toy_id: u32,
     pub toy_name: String,
-    pub battery_level: Option<f64>,
+    pub battery_level: ToyPower,
     pub toy_connected: bool,
     pub toy_features: ClientDeviceMessageAttributes,
     pub parsed_toy_features: VCToyFeatures,

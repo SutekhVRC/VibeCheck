@@ -120,7 +120,7 @@ impl ToyManager {
                 toy_id: None,
                 toy_name: config.toy_name.clone(),
                 toy_anatomy: config.anatomy.to_fe(),
-                battery_level: None,
+                battery_level: super::ToyPower::Offline,
                 toy_connected: false,
                 features: config.features.features.to_frontend(),
                 listening: false,
