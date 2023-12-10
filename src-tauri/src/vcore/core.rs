@@ -565,7 +565,7 @@ pub async fn native_vibecheck_start_bt_scan(
     if vc_lock.bp_client.is_none() {
         // ButtPlugClient not created (CEH is probably not running)
         return Err(frontend::VCFeError::StartScanFailure(
-            "ButtPlugClient is None".to_string(),
+            "ButtplugClient is None".to_string(),
         ));
     }
 
