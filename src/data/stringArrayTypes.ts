@@ -1,3 +1,5 @@
+import { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
+import { PenetrationSystemType } from "src-tauri/bindings/PenetrationSystemType";
 import { FeVCToyAnatomy } from "../../src-tauri/bindings/FeVCToyAnatomy";
 
 /*
@@ -40,8 +42,19 @@ export const ToyAnatomyArray = [
   "Vulva",
   "Wrist",
 ] as const;
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type AnatomyIsSame = StaticAssert<
   TypesAreEqual<FeVCToyAnatomy, (typeof ToyAnatomyArray)[number]>
+>;
+
+export const PenetrationSystems = ["NONE", "TPS", "SPS"] as const;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type PenTypeIsSame = StaticAssert<
+  TypesAreEqual<PenetrationSystemType, (typeof PenetrationSystems)[number]>
+>;
+
+export const ProcessingModes = ["Raw", "Smooth", "Rate", "Constant"] as const;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type ProcessingModeIsSame = StaticAssert<
+  TypesAreEqual<FeProcessingMode, (typeof ProcessingModes)[number]>
 >;
