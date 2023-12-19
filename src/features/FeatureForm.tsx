@@ -195,9 +195,11 @@ export default function FeatureForm({
                 </div>
               </div>
               <div className="flex flex-col justify-center">
-                <Button onClick={() => addParam()}>
-                  <Plus className="h-6" />
-                </Button>
+                <div>
+                  <Button onClick={() => addParam()} size="sm">
+                    <Plus className="h-6" />
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (
