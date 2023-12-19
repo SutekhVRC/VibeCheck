@@ -454,7 +454,7 @@ async fn mode_processor<'toy_parameter>(
                     )
                     .await;
                 }
-                // Never called with Boolean type yet
+                // Never called with Boolean type yet (todo)
                 ModeProcessorInputType::Boolean(_) => return None,
             }
         }
@@ -469,7 +469,7 @@ async fn mode_processor<'toy_parameter>(
                 )
                 .await
             }
-            // Never called with Boolean type yet
+            // Never called with Boolean type yet (todo)
             ModeProcessorInputType::Boolean(_) => return None,
         },
     }
@@ -484,7 +484,7 @@ async fn mode_processor_logic(
     // Process logic for each mode processing type
     match processor {
         // Raw = mode processing so just return the original value
-        ProcessingModeValues::Raw => return Some(input),
+        ProcessingModeValues::Raw => Some(input),
         // Smooth = do smoothing logic with input and processor
         ProcessingModeValues::Smooth(values) => {
             //trace!("parse_moothing()");
@@ -495,12 +495,10 @@ async fn mode_processor_logic(
                 flip_input_float,
             ) {
                 // If smooth parser calculates a smooth value or the input is 0 return it
-                SmoothParser::SkipZero(f_out) | SmoothParser::Smoothed(f_out) => {
-                    return Some(f_out);
-                }
+                SmoothParser::SkipZero(f_out) | SmoothParser::Smoothed(f_out) => Some(f_out),
                 // None so that we don't send the value to the device
                 // None because smoother is still smoothing
-                SmoothParser::Smoothing => return None,
+                SmoothParser::Smoothing => None,
             }
             // Return processed input
         }
@@ -511,22 +509,19 @@ async fn mode_processor_logic(
                 values.rate_timestamp = Some(Instant::now());
             }
             match parse_rate(values, feature_levels.rate_tune, input, flip_input_float) {
-                RateParser::SkipZero => {
-                    // Skip zero and send to toy
-                    return Some(0.);
-                }
+                RateParser::SkipZero => Some(0.), // Skip zero and send to toy
                 RateParser::RateCalculated(f_out, reset_timer) => {
                     // Rate calculated reset timer and send calculated value to toy
-
                     if reset_timer {
                         values.rate_timestamp = Some(Instant::now())
                     }
-                    return Some(f_out);
+                    Some(f_out)
                 }
             }
         }
         ProcessingModeValues::Constant => {
-            todo!()
+            // Logic here ?
+            Some(feature_levels.constant_level)
         }
     }
 }
