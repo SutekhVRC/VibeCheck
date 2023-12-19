@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
 import { Select } from "@/layout/Select";
 import { Plus, X } from "lucide-react";
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, Fragment, useEffect, useState } from "react";
 import { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
 import { FeToyParameter } from "src-tauri/bindings/FeToyParameter";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
@@ -33,9 +34,6 @@ export default function FeatureForm({
   const submenuOptions = ["Parameters", "Advanced"] as const;
   type SubmenuOptions = (typeof submenuOptions)[number];
   const [subMenu, setSubMenu] = useState<SubmenuOptions>("Parameters");
-
-  const modeOptions = ["Raw", "Smooth", "Rate", "Constant"] as const;
-  type ModeOption = (typeof modeOptions)[number];
 
   useEffect(() => {
     setToyFeature(toy.features[selectedIndex] ?? toy.features[0]);
@@ -112,11 +110,26 @@ export default function FeatureForm({
         newParams[paramIndex].parameter =
           `${OSC_PARAM_PREFIX}${e.target.value}`;
       } else if (e.target.name == "osc_parameter_mode") {
-        newParams[paramIndex].processing_mode = e.target.value as ModeOption;
+        newParams[paramIndex].processing_mode = e.target
+          .value as FeProcessingMode;
       }
       const newF = {
         ...f,
         osc_parameters: newParams,
+      };
+      handleFeatureAlter(toy, newF);
+      return newF;
+    });
+  }
+
+  function handleInputProcessor(e: ChangeEvent<HTMLSelectElement>) {
+    setToyFeature((f) => {
+      const newF = {
+        ...f,
+        penetration_system: {
+          ...f.penetration_system,
+          [e.target.name]: e.target.value,
+        },
       };
       handleFeatureAlter(toy, newF);
       return newF;
@@ -168,7 +181,7 @@ export default function FeatureForm({
                     // This needs to be by index because we update directly from backend
                     // If we key on param, it would change on every update when typing, and un-select after each char
                     return (
-                      <>
+                      <Fragment key={paramIndex}>
                         <input
                           className="text-zinc-800 px-4 rounded-sm outline-none w-full"
                           name="osc_parameter"
@@ -181,7 +194,7 @@ export default function FeatureForm({
                           onChange={(e) => {
                             handleOscParam(e, paramIndex);
                           }}
-                          options={modeOptions}
+                          options={ProcessingModes}
                         />
                         <button
                           className="flex justify-center"
@@ -189,15 +202,17 @@ export default function FeatureForm({
                         >
                           <X className="h-5" />
                         </button>
-                      </>
+                      </Fragment>
                     );
                   })}
                 </div>
               </div>
               <div className="flex flex-col justify-center">
-                <Button onClick={() => addParam()}>
-                  <Plus className="h-6" />
-                </Button>
+                <div>
+                  <Button onClick={() => addParam()} size="sm">
+                    <Plus className="h-6" />
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (
@@ -310,6 +325,32 @@ export default function FeatureForm({
                 four={`${round0.format(
                   levels.minimum_level * 100,
                 )}-${round0.format(levels.maximum_level * 100)}`}
+              />
+              <FourPanel
+                text="Processor"
+                tooltip="The Input processor for this feature"
+                three={
+                  <div className="flex gap-2">
+                    <Select
+                      name="pen_system_type"
+                      value={feature.penetration_system.pen_system_type}
+                      onChange={(e) => {
+                        handleInputProcessor(e);
+                      }}
+                      options={PenetrationSystems}
+                    />
+                    <Select
+                      name="pen_system_processing_mode"
+                      value={
+                        feature.penetration_system.pen_system_processing_mode
+                      }
+                      onChange={(e) => {
+                        handleInputProcessor(e);
+                      }}
+                      options={ProcessingModes}
+                    />
+                  </div>
+                }
               />
               {simulateEnabled != null && (
                 <FourPanel
