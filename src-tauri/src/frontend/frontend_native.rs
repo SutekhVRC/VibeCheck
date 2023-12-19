@@ -134,7 +134,7 @@ pub fn alter_toy(
     app_handle: tauri::AppHandle,
     mutate: FeToyAlter,
 ) -> Result<(), frontend::VCFeError> {
-    trace!("alter_toy({:?})", mutate);
+    trace!("alter_toy({:#?})", mutate);
 
     match mutate {
         // Online toy alter
