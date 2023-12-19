@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    frontend::{frontend_types::FePenetrationSystem, ToFrontend},
+    frontend::{frontend_types::FePenetrationSystem, FromFrontend, ToBackend, ToFrontend},
     toy_handling::toyops::{ProcessingMode, ProcessingModeValues},
 };
 
@@ -47,5 +47,16 @@ impl ToFrontend<FePenetrationSystem> for PenetrationSystem {
             pen_system_type: self.pen_system_type.clone(),
             pen_system_processing_mode: self.pen_system_processing_mode.to_frontend(),
         }
+    }
+}
+
+impl FromFrontend<FePenetrationSystem> for PenetrationSystem {
+    type OutputType = bool;
+
+    fn from_frontend(&mut self, frontend_type: FePenetrationSystem) -> Self::OutputType {
+        self.pen_system_type = frontend_type.pen_system_type;
+        self.pen_system_processing_mode = frontend_type.pen_system_processing_mode.to_backend();
+
+        true
     }
 }

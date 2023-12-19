@@ -498,6 +498,8 @@ impl FromFrontend<FeVCToyFeature> for VCToyFeature {
         self.flip_input_float = frontend_type.flip_input_float;
         self.osc_parameters
             .from_frontend(frontend_type.osc_parameters);
+        self.penetration_system
+            .from_frontend(frontend_type.penetration_system);
         self.feature_levels.from_fe(frontend_type.feature_levels);
         self.smooth_enabled = frontend_type.smooth_enabled;
         self.rate_enabled = frontend_type.rate_enabled;
