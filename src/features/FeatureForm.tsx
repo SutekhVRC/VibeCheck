@@ -3,7 +3,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
 import { Select } from "@/layout/Select";
 import { Plus, X } from "lucide-react";
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, Fragment, useEffect, useState } from "react";
 import { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
 import { FeToyParameter } from "src-tauri/bindings/FeToyParameter";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
@@ -181,7 +181,7 @@ export default function FeatureForm({
                     // This needs to be by index because we update directly from backend
                     // If we key on param, it would change on every update when typing, and un-select after each char
                     return (
-                      <>
+                      <Fragment key={paramIndex}>
                         <input
                           className="text-zinc-800 px-4 rounded-sm outline-none w-full"
                           name="osc_parameter"
@@ -202,7 +202,7 @@ export default function FeatureForm({
                         >
                           <X className="h-5" />
                         </button>
-                      </>
+                      </Fragment>
                     );
                   })}
                 </div>
