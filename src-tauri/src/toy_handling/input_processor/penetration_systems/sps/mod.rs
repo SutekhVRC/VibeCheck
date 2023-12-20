@@ -13,7 +13,7 @@ impl InputProcessor for SPSProcessor {
         self.parameter_list.contains(param)
     }
 
-    fn process(&self, _input: ModeProcessorInputType) -> Option<f64> {
+    fn process(&mut self, _input: ModeProcessorInputType) -> Option<f64> {
         todo!()
     }
 }
