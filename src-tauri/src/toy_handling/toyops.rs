@@ -466,6 +466,11 @@ impl VCToyFeature {
         if self.feature_enabled {
             for osc_param in &mut self.osc_parameters {
                 if osc_param.is_assigned_param(param) {
+                    debug!(
+                        "Found osc parameter match in feature! : {:?} - {}",
+                        (self.feature_index, self.feature_type),
+                        param
+                    );
                     return Some(self);
                 }
             }
@@ -714,7 +719,7 @@ impl VCToyFeatures {
         }
     }
 
-    pub fn get_features_with_penetration_systems(
+    pub fn get_features_with_input_processors(
         &mut self,
         param: &String,
     ) -> Option<Vec<&mut VCToyFeature>> {

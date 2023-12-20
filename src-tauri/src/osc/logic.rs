@@ -52,7 +52,11 @@ pub fn toy_input_routine(
                 return;
             }
         };
-    info!("Listen sock is bound");
+    info!(
+        "Listen sock is bound {} : {}",
+        vc_config.bind.ip(),
+        vc_config.bind.port()
+    );
     bind_sock.set_nonblocking(false).unwrap();
     let _ = bind_sock.set_read_timeout(Some(Duration::from_secs(1)));
 
