@@ -438,91 +438,155 @@ fn parse_rate(
 async fn mode_processor<'toy_parameter>(
     input: ModeProcessorInput<'_>,
     feature_levels: LevelTweaks,
-    flip_input_float: bool,
+    flip_input: bool,
 ) -> Option<f64> {
     // Parse if input is from an Input Processor or raw input
+
     match input {
         // Input is from an Input Processor
         ModeProcessorInput::InputProcessor((input_type, processing_mode_values)) => {
             match input_type {
                 ModeProcessorInputType::Float(f_input) => {
+                    // Input Processor & Float
                     return mode_processor_logic(
-                        f_input,
+                        ModeProcessorInputType::Float(f_input),
                         processing_mode_values,
                         feature_levels,
-                        flip_input_float,
+                        flip_input,
                     )
                     .await;
                 }
                 // Never called with Boolean type yet (todo)
-                ModeProcessorInputType::Boolean(_) => return None,
+                ModeProcessorInputType::Boolean(b_input) => {
+                    // Input Processor & Boolean
+                    return mode_processor_logic(
+                        ModeProcessorInputType::Boolean(b_input),
+                        processing_mode_values,
+                        feature_levels,
+                        flip_input,
+                    )
+                    .await;
+                } // Input Processor & Boolean
             }
         }
         // Input is from parameter parsing
-        ModeProcessorInput::RawInput(input_type, toy_parameter) => match input_type {
-            ModeProcessorInputType::Float(f_input) => {
-                return mode_processor_logic(
-                    f_input,
-                    &mut toy_parameter.processing_mode_values,
-                    feature_levels,
-                    flip_input_float,
-                )
-                .await
+        ModeProcessorInput::RawInput(input_type, toy_parameter) => {
+            match input_type {
+                ModeProcessorInputType::Float(f_input) => {
+                    // Raw Input & Float
+                    return mode_processor_logic(
+                        ModeProcessorInputType::Float(f_input),
+                        &mut toy_parameter.processing_mode_values,
+                        feature_levels,
+                        flip_input,
+                    )
+                    .await;
+                }
+                // Never called with Boolean type yet (todo)
+                ModeProcessorInputType::Boolean(b_input) => {
+                    // Raw Input & Boolean
+                    return mode_processor_logic(
+                        ModeProcessorInputType::Boolean(b_input),
+                        &mut toy_parameter.processing_mode_values,
+                        feature_levels,
+                        flip_input,
+                    )
+                    .await;
+                } // Raw Input & Boolean
             }
-            // Never called with Boolean type yet (todo)
-            ModeProcessorInputType::Boolean(_) => return None,
-        },
+        }
     }
 }
 
 async fn mode_processor_logic(
-    input: f64,
+    input: ModeProcessorInputType,
     processor: &mut ProcessingModeValues,
     feature_levels: LevelTweaks,
-    flip_input_float: bool,
+    flip_input: bool,
 ) -> Option<f64> {
     // Process logic for each mode processing type
     match processor {
+        // Raw Mode Handling
         // Raw = mode processing so just return the original value
-        ProcessingModeValues::Raw => Some(input),
+        ProcessingModeValues::Raw => match input {
+            ModeProcessorInputType::Float(float_level) => Some(float_level),
+            ModeProcessorInputType::Boolean(b) => {
+                if b {
+                    // True == 1.0
+                    Some(1.0)
+                } else {
+                    //False == 0.0
+                    Some(0.0)
+                }
+            }
+        },
+        // Smoothing Mode Handling
         // Smooth = do smoothing logic with input and processor
         ProcessingModeValues::Smooth(values) => {
             //trace!("parse_moothing()");
-            match parse_smoothing(
-                &mut values.smooth_queue,
-                feature_levels,
-                input,
-                flip_input_float,
-            ) {
-                // If smooth parser calculates a smooth value or the input is 0 return it
-                SmoothParser::SkipZero(f_out) | SmoothParser::Smoothed(f_out) => Some(f_out),
-                // None so that we don't send the value to the device
-                // None because smoother is still smoothing
-                SmoothParser::Smoothing => None,
+
+            match input {
+                ModeProcessorInputType::Float(float_level) => {
+                    match parse_smoothing(
+                        &mut values.smooth_queue,
+                        feature_levels,
+                        float_level,
+                        flip_input,
+                    ) {
+                        // If smooth parser calculates a smooth value or the input is 0 return it
+                        SmoothParser::SkipZero(f_out) | SmoothParser::Smoothed(f_out) => {
+                            Some(f_out)
+                        }
+                        // None so that we don't send the value to the device
+                        // None because smoother is still smoothing
+                        SmoothParser::Smoothing => None,
+                    }
+                }
+                ModeProcessorInputType::Boolean(_b) => None, // No support for Smoothing mode and Boolean
             }
             // Return processed input
         }
+        // Rate Mode Handling
         ProcessingModeValues::Rate(values) => {
             //trace!("parse_rate()");
             // Need to set rate_timestamp when feature enabled
             if let None = values.rate_timestamp {
                 values.rate_timestamp = Some(Instant::now());
             }
-            match parse_rate(values, feature_levels.rate_tune, input, flip_input_float) {
-                RateParser::SkipZero => Some(0.), // Skip zero and send to toy
-                RateParser::RateCalculated(f_out, reset_timer) => {
-                    // Rate calculated reset timer and send calculated value to toy
-                    if reset_timer {
-                        values.rate_timestamp = Some(Instant::now())
+
+            match input {
+                ModeProcessorInputType::Float(float_level) => {
+                    match parse_rate(values, feature_levels.rate_tune, float_level, flip_input) {
+                        RateParser::SkipZero => Some(0.), // Skip zero and send to toy
+                        RateParser::RateCalculated(f_out, reset_timer) => {
+                            // Rate calculated reset timer and send calculated value to toy
+                            if reset_timer {
+                                values.rate_timestamp = Some(Instant::now())
+                            }
+                            Some(f_out)
+                        }
                     }
-                    Some(f_out)
                 }
+                ModeProcessorInputType::Boolean(_b) => None, // No support for Rate and Boolean
             }
         }
-        ProcessingModeValues::Constant => {
-            // Logic here ?
-            Some(feature_levels.constant_level)
-        }
+        // Constant Mode Handling
+        ProcessingModeValues::Constant => match input {
+            ModeProcessorInputType::Float(float_level) => {
+                if float_level >= 0.5 {
+                    Some(feature_levels.constant_level)
+                } else {
+                    Some(0.0)
+                }
+            }
+            ModeProcessorInputType::Boolean(b) => {
+                if b {
+                    Some(feature_levels.constant_level)
+                } else {
+                    Some(0.0)
+                }
+            }
+        },
     }
 }
 
@@ -558,7 +622,7 @@ pub async fn toy_management_handler(
                         match ts {
                             ToySig::OSCMsg(mut msg) => {
                                 // Parse OSC msgs to toys commands
-
+                                //debug!("msg.addr = {} | msg.args = {:?}", msg.addr, msg.args);
                                 /*
                                  * Do Penetration System parsing first?
                                  * Then parameter parsing?
@@ -577,13 +641,13 @@ pub async fn toy_management_handler(
                                  *
                                  */
 
-                                // Get all features with an enabled penetration system?
-                                if let Some(penetration_system_features) =
-                                    vc_toy_features.get_features_with_penetration_systems(&msg.addr)
+                                // Get all features with an enabled input processor?
+                                if let Some(input_processor_system_features) =
+                                    vc_toy_features.get_features_with_input_processors(&msg.addr)
                                 {
                                     match newest_msg_val {
                                         OscType::Float(lvl) => {
-                                            for feature in penetration_system_features {
+                                            for feature in input_processor_system_features {
                                                 let float_level =
                                                     ((lvl * 100.0).round() / 100.0) as f64;
                                                 // pen_system is checked for None in get_features_with_penetration_systems method.
@@ -591,7 +655,7 @@ pub async fn toy_management_handler(
                                                 if let Some(i_mode_processed_value) = feature
                                                     .penetration_system
                                                     .pen_system
-                                                    .as_ref()
+                                                    .as_mut()
                                                     .unwrap()
                                                     .process(ModeProcessorInputType::Float(
                                                         float_level,
@@ -630,12 +694,12 @@ pub async fn toy_management_handler(
                                         }
                                         // Boolean can be supported in the process trait method
                                         OscType::Bool(b) => {
-                                            for feature in penetration_system_features {
+                                            for feature in input_processor_system_features {
                                                 // Boolean to float transformation here
                                                 if let Some(i_mode_processed_value) = feature
                                                     .penetration_system
                                                     .pen_system
-                                                    .as_ref()
+                                                    .as_mut()
                                                     .unwrap()
                                                     .process(ModeProcessorInputType::Boolean(b))
                                                 {
@@ -739,12 +803,9 @@ pub async fn toy_management_handler(
                                             }
                                         }
                                         OscType::Bool(b) => {
-                                            // Boolean to float transformation here
-                                            let float_level = if b { 1. } else { 0. };
-
+                                            info!("Got a Bool! {} = {}", msg.addr, b);
                                             for feature in features {
                                                 // Get ToyParameter here
-                                                // We unwrap here because the call to get_features_from_param guarantees the parameter exists.
                                                 let mut toy_parameter = feature
                                                     .osc_parameters
                                                     .iter_mut()
@@ -762,9 +823,7 @@ pub async fn toy_management_handler(
                                                 {
                                                     if let Some(i) = mode_processor(
                                                         ModeProcessorInput::RawInput(
-                                                            ModeProcessorInputType::Float(
-                                                                float_level,
-                                                            ),
+                                                            ModeProcessorInputType::Boolean(b),
                                                             first_toy_param,
                                                         ),
                                                         feature.feature_levels,
