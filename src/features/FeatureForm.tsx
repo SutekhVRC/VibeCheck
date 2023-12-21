@@ -237,64 +237,6 @@ export default function FeatureForm({
                 />
               )}
               <FourPanel
-                text="Rate Level"
-                tooltip="This uses rate mode on the float input."
-                three={
-                  <Slider
-                    min={1}
-                    max={20}
-                    step={1}
-                    value={[levels.rate_tune]}
-                    onValueChange={(e) => handleLevels("rate_tune", e[0])}
-                    onValueCommit={handleCommit}
-                  />
-                }
-                four={levels.rate_tune.toString()}
-              />
-              <FourPanel
-                text="Smooth Level"
-                tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
-                three={
-                  <Slider
-                    min={1}
-                    max={20}
-                    step={1}
-                    value={[levels.smooth_rate]}
-                    onValueChange={(e) => handleLevels("smooth_rate", e[0])}
-                    onValueCommit={handleCommit}
-                  />
-                }
-                four={levels.smooth_rate.toString()}
-              />
-              <FourPanel
-                text="Constant Level"
-                tooltip="This uses contant mode on the float input."
-                three={
-                  <Slider
-                    min={1}
-                    max={20}
-                    step={1}
-                    value={[levels.constant_level]}
-                    onValueChange={(e) => handleLevels("constant_level", e[0])}
-                    onValueCommit={handleCommit}
-                  />
-                }
-                four={levels.constant_level.toString()}
-              />
-              <FourPanel
-                text="Flip Input"
-                tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
-                two={
-                  <Switch
-                    size="small"
-                    checked={feature.flip_input_float}
-                    onCheckedChange={(checked) =>
-                      handleBool(checked, "flip_input_float")
-                    }
-                  />
-                }
-              />
-              <FourPanel
                 text="Idle"
                 tooltip="Set the idle motor speed for this feature. Idle activates when there is no input. Your set idle speed won't activate until you send at least one float value in the valid min/max range you have set."
                 flipped={feature.flip_input_float}
@@ -342,6 +284,19 @@ export default function FeatureForm({
                 )}-${round0.format(levels.maximum_level * 100)}`}
               />
               <FourPanel
+                text="Flip Input"
+                tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
+                two={
+                  <Switch
+                    size="small"
+                    checked={feature.flip_input_float}
+                    onCheckedChange={(checked) =>
+                      handleBool(checked, "flip_input_float")
+                    }
+                  />
+                }
+              />
+              <FourPanel
                 text="Processor"
                 tooltip="The Input processor for this feature"
                 three={
@@ -366,6 +321,63 @@ export default function FeatureForm({
                     />
                   </div>
                 }
+              />
+              <FourPanel
+                text="Smooth Level"
+                tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
+                three={
+                  <Slider
+                    accent={
+                      feature.penetration_system.pen_system_processing_mode ==
+                      "Smooth"
+                    }
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={[levels.smooth_rate]}
+                    onValueChange={(e) => handleLevels("smooth_rate", e[0])}
+                    onValueCommit={handleCommit}
+                  />
+                }
+                four={levels.smooth_rate.toString()}
+              />
+              <FourPanel
+                text="Rate Level"
+                tooltip="This uses rate mode on the float input."
+                three={
+                  <Slider
+                    accent={
+                      feature.penetration_system.pen_system_processing_mode ==
+                      "Rate"
+                    }
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={[levels.rate_tune]}
+                    onValueChange={(e) => handleLevels("rate_tune", e[0])}
+                    onValueCommit={handleCommit}
+                  />
+                }
+                four={levels.rate_tune.toString()}
+              />
+              <FourPanel
+                text="Constant Level"
+                tooltip="This uses contant mode on the float input."
+                three={
+                  <Slider
+                    accent={
+                      feature.penetration_system.pen_system_processing_mode ==
+                      "Constant"
+                    }
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={[levels.constant_level]}
+                    onValueChange={(e) => handleLevels("constant_level", e[0])}
+                    onValueCommit={handleCommit}
+                  />
+                }
+                four={levels.constant_level.toString()}
               />
               {simulateEnabled != null && (
                 <FourPanel

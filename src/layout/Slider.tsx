@@ -4,12 +4,18 @@ import { useState } from "react";
 import { cn } from "../lib/utils";
 import { round0 } from "../utils";
 
+type SliderProps = {
+  multiply?: number;
+  accent?: boolean;
+};
+
 export default function Slider(
-  props: SliderPrimitive.SliderProps & { multiply?: number },
+  props: SliderPrimitive.SliderProps & SliderProps,
 ) {
   const [hover, setHover] = useState(false);
   const first = props.value?.at(0);
   const second = props.value?.at(1);
+  const color = props?.accent && "bg-cyan-500";
   // This is really dumb right now
   // Hopefully RadixPopper "updatePositionStrategy" = "always" will be added to tooltip
   return (
@@ -24,7 +30,12 @@ export default function Slider(
       aria-label="Slider"
     >
       <SliderPrimitive.Track className="relative flex bg-zinc-700 flex-grow rounded-full h-2">
-        <SliderPrimitive.Range className="absolute bg-zinc-100 rounded-full h-full data-[disabled]:bg-zinc-600 transition-all" />
+        <SliderPrimitive.Range
+          className={cn(
+            "absolute bg-zinc-100 rounded-full h-full data-[disabled]:bg-zinc-600 transition-all",
+            color,
+          )}
+        />
       </SliderPrimitive.Track>
       {first != undefined && (
         <TooltipPrimitive.Provider>
