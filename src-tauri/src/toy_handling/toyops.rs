@@ -650,6 +650,7 @@ impl LevelTweaks {
         self.smooth_rate = fe_lt.smooth_rate;
         self.linear_position_speed = fe_lt.linear_position_speed;
         self.rate_tune = fe_lt.rate_tune;
+        self.constant_level = fe_lt.constant_level
     }
 
     pub fn to_fe(&self) -> FeLevelTweaks {
@@ -660,6 +661,7 @@ impl LevelTweaks {
             smooth_rate: self.smooth_rate,
             linear_position_speed: self.linear_position_speed,
             rate_tune: self.rate_tune,
+            constant_level: self.constant_level,
         }
     }
 }

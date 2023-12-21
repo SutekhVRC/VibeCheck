@@ -267,6 +267,21 @@ export default function FeatureForm({
                 four={levels.smooth_rate.toString()}
               />
               <FourPanel
+                text="Constant Level"
+                tooltip="This uses contant mode on the float input."
+                three={
+                  <Slider
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={[levels.constant_level]}
+                    onValueChange={(e) => handleLevels("constant_level", e[0])}
+                    onValueCommit={handleCommit}
+                  />
+                }
+                four={levels.constant_level.toString()}
+              />
+              <FourPanel
                 text="Flip Input"
                 tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
                 two={
