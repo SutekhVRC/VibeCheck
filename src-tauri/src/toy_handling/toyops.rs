@@ -16,6 +16,9 @@ use crate::{
         },
         FromFrontend, ToBackend, ToFrontend,
     },
+    toy_handling::input_processor::penetration_systems::{
+        sps::SPSProcessor, tps::TPSProcessor, PenetrationSystemType,
+    },
     util::fs::{file_exists, get_config_dir},
     vcore::vcerror,
 };
@@ -232,6 +235,27 @@ impl VCToy {
 
                 // Feature count is the same so its probably safe to assume the toy config is intact
                 self.parsed_toy_features = conf.features.clone();
+
+                // Allocate / Instantiate new Penetration system structure based on configuration data
+                for feature in &mut self.parsed_toy_features.features {
+                    match feature.penetration_system.pen_system_type {
+                        PenetrationSystemType::NONE => feature.penetration_system.pen_system = None,
+                        PenetrationSystemType::SPS => {
+                            feature.penetration_system.pen_system =
+                                Some(Box::new(SPSProcessor::default()))
+                        }
+                        PenetrationSystemType::TPS => {
+                            feature.penetration_system.pen_system =
+                                Some(Box::new(TPSProcessor::default()))
+                        }
+                    }
+
+                    feature.penetration_system.pen_system_processing_mode_values =
+                        ProcessingModeValues::new_from(
+                            &feature.penetration_system.pen_system_processing_mode,
+                        );
+                }
+
                 self.osc_data = conf.osc_data;
                 info!("Populated toy with loaded config from file!");
             }
