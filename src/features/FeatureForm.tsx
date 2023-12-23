@@ -362,16 +362,16 @@ export default function FeatureForm({
               />
               <FourPanel
                 text="Constant Level"
-                tooltip="This uses contant mode on the float input."
+                tooltip="The intensity your toy will activate when you have constant mode enabled."
                 three={
                   <Slider
                     accent={
                       feature.penetration_system.pen_system_processing_mode ==
                       "Constant"
                     }
-                    min={1}
-                    max={20}
-                    step={1}
+                    min={0.01}
+                    max={1.0}
+                    step={0.01}
                     value={[levels.constant_level]}
                     onValueChange={(e) => handleLevels("constant_level", e[0])}
                     onValueCommit={handleCommit}

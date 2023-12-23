@@ -456,7 +456,7 @@ async fn mode_processor<'toy_parameter>(
                     )
                     .await;
                 }
-                // Never called with Boolean type yet (todo)
+
                 ModeProcessorInputType::Boolean(b_input) => {
                     // Input Processor & Boolean
                     return mode_processor_logic(
@@ -482,7 +482,7 @@ async fn mode_processor<'toy_parameter>(
                     )
                     .await;
                 }
-                // Never called with Boolean type yet (todo)
+
                 ModeProcessorInputType::Boolean(b_input) => {
                     // Raw Input & Boolean
                     return mode_processor_logic(
