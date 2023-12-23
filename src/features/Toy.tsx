@@ -23,7 +23,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
         <div>{nameInfo.shortName}</div>
         <ToyInfo nameInfo={nameInfo} toyPower={toy.toy_power} />
       </div>
-      <div className="m-4 overflow-hidden h-full">
+      <div className="m-4 h-full">
         <ToySettings toy={toy} />
         <div className="flex overflow-x-scroll scrollbar select-none w-[calc(100vw-300px)]">
           {toy.features.map((feature, featureArrayIndex) => (
