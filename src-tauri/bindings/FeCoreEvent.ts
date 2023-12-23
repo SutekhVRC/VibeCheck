@@ -2,4 +2,4 @@
 import type { FeScanEvent } from "./FeScanEvent";
 import type { FeStateEvent } from "./FeStateEvent";
 
-export type FeCoreEvent = { kind: "Scan", data: FeScanEvent } | { kind: "State", data: FeStateEvent };
+export type FeCoreEvent = { "kind": "Scan", "data": FeScanEvent } | { "kind": "State", "data": FeStateEvent };

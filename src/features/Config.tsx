@@ -1,13 +1,12 @@
-import { ChangeEvent, FormEvent } from "react";
-import { useState } from "react";
 import { invoke } from "@tauri-apps/api";
+import { ChangeEvent, FormEvent, useState } from "react";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
-import { CLEAR_OSC_CONFIG, SET_CONFIG } from "../data/constants";
-import UpdateButton from "../components/UpdateButton";
-import { TooltipLabel } from "../layout/Tooltip";
-import Switch from "../layout/Switch";
-import Button from "../layout/Button";
 import { createToast } from "../components/Toast";
+import UpdateButton from "../components/UpdateButton";
+import { CLEAR_OSC_CONFIG, SET_CONFIG } from "../data/constants";
+import Button from "../layout/Button";
+import Switch from "../layout/Switch";
+import { TooltipLabel } from "../layout/Tooltip";
 
 export default function Config({
   config,
@@ -67,13 +66,13 @@ export default function Config({
       createToast(
         "info",
         "Cleared avatar OSC configs",
-        "Removed AppData\\LocalLow\\VRChat\\VRChat\\OSC"
+        "Removed AppData\\LocalLow\\VRChat\\VRChat\\OSC",
       );
     } catch (e) {
       createToast(
         "error",
         "Could not clear avatar OSC configs!",
-        JSON.stringify(e)
+        JSON.stringify(e),
       );
     }
   }
@@ -105,7 +104,7 @@ export default function Config({
               pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}
               onInvalid={(e) =>
                 (e.target as HTMLInputElement).setCustomValidity(
-                  "Enter valid IP:HOST"
+                  "Enter valid IP:HOST",
                 )
               }
               onInput={(e) =>
@@ -125,7 +124,7 @@ export default function Config({
               pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}
               onInvalid={(e) =>
                 (e.target as HTMLInputElement).setCustomValidity(
-                  "Enter valid IP:HOST"
+                  "Enter valid IP:HOST",
                 )
               }
               onInput={(e) =>
@@ -152,7 +151,7 @@ export default function Config({
                 pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$`}
                 onInvalid={(e) =>
                   (e.target as HTMLInputElement).setCustomValidity(
-                    "Enter valid IP"
+                    "Enter valid IP",
                   )
                 }
                 onInput={(e) =>

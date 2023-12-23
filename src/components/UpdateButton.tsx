@@ -1,8 +1,8 @@
-import { installUpdate } from "@tauri-apps/api/updater";
 import { relaunch } from "@tauri-apps/api/process";
-import UpdatePing from "./UpdatePing";
+import { installUpdate } from "@tauri-apps/api/updater";
 import Button from "../layout/Button";
 import { createToast } from "./Toast";
+import UpdatePing from "./UpdatePing";
 
 export default function UpdateButton({ enabled }: { enabled: boolean }) {
   async function handleUpdate() {

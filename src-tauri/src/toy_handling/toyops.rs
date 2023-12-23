@@ -5,23 +5,30 @@ use buttplug::{
 use core::fmt;
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, sync::Arc, time::Instant, borrow::BorrowMut};
+use std::{collections::HashMap, fs, sync::Arc, time::Instant};
 use ts_rs::TS;
 
 use crate::{
     config::toy::{VCToyAnatomy, VCToyConfig},
-    frontend::{frontend_types::{FeLevelTweaks, FeVCFeatureType, FeVCToyFeature, FeToyParameter, FeProcessingMode}, ToBackend, ToFrontend},
+    frontend::{
+        frontend_types::{
+            FeLevelTweaks, FeProcessingMode, FeToyParameter, FeVCFeatureType, FeVCToyFeature,
+        },
+        FromFrontend, ToBackend, ToFrontend,
+    },
     util::fs::{file_exists, get_config_dir},
     vcore::vcerror,
 };
 
-use super::penetration_systems::PenetrationSystem;
+use crate::toy_handling::input_processor::penetration_systems::PenetrationSystem;
+
+use super::ToyPower;
 
 #[derive(Clone, Debug)]
 pub struct VCToy {
     pub toy_id: u32,
     pub toy_name: String,
-    pub battery_level: Option<f64>,
+    pub toy_power: ToyPower,
     pub toy_connected: bool,
     pub toy_features: ClientDeviceMessageAttributes,
     pub parsed_toy_features: VCToyFeatures,
@@ -33,7 +40,6 @@ pub struct VCToy {
 }
 
 impl VCToy {
-
     fn populate_linears(&mut self, features: &ClientDeviceMessageAttributes) {
         // Populate Linears
         if features.linear_cmd().is_some() {
@@ -45,21 +51,25 @@ impl VCToy {
                 .iter()
                 .for_each(|_linear_feature| {
                     self.parsed_toy_features.features.push(VCToyFeature::new(
-                        vec![
-                            ToyParameter {
-                                parameter: format!("/avatar/parameters/{:?}_{}", VCFeatureType::Linear, indexer),
-                                processing_mode: ProcessingMode::Raw,
-                            }        
-                        ],
+                        vec![ToyParameter {
+                            parameter: format!(
+                                "/avatar/parameters/{:?}_{}",
+                                VCFeatureType::Linear,
+                                indexer
+                            ),
+                            processing_mode: ProcessingMode::Raw,
+                            processing_mode_values: ProcessingModeValues::default(),
+                        }],
                         indexer,
                         VCFeatureType::Linear,
                     ));
+
                     indexer += 1;
                 });
             info!("Populated {} linears", indexer);
         }
     }
-    
+
     fn populate_rotators(&mut self, features: &ClientDeviceMessageAttributes) {
         // Populate rotators
         if features.rotate_cmd().is_some() {
@@ -71,15 +81,11 @@ impl VCToy {
                 .iter()
                 .for_each(|_rotate_feature| {
                     self.parsed_toy_features.features.push(VCToyFeature::new(
-                        vec![
-                            ToyParameter {
-                                parameter: format!("/avatar/parameters/{:?}_{}", VCFeatureType::Rotator, indexer),
-                                processing_mode: ProcessingMode::Raw,
-                            }        
-                        ],
+                        vec![],
                         indexer,
-                        VCFeatureType::Rotator,
+                        VCFeatureType::Linear,
                     ));
+
                     indexer += 1;
                 });
             info!("Populated {} rotators", indexer);
@@ -101,78 +107,60 @@ impl VCToy {
                     match scalar_feature.actuator_type() {
                         &ActuatorType::Rotate => {
                             self.parsed_toy_features.features.push(VCToyFeature::new(
-                                vec![
-                                    ToyParameter {
-                                        parameter: format!("/avatar/parameters/{:?}_{}", VCFeatureType::ScalarRotator, indexer),
-                                        processing_mode: ProcessingMode::Raw,
-                                    }        
-                                ],
+                                vec![],
                                 indexer,
                                 VCFeatureType::ScalarRotator,
-                            ))
+                            ));
+
+                            indexer += 1;
                         }
                         &ActuatorType::Vibrate => {
                             self.parsed_toy_features.features.push(VCToyFeature::new(
-                                vec![
-                                    ToyParameter {
-                                        parameter: format!("/avatar/parameters/{:?}_{}", VCFeatureType::Vibrator, indexer),
-                                        processing_mode: ProcessingMode::Raw,
-                                    }        
-                                ],
+                                vec![],
                                 indexer,
                                 VCFeatureType::Vibrator,
-                            ))
+                            ));
+
+                            indexer += 1;
                         }
                         &ActuatorType::Constrict => {
                             self.parsed_toy_features.features.push(VCToyFeature::new(
-                                vec![
-                                    ToyParameter {
-                                        parameter: format!("/avatar/parameters/{:?}_{}", VCFeatureType::Constrict, indexer),
-                                        processing_mode: ProcessingMode::Raw,
-                                    }        
-                                ],
+                                vec![],
                                 indexer,
                                 VCFeatureType::Constrict,
-                            ))
+                            ));
+
+                            indexer += 1;
                         }
                         &ActuatorType::Inflate => {
                             self.parsed_toy_features.features.push(VCToyFeature::new(
-                                vec![
-                                    ToyParameter {
-                                        parameter: format!("/avatar/parameters/{:?}_{}", VCFeatureType::Inflate, indexer),
-                                        processing_mode: ProcessingMode::Raw,
-                                    }        
-                                ],
+                                vec![],
                                 indexer,
                                 VCFeatureType::Inflate,
-                            ))
+                            ));
+
+                            indexer += 1;
                         }
                         &ActuatorType::Oscillate => {
                             self.parsed_toy_features.features.push(VCToyFeature::new(
-                                vec![
-                                    ToyParameter {
-                                        parameter: format!("/avatar/parameters/{:?}_{}", VCFeatureType::Oscillate, indexer),
-                                        processing_mode: ProcessingMode::Raw,
-                                    }        
-                                ],
+                                vec![],
                                 indexer,
                                 VCFeatureType::Oscillate,
-                            ))
+                            ));
+
+                            indexer += 1;
                         }
                         &ActuatorType::Position => {
                             self.parsed_toy_features.features.push(VCToyFeature::new(
-                                vec![
-                                    ToyParameter{
-                                        parameter: format!("/avatar/parameters/{:?}_{}", VCFeatureType::Position, indexer),
-                                        processing_mode: ProcessingMode::Raw,
-                                }],
+                                vec![],
                                 indexer,
                                 VCFeatureType::Position,
-                            ))
+                            ));
+
+                            indexer += 1;
                         }
                         &ActuatorType::Unknown => {}
                     }
-                    indexer += 1;
                 });
             info!("Populated {} scalars", indexer);
         }
@@ -180,11 +168,7 @@ impl VCToy {
 
     // Populate if no config can be read for toy
     fn populate_routine(&mut self) {
-        
-        info!(
-            "Populating toy: {}",
-            self.toy_id,
-        );
+        info!("Populating toy: {}", self.toy_id,);
 
         let features = self.toy_features.clone();
 
@@ -207,7 +191,6 @@ impl VCToy {
         match self.config {
             // If config is loaded check that its feature count matches the toy that loaded it. Then set the feature map to the one from the config.
             Some(ref conf) => {
-
                 // If feature count differs the user probably swapped between connection types (This used to be a bug when LC impl in bp-rs wasnt done for the Max2. This was fixed but I am keeping the feature count check in case it happens again)
 
                 let mut conn_toy_feature_count = 0;
@@ -331,6 +314,44 @@ impl VCToy {
     }
 }
 
+#[derive(Clone, Default, Debug)]
+pub struct SmoothProcessingValues {
+    pub smooth_queue: Vec<f64>,
+}
+
+#[derive(Clone, Default, Debug)]
+pub struct RateProcessingValues {
+    pub rate_saved_level: f64,
+    pub rate_saved_osc_input: f64,
+    pub rate_timestamp: Option<Instant>,
+}
+
+#[derive(Clone, Default, Debug)]
+pub enum ProcessingModeValues {
+    #[default]
+    Raw,
+    Smooth(SmoothProcessingValues),
+    Rate(RateProcessingValues),
+    Constant,
+}
+
+impl ProcessingModeValues {
+    pub fn new_from(processing_mode: &ProcessingMode) -> Self {
+        match processing_mode {
+            ProcessingMode::Raw => Self::Raw,
+            ProcessingMode::Constant => Self::Constant,
+            ProcessingMode::Smooth => Self::Smooth(SmoothProcessingValues {
+                smooth_queue: Vec::new(),
+            }),
+            ProcessingMode::Rate => Self::Rate(RateProcessingValues {
+                rate_saved_level: 0.0,
+                rate_saved_osc_input: 0.0,
+                rate_timestamp: None,
+            }),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub enum ProcessingMode {
     Raw,
@@ -340,7 +361,6 @@ pub enum ProcessingMode {
 }
 
 impl ToFrontend<FeProcessingMode> for ProcessingMode {
-
     type OutputType = FeProcessingMode;
 
     fn to_frontend(&self) -> Self::OutputType {
@@ -357,6 +377,9 @@ impl ToFrontend<FeProcessingMode> for ProcessingMode {
 pub struct ToyParameter {
     pub parameter: String,
     pub processing_mode: ProcessingMode,
+    // Temporary values for calculations for Processing Modes
+    #[serde(skip)]
+    pub processing_mode_values: ProcessingModeValues,
 }
 
 impl ToyParameter {
@@ -373,74 +396,81 @@ impl ToFrontend<Vec<FeToyParameter>> for Vec<ToyParameter> {
     type OutputType = Vec<FeToyParameter>;
 
     fn to_frontend(&self) -> Self::OutputType {
-        
         let mut out = Vec::new();
 
         for tp in self {
-            out.push(
-                FeToyParameter { parameter: tp.parameter.clone(), processing_mode: tp.processing_mode.to_frontend() }
-            );
+            out.push(FeToyParameter {
+                parameter: tp.parameter.clone(),
+                processing_mode: tp.processing_mode.to_frontend(),
+            });
         }
 
         out
     }
 }
 
+/*
+#[derive(Clone, Debug, Default)]
+pub struct FeatureProcessor {
 
+
+    pub rate_saved_level: f64,
+    pub rate_saved_osc_input: f64,
+    pub rate_timestamp: Option<Instant>,
+}
+*/
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct VCToyFeature {
-    pub feature_enabled: bool,
-
-    pub feature_type: VCFeatureType,
-
-    //pub osc_parameter: String,
-    pub osc_parameters: Vec<ToyParameter>,
-
-    // Note: add pen system to FE type for toyfeature
-    pub penetration_system: PenetrationSystem,
-
+    // The feature index of the toy
     pub feature_index: u32,
-
+    // Is this feature enabled
+    pub feature_enabled: bool,
+    // The type of feature
+    pub feature_type: VCFeatureType,
+    // Assigned OSC parameters with their respective processing modes
+    pub osc_parameters: Vec<ToyParameter>,
+    // The assigned penetration system to the feature
+    pub penetration_system: PenetrationSystem,
+    // Should toy input be flipped
     pub flip_input_float: bool,
-
+    // Various user defined parameters
     pub feature_levels: LevelTweaks,
-
+    // Smooth mode enabled (This will be removed with multi-param update)
     pub smooth_enabled: bool,
-    #[serde(skip)]
-    pub smooth_queue: Vec<f64>,
-
+    // Rate mode enabled (This will be removed with multi-param update)
     pub rate_enabled: bool,
-    #[serde(skip)]
-    pub rate_saved_level: f64,
-    #[serde(skip)]
-    pub rate_saved_osc_input: f64,
-    #[serde(skip)]
-    pub rate_timestamp: Option<Instant>,
 }
 
 impl VCToyFeature {
-    fn new(osc_parameters: Vec<ToyParameter>, feature_index: u32, feature_type: VCFeatureType) -> Self {
+    fn new(
+        osc_parameters: Vec<ToyParameter>,
+        feature_index: u32,
+        feature_type: VCFeatureType,
+    ) -> Self {
         VCToyFeature {
             feature_enabled: true,
             feature_type,
             osc_parameters,
-            penetration_system: PenetrationSystem::NONE,
+            penetration_system: PenetrationSystem::default(),
             feature_index,
             flip_input_float: false,
             feature_levels: LevelTweaks::default(),
             smooth_enabled: true,
-            smooth_queue: vec![],
             rate_enabled: false,
-            rate_saved_level: 0.,
-            rate_saved_osc_input: 0.,
-            rate_timestamp: None,
+            //processor: FeatureProcessor::default(),
         }
     }
 
     pub fn get_enabled_feature_from_param(&mut self, param: &String) -> Option<&mut Self> {
+        // Implement parameter priority?
         if self.feature_enabled {
             for osc_param in &mut self.osc_parameters {
                 if osc_param.is_assigned_param(param) {
+                    debug!(
+                        "Found osc parameter match in feature! : {:?} - {}",
+                        (self.feature_index, self.feature_type),
+                        param
+                    );
                     return Some(self);
                 }
             }
@@ -448,16 +478,79 @@ impl VCToyFeature {
         return None;
     }
 
+    /*
     pub fn from_fe(&mut self, fe_feature: FeVCToyFeature) {
         self.feature_enabled = fe_feature.feature_enabled;
         // Not including feature type because the feature type is decided by the Server Core not the frontend user
         // we don't want to allow users to mutate feature types as it could break / make the feature unuseable until restart
         //self.feature_type.from_fe(fe_feature.feature_type);
         self.flip_input_float = fe_feature.flip_input_float;
-        self.osc_parameters = fe_feature.osc_parameters.to_backend();
+        self.osc_parameters.from_frontend(fe_feature.osc_parameters);
         self.feature_levels.from_fe(fe_feature.feature_levels);
         self.smooth_enabled = fe_feature.smooth_enabled;
         self.rate_enabled = fe_feature.rate_enabled;
+    }*/
+}
+
+impl FromFrontend<FeVCToyFeature> for VCToyFeature {
+    type OutputType = bool;
+
+    fn from_frontend(&mut self, frontend_type: FeVCToyFeature) -> Self::OutputType {
+        self.feature_enabled = frontend_type.feature_enabled;
+        // Not including feature type because the feature type is decided by the Server Core not the frontend user
+        // we don't want to allow users to mutate feature types as it could break / make the feature unuseable until restart
+        //self.feature_type.from_fe(fe_feature.feature_type);
+        self.flip_input_float = frontend_type.flip_input_float;
+        self.osc_parameters
+            .from_frontend(frontend_type.osc_parameters);
+        self.penetration_system
+            .from_frontend(frontend_type.penetration_system);
+        self.feature_levels.from_fe(frontend_type.feature_levels);
+        self.smooth_enabled = frontend_type.smooth_enabled;
+        self.rate_enabled = frontend_type.rate_enabled;
+        true
+    }
+}
+
+impl FromFrontend<Vec<FeToyParameter>> for Vec<ToyParameter> {
+    type OutputType = bool;
+
+    fn from_frontend(&mut self, frontend_type: Vec<FeToyParameter>) -> Self::OutputType {
+        // Remove make not shit
+        self.clear();
+
+        for toy_param in frontend_type {
+            info!("FTP: {:?}", toy_param);
+            self.push(ToyParameter {
+                parameter: toy_param.parameter,
+                processing_mode: toy_param.processing_mode.to_backend(),
+                processing_mode_values: ProcessingModeValues::new_from(
+                    &toy_param.processing_mode.to_backend(),
+                ),
+            });
+        }
+
+        true
+    }
+}
+
+impl ToFrontend<HashMap<String, FeToyParameter>> for HashMap<String, ToyParameter> {
+    type OutputType = HashMap<String, FeToyParameter>;
+
+    fn to_frontend(&self) -> Self::OutputType {
+        let mut frontend_parameter_map = HashMap::new();
+
+        for (p, tp) in self {
+            frontend_parameter_map.insert(
+                p.to_owned(),
+                FeToyParameter {
+                    parameter: p.clone(),
+                    processing_mode: tp.processing_mode.to_frontend(),
+                },
+            );
+        }
+
+        frontend_parameter_map
     }
 }
 
@@ -532,6 +625,7 @@ pub struct LevelTweaks {
     pub smooth_rate: f64,
     pub linear_position_speed: u32,
     pub rate_tune: f64,
+    pub constant_level: f64,
 }
 
 impl Default for LevelTweaks {
@@ -543,6 +637,7 @@ impl Default for LevelTweaks {
             smooth_rate: 2.,
             linear_position_speed: 100,
             rate_tune: 0.4,
+            constant_level: 0.5,
         }
     }
 }
@@ -555,6 +650,7 @@ impl LevelTweaks {
         self.smooth_rate = fe_lt.smooth_rate;
         self.linear_position_speed = fe_lt.linear_position_speed;
         self.rate_tune = fe_lt.rate_tune;
+        self.constant_level = fe_lt.constant_level
     }
 
     pub fn to_fe(&self) -> FeLevelTweaks {
@@ -565,6 +661,7 @@ impl LevelTweaks {
             smooth_rate: self.smooth_rate,
             linear_position_speed: self.linear_position_speed,
             rate_tune: self.rate_tune,
+            constant_level: self.constant_level,
         }
     }
 }
@@ -608,11 +705,7 @@ impl VCToyFeatures {
         }
     }
 
-    pub fn get_features_from_param(
-        &mut self,
-        param: &String,
-    ) -> Option<Vec<&mut VCToyFeature>> {
-
+    pub fn get_features_from_param(&mut self, param: &String) -> Option<Vec<&mut VCToyFeature>> {
         let mut out = Vec::new();
 
         for f in &mut self.features {
@@ -628,6 +721,38 @@ impl VCToyFeatures {
         }
     }
 
+    pub fn get_features_with_input_processors(
+        &mut self,
+        param: &String,
+    ) -> Option<Vec<&mut VCToyFeature>> {
+        let mut out = Vec::new();
+
+        for f in &mut self.features {
+            // If penetration system not set for feature move to next feature
+            if let None = f.penetration_system.pen_system {
+                continue;
+            }
+
+            // Is parameter part of the implemented penetration system?
+            if f.penetration_system
+                .pen_system
+                .as_ref()
+                .unwrap()
+                .is_parameter(param)
+            {
+                // Add to features vector for features with a penetration system related to the input parameter
+                out.push(f);
+            }
+        }
+
+        if out.is_empty() {
+            None
+        } else {
+            Some(out)
+        }
+    }
+
+    /*
     pub fn from_fe(&mut self, fe_feature: FeVCToyFeature) -> bool {
         let mut success = false;
         self.features.iter_mut().for_each(|f| {
@@ -652,7 +777,7 @@ impl VCToyFeatures {
             }
         });
         success
-    }
+    }*/
 
     /*
     pub fn to_fe(&self) -> Vec<FeVCToyFeature> {
@@ -679,7 +804,6 @@ impl VCToyFeatures {
 impl ToFrontend<Vec<FeVCToyFeature>> for Vec<VCToyFeature> {
     type OutputType = Vec<FeVCToyFeature>;
     fn to_frontend(&self) -> Self::OutputType {
-        
         let mut fe_features = Vec::new();
 
         self.iter().for_each(|f| {
@@ -687,7 +811,7 @@ impl ToFrontend<Vec<FeVCToyFeature>> for Vec<VCToyFeature> {
                 feature_enabled: f.feature_enabled,
                 feature_type: f.feature_type.to_fe(),
                 osc_parameters: f.osc_parameters.to_frontend(),
-                penetration_system: f.penetration_system.clone(),
+                penetration_system: f.penetration_system.to_frontend(),
                 feature_index: f.feature_index,
                 flip_input_float: f.flip_input_float,
                 feature_levels: f.feature_levels.to_fe(),
@@ -696,5 +820,38 @@ impl ToFrontend<Vec<FeVCToyFeature>> for Vec<VCToyFeature> {
             });
         });
         fe_features
+    }
+}
+
+impl FromFrontend<FeVCToyFeature> for VCToyFeatures {
+    type OutputType = bool;
+
+    fn from_frontend(&mut self, frontend_feature: FeVCToyFeature) -> Self::OutputType {
+        let mut success = false;
+        self.features.iter_mut().for_each(|f| {
+            info!(
+                "Checking Loaded: [{}: {:?}] - Fe: [{}: {:?}]",
+                f.feature_index,
+                f.feature_type,
+                frontend_feature.feature_index,
+                frontend_feature.feature_type
+            );
+            // Check that the index and type are the same
+            // Note that here there is an OR for when the feature type is a ScalarRotator
+            // May be a good idea in the future to create Scalar types and then convert the names in the frontend.
+            if f.feature_index == frontend_feature.feature_index
+                && (f.feature_type == frontend_feature.feature_type
+                    || f.feature_type == VCFeatureType::ScalarRotator
+                        && frontend_feature.feature_type == FeVCFeatureType::Rotator)
+            {
+                info!(
+                    "FE Object and Loaded Object are Eq: {}: {:?}",
+                    f.feature_index, f.feature_type
+                );
+                f.from_frontend(frontend_feature.clone());
+                success = true;
+            }
+        });
+        success
     }
 }

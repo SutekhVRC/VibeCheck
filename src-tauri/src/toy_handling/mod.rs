@@ -1,17 +1,22 @@
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
+
+use self::toyops::{ProcessingModeValues, ToyParameter};
+
 pub mod errors;
 pub mod handling;
+pub mod input_processor;
 pub mod toy_manager;
 pub mod toyops;
-pub mod penetration_systems;
 
 pub enum SmoothParser {
-    Smoothed,
-    SkipZero,
+    Smoothed(f64),
+    SkipZero(f64),
     Smoothing,
 }
 
 pub enum RateParser {
-    RateCalculated(bool),
+    RateCalculated(f64, bool),
     SkipZero,
 }
 
@@ -20,4 +25,65 @@ pub enum ToySig {
     //ToyCommand(ToyFeature),
     UpdateToy(crate::vcore::core::ToyUpdate),
     OSCMsg(rosc::OscMessage),
+}
+
+pub enum ModeProcessorInput<'processor> {
+    InputProcessor((ModeProcessorInputType, &'processor mut ProcessingModeValues)),
+    RawInput(ModeProcessorInputType, &'processor mut ToyParameter),
+}
+
+/*
+impl<'processor> ModeProcessorInput<'processor> {
+    fn is_input_processor(&self) -> bool {
+        if let ModeProcessorInput::InputProcessor(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn is_raw_input(&self) -> bool {
+        if let ModeProcessorInput::RawInput(_, _) = self {
+            true
+        } else {
+            false
+        }
+    }
+}*/
+
+pub enum ModeProcessorInputType {
+    Float(f64),
+    Boolean(bool),
+}
+
+#[derive(Debug, Serialize, Deserialize, TS, Clone)]
+#[ts(export)]
+pub enum ToyPower {
+    Pending,
+    Battery(f64),
+    NoBattery,
+    Offline,
+}
+
+impl ToyPower {
+    pub fn to_float(&self) -> f64 {
+        match self {
+            Self::Battery(level) => *level,
+            _ => 0.0,
+        }
+    }
+}
+
+impl ToString for ToyPower {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Pending => "Pending".to_owned(),
+            Self::Battery(level) => {
+                let m = 100.0 * level;
+                format!("{}%", m.to_string())
+            }
+            Self::NoBattery => "Powered".to_owned(),
+            Self::Offline => "Offline".to_owned(),
+        }
+    }
 }

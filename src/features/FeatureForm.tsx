@@ -1,17 +1,22 @@
-import { ChangeEvent, useEffect, useState } from "react";
-import { OSC_PARAM_PREFIX } from "../data/constants";
-import { round0 } from "../utils";
-import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
-import Slider from "../layout/Slider";
-import useSimulate from "../hooks/useSimulate";
-import Switch from "../layout/Switch";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
+import { Select } from "@/layout/Select";
+import { Plus, X } from "lucide-react";
+import { ChangeEvent, Fragment, useEffect, useState } from "react";
+import { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
+import { FeToyParameter } from "src-tauri/bindings/FeToyParameter";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
-import FourPanel from "../components/FourPanel";
-import { handleFeatureAlter } from "../hooks/useToys";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
-import { Select } from "../layout/Select";
-import { TooltipLabel } from "../layout/Tooltip";
+import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
+import FourPanel from "../components/FourPanel";
 import FourPanelContainer from "../components/FourPanelContainer";
+import { OSC_PARAM_PREFIX } from "../data/constants";
+import useSimulate from "../hooks/useSimulate";
+import { handleFeatureAlter } from "../hooks/useToys";
+import Slider from "../layout/Slider";
+import Switch from "../layout/Switch";
+import { round0 } from "../utils";
 
 type ToyFeatureFormProps = {
   toy: FeVCToy;
@@ -23,12 +28,12 @@ export default function FeatureForm({
   selectedIndex,
 }: ToyFeatureFormProps) {
   const [feature, setToyFeature] = useState(
-    toy.features[selectedIndex] ?? toy.features[0]
+    toy.features[selectedIndex] ?? toy.features[0],
   );
   const levels = feature.feature_levels;
-
-  const modeOptions = ["None", "Smooth", "Rate"] as const;
-  type modeOption = (typeof modeOptions)[number];
+  const submenuOptions = ["Parameters", "Advanced"] as const;
+  type SubmenuOptions = (typeof submenuOptions)[number];
+  const [subMenu, setSubMenu] = useState<SubmenuOptions>("Parameters");
 
   useEffect(() => {
     setToyFeature(toy.features[selectedIndex] ?? toy.features[0]);
@@ -50,25 +55,81 @@ export default function FeatureForm({
     });
   }
 
-  function handleMode(option: modeOption) {
-    const smooth_enabled = option == "Smooth";
-    const rate_enabled = option == "Rate";
+  function removeParam(parameter: string) {
     setToyFeature((f) => {
       const newF = {
         ...f,
-        smooth_enabled,
-        rate_enabled,
-      } as FeVCToyFeature;
+        osc_parameters: f.osc_parameters.filter(
+          (param) => param.parameter != parameter,
+        ),
+      };
       handleFeatureAlter(toy, newF);
       return newF;
     });
   }
 
-  function handleOscParam(e: ChangeEvent<HTMLInputElement>) {
+  function findParamName(params: FeToyParameter[]) {
+    // A bit overpowered for need but :shrug:
+    const seenSuffixes = params.reduce((acc, val) => {
+      const [_, suffix] = val.parameter.split("param-").map((c) => parseInt(c));
+      if (isNaN(suffix)) return acc;
+      acc.add(suffix);
+      return acc;
+    }, new Set<number>());
+    for (let i = 0; i < params.length; i++) if (!seenSuffixes.has(i)) return i;
+    return params.length;
+  }
+
+  function addParam() {
+    setToyFeature((f) => {
+      const newParam = `${OSC_PARAM_PREFIX}param-${findParamName(
+        f.osc_parameters,
+      )}`;
+      const newF = {
+        ...f,
+        osc_parameters: [
+          ...f.osc_parameters,
+          {
+            parameter: newParam,
+            processing_mode: "Raw" as FeProcessingMode,
+          },
+        ],
+      };
+      handleFeatureAlter(toy, newF);
+      return newF;
+    });
+  }
+
+  function handleOscParam(
+    e: ChangeEvent<HTMLInputElement> | ChangeEvent<HTMLSelectElement>,
+    paramIndex: number,
+  ) {
+    setToyFeature((f) => {
+      const newParams = [...f.osc_parameters];
+      if (e.target.name == "osc_parameter") {
+        newParams[paramIndex].parameter =
+          `${OSC_PARAM_PREFIX}${e.target.value}`;
+      } else if (e.target.name == "osc_parameter_mode") {
+        newParams[paramIndex].processing_mode = e.target
+          .value as FeProcessingMode;
+      }
+      const newF = {
+        ...f,
+        osc_parameters: newParams,
+      };
+      handleFeatureAlter(toy, newF);
+      return newF;
+    });
+  }
+
+  function handleInputProcessor(e: ChangeEvent<HTMLSelectElement>) {
     setToyFeature((f) => {
       const newF = {
         ...f,
-        [e.target.name]: `${OSC_PARAM_PREFIX}${e.target.value}`,
+        penetration_system: {
+          ...f.penetration_system,
+          [e.target.name]: e.target.value,
+        },
       };
       handleFeatureAlter(toy, newF);
       return newF;
@@ -89,195 +150,266 @@ export default function FeatureForm({
   }
 
   return (
-    <FourPanelContainer>
-      <FourPanel
-        text="Enabled"
-        tooltip="Enable/Disable this feature."
-        two={
-          <Switch
-            size="small"
-            checked={feature.feature_enabled}
-            onCheckedChange={(checked) =>
-              handleBool(checked, "feature_enabled")
-            }
-          />
-        }
-      />
-      <FourPanel
-        text="Parameter"
-        tooltip="The float OSC parameter to control this feature's motor."
-        three={
-          <input
-            className="text-zinc-800 px-4 rounded-sm outline-none w-full"
-            name="osc_parameter"
-            value={feature.osc_parameter.replace(OSC_PARAM_PREFIX, "")}
-            onChange={handleOscParam} // Not debounced because :shrug:
-          />
-        }
-      />
-      {feature.smooth_enabled ? (
-        <TooltipLabel
-          text="Mode"
-          tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
-        />
-      ) : feature.rate_enabled ? (
-        <TooltipLabel
-          text="Mode"
-          tooltip="This uses rate mode on the float input."
-        />
-      ) : (
-        <TooltipLabel
-          text="Mode"
-          tooltip="No additional mode options will be applied to the float input."
-        />
-      )}
-      <Select
-        value={
-          feature.rate_enabled
-            ? "Rate"
-            : feature.smooth_enabled
-            ? "Smooth"
-            : "None"
-        }
-        onChange={(e) => {
-          handleMode(e.target.value as modeOption);
-        }}
-        options={modeOptions}
-      />
-      <div className="col-span-2 md:col-span-1">
-        {feature.smooth_enabled ? (
-          <Slider
-            disabled={!feature.smooth_enabled}
-            min={1}
-            max={20}
-            step={1}
-            value={[levels.smooth_rate]}
-            onValueChange={(e) => handleLevels("smooth_rate", e[0])}
-            onValueCommit={handleCommit}
-          />
-        ) : feature.rate_enabled ? (
-          <Slider
-            disabled={!feature.rate_enabled}
-            min={0.1}
-            max={1}
-            step={0.01}
-            value={[levels.rate_tune]}
-            onValueChange={(e) => handleLevels("rate_tune", e[0])}
-            onValueCommit={handleCommit}
-          />
-        ) : null}
-      </div>
-      <div className="text-right hidden md:block">
-        {feature.smooth_enabled
-          ? levels.smooth_rate.toString()
-          : feature.rate_enabled
-          ? levels.rate_tune.toString()
-          : null}
-      </div>
-      {feature.feature_type == "Linear" && (
+    <>
+      <FourPanelContainer>
         <FourPanel
-          text="Linear Speed"
-          tooltip="Linear positional duration speed in milliseconds. Speed is determined by the toy itself, this is only requested speed."
-          three={
-            <Slider
-              min={10}
-              max={1000}
-              step={1}
-              value={[levels.linear_position_speed]}
-              onValueChange={(e) => handleLevels("linear_position_speed", e[0])}
-              onValueCommit={handleCommit}
-            />
-          }
-          four={levels.linear_position_speed.toString()}
-        />
-      )}
-      <FourPanel
-        text="Flip Input"
-        tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
-        two={
-          <Switch
-            size="small"
-            checked={feature.flip_input_float}
-            onCheckedChange={(checked) =>
-              handleBool(checked, "flip_input_float")
-            }
-          />
-        }
-      />
-      <FourPanel
-        text="Idle"
-        tooltip="Set the idle motor speed for this feature. Idle activates when there is no input. Your set idle speed won't activate until you send at least one float value in the valid min/max range you have set."
-        flipped={feature.flip_input_float}
-        three={
-          <Slider
-            multiply={100}
-            min={0}
-            max={1}
-            step={0.01}
-            value={[levels.idle_level]}
-            onValueChange={(e) => handleLevels("idle_level", e[0])}
-            onValueCommit={handleCommit}
-          />
-        }
-        four={round0.format(levels.idle_level * 100)}
-      />
-      <FourPanel
-        text="Range"
-        tooltip="The minimum/maximum motor speed that will be sent to the feature's motor."
-        flipped={feature.flip_input_float}
-        three={
-          <Slider
-            multiply={100}
-            min={0}
-            max={1}
-            step={0.01}
-            value={[levels.minimum_level, levels.maximum_level]}
-            onValueChange={(e) => {
-              setToyFeature((f) => {
-                return {
-                  ...f,
-                  feature_levels: {
-                    ...levels,
-                    minimum_level: e[0],
-                    maximum_level: e[1],
-                  },
-                };
-              });
-            }}
-            onValueCommit={handleCommit}
-          />
-        }
-        four={`${round0.format(levels.minimum_level * 100)}-${round0.format(
-          levels.maximum_level * 100
-        )}`}
-      />
-      {simulateEnabled != null && (
-        <FourPanel
-          text="Simulate"
-          tooltip="Test feature power level."
-          flipped={feature.flip_input_float}
+          text="Enabled"
+          tooltip="Enable/Disable this feature."
           two={
             <Switch
               size="small"
-              checked={simulateEnabled}
-              onCheckedChange={toggleSimulate}
+              checked={feature.feature_enabled}
+              onCheckedChange={(checked) =>
+                handleBool(checked, "feature_enabled")
+              }
             />
           }
-          three={
-            <Slider
-              multiply={100}
-              disabled={!simulateEnabled}
-              min={0}
-              max={1}
-              step={0.01}
-              value={[simulateLevel]}
-              onValueChange={(e) => simulateOnValueChange(e[0])}
-              onValueCommit={() => simulateOnValueCommit()}
-            />
-          }
-          four={round0.format(simulateLevel * 100)}
         />
-      )}
-    </FourPanelContainer>
+      </FourPanelContainer>
+      <div className="flex gap-4 m-2">
+        <Button onClick={() => setSubMenu("Parameters")}>Parameters</Button>
+        <Button onClick={() => setSubMenu("Advanced")}>Advanced</Button>
+      </div>
+      <ScrollArea className="rounded-md border flex flex-grow flex-col h-[calc(100vh-410px)]">
+        <>
+          {subMenu == "Parameters" ? (
+            <div className="flex flex-col justify-between gap-2">
+              <div className="h-[calc(100vh-470px)] overflow-y-scroll scrollbar">
+                <div className="grid grid-cols-[20fr,_6fr,_1fr] text-sm text-justify p-4 gap-y-2 gap-x-6 items-center">
+                  {feature.osc_parameters.map((param, paramIndex) => {
+                    // TODO this is an antipatern to use index, however there should only be a low number of params
+                    // This needs to be by index because we update directly from backend
+                    // If we key on param, it would change on every update when typing, and un-select after each char
+                    return (
+                      <Fragment key={paramIndex}>
+                        <input
+                          className="text-zinc-800 px-4 rounded-sm outline-none w-full"
+                          name="osc_parameter"
+                          value={param.parameter.replace(OSC_PARAM_PREFIX, "")}
+                          onChange={(e) => handleOscParam(e, paramIndex)} // Not debounced because :shrug:
+                        />
+                        <Select
+                          name="osc_parameter_mode"
+                          value={param.processing_mode}
+                          onChange={(e) => {
+                            handleOscParam(e, paramIndex);
+                          }}
+                          options={ProcessingModes}
+                        />
+                        <button
+                          className="flex justify-center"
+                          onClick={() => removeParam(param.parameter)}
+                        >
+                          <X className="h-5" />
+                        </button>
+                      </Fragment>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex flex-col justify-center">
+                <div>
+                  <Button onClick={() => addParam()} size="sm">
+                    <Plus className="h-6" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <FourPanelContainer>
+              {feature.feature_type == "Linear" && (
+                <FourPanel
+                  text="Linear Speed"
+                  tooltip="Linear positional duration speed in milliseconds. Speed is determined by the toy itself, this is only requested speed."
+                  three={
+                    <Slider
+                      min={10}
+                      max={1000}
+                      step={1}
+                      value={[levels.linear_position_speed]}
+                      onValueChange={(e) =>
+                        handleLevels("linear_position_speed", e[0])
+                      }
+                      onValueCommit={handleCommit}
+                    />
+                  }
+                  four={levels.linear_position_speed.toString()}
+                />
+              )}
+              <FourPanel
+                text="Idle"
+                tooltip="Set the idle motor speed for this feature. Idle activates when there is no input. Your set idle speed won't activate until you send at least one float value in the valid min/max range you have set."
+                flipped={feature.flip_input_float}
+                three={
+                  <Slider
+                    multiply={100}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={[levels.idle_level]}
+                    onValueChange={(e) => handleLevels("idle_level", e[0])}
+                    onValueCommit={handleCommit}
+                  />
+                }
+                four={round0.format(levels.idle_level * 100)}
+              />
+              <FourPanel
+                text="Range"
+                tooltip="The minimum/maximum motor speed that will be sent to the feature's motor."
+                flipped={feature.flip_input_float}
+                three={
+                  <Slider
+                    multiply={100}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={[levels.minimum_level, levels.maximum_level]}
+                    onValueChange={(e) => {
+                      setToyFeature((f) => {
+                        return {
+                          ...f,
+                          feature_levels: {
+                            ...levels,
+                            minimum_level: e[0],
+                            maximum_level: e[1],
+                          },
+                        };
+                      });
+                    }}
+                    onValueCommit={handleCommit}
+                  />
+                }
+                four={`${round0.format(
+                  levels.minimum_level * 100,
+                )}-${round0.format(levels.maximum_level * 100)}`}
+              />
+              <FourPanel
+                text="Flip Input"
+                tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
+                two={
+                  <Switch
+                    size="small"
+                    checked={feature.flip_input_float}
+                    onCheckedChange={(checked) =>
+                      handleBool(checked, "flip_input_float")
+                    }
+                  />
+                }
+              />
+              <FourPanel
+                text="Processor"
+                tooltip="The Input processor for this feature"
+                three={
+                  <div className="flex gap-2">
+                    <Select
+                      name="pen_system_type"
+                      value={feature.penetration_system.pen_system_type}
+                      onChange={(e) => {
+                        handleInputProcessor(e);
+                      }}
+                      options={PenetrationSystems}
+                    />
+                    <Select
+                      name="pen_system_processing_mode"
+                      value={
+                        feature.penetration_system.pen_system_processing_mode
+                      }
+                      onChange={(e) => {
+                        handleInputProcessor(e);
+                      }}
+                      options={ProcessingModes}
+                    />
+                  </div>
+                }
+              />
+              <FourPanel
+                text="Smooth Level"
+                tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
+                three={
+                  <Slider
+                    accent={
+                      feature.penetration_system.pen_system_processing_mode ==
+                      "Smooth"
+                    }
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={[levels.smooth_rate]}
+                    onValueChange={(e) => handleLevels("smooth_rate", e[0])}
+                    onValueCommit={handleCommit}
+                  />
+                }
+                four={levels.smooth_rate.toString()}
+              />
+              <FourPanel
+                text="Rate Level"
+                tooltip="This uses rate mode on the float input."
+                three={
+                  <Slider
+                    accent={
+                      feature.penetration_system.pen_system_processing_mode ==
+                      "Rate"
+                    }
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={[levels.rate_tune]}
+                    onValueChange={(e) => handleLevels("rate_tune", e[0])}
+                    onValueCommit={handleCommit}
+                  />
+                }
+                four={levels.rate_tune.toString()}
+              />
+              <FourPanel
+                text="Constant Level"
+                tooltip="The intensity your toy will activate when you have constant mode enabled."
+                three={
+                  <Slider
+                    accent={
+                      feature.penetration_system.pen_system_processing_mode ==
+                      "Constant"
+                    }
+                    min={0.01}
+                    max={1.0}
+                    step={0.01}
+                    value={[levels.constant_level]}
+                    onValueChange={(e) => handleLevels("constant_level", e[0])}
+                    onValueCommit={handleCommit}
+                  />
+                }
+                four={levels.constant_level.toString()}
+              />
+              {simulateEnabled != null && (
+                <FourPanel
+                  text="Simulate"
+                  tooltip="Test feature power level."
+                  flipped={feature.flip_input_float}
+                  two={
+                    <Switch
+                      size="small"
+                      checked={simulateEnabled}
+                      onCheckedChange={toggleSimulate}
+                    />
+                  }
+                  three={
+                    <Slider
+                      multiply={100}
+                      disabled={!simulateEnabled}
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      value={[simulateLevel]}
+                      onValueChange={(e) => simulateOnValueChange(e[0])}
+                      onValueCommit={() => simulateOnValueCommit()}
+                    />
+                  }
+                  four={round0.format(simulateLevel * 100)}
+                />
+              )}
+            </FourPanelContainer>
+          )}
+        </>
+      </ScrollArea>
+    </>
   );
 }

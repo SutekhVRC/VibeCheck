@@ -1,14 +1,14 @@
 import { ReactNode } from "react";
-import { assertExhaustive } from "../utils";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { assertExhaustive } from "../utils";
 
 type MessageType = "info" | "warn" | "error";
 
 export function createToast(
   type: MessageType,
   title: string,
-  message?: string
+  message?: string,
 ) {
   const messageCombo = message ? `${title}\n${message}` : title;
 

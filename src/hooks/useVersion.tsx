@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api";
-import { VERSION } from "../data/constants";
 import { useEffect, useState } from "react";
 import { createToast } from "../components/Toast";
+import { VERSION } from "../data/constants";
 
 export function useVersion() {
   const [version, setVersion] = useState("");

@@ -1,52 +1,43 @@
-use std::fs;
-use std::net::{SocketAddrV4, Ipv4Addr};
-use std::str::FromStr;
-use std::sync::Arc;
-use std::sync::mpsc::{self, Receiver, Sender};
 use buttplug::client::ButtplugClient;
-use log::{warn, error as logerr, info, trace, debug};
-//use rosc::{OscMessage, encoder, OscPacket, OscType};
-use tauri::{AppHandle, Manager};
-use tokio::runtime::Runtime;
-use tokio::task::JoinHandle;
-use parking_lot::Mutex;
-use vrcoscquery::OSCQuery;
+use log::{debug, error as logerr, info, trace, warn};
+use std::fs;
+use std::net::{Ipv4Addr, SocketAddrV4};
+use std::str::FromStr;
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::Arc;
+
+use crate::frontend::frontend_types::{FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig};
 use crate::frontend::ToFrontend;
-use crate::osc::logic::{vc_disabled_osc_command_listen, toy_refresh};
-use crate::util::bluetooth;
-use crate::toy_handling::{handling::command_toy, errors::HandlerErr};
-use crate::frontend::frontend_types::{FeVCToy, FeVibeCheckConfig, FeToyEvent, FeVCFeatureType};
+use crate::osc::logic::{toy_refresh, vc_disabled_osc_command_listen};
 use crate::toy_handling::toy_manager::ToyManager;
 use crate::toy_handling::toyops::VCFeatureType;
+use crate::toy_handling::{errors::HandlerErr, handling::command_toy};
+use crate::util::bluetooth;
 use crate::util::fs::{get_config_dir, get_user_home_dir};
 use crate::util::net::{find_available_tcp_port, find_available_udp_port};
 use crate::vcore::vcerror::{backend, frontend};
 use crate::{
+    config::{OSCNetworking, VibeCheckConfig},
     toy_handling::handling::{client_event_handler, toy_management_handler},
-    config::{
-        VibeCheckConfig,
-        OSCNetworking,
-    },
     toy_handling::toyops::VCToy,
 };
+use parking_lot::Mutex;
+use tauri::{AppHandle, Manager};
+use tokio::runtime::Runtime;
+use tokio::task::JoinHandle;
+use vrcoscquery::OSCQuery;
 
-use tokio::sync::{
-    mpsc::unbounded_channel,
-    mpsc::UnboundedReceiver,
-    mpsc::UnboundedSender,
-};
+use tokio::sync::{mpsc::unbounded_channel, mpsc::UnboundedReceiver, mpsc::UnboundedSender};
 
 pub struct VCStateMutex(pub Arc<Mutex<VibeCheckState>>);
 
 pub struct VibeCheckState {
-
     pub app_handle: Option<AppHandle>,
     pub identifier: String,
 
     pub config: VibeCheckConfig,
     pub osc_query_handler: Option<OSCQuery>,
     //pub connection_modes: ConnectionModes,
-
     pub bp_client: Option<ButtplugClient>,
 
     pub running: RunningState,
@@ -89,9 +80,7 @@ pub struct VibeCheckState {
 }
 
 impl VibeCheckState {
-
     pub fn new(config: VibeCheckConfig) -> Self {
-
         // Toys hashmap
         //let core_toy_manager = ToyHandler::new();
 
@@ -102,11 +91,16 @@ impl VibeCheckState {
         let async_rt = Runtime::new().unwrap();
 
         // Setup channels
-        let (tme_recv_tx, tme_recv_rx): (UnboundedSender<ToyManagementEvent>, UnboundedReceiver<ToyManagementEvent>) = unbounded_channel();
-        let (tme_send_tx, tme_send_rx): (UnboundedSender<ToyManagementEvent>, UnboundedReceiver<ToyManagementEvent>) = unbounded_channel();
+        let (tme_recv_tx, tme_recv_rx): (
+            UnboundedSender<ToyManagementEvent>,
+            UnboundedReceiver<ToyManagementEvent>,
+        ) = unbounded_channel();
+        let (tme_send_tx, tme_send_rx): (
+            UnboundedSender<ToyManagementEvent>,
+            UnboundedReceiver<ToyManagementEvent>,
+        ) = unbounded_channel();
 
         Self {
-
             app_handle: None,
             identifier: String::new(),
             config,
@@ -141,13 +135,12 @@ impl VibeCheckState {
 
             tme_recv_tx: Some(tme_recv_tx),
             tme_send_rx: Some(tme_send_rx),
-            
 
             //================================================
             // Message handler
             message_handler_thread: None,
             vibecheck_state_pointer: None,
-            
+
             //======================================
             // Async runtime
             async_rt,
@@ -176,20 +169,18 @@ impl VibeCheckState {
     }
 
     pub fn start_disabled_listener(&mut self) {
-
         if self.disabled_osc_listener_h_thread.is_some() {
             return;
         }
 
-        self.disabled_osc_listener_h_thread = Some(self.async_rt.spawn(
-            vc_disabled_osc_command_listen(            
+        self.disabled_osc_listener_h_thread =
+            Some(self.async_rt.spawn(vc_disabled_osc_command_listen(
                 self.app_handle.as_ref().unwrap().clone(),
                 self.config.networking.clone(),
             )));
     }
 
     pub async fn stop_disabled_listener(&mut self) {
-
         if self.disabled_osc_listener_h_thread.is_none() {
             return;
         }
@@ -213,14 +204,13 @@ impl VibeCheckState {
     }
 
     pub fn init_ceh(&mut self) {
-
         // Is there a supplied state pointer?
         if self.vibecheck_state_pointer.is_none() {
             return;
         }
 
         // Is CEH already running?
-        
+
         if self.client_eh_thread.is_some() {
             return;
         }
@@ -229,22 +219,24 @@ impl VibeCheckState {
         //let mut connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
 
         // Get ButtPlugClient with modified connection modes
-        self.bp_client = Some(self.async_rt.block_on(bluetooth::vc_toy_client_server_init("VibeCheck", false)));
+        self.bp_client = Some(
+            self.async_rt
+                .block_on(bluetooth::vc_toy_client_server_init("VibeCheck", false)),
+        );
         info!("Buttplug Client Initialized.");
 
         // Get event stream
         let event_stream = self.bp_client.as_ref().unwrap().event_stream();
 
         // Start CEH
-        self.client_eh_thread = Some(self.async_rt.spawn(
-            client_event_handler(
-                event_stream,
-                self.vibecheck_state_pointer.as_ref().unwrap().clone(),
-                self.identifier.clone(),
-                self.app_handle.as_ref().unwrap().clone(),
-                self.tme_send_tx.clone(),
-                self.error_tx.clone()
-            )));
+        self.client_eh_thread = Some(self.async_rt.spawn(client_event_handler(
+            event_stream,
+            self.vibecheck_state_pointer.as_ref().unwrap().clone(),
+            self.identifier.clone(),
+            self.app_handle.as_ref().unwrap().clone(),
+            self.tme_send_tx.clone(),
+            self.error_tx.clone(),
+        )));
     }
 
     /*
@@ -263,7 +255,6 @@ impl VibeCheckState {
     }
     */
     pub async fn init_toy_update_handler(&mut self) {
-
         // Is there a supplied state pointer?
         if self.vibecheck_state_pointer.is_none() {
             return;
@@ -278,12 +269,14 @@ impl VibeCheckState {
             return;
         }
 
-        self.toy_update_h_thread = Some(self.async_rt.spawn(toy_refresh(self.vibecheck_state_pointer.as_ref().unwrap().clone(), self.app_handle.as_ref().unwrap().clone())));
+        self.toy_update_h_thread = Some(self.async_rt.spawn(toy_refresh(
+            self.vibecheck_state_pointer.as_ref().unwrap().clone(),
+            self.app_handle.as_ref().unwrap().clone(),
+        )));
         info!("TUH thread started");
     }
 
     pub async fn destroy_toy_update_handler(&mut self) {
-        
         if self.toy_update_h_thread.is_none() {
             return;
         }
@@ -297,20 +290,30 @@ impl VibeCheckState {
     }
 
     pub fn osc_query_init(&mut self) {
-    
-        let available_tcp_port = find_available_tcp_port(self.config.networking.bind.ip().to_string());
-        let available_udp_port = find_available_udp_port(self.config.networking.bind.ip().to_string());
+        let available_tcp_port =
+            find_available_tcp_port(self.config.networking.bind.ip().to_string());
+        let available_udp_port =
+            find_available_udp_port(self.config.networking.bind.ip().to_string());
 
-        let http_net = SocketAddrV4::new(Ipv4Addr::from(*self.config.networking.bind.ip()), available_tcp_port.unwrap());
-        let osc_net = SocketAddrV4::new(Ipv4Addr::from(*self.config.networking.bind.ip()), available_udp_port.unwrap());
+        let http_net = SocketAddrV4::new(
+            Ipv4Addr::from(*self.config.networking.bind.ip()),
+            available_tcp_port.unwrap(),
+        );
+        let osc_net = SocketAddrV4::new(
+            Ipv4Addr::from(*self.config.networking.bind.ip()),
+            available_udp_port.unwrap(),
+        );
 
         self.osc_query_handler = Some(OSCQuery::new("VibeCheck".to_string(), http_net, osc_net));
-        self.config.networking.bind.set_port(available_udp_port.unwrap());
+        self.config
+            .networking
+            .bind
+            .set_port(available_udp_port.unwrap());
     }
 
     pub fn osc_query_fini(&mut self) {
         if self.osc_query_handler.is_some() {
-            let mut h = self.osc_query_handler.take().unwrap();            
+            let mut h = self.osc_query_handler.take().unwrap();
             h.stop_http_json();
             h.unregister_mdns_service();
             h.shutdown_mdns();
@@ -319,11 +322,13 @@ impl VibeCheckState {
 
     pub fn osc_query_associate(&self) {
         if self.osc_query_handler.is_some() {
-            self.osc_query_handler.as_ref().unwrap().attempt_force_vrc_response_detect(10);
+            self.osc_query_handler
+                .as_ref()
+                .unwrap()
+                .attempt_force_vrc_response_detect(10);
         }
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub enum ToyUpdate {
@@ -360,8 +365,9 @@ pub enum RunningState {
     Stopped,
 }
 
-pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
-
+pub async fn native_vibecheck_disable(
+    vc_state: tauri::State<'_, VCStateMutex>,
+) -> Result<(), frontend::VCFeError> {
     let mut vc_lock = vc_state.0.lock();
     trace!("Got vc_lock");
     if let RunningState::Stopped = vc_lock.running {
@@ -372,14 +378,12 @@ pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) 
         info!("ButtPlugClient is None");
         return Err(frontend::VCFeError::DisableFailure);
     }
-    
 
     //Delay::new(Duration::from_secs(10)).await;
     trace!("Calling destroy_toy_update_handler()");
     vc_lock.destroy_toy_update_handler().await;
     trace!("TUH destroyed");
 
-    
     let bpc = vc_lock.bp_client.as_ref().unwrap();
     let _ = bpc.stop_scanning().await;
     let _ = bpc.stop_all_devices().await;
@@ -393,11 +397,11 @@ pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) 
     //vc_lock.destroy_ceh().await;
     //info!("CEH destroyed");
 
-
     //Delay::new(Duration::from_secs(10)).await;
-    vc_lock.tme_send_tx
-    .send(ToyManagementEvent::Sig(TmSig::TMHReset))
-    .unwrap();
+    vc_lock
+        .tme_send_tx
+        .send(ToyManagementEvent::Sig(TmSig::TMHReset))
+        .unwrap();
     info!("Sent TMHReset signal");
 
     // Dont clear toys anymore
@@ -412,7 +416,9 @@ pub async fn native_vibecheck_disable(vc_state: tauri::State<'_, VCStateMutex>) 
     Ok(())
 }
 
-pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
+pub async fn native_vibecheck_enable(
+    vc_state: tauri::State<'_, VCStateMutex>,
+) -> Result<(), frontend::VCFeError> {
     // Send Start listening signal
 
     let mut vc_lock = vc_state.0.lock();
@@ -426,7 +432,6 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
         return Err(frontend::VCFeError::EnableFailure);
     }
 
-
     info!("Stopping DOL");
     vc_lock.stop_disabled_listener().await;
 
@@ -434,9 +439,14 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
     vc_lock.init_ceh().await;
     info!("CEH initialized");
     */
-    
-    vc_lock.tme_send_tx.send(ToyManagementEvent::Sig(TmSig::StartListening(vc_lock.config.networking.clone()))).unwrap();
-    
+
+    vc_lock
+        .tme_send_tx
+        .send(ToyManagementEvent::Sig(TmSig::StartListening(
+            vc_lock.config.networking.clone(),
+        )))
+        .unwrap();
+
     // Check if listening succeded or not
     match vc_lock.tme_recv_rx.recv().await {
         Some(tme) => {
@@ -445,63 +455,78 @@ pub async fn native_vibecheck_enable(vc_state: tauri::State<'_, VCStateMutex>) -
                     match sig {
                         TmSig::Listening => {
                             vc_lock.running = RunningState::Running;
-                            
+
                             // Enable successful
                             // Start TUH thread
                             vc_lock.init_toy_update_handler().await;
 
                             Ok(())
-                        },
+                        }
                         TmSig::BindError => {
-
                             logerr!("Bind Error in TME sig: Sending shutdown signal!");
 
-                            vc_lock.tme_send_tx.send(ToyManagementEvent::Sig(TmSig::StopListening)).unwrap();
+                            vc_lock
+                                .tme_send_tx
+                                .send(ToyManagementEvent::Sig(TmSig::StopListening))
+                                .unwrap();
                             vc_lock.running = RunningState::Stopped;
 
                             return Err(frontend::VCFeError::EnableBindFailure);
-                        },
-                        _ => {//Did not get the correct signal oops
+                        }
+                        _ => {
+                            //Did not get the correct signal oops
                             warn!("Got incorrect TME signal.");
                             Err(frontend::VCFeError::EnableFailure)
-                        }, 
+                        }
                     }
-                },
+                }
                 _ => {
                     warn!("Got ToyUpdate in vc_enable().");
                     Err(frontend::VCFeError::EnableFailure)
-                },// Got unexpected Sig
+                } // Got unexpected Sig
             }
-        },
+        }
         None => {
             warn!("Failed to recv from TME receiver.");
             Err(frontend::VCFeError::EnableFailure)
-        },// Recv failed
-    }// tme recv
+        } // Recv failed
+    } // tme recv
 }
 
-pub fn native_osc_query_start(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
-
+pub fn native_osc_query_start(
+    vc_state: tauri::State<'_, VCStateMutex>,
+) -> Result<(), frontend::VCFeError> {
     let mut vc_lock = vc_state.0.lock();
 
     if vc_lock.osc_query_handler.is_none() {
         vc_lock.osc_query_init();
     }
 
-    vc_lock.osc_query_handler.as_mut().unwrap().start_http_json();
-    vc_lock.osc_query_handler.as_ref().unwrap().register_mdns_service();
+    vc_lock
+        .osc_query_handler
+        .as_mut()
+        .unwrap()
+        .start_http_json();
+    vc_lock
+        .osc_query_handler
+        .as_ref()
+        .unwrap()
+        .register_mdns_service();
     // This is only to attempt to auto-induce an mDNS response with separated answers.
     vc_lock.osc_query_associate();
 
     Ok(())
 }
 
-pub fn native_osc_query_stop(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
-    
+pub fn native_osc_query_stop(
+    vc_state: tauri::State<'_, VCStateMutex>,
+) -> Result<(), frontend::VCFeError> {
     let mut vc_lock = vc_state.0.lock();
 
     if vc_lock.osc_query_handler.is_none() {
-        return Err(frontend::VCFeError::OSCQueryFailure("OSCQuery is not initialized"));
+        return Err(frontend::VCFeError::OSCQueryFailure(
+            "OSCQuery is not initialized",
+        ));
     }
 
     vc_lock.osc_query_fini();
@@ -509,12 +534,15 @@ pub fn native_osc_query_stop(vc_state: tauri::State<'_, VCStateMutex>) -> Result
     Ok(())
 }
 
-pub fn native_osc_query_attempt_force(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
-
+pub fn native_osc_query_attempt_force(
+    vc_state: tauri::State<'_, VCStateMutex>,
+) -> Result<(), frontend::VCFeError> {
     let vc_lock = vc_state.0.lock();
 
     if vc_lock.osc_query_handler.is_none() {
-        return Err(frontend::VCFeError::OSCQueryFailure("OSCQuery is not initialized"));
+        return Err(frontend::VCFeError::OSCQueryFailure(
+            "OSCQuery is not initialized",
+        ));
     }
 
     // This is only to attempt to auto-induce an mDNS response with separated answers.
@@ -523,24 +551,26 @@ pub fn native_osc_query_attempt_force(vc_state: tauri::State<'_, VCStateMutex>) 
     Ok(())
 }
 
-pub fn osc_query_force_populate(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
-
-
-
+pub fn osc_query_force_populate(
+    vc_state: tauri::State<'_, VCStateMutex>,
+) -> Result<(), frontend::VCFeError> {
     Ok(())
 }
 
-pub async fn native_vibecheck_start_bt_scan(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError>{
+pub async fn native_vibecheck_start_bt_scan(
+    vc_state: tauri::State<'_, VCStateMutex>,
+) -> Result<(), frontend::VCFeError> {
     let vc_lock = vc_state.0.lock();
 
     if vc_lock.bp_client.is_none() {
         // ButtPlugClient not created (CEH is probably not running)
-        return Err(frontend::VCFeError::StartScanFailure("ButtPlugClient is None".to_string()));
+        return Err(frontend::VCFeError::StartScanFailure(
+            "ButtplugClient is None".to_string(),
+        ));
     }
 
     // Start scanning for toys
     if let Err(e) = vc_lock.bp_client.as_ref().unwrap().start_scanning().await {
-
         let _ = vc_lock.error_tx.send(VCError::HandlingErr(HandlerErr {
             id: -2,
             msg: format!("Failed to scan for bluetooth devices. {}", e),
@@ -552,12 +582,16 @@ pub async fn native_vibecheck_start_bt_scan(vc_state: tauri::State<'_, VCStateMu
     Ok(())
 }
 
-pub async fn native_vibecheck_stop_bt_scan(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), frontend::VCFeError> {
+pub async fn native_vibecheck_stop_bt_scan(
+    vc_state: tauri::State<'_, VCStateMutex>,
+) -> Result<(), frontend::VCFeError> {
     let vc_lock = vc_state.0.lock();
 
     if vc_lock.bp_client.is_none() {
         // ButtPlugClient not created (CEH is probably not running)
-        return Err(frontend::VCFeError::StopScanFailure("ButtPlugClient is None".to_string()));
+        return Err(frontend::VCFeError::StopScanFailure(
+            "ButtPlugClient is None".to_string(),
+        ));
     }
 
     // Stop scanning for toys
@@ -574,7 +608,6 @@ pub async fn native_vibecheck_stop_bt_scan(vc_state: tauri::State<'_, VCStateMut
 }
 
 pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> FeVibeCheckConfig {
-
     let config = {
         let vc_lock = vc_state.0.lock();
         vc_lock.config.clone()
@@ -597,8 +630,10 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
     }
 }
 
-pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_vc_config: FeVibeCheckConfig) -> Result<(), frontend::VCFeError> {
-
+pub fn native_set_vibecheck_config(
+    vc_state: tauri::State<'_, VCStateMutex>,
+    fe_vc_config: FeVibeCheckConfig,
+) -> Result<(), frontend::VCFeError> {
     info!("Got fe_vc_config: {:?}", fe_vc_config);
     let bind = match SocketAddrV4::from_str(&fe_vc_config.networking.bind) {
         Ok(sa) => sa,
@@ -623,32 +658,32 @@ pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_
             match Ipv4Addr::from_str(&host) {
                 Ok(sa) => {
                     // Force port because buttplug forces non http atm
-                    std::env::set_var("VCLC_HOST_PORT", format!("{}:20010", sa.to_string()).as_str());
+                    std::env::set_var(
+                        "VCLC_HOST_PORT",
+                        format!("{}:20010", sa.to_string()).as_str(),
+                    );
                     match std::env::var("VCLC_HOST_PORT") {
                         Ok(_) => {
                             vc_lock.config.lc_override = Some(sa);
-                        },
+                        }
                         Err(_) => return Err(frontend::VCFeError::SetLCOverrideFailure),
                     }
-                },
+                }
                 Err(_e) => return Err(frontend::VCFeError::InvalidLCHost),
             };
-
         } else {
             std::env::remove_var("VCLC_HOST_PORT");
             match std::env::var("VCLC_HOST_PORT") {
                 Ok(_) => return Err(frontend::VCFeError::UnsetLCOverrideFailure),
-                Err(e) => {
-                    match e {
-                        std::env::VarError::NotPresent => {
-                            vc_lock.config.lc_override = None;
-                        },
-                        _ => {
-                            logerr!("Got Non unicode var during unset routine");
-                            return Err(frontend::VCFeError::UnsetLCOverrideFailure);
-                        },
+                Err(e) => match e {
+                    std::env::VarError::NotPresent => {
+                        vc_lock.config.lc_override = None;
                     }
-                }
+                    _ => {
+                        logerr!("Got Non unicode var during unset routine");
+                        return Err(frontend::VCFeError::UnsetLCOverrideFailure);
+                    }
+                },
             }
         }
 
@@ -657,18 +692,18 @@ pub fn native_set_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>, fe_
 
     match save_config(config) {
         Ok(()) => Ok(()),
-        Err(e) => {
-            match e {
-                backend::VibeCheckConfigError::SerializeError => Err(frontend::VCFeError::SerializeFailure),
-                backend::VibeCheckConfigError::WriteFailure => Err(frontend::VCFeError::WriteFailure),
+        Err(e) => match e {
+            backend::VibeCheckConfigError::SerializeError => {
+                Err(frontend::VCFeError::SerializeFailure)
             }
-        }
+            backend::VibeCheckConfigError::WriteFailure => Err(frontend::VCFeError::WriteFailure),
+        },
     }
-
 }
 
-fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::VibeCheckConfigError> {
-
+fn save_config(
+    config: crate::config::VibeCheckConfig,
+) -> Result<(), backend::VibeCheckConfigError> {
     let json_config_str = match serde_json::to_string(&config) {
         Ok(s) => s,
         Err(_e) => {
@@ -678,13 +713,10 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::Vi
     };
 
     match fs::write(
-        format!(
-            "{}\\Config.json",
-            get_config_dir()
-        ),
+        format!("{}\\Config.json", get_config_dir()),
         json_config_str,
     ) {
-        Ok(()) => {},
+        Ok(()) => {}
         Err(_e) => {
             logerr!("[!] Failure writing VibeCheck config.");
             return Err(backend::VibeCheckConfigError::WriteFailure);
@@ -693,24 +725,30 @@ fn save_config(config: crate::config::VibeCheckConfig) -> Result<(), backend::Vi
     Ok(())
 }
 
-pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: tauri::AppHandle, altered: VCToy) -> Result<(), backend::ToyAlterError> {
-
+pub fn native_alter_toy(
+    vc_state: tauri::State<'_, VCStateMutex>,
+    app_handle: tauri::AppHandle,
+    altered: VCToy,
+) -> Result<(), backend::ToyAlterError> {
     let alter_clone = altered.clone();
     altered.save_toy_config();
     info!("Altered toy config: {:?}", altered);
 
     let send_res = {
         let vc_lock = vc_state.0.lock();
-        vc_lock.tme_send_tx.send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)))
+        vc_lock
+            .tme_send_tx
+            .send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)))
     };
 
-    let _ = app_handle.emit_all("fe_toy_event",
-        FeToyEvent::Update ({
+    let _ = app_handle.emit_all(
+        "fe_toy_event",
+        FeToyEvent::Update({
             FeVCToy {
                 toy_id: Some(alter_clone.toy_id),
                 toy_name: alter_clone.toy_name,
                 toy_anatomy: alter_clone.config.as_ref().unwrap().anatomy.to_fe(),
-                battery_level: alter_clone.battery_level,
+                toy_power: alter_clone.toy_power,
                 toy_connected: alter_clone.toy_connected,
                 features: alter_clone.parsed_toy_features.features.to_frontend(),
                 listening: alter_clone.listening,
@@ -727,32 +765,40 @@ pub fn native_alter_toy(vc_state: tauri::State<'_, VCStateMutex>, app_handle: ta
 }
 
 pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
-
-    let osc_dirs = match std::fs::read_dir(format!("{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\", get_user_home_dir())) {
+    let osc_dirs = match std::fs::read_dir(format!(
+        "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\",
+        get_user_home_dir()
+    )) {
         Ok(dirs) => dirs,
         Err(_e) => return Err(backend::VibeCheckFSError::ReadDirFailure),
     };
 
     //info!("osc_dirs: {}", osc_dirs.count());
 
-    let usr_dirs = match osc_dirs.map(|res| res.map(|e| e.path()))
-    .collect::<Result<Vec<_>, std::io::Error>>() {
+    let usr_dirs = match osc_dirs
+        .map(|res| res.map(|e| e.path()))
+        .collect::<Result<Vec<_>, std::io::Error>>()
+    {
         Ok(usr_dirs) => usr_dirs,
         Err(_) => return Err(backend::VibeCheckFSError::ReadDirPathFailure),
     };
 
     for dir in usr_dirs {
-        
         if dir.is_dir() {
-
             let dir_path = dir.file_name().unwrap().to_str().unwrap();
             info!("Got Dir: {}", dir_path);
-            
-            if dir.file_name().unwrap().to_str().unwrap().starts_with("usr_") {
+
+            if dir
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .starts_with("usr_")
+            {
                 let delete_dir = dir.as_path().to_str().unwrap();
                 info!("Clearing dir: {}", delete_dir);
                 match std::fs::remove_dir_all(delete_dir) {
-                    Ok(()) => {},
+                    Ok(()) => {}
                     Err(_e) => return Err(backend::VibeCheckFSError::RemoveDirsFailure),
                 }
             }
@@ -761,24 +807,40 @@ pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
     return Ok(());
 }
 
-pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, toy_id: u32, feature_index: u32, feature_type: FeVCFeatureType, float_level: f64, stop: bool) {
-    
+pub fn native_simulate_device_feature(
+    vc_state: tauri::State<'_, VCStateMutex>,
+    toy_id: u32,
+    feature_index: u32,
+    feature_type: FeVCFeatureType,
+    float_level: f64,
+    stop: bool,
+) {
     let vc_toys = {
         let vc_lock = vc_state.0.lock();
-        vc_lock.core_toy_manager.as_ref().unwrap().online_toys.clone()
+        vc_lock
+            .core_toy_manager
+            .as_ref()
+            .unwrap()
+            .online_toys
+            .clone()
     };
-    
+
     let toy = match vc_toys.get(&toy_id) {
         Some(toy) => toy,
         None => return,
-    }.clone();
+    }
+    .clone();
 
     // Need to filter between ScalarCmd's and non ScalarCmd's
     for feature in toy.parsed_toy_features.features {
         // Check that feature index and feature type are the same.
         // Have to do this due to feature type separation between FE and BE. And buttplug IO mixing scalar rotator and normal rotator commands.
         // Could make this a bit simpler by creating ScalarTYPE types and converting their names in the frontend.
-        if feature.feature_index == feature_index && (feature.feature_type == feature_type || feature.feature_type == VCFeatureType::ScalarRotator && feature_type == FeVCFeatureType::Rotator){
+        if feature.feature_index == feature_index
+            && (feature.feature_type == feature_type
+                || feature.feature_type == VCFeatureType::ScalarRotator
+                    && feature_type == FeVCFeatureType::Rotator)
+        {
             let handle_clone = toy.device_handle.clone();
             {
                 let vc_lock = vc_state.0.lock();
@@ -787,7 +849,14 @@ pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, 
                     debug!("Stopping Idle Simulate");
                     handle_clone.stop();
                 } else {
-                    vc_lock.async_rt.spawn(command_toy(handle_clone, feature.feature_type, float_level, feature.feature_index, feature.flip_input_float, feature.feature_levels));
+                    vc_lock.async_rt.spawn(command_toy(
+                        handle_clone,
+                        feature.feature_type,
+                        float_level,
+                        feature.feature_index,
+                        feature.flip_input_float,
+                        feature.feature_levels,
+                    ));
                 }
             }
             return;
@@ -798,7 +867,7 @@ pub fn native_simulate_device_feature(vc_state: tauri::State<'_, VCStateMutex>, 
 /* Leaving this here in case of future use
  *
 pub fn native_simulate_feature_osc_input(vc_state: tauri::State<'_, VCStateMutex>, simulated_param_address: String, simulated_param_value: f32) {
-    
+
     let osc_buf = match encoder::encode(&OscPacket::Message(OscMessage {
         addr: simulated_param_address.clone(),
         args: vec![OscType::Float(simulated_param_value)],
