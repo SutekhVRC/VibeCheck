@@ -336,7 +336,7 @@ pub enum ProcessingModeValues {
 }
 
 impl ProcessingModeValues {
-    pub fn new_from(processing_mode: ProcessingMode) -> Self {
+    pub fn new_from(processing_mode: &ProcessingMode) -> Self {
         match processing_mode {
             ProcessingMode::Raw => Self::Raw,
             ProcessingMode::Constant => Self::Constant,
@@ -525,7 +525,7 @@ impl FromFrontend<Vec<FeToyParameter>> for Vec<ToyParameter> {
                 parameter: toy_param.parameter,
                 processing_mode: toy_param.processing_mode.to_backend(),
                 processing_mode_values: ProcessingModeValues::new_from(
-                    toy_param.processing_mode.to_backend(),
+                    &toy_param.processing_mode.to_backend(),
                 ),
             });
         }

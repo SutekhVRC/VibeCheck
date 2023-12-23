@@ -9,6 +9,8 @@ use crate::{
     toy_handling::toyops::{ProcessingMode, ProcessingModeValues},
 };
 
+use self::{sps::SPSProcessor, tps::TPSProcessor};
+
 use super::InputProcessor;
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
@@ -51,12 +53,18 @@ impl ToFrontend<FePenetrationSystem> for PenetrationSystem {
 }
 
 impl FromFrontend<FePenetrationSystem> for PenetrationSystem {
-    type OutputType = bool;
+    type OutputType = ();
 
     fn from_frontend(&mut self, frontend_type: FePenetrationSystem) -> Self::OutputType {
+        // Allocate / Instantiate new Penetration system structure based on user's choice
+        match frontend_type.pen_system_type {
+            PenetrationSystemType::NONE => self.pen_system = None,
+            PenetrationSystemType::SPS => self.pen_system = Some(Box::new(SPSProcessor::default())),
+            PenetrationSystemType::TPS => self.pen_system = Some(Box::new(TPSProcessor::default())),
+        }
         self.pen_system_type = frontend_type.pen_system_type;
-        self.pen_system_processing_mode = frontend_type.pen_system_processing_mode.to_backend();
-
-        true
+        let backend_pspm = frontend_type.pen_system_processing_mode.to_backend();
+        self.pen_system_processing_mode_values = ProcessingModeValues::new_from(&backend_pspm);
+        self.pen_system_processing_mode = backend_pspm;
     }
 }
