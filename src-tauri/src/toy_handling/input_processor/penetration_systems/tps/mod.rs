@@ -8,6 +8,14 @@ pub struct TPSProcessor {
     pub parameter_list: Vec<String>,
 }
 
+impl Default for TPSProcessor {
+    fn default() -> Self {
+        Self {
+            parameter_list: vec![],
+        }
+    }
+}
+
 impl InputProcessor for TPSProcessor {
     fn is_parameter(&self, param: &String) -> bool {
         self.parameter_list.contains(param)
