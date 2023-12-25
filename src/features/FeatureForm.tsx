@@ -186,10 +186,10 @@ export default function FeatureForm({
                 <button onClick={() => addParam()}>
                   <Plus className="h-5" />
                 </button>
-                <div className="flex gap-4 m-2"></div>
+                <div className="m-2 flex gap-4"></div>
               </div>
               <HackyScrollArea>
-                <div className="grid grid-cols-[minmax(6rem,20fr),minmax(6rem,6fr),minmax(1rem,1fr)] text-sm text-justify p-4 gap-y-2 gap-x-6">
+                <div className="grid grid-cols-[minmax(6rem,20fr),minmax(6rem,6fr),minmax(1rem,1fr)] gap-x-6 gap-y-2 p-4 text-justify text-sm">
                   {feature.osc_parameters.map((param, paramIndex) => {
                     // TODO: Using index is generally an anti-pattern, but I think it's required in this specific scenario
                     // If we key on a parameter or other identifiers, typing the parameter name would trigger a refresh from the backend
@@ -198,7 +198,7 @@ export default function FeatureForm({
                       <Fragment key={paramIndex}>
                         {/* Adding debounce on this makes it more complex b/c separate state, plus parent key on index */}
                         <input
-                          className="text-zinc-800 px-4 rounded-sm outline-none w-full"
+                          className="w-full rounded-sm px-4 text-zinc-800 outline-none"
                           name="osc_parameter"
                           value={param.parameter.replace(OSC_PARAM_PREFIX, "")}
                           onChange={(e) => handleOscParam(e, paramIndex)}
@@ -428,7 +428,7 @@ export default function FeatureForm({
 
 function HackyScrollArea({ children }: { children: ReactNode }) {
   return (
-    <ScrollArea className="overflow-y-scroll scrollbar h-[calc(100vh-440px)]">
+    <ScrollArea className="scrollbar h-[calc(100vh-440px)] overflow-y-scroll">
       {children}
     </ScrollArea>
   );

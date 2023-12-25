@@ -2,7 +2,7 @@ export default function Loading() {
   return (
     <>
       <div
-        className="animate-bounce transform -translate-y-1/4"
+        className="-translate-y-1/4 transform animate-bounce"
         style={{
           animationDelay: "250ms",
         }}
@@ -10,7 +10,7 @@ export default function Loading() {
         .
       </div>
       <div
-        className="animate-bounce transform -translate-y-1/4"
+        className="-translate-y-1/4 transform animate-bounce"
         style={{
           animationDelay: "500ms",
         }}
@@ -18,7 +18,7 @@ export default function Loading() {
         .
       </div>
       <div
-        className="animate-bounce transform -translate-y-1/4"
+        className="-translate-y-1/4 transform animate-bounce"
         style={{
           animationDelay: "750ms",
         }}

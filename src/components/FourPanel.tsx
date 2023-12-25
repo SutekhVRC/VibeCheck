@@ -33,8 +33,10 @@ export default function FourPanel({
         label
       )}
       <div>{two}</div>
-      <div className="text-right w-full col-span-2 md:col-span-1">{three}</div>
-      <div className="text-right hidden md:inline">{four}</div>
+      <div className="col-span-2 flex w-full flex-col text-right md:col-span-1">
+        {three}
+      </div>
+      <div className="hidden text-right md:inline">{four}</div>
     </>
   );
 }

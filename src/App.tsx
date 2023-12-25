@@ -75,7 +75,7 @@ export default function App() {
         disableOnPortChange={disableOnPortChange}
       />
     ) : !hasOnlineToys ? (
-      <div className="flex flex-col justify-center items-center w-full">
+      <div className="flex w-full flex-col items-center justify-center">
         <img src={cryingAnimeGirl} />
         <div>No Online Toys</div>
       </div>
@@ -97,13 +97,13 @@ export default function App() {
 
   return (
     <div
-      className="w-full h-screen p-4"
+      className="h-screen w-full p-4"
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className="grid grid-cols-[12rem,_1fr] gap-3">
         <div className="flex flex-col gap-1">
           <img className="h-14 object-contain" src={VibecheckLogo} />
-          <div className="flex justify-around items-center mt-2 mb-1">
+          <div className="mb-1 mt-2 flex items-center justify-around">
             <ExternalLogo
               src={VrchatLogo}
               link="VRChatGroup"
@@ -120,8 +120,8 @@ export default function App() {
               tooltip="Vibecheck Github"
             />
           </div>
-          <div className="bg-zinc-800 rounded-md justify-between flex-col overflow-hidden h-[calc(100vh-185px)] flex">
-            <div className="flex flex-col pl-2 select-none overflow-y-scroll scrollbar">
+          <div className="flex h-[calc(100vh-185px)] flex-col justify-between overflow-hidden rounded-md bg-zinc-800">
+            <div className="scrollbar flex select-none flex-col overflow-y-scroll pl-2">
               <AnimatePresence>
                 {toysList.map((sidebarToy) => (
                   <button
@@ -134,7 +134,7 @@ export default function App() {
                       sidebarToy.toy_connected
                         ? "text-zinc-200"
                         : "text-zinc-500",
-                      "bg-zinc-700 rounded-md p-2 m-2 hover:bg-cyan-600 outline-2 outline-cyan-400",
+                      "m-2 rounded-md bg-zinc-700 p-2 outline-2 outline-cyan-400 hover:bg-cyan-600",
                     )}
                   >
                     {parseName(sidebarToy.toy_name)}
@@ -153,12 +153,12 @@ export default function App() {
               )}
             </Button>
           </div>
-          <div className="flex justify-around items-center">
+          <div className="flex items-center justify-around">
             <UpdatePing canUpdate={canUpdate}>
               <Settings
                 className={cn(
                   selection?.type == "Config" && "rotate-45",
-                  "h-10 cursor-pointer transform duration-300 ease-in-out",
+                  "h-10 transform cursor-pointer duration-300 ease-in-out",
                 )}
                 onClick={() => setConfig()}
               />
@@ -175,8 +175,8 @@ export default function App() {
             </Tooltip>
           </div>
         </div>
-        <div className="bg-zinc-800 rounded-lg">
-          <div className="flex p-4 h-full">{mainPanel}</div>
+        <div className="rounded-lg bg-zinc-800">
+          <div className="flex h-full p-4">{mainPanel}</div>
         </div>
       </div>
       {version}

@@ -84,13 +84,13 @@ export default function Config({
   }
 
   return (
-    <div className="w-full h-full">
-      <div className="text-4xl flex justify-between items-center px-6">
+    <div className="h-full w-full">
+      <div className="flex items-center justify-between px-6 text-4xl">
         <div className="flex items-end gap-2">Config</div>
       </div>
-      <div className="flex flex-col justify-between w-full">
+      <div className="flex w-full flex-col justify-between">
         <form id="config" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-[minmax(10rem,4fr)_1fr_minmax(4rem,_4fr)] text-sm text-justify gap-1 my-4 mx-8">
+          <div className="mx-8 my-4 grid grid-cols-[minmax(10rem,4fr)_1fr_minmax(4rem,_4fr)] gap-1 text-justify text-sm">
             <TooltipLabel
               text="OSC Bind"
               tooltip="OSC Receive Port (Default: 127.0.0.1:9001)"
@@ -98,7 +98,7 @@ export default function Config({
             <div />
             <input
               name="bind"
-              className="text-zinc-800 px-1 rounded-sm outline-none"
+              className="rounded-sm px-1 text-zinc-800 outline-none"
               value={newConfig.networking.bind}
               onChange={onChangeNetworking}
               pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}
@@ -118,7 +118,7 @@ export default function Config({
             <div />
             <input
               name="remote"
-              className="text-zinc-800 px-1 rounded-sm outline-none"
+              className="rounded-sm px-1 text-zinc-800 outline-none"
               value={newConfig.networking.remote}
               onChange={onChangeNetworking}
               pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}
@@ -145,7 +145,7 @@ export default function Config({
             ) : (
               <input
                 name="lc_override"
-                className="text-zinc-800 px-1"
+                className="px-1 text-zinc-800"
                 value={newConfig.lc_override}
                 onChange={onChange}
                 pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$`}

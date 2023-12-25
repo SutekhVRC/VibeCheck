@@ -20,7 +20,7 @@ export default function Tooltip({
         </TooltipPrimitive.Trigger>
         <TooltipPrimitive.Portal>
           <TooltipPrimitive.Content
-            className="rounded-md text-zinc-50 bg-zinc-600 pl-3 pr-3 max-w-md z-50 cursor-pointer pointer-events-none"
+            className="pointer-events-none z-50 max-w-md cursor-pointer rounded-md bg-zinc-600 pl-3 pr-3 text-zinc-50"
             sideOffset={5}
           >
             {text}
@@ -40,7 +40,7 @@ type TooltipProps = {
 export function TooltipLabel({ text, tooltip }: TooltipProps) {
   return (
     <Tooltip text={tooltip}>
-      <label className="justify-self-start cursor-help">{text}</label>
+      <label className="cursor-help justify-self-start">{text}</label>
     </Tooltip>
   );
 }

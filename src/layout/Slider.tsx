@@ -21,7 +21,7 @@ export default function Slider(
   return (
     <SliderPrimitive.Root
       className={cn(
-        "relative items-center flex",
+        "relative flex items-center",
         !props.disabled && "cursor-ew-resize",
       )}
       onMouseEnter={() => setHover(true)}
@@ -29,10 +29,10 @@ export default function Slider(
       {...props}
       aria-label="Slider"
     >
-      <SliderPrimitive.Track className="relative flex bg-zinc-700 flex-grow rounded-full h-2">
+      <SliderPrimitive.Track className="relative flex h-2 flex-grow rounded-full bg-zinc-700">
         <SliderPrimitive.Range
           className={cn(
-            "absolute bg-zinc-100 rounded-full h-full data-[disabled]:bg-zinc-600 transition-all",
+            "absolute h-full rounded-full bg-zinc-100 transition-all data-[disabled]:bg-zinc-600",
             color,
           )}
         />
@@ -45,7 +45,7 @@ export default function Slider(
             </TooltipPrimitive.Trigger>
             <TooltipPrimitive.Portal>
               <TooltipPrimitive.Content
-                className="rounded-md text-zinc-50 bg-zinc-600 pl-3 pr-3 max-w-md"
+                className="max-w-md rounded-md bg-zinc-600 pl-3 pr-3 text-zinc-50"
                 sideOffset={10}
                 key={first} // force update with key
               >
@@ -63,7 +63,7 @@ export default function Slider(
             </TooltipPrimitive.Trigger>
             <TooltipPrimitive.Portal>
               <TooltipPrimitive.Content
-                className="rounded-md text-zinc-50 bg-zinc-600 pl-3 pr-3 max-w-md"
+                className="max-w-md rounded-md bg-zinc-600 pl-3 pr-3 text-zinc-50"
                 sideOffset={10}
                 key={second} // force update with key
               >
