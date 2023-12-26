@@ -18,14 +18,14 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
   }, [toy]);
 
   return (
-    <div className="w-full h-full">
-      <div className="text-4xl flex justify-between items-center px-6">
+    <div className="h-full w-full">
+      <div className="flex items-center justify-between px-6 text-4xl">
         <div>{nameInfo.shortName}</div>
         <ToyInfo nameInfo={nameInfo} toyPower={toy.toy_power} />
       </div>
       <div className="m-4 h-full">
         <ToySettings toy={toy} />
-        <div className="flex overflow-x-scroll scrollbar select-none w-[calc(100vw-300px)]">
+        <div className="scrollbar flex w-[calc(100vw-300px)] select-none overflow-x-scroll">
           {toy.features.map((feature, featureArrayIndex) => (
             <button
               key={`${feature.feature_type} ${feature.feature_index}`}
@@ -33,7 +33,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
               className={cn(
                 featureArrayIndex == selectedFeatureIndex && "outline",
                 feature.feature_enabled ? "text-zinc-200" : "text-zinc-500",
-                "rounded-md bg-zinc-700 px-4 py-1 hover:bg-cyan-600 m-2 outline-2 outline-cyan-500 whitespace-nowrap",
+                "m-2 whitespace-nowrap rounded-md bg-zinc-700 px-4 py-1 outline-2 outline-cyan-500 hover:bg-cyan-600",
               )}
             >
               {feature.feature_type} {feature.feature_index}
@@ -92,10 +92,10 @@ function ToyInfo({
   toyPower: ToyPower;
 }) {
   return (
-    <div className="flex gap-x-4 items-center">
+    <div className="flex items-center gap-x-4">
       {nameInfo.logo != undefined && (
         <Tooltip text={nameInfo.fullName}>
-          <img className="max-h-6 rounded-lg cursor-help" src={nameInfo.logo} />
+          <img className="max-h-6 cursor-help rounded-lg" src={nameInfo.logo} />
         </Tooltip>
       )}
       <BatteryIcon toyPower={toyPower} />

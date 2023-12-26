@@ -14,7 +14,7 @@ export function Select({
 }) {
   return (
     <select
-      className="outline-none text-zinc-800 px-2 rounded-sm w-full"
+      className="w-full rounded-sm px-2 text-zinc-800 outline-none"
       value={value}
       onChange={onChange}
       name={name}

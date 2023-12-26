@@ -46,7 +46,7 @@ export default function Switch(
       className={cn(
         props.checked ? selectedTheme.active : selectedTheme.inactive,
         sizes[size].container,
-        "relative inline-flex cursor-pointer rounded-full border-transparent transition-all duration-200 ease-in-out disabled:bg-zinc-700 disabled:cursor-not-allowed",
+        "relative inline-flex cursor-pointer rounded-full border-transparent transition-all duration-200 ease-in-out disabled:cursor-not-allowed disabled:bg-zinc-700",
       )}
     >
       <SwitchPrimitive.Thumb
