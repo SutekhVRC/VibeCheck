@@ -21,7 +21,7 @@ impl InputProcessor for TPSProcessor {
         self.parameter_list.contains(param)
     }
 
-    fn process(&mut self, _input: ModeProcessorInputType) -> Option<f64> {
+    fn process(&mut self, _addr: &str, _input: ModeProcessorInputType) -> Option<f64> {
         todo!()
     }
 }

@@ -657,9 +657,10 @@ pub async fn toy_management_handler(
                                                     .pen_system
                                                     .as_mut()
                                                     .unwrap()
-                                                    .process(ModeProcessorInputType::Float(
-                                                        float_level,
-                                                    ))
+                                                    .process(
+                                                        msg.addr.as_str(),
+                                                        ModeProcessorInputType::Float(float_level),
+                                                    )
                                                 {
                                                     // Send to mode processor if specified (Raw = no mode processing)
                                                     if let ProcessingMode::Raw = feature
@@ -701,7 +702,10 @@ pub async fn toy_management_handler(
                                                     .pen_system
                                                     .as_mut()
                                                     .unwrap()
-                                                    .process(ModeProcessorInputType::Boolean(b))
+                                                    .process(
+                                                        msg.addr.as_str(),
+                                                        ModeProcessorInputType::Boolean(b),
+                                                    )
                                                 {
                                                     // Send to mode processor if specified (Raw = no mode processing)
                                                     if let ProcessingMode::Raw = feature
