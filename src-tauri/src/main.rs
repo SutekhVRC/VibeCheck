@@ -133,28 +133,27 @@ fn main() {
 
     app.run(|_app_handle, event| {
         match event {
-            tauri::RunEvent::WindowEvent { label, event, .. } => {
-                match event {
-                    tauri::WindowEvent::CloseRequested { api, .. } => {
-                        let minimize_on_exit = {
-                            _app_handle
-                                .state::<vcore::core::VCStateMutex>()
-                                .0
-                                .lock()
-                                .config
-                                .minimize_on_exit
-                        };
+            tauri::RunEvent::WindowEvent {
+                label,
+                event: tauri::WindowEvent::CloseRequested { api, .. },
+                ..
+            } => {
+                let minimize_on_exit = {
+                    _app_handle
+                        .state::<vcore::core::VCStateMutex>()
+                        .0
+                        .lock()
+                        .config
+                        .minimize_on_exit
+                };
 
-                        if minimize_on_exit {
-                            let window = _app_handle.get_window(&label).unwrap();
-                            trace!("Closing window: {}", window.label());
-                            window.hide().unwrap();
-                            api.prevent_close();
-                        } else {
-                            // Let exit
-                        }
-                    }
-                    _ => {}
+                if minimize_on_exit {
+                    let window = _app_handle.get_window(&label).unwrap();
+                    trace!("Closing window: {}", window.label());
+                    window.hide().unwrap();
+                    api.prevent_close();
+                } else {
+                    // Let exit
                 }
             }
             tauri::RunEvent::ExitRequested { .. } => {

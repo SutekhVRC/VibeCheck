@@ -7,14 +7,8 @@ pub enum InterfaceL4Proto {
 
 fn is_port_available(interface_proto: InterfaceL4Proto, port: u16) -> bool {
     match interface_proto {
-        InterfaceL4Proto::TCP(interface) => match TcpListener::bind((interface, port)) {
-            Ok(_) => true,
-            _ => false,
-        },
-        InterfaceL4Proto::UDP(interface) => match UdpSocket::bind((interface, port)) {
-            Ok(_) => true,
-            _ => false,
-        },
+        InterfaceL4Proto::TCP(interface) => TcpListener::bind((interface, port)).is_ok(),
+        InterfaceL4Proto::UDP(interface) => UdpSocket::bind((interface, port)).is_ok(),
     }
 }
 

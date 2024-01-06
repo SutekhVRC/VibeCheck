@@ -66,9 +66,7 @@ pub fn toy_input_routine(
         // Send address and arg to broadcast channel
         // Die when channel disconnects
 
-        if vibecheck_osc_api(&bind_sock, &app_handle, &toy_bcst_tx) {
-            continue;
-        } else {
+        if !vibecheck_osc_api(&bind_sock, &app_handle, &toy_bcst_tx) {
             return;
         }
     }
@@ -111,7 +109,7 @@ pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OS
             }
         };
 
-        if br <= 0 {
+        if br == 0 {
             continue;
         } else {
             let pkt = match rosc::decoder::decode_udp(&buf) {
@@ -152,24 +150,13 @@ pub fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
         }
     };
 
-    if br <= 0 {
+    if br == 0 {
         return None;
-    } else {
-        let pkt = match rosc::decoder::decode_udp(&buf) {
-            Ok(pkt) => pkt,
-            Err(_e) => {
-                return None;
-            }
-        };
-
-        match pkt.1 {
-            OscPacket::Message(msg) => {
-                return Some(msg);
-            }
-            _ => {
-                return None;
-            }
-        }
+    }
+    let pkt = rosc::decoder::decode_udp(&buf).ok()?;
+    match pkt.1 {
+        OscPacket::Message(msg) => Some(msg),
+        _ => None,
     }
 }
 

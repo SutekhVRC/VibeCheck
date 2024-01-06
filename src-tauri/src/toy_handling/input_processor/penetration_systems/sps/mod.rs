@@ -14,17 +14,9 @@ use self::model::SPSParameter;
  * Try
  */
 
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize, TS)]
 pub struct SPSProcessor {
     mappings: HashMap<String, SPSParameter>,
-}
-
-impl Default for SPSProcessor {
-    fn default() -> Self {
-        Self {
-            mappings: HashMap::new(),
-        }
-    }
 }
 
 impl InputProcessor for SPSProcessor {
@@ -34,19 +26,12 @@ impl InputProcessor for SPSProcessor {
 
     fn process(&mut self, _addr: &str, _input: ModeProcessorInputType) -> Option<f64> {
         // Strip away VRChat avatar parameter prefix
-        let sps_param = if let Some(s) = _addr.strip_prefix("/avatar/parameters/") {
-            s
-        } else {
-            return None;
-        };
-
-        let sps_param_split = sps_param.split("/").collect::<Vec<&str>>();
+        let sps_param = _addr.strip_prefix("/avatar/parameters/")?;
+        let sps_param_split = sps_param.split('/').collect::<Vec<&str>>();
 
         // Orf/Pen/etc.
         let p_type = sps_param_split[1];
-        //
         let p_id = sps_param_split[2];
-
         let sps_key = format!("{}__{}", p_type, p_id);
 
         // If mapping exists use it
@@ -55,12 +40,7 @@ impl InputProcessor for SPSProcessor {
             todo!();
             // return sps_mapping.internal_process;
         } else {
-            let new_sps_param_obj = if let Some(sp) = SPSParameter::new(sps_param.to_string()) {
-                sp
-            } else {
-                return None;
-            };
-
+            let new_sps_param_obj = SPSParameter::new(sps_param.to_string())?;
             self.mappings.insert(sps_key, new_sps_param_obj);
         }
 

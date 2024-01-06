@@ -133,7 +133,7 @@ pub async fn client_event_handler(
                         Err(e) => warn!("Toy config failed to load: {:?}", e),
                     }
 
-                    if let None = toy.config {
+                    if toy.config.is_none() {
                         // First time toy load
                         toy.populate_toy_config();
                         let mut vc_lock = vibecheck_state_pointer.lock();
@@ -223,7 +223,7 @@ pub async fn client_event_handler(
                             if vc_lock.config.desktop_notifications {
                                 let _ = Notification::new(identifier.clone())
                                     .title("Toy Disconnected")
-                                    .body(format!("{}", toy.toy_name).as_str())
+                                    .body(toy.toy_name.to_string())
                                     .show();
                             }
                         }
@@ -232,7 +232,7 @@ pub async fn client_event_handler(
                             info!("Scan on disconnect is enabled.. Starting scan.");
                             let vc_lock = vibecheck_state_pointer.lock();
                             if vc_lock.bp_client.is_some() && vc_lock.config.scan_on_disconnect {
-                                let _ = vc_lock
+                                vc_lock
                                     .async_rt
                                     .spawn(vc_lock.bp_client.as_ref().unwrap().start_scanning());
                             }
@@ -337,10 +337,9 @@ fn parse_smoothing(
         } else {
             debug!("Setting float_level with smoothed float");
             // Get Mean of all numbers in smoothing rate and then round to hundredths and cast as f64
-            float_level = ((smooth_queue.iter().sum::<f64>() as f64 / smooth_queue.len() as f64
-                * 100.0)
+            float_level = (smooth_queue.iter().sum::<f64>() / smooth_queue.len() as f64 * 100.0)
                 .round()
-                / 100.0) as f64;
+                / 100.0;
             smooth_queue.clear();
 
             smooth_queue.push(float_level);
@@ -448,24 +447,24 @@ async fn mode_processor<'toy_parameter>(
             match input_type {
                 ModeProcessorInputType::Float(f_input) => {
                     // Input Processor & Float
-                    return mode_processor_logic(
+                    mode_processor_logic(
                         ModeProcessorInputType::Float(f_input),
                         processing_mode_values,
                         feature_levels,
                         flip_input,
                     )
-                    .await;
+                    .await
                 }
 
                 ModeProcessorInputType::Boolean(b_input) => {
                     // Input Processor & Boolean
-                    return mode_processor_logic(
+                    mode_processor_logic(
                         ModeProcessorInputType::Boolean(b_input),
                         processing_mode_values,
                         feature_levels,
                         flip_input,
                     )
-                    .await;
+                    .await
                 } // Input Processor & Boolean
             }
         }
@@ -474,24 +473,24 @@ async fn mode_processor<'toy_parameter>(
             match input_type {
                 ModeProcessorInputType::Float(f_input) => {
                     // Raw Input & Float
-                    return mode_processor_logic(
+                    mode_processor_logic(
                         ModeProcessorInputType::Float(f_input),
                         &mut toy_parameter.processing_mode_values,
                         feature_levels,
                         flip_input,
                     )
-                    .await;
+                    .await
                 }
 
                 ModeProcessorInputType::Boolean(b_input) => {
                     // Raw Input & Boolean
-                    return mode_processor_logic(
+                    mode_processor_logic(
                         ModeProcessorInputType::Boolean(b_input),
                         &mut toy_parameter.processing_mode_values,
                         feature_levels,
                         flip_input,
                     )
-                    .await;
+                    .await
                 } // Raw Input & Boolean
             }
         }
@@ -550,7 +549,7 @@ async fn mode_processor_logic(
         ProcessingModeValues::Rate(values) => {
             //trace!("parse_rate()");
             // Need to set rate_timestamp when feature enabled
-            if let None = values.rate_timestamp {
+            if values.rate_timestamp.is_none() {
                 values.rate_timestamp = Some(Instant::now());
             }
 
@@ -721,16 +720,17 @@ pub async fn toy_management_handler(
                                                             feature.feature_levels,
                                                         )
                                                         .await;
-                                                    } else {
-                                                        if let Some(i) = mode_processor(
+                                                    } else if let Some(i) = mode_processor(
                                                         ModeProcessorInput::InputProcessor((
-                                                            ModeProcessorInputType::Float(i_mode_processed_value),
+                                                            ModeProcessorInputType::Float(
+                                                                i_mode_processed_value,
+                                                            ),
                                                             &mut feature
                                                                 .penetration_system
                                                                 .pen_system_processing_mode_values,
                                                         )),
                                                         feature.feature_levels,
-                                                        feature.flip_input_float
+                                                        feature.flip_input_float,
                                                     )
                                                     .await
                                                     {
@@ -743,7 +743,6 @@ pub async fn toy_management_handler(
                                                             feature.feature_levels,
                                                         )
                                                         .await;
-                                                    }
                                                     }
                                                 }
                                             }
@@ -853,15 +852,12 @@ pub async fn toy_management_handler(
                                 }
                             }
                             ToySig::UpdateToy(toy) => {
-                                match toy {
-                                    // Update feature map while toy running!
-                                    ToyUpdate::AlterToy(new_toy) => {
-                                        if new_toy.toy_id == dev.index() {
-                                            vc_toy_features = new_toy.parsed_toy_features;
-                                            info!("Altered toy: {}", new_toy.toy_id);
-                                        }
+                                // Update feature map while toy running!
+                                if let ToyUpdate::AlterToy(new_toy) = toy {
+                                    if new_toy.toy_id == dev.index() {
+                                        vc_toy_features = new_toy.parsed_toy_features;
+                                        info!("Altered toy: {}", new_toy.toy_id);
                                     }
-                                    _ => {} // Remove and Add are handled internally from device connected state and management loop (listening)
                                 }
                             }
                         }
@@ -881,41 +877,38 @@ pub async fn toy_management_handler(
     // Management loop
     loop {
         // Recv event (not listening)
-        match tme_recv.recv().await {
-            Some(event) => {
-                match event {
-                    // Handle Toy Update Signals
-                    ToyManagementEvent::Tu(tu) => match tu {
-                        ToyUpdate::AddToy(toy) => {
-                            core_toy_manager.online_toys.insert(toy.toy_id, toy);
-                        }
-                        ToyUpdate::RemoveToy(id) => {
-                            core_toy_manager.online_toys.remove(&id);
-                        }
-                        ToyUpdate::AlterToy(toy) => {
-                            core_toy_manager.online_toys.insert(toy.toy_id, toy);
-                        }
-                    },
-                    // Handle Management Signals
-                    ToyManagementEvent::Sig(tm_sig) => {
-                        match tm_sig {
-                            TmSig::StartListening(osc_net) => {
-                                vc_config = osc_net;
-                                listening = true;
-                            }
-                            TmSig::StopListening => {
-                                // Already not listening
-                                info!("StopListening but not listening");
-                            }
-                            TmSig::TMHReset => {
-                                info!("TMHReset but not listening");
-                            }
-                            _ => {}
-                        }
+        if let Some(event) = tme_recv.recv().await {
+            match event {
+                // Handle Toy Update Signals
+                ToyManagementEvent::Tu(tu) => match tu {
+                    ToyUpdate::AddToy(toy) => {
+                        core_toy_manager.online_toys.insert(toy.toy_id, toy);
                     }
-                } // Event handled
-            }
-            None => {}
+                    ToyUpdate::RemoveToy(id) => {
+                        core_toy_manager.online_toys.remove(&id);
+                    }
+                    ToyUpdate::AlterToy(toy) => {
+                        core_toy_manager.online_toys.insert(toy.toy_id, toy);
+                    }
+                },
+                // Handle Management Signals
+                ToyManagementEvent::Sig(tm_sig) => {
+                    match tm_sig {
+                        TmSig::StartListening(osc_net) => {
+                            vc_config = osc_net;
+                            listening = true;
+                        }
+                        TmSig::StopListening => {
+                            // Already not listening
+                            info!("StopListening but not listening");
+                        }
+                        TmSig::TMHReset => {
+                            info!("TMHReset but not listening");
+                        }
+                        _ => {}
+                    }
+                }
+            } // Event handled
         }
 
         if listening {
@@ -967,121 +960,116 @@ pub async fn toy_management_handler(
             loop {
                 // Recv event (listening)
                 let event = tme_recv.recv().await;
-                match event {
-                    Some(event) => {
-                        match event {
-                            // Handle Toy Update Signals
-                            ToyManagementEvent::Tu(tu) => {
-                                match tu {
-                                    ToyUpdate::AddToy(toy) => {
-                                        core_toy_manager
-                                            .online_toys
-                                            .insert(toy.toy_id, toy.clone());
-                                        let f_run = f(
-                                            toy.device_handle,
-                                            toy_bcst_tx.subscribe(),
-                                            toy.parsed_toy_features.clone(),
-                                        );
-                                        running_toy_ths.insert(
-                                            toy.toy_id,
-                                            toy_async_rt.spawn(async move {
-                                                f_run.await;
-                                            }),
-                                        );
-                                        info!("Toy: {} started listening..", toy.toy_id);
-                                    }
-                                    ToyUpdate::RemoveToy(id) => {
-                                        // OSC Listener thread will only die on StopListening event
-                                        if let Some(toy) = running_toy_ths.remove(&id) {
-                                            toy.abort();
-                                            match toy.await {
-                                                Ok(()) => info!("Toy {} thread finished", id),
-                                                Err(e) => warn!(
-                                                    "Toy {} thread failed to reach completion: {}",
-                                                    id, e
-                                                ),
-                                            }
-                                            info!("[TOY ID: {}] Stopped listening. (ToyUpdate::RemoveToy)", id);
-                                            running_toy_ths.remove(&id);
-                                            core_toy_manager.online_toys.remove(&id);
-                                        }
-                                    }
-                                    ToyUpdate::AlterToy(toy) => {
-                                        match toy_bcst_tx.send(ToySig::UpdateToy(
-                                            ToyUpdate::AlterToy(toy.clone()),
-                                        )) {
-                                            Ok(receivers) => info!(
-                                                "Sent ToyUpdate broadcast to {} toys",
-                                                receivers - 1
+                if let Some(event) = event {
+                    match event {
+                        // Handle Toy Update Signals
+                        ToyManagementEvent::Tu(tu) => {
+                            match tu {
+                                ToyUpdate::AddToy(toy) => {
+                                    core_toy_manager.online_toys.insert(toy.toy_id, toy.clone());
+                                    let f_run = f(
+                                        toy.device_handle,
+                                        toy_bcst_tx.subscribe(),
+                                        toy.parsed_toy_features.clone(),
+                                    );
+                                    running_toy_ths.insert(
+                                        toy.toy_id,
+                                        toy_async_rt.spawn(async move {
+                                            f_run.await;
+                                        }),
+                                    );
+                                    info!("Toy: {} started listening..", toy.toy_id);
+                                }
+                                ToyUpdate::RemoveToy(id) => {
+                                    // OSC Listener thread will only die on StopListening event
+                                    if let Some(toy) = running_toy_ths.remove(&id) {
+                                        toy.abort();
+                                        match toy.await {
+                                            Ok(()) => info!("Toy {} thread finished", id),
+                                            Err(e) => warn!(
+                                                "Toy {} thread failed to reach completion: {}",
+                                                id, e
                                             ),
-                                            Err(e) => {
-                                                logerr!("Failed to send UpdateToy: {}", e)
-                                            }
                                         }
-                                        core_toy_manager.online_toys.insert(toy.toy_id, toy);
+                                        info!("[TOY ID: {}] Stopped listening. (ToyUpdate::RemoveToy)", id);
+                                        running_toy_ths.remove(&id);
+                                        core_toy_manager.online_toys.remove(&id);
                                     }
                                 }
-                            }
-                            // Handle Management Signals
-                            ToyManagementEvent::Sig(tm_sig) => {
-                                match tm_sig {
-                                    TmSig::StartListening(osc_net) => {
-                                        vc_config = osc_net;
-                                        // Already listening
-                                    }
-                                    TmSig::StopListening => {
-                                        // Stop listening on every device and clean running thread hashmap
-
-                                        for toy in &mut running_toy_ths {
-                                            toy.1.abort();
-                                            match toy.1.await {
-                                                Ok(()) => {
-                                                    info!("Toy {} thread finished", toy.0)
-                                                }
-                                                Err(e) => warn!(
-                                                    "Toy {} thread failed to reach completion: {}",
-                                                    toy.0, e
-                                                ),
-                                            }
-                                            info!("[TOY ID: {}] Stopped listening. (TMSIG)", toy.0);
+                                ToyUpdate::AlterToy(toy) => {
+                                    match toy_bcst_tx
+                                        .send(ToySig::UpdateToy(ToyUpdate::AlterToy(toy.clone())))
+                                    {
+                                        Ok(receivers) => info!(
+                                            "Sent ToyUpdate broadcast to {} toys",
+                                            receivers - 1
+                                        ),
+                                        Err(e) => {
+                                            logerr!("Failed to send UpdateToy: {}", e)
                                         }
-                                        running_toy_ths.clear();
-                                        drop(_toy_bcst_rx); // Causes OSC listener to die
-                                        toy_async_rt.shutdown_background();
-                                        listening = false;
-                                        info!("Toys: {}", core_toy_manager.online_toys.len());
-                                        break; //Stop Listening
                                     }
-                                    TmSig::TMHReset => {
-                                        // Stop listening on every device and clean running thread hashmap
-                                        info!("TMHReset");
-
-                                        for toy in &mut running_toy_ths {
-                                            toy.1.abort();
-                                            match toy.1.await {
-                                                Ok(()) => {
-                                                    info!("Toy {} thread finished", toy.0)
-                                                }
-                                                Err(e) => warn!(
-                                                    "Toy {} thread failed to reach completion: {}",
-                                                    toy.0, e
-                                                ),
-                                            }
-                                            info!("[TOY ID: {}] Stopped listening. (TMSIG)", toy.0);
-                                        }
-                                        running_toy_ths.clear();
-                                        drop(_toy_bcst_rx); // Causes OSC listener to die
-                                        toy_async_rt.shutdown_background();
-                                        listening = false;
-                                        info!("Toys: {}", core_toy_manager.online_toys.len());
-                                        break; //Stop Listening
-                                    }
-                                    _ => {}
+                                    core_toy_manager.online_toys.insert(toy.toy_id, toy);
                                 }
                             }
-                        } // Event handled
-                    }
-                    None => {}
+                        }
+                        // Handle Management Signals
+                        ToyManagementEvent::Sig(tm_sig) => {
+                            match tm_sig {
+                                TmSig::StartListening(osc_net) => {
+                                    vc_config = osc_net;
+                                    // Already listening
+                                }
+                                TmSig::StopListening => {
+                                    // Stop listening on every device and clean running thread hashmap
+
+                                    for toy in &mut running_toy_ths {
+                                        toy.1.abort();
+                                        match toy.1.await {
+                                            Ok(()) => {
+                                                info!("Toy {} thread finished", toy.0)
+                                            }
+                                            Err(e) => warn!(
+                                                "Toy {} thread failed to reach completion: {}",
+                                                toy.0, e
+                                            ),
+                                        }
+                                        info!("[TOY ID: {}] Stopped listening. (TMSIG)", toy.0);
+                                    }
+                                    running_toy_ths.clear();
+                                    drop(_toy_bcst_rx); // Causes OSC listener to die
+                                    toy_async_rt.shutdown_background();
+                                    listening = false;
+                                    info!("Toys: {}", core_toy_manager.online_toys.len());
+                                    break; //Stop Listening
+                                }
+                                TmSig::TMHReset => {
+                                    // Stop listening on every device and clean running thread hashmap
+                                    info!("TMHReset");
+
+                                    for toy in &mut running_toy_ths {
+                                        toy.1.abort();
+                                        match toy.1.await {
+                                            Ok(()) => {
+                                                info!("Toy {} thread finished", toy.0)
+                                            }
+                                            Err(e) => warn!(
+                                                "Toy {} thread failed to reach completion: {}",
+                                                toy.0, e
+                                            ),
+                                        }
+                                        info!("[TOY ID: {}] Stopped listening. (TMSIG)", toy.0);
+                                    }
+                                    running_toy_ths.clear();
+                                    drop(_toy_bcst_rx); // Causes OSC listener to die
+                                    toy_async_rt.shutdown_background();
+                                    listening = false;
+                                    info!("Toys: {}", core_toy_manager.online_toys.len());
+                                    break; //Stop Listening
+                                }
+                                _ => {}
+                            }
+                        }
+                    } // Event handled
                 }
             }
         } //if listening

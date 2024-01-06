@@ -32,24 +32,7 @@ pub enum ModeProcessorInput<'processor> {
     RawInput(ModeProcessorInputType, &'processor mut ToyParameter),
 }
 
-/*
-impl<'processor> ModeProcessorInput<'processor> {
-    fn is_input_processor(&self) -> bool {
-        if let ModeProcessorInput::InputProcessor(_) = self {
-            true
-        } else {
-            false
-        }
-    }
 
-    fn is_raw_input(&self) -> bool {
-        if let ModeProcessorInput::RawInput(_, _) = self {
-            true
-        } else {
-            false
-        }
-    }
-}*/
 
 pub enum ModeProcessorInputType {
     Float(f64),
@@ -80,7 +63,7 @@ impl ToString for ToyPower {
             Self::Pending => "Pending".to_owned(),
             Self::Battery(level) => {
                 let m = 100.0 * level;
-                format!("{}%", m.to_string())
+                format!("{}%", m)
             }
             Self::NoBattery => "Powered".to_owned(),
             Self::Offline => "Offline".to_owned(),

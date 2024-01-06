@@ -3,17 +3,9 @@ use ts_rs::TS;
 
 use crate::toy_handling::{input_processor::InputProcessor, ModeProcessorInputType};
 
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize, TS)]
 pub struct TPSProcessor {
     pub parameter_list: Vec<String>,
-}
-
-impl Default for TPSProcessor {
-    fn default() -> Self {
-        Self {
-            parameter_list: vec![],
-        }
-    }
 }
 
 impl InputProcessor for TPSProcessor {

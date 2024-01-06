@@ -90,16 +90,10 @@ pub fn config_load() -> VibeCheckConfig {
             Ok(o) => {
                 info!("Config Loaded Successfully!");
                 if let Some(h) = o.lc_override {
-                    std::env::set_var(
-                        "VCLC_HOST_PORT",
-                        format!("{}:20010", h.to_string()).as_str(),
-                    );
-                    info!(
-                        "Setting VCLC_HOST_PORT: {}",
-                        format!("{}:20010", h.to_string())
-                    );
+                    std::env::set_var("VCLC_HOST_PORT", format!("{}:20010", h).as_str());
+                    info!("Setting VCLC_HOST_PORT: {}", format!("{}:20010", h));
                 }
-                return o;
+                o
             }
             Err(_e) => {
                 logerr!(
@@ -120,7 +114,7 @@ pub fn config_load() -> VibeCheckConfig {
                 fs::write(&vc_config_file, serde_json::to_string(&def_conf).unwrap()).unwrap();
                 trace!("Wrote VibeCheck config file");
                 // If fail to parse config overwrite with new default
-                return def_conf;
+                def_conf
             }
         },
         Err(_e) => {
@@ -139,7 +133,7 @@ pub fn config_load() -> VibeCheckConfig {
             };
             fs::write(&vc_config_file, serde_json::to_string(&def_conf).unwrap()).unwrap();
             trace!("Wrote VibeCheck config file");
-            return def_conf;
+            def_conf
         }
     }
 }
@@ -300,7 +294,7 @@ pub mod toy {
             );
 
             if !file_exists(&config_path) {
-                return Err(vcerror::backend::VibeCheckToyConfigError::OfflineToyConfigNotFound);
+                Err(vcerror::backend::VibeCheckToyConfigError::OfflineToyConfigNotFound)
             } else {
                 let con = std::fs::read_to_string(config_path).unwrap();
 
@@ -311,7 +305,7 @@ pub mod toy {
                     }
                 };
                 debug!("Loaded & parsed toy config successfully!");
-                return Ok(config);
+                Ok(config)
             }
         }
 
@@ -328,11 +322,9 @@ pub mod toy {
                 match std::fs::write(&config_path, json_string) {
                     Ok(()) => {
                         info!("Saved toy config: {}", self.toy_name);
-                        return;
                     }
                     Err(e) => {
                         logerr!("Failed to write to file: {}", e);
-                        return;
                     }
                 }
             } else {

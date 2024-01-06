@@ -5,28 +5,26 @@ use buttplug::core::connector::ButtplugInProcessClientConnectorBuilder; //new_js
 use buttplug::server::device::hardware::communication::btleplug::BtlePlugCommunicationManagerBuilder;
 use buttplug::server::device::hardware::communication::lovense_connect_service::LovenseConnectServiceCommunicationManagerBuilder;
 use buttplug::server::ButtplugServerBuilder;
-//use buttplug::server::device::hardware::communication::websocket_server::websocket_server_comm_manager::WebsocketServerDeviceCommunicationManagerBuilder;
 use log::{error as logerr, info, trace, warn};
 
 #[allow(unused)]
 pub async fn detect_btle_adapter() -> bool {
-    if let Ok(manager) = Manager::new().await {
-        if let Ok(adapters) = manager.adapters().await {
-            if adapters.is_empty() {
-                return false;
-            }
-            let adapter = manager.adapters().await.unwrap();
-            let central = adapter.into_iter().nth(0).unwrap();
-            info!("[+] BTLE: {}", central.adapter_info().await.unwrap());
-            return !adapters.is_empty();
-        } else {
-            warn!("No btle adapters detected");
-            return false;
-        }
-    } else {
+    let Ok(manager) = Manager::new().await else {
         logerr!("[-] Failed to create btle Manager.");
         return false;
+    };
+    let Ok(adapters) = manager.adapters().await else {
+        warn!("No btle adapters detected");
+        return false;
+    };
+    if adapters.is_empty() {
+        return false;
     }
+
+    let adapter = manager.adapters().await.unwrap();
+    let central = adapter.into_iter().next().unwrap();
+    info!("[+] BTLE: {}", central.adapter_info().await.unwrap());
+    !adapters.is_empty() // TODO is this always true?
 }
 
 pub async fn vc_toy_client_server_init(

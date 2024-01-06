@@ -296,11 +296,11 @@ impl VibeCheckState {
             find_available_udp_port(self.config.networking.bind.ip().to_string());
 
         let http_net = SocketAddrV4::new(
-            Ipv4Addr::from(*self.config.networking.bind.ip()),
+            *self.config.networking.bind.ip(),
             available_tcp_port.unwrap(),
         );
         let osc_net = SocketAddrV4::new(
-            Ipv4Addr::from(*self.config.networking.bind.ip()),
+            *self.config.networking.bind.ip(),
             available_udp_port.unwrap(),
         );
 
@@ -470,8 +470,7 @@ pub async fn native_vibecheck_enable(
                                 .send(ToyManagementEvent::Sig(TmSig::StopListening))
                                 .unwrap();
                             vc_lock.running = RunningState::Stopped;
-
-                            return Err(frontend::VCFeError::EnableBindFailure);
+                            Err(frontend::VCFeError::EnableBindFailure)
                         }
                         _ => {
                             //Did not get the correct signal oops
@@ -613,13 +612,7 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
         vc_lock.config.clone()
     };
 
-    let lc_or = {
-        if let Some(host) = config.lc_override {
-            Some(host.to_string())
-        } else {
-            None
-        }
-    };
+    let lc_or = config.lc_override.map(|host| host.to_string());
 
     FeVibeCheckConfig {
         networking: config.networking.to_fe(),
@@ -658,10 +651,7 @@ pub fn native_set_vibecheck_config(
             match Ipv4Addr::from_str(&host) {
                 Ok(sa) => {
                     // Force port because buttplug forces non http atm
-                    std::env::set_var(
-                        "VCLC_HOST_PORT",
-                        format!("{}:20010", sa.to_string()).as_str(),
-                    );
+                    std::env::set_var("VCLC_HOST_PORT", format!("{}:20010", sa).as_str());
                     match std::env::var("VCLC_HOST_PORT") {
                         Ok(_) => {
                             vc_lock.config.lc_override = Some(sa);
@@ -804,7 +794,7 @@ pub fn native_clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
             }
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 pub fn native_simulate_device_feature(

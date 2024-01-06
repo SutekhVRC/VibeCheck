@@ -29,7 +29,7 @@ impl SPSParameter {
     pub fn new(param: String) -> Option<Self> {
         // Parse out the parts of SPS parameter
         let param_split = param
-            .split("/")
+            .split('/')
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
 

@@ -229,8 +229,4 @@ impl PartialEq<VCFeatureType> for FeVCFeatureType {
     fn eq(&self, other: &VCFeatureType) -> bool {
         *self as u32 == *other as u32
     }
-
-    fn ne(&self, other: &VCFeatureType) -> bool {
-        !self.eq(other)
-    }
 }
