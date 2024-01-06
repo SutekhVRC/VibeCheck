@@ -18,7 +18,7 @@ impl Default for TPSProcessor {
 
 impl InputProcessor for TPSProcessor {
     fn is_parameter(&self, param: &String) -> bool {
-        self.parameter_list.contains(param)
+        param.starts_with("/avatar/parameters/TPS_Internal")
     }
 
     fn process(&mut self, _addr: &str, _input: ModeProcessorInputType) -> Option<f64> {
