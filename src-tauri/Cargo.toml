@@ -33,7 +33,7 @@ env_logger = "0.10.0"
 open = "3.2.0"
 dyn-clone = "1.0.16"
 tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "dev" }
-
+strum = { version="0.25.0", features = ["derive"] }
 # Tauri dependencies
 tauri = { version = "1.5.2", features = ["api-all", "system-tray", "updater"] }
 [features]

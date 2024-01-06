@@ -1,23 +1,15 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::str::FromStr;
+use std::string::ToString;
+use strum::{Display, EnumString};
 use ts_rs::TS;
 
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[derive(Clone, Debug, Serialize, Deserialize, TS, Display, EnumString)]
 pub enum SPSParameterType {
     Orf,
     Pen,
     Touch,
-}
-
-impl ToString for SPSParameterType {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Orf => "Orf".to_string(),
-            Self::Pen => "Pen".to_string(),
-            Self::Touch => "Touch".to_string(),
-        }
-    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
@@ -46,7 +38,8 @@ impl SPSParameter {
             return None;
         }
 
-        let param_type = param_split[1].to_owned();
+        let param_type = SPSParameterType::from_str(param_split[1].as_str())
+            .expect("parameter_type convert enum string");
         let param_obj_id = param_split[2].to_owned();
         let param_contact_type = param_split.last().unwrap().to_owned();
 

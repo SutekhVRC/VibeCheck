@@ -51,8 +51,9 @@ impl InputProcessor for SPSProcessor {
 
         // If mapping exists use it
         // If mapping does not exist, make a new one and use it
-        if let Some(sps_mapping) = self.mappings.get_mut(&sps_key) {
-            return sps_mapping.internal_process;
+        if let Some(_sps_mapping) = self.mappings.get_mut(&sps_key) {
+            todo!();
+            // return sps_mapping.internal_process;
         } else {
             let new_sps_param_obj = if let Some(sp) = SPSParameter::new(sps_param.to_string()) {
                 sp
