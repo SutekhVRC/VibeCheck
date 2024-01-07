@@ -1,39 +1,9 @@
-use buttplug::client::ButtplugClientDevice;
-use buttplug::client::ButtplugClientEvent;
-use buttplug::client::RotateCommand::RotateMap;
-use buttplug::client::ScalarCommand::ScalarMap;
-use buttplug::core::message::ActuatorType;
-use futures::StreamExt;
-use futures_timer::Delay;
-use log::debug;
-use parking_lot::Mutex;
-
-use rosc::OscType;
-use tauri::AppHandle;
-use tauri::Manager;
-
-use std::collections::HashMap;
-use tokio::sync::mpsc::UnboundedReceiver;
-
-use std::sync::mpsc::Sender;
-use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
-use std::time::Instant;
-use tokio::runtime::Runtime;
-use tokio::sync::{
-    self,
-    broadcast::{Receiver as BReceiver, Sender as BSender},
-};
-use tokio::task::JoinHandle;
-
 use crate::config::OSCNetworking;
 use crate::frontend::frontend_types::FeCoreEvent;
 use crate::frontend::frontend_types::FeScanEvent;
 use crate::frontend::frontend_types::FeToyEvent;
 use crate::frontend::frontend_types::FeVCToy;
 use crate::frontend::ToFrontend;
-
 use crate::osc::logic::toy_input_routine;
 use crate::toy_handling::toy_manager::ToyManager;
 use crate::toy_handling::toyops::LevelTweaks;
@@ -45,9 +15,35 @@ use crate::toy_handling::ToySig;
 use crate::vcore::core::ToyManagementEvent;
 use crate::vcore::core::VibeCheckState;
 use crate::{vcore::core::TmSig, vcore::core::ToyUpdate, vcore::core::VCError};
+use buttplug::client::ButtplugClientDevice;
+use buttplug::client::ButtplugClientEvent;
+use buttplug::client::RotateCommand::RotateMap;
+use buttplug::client::ScalarCommand::ScalarMap;
+use buttplug::core::message::ActuatorType;
+use futures::StreamExt;
+use futures_timer::Delay;
+use log::debug;
 use log::{error as logerr, info, trace, warn};
+use parking_lot::Mutex;
+use rosc::OscMessage;
+use rosc::OscType;
+use std::collections::HashMap;
+use std::sync::mpsc::Sender;
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
+use std::time::Instant;
 use tauri::api::notification::Notification;
+use tauri::AppHandle;
+use tauri::Manager;
+use tokio::runtime::Runtime;
+use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::{
+    self,
+    broadcast::{Receiver as BReceiver, Sender as BSender},
+};
+use tokio::task::JoinHandle;
 
 use super::toyops::ProcessingMode;
 use super::toyops::ProcessingModeValues;
@@ -455,7 +451,6 @@ async fn mode_processor<'toy_parameter>(
                     )
                     .await
                 }
-
                 ModeProcessorInputType::Boolean(b_input) => {
                     // Input Processor & Boolean
                     mode_processor_logic(
@@ -481,7 +476,6 @@ async fn mode_processor<'toy_parameter>(
                     )
                     .await
                 }
-
                 ModeProcessorInputType::Boolean(b_input) => {
                     // Raw Input & Boolean
                     mode_processor_logic(
@@ -596,6 +590,7 @@ async fn mode_processor_logic(
         + Send toy updates like (battery updates)
 */
 // Uses TME send and recv channel
+
 pub async fn toy_management_handler(
     tme_send: UnboundedSender<ToyManagementEvent>,
     mut tme_recv: UnboundedReceiver<ToyManagementEvent>,
@@ -615,254 +610,14 @@ pub async fn toy_management_handler(
 
             // Lock this to a user-set HZ value
             while dev.connected() {
-                //trace!("Toy recv loop start");
-                match toy_bcst_rx.recv().await {
-                    Ok(ts) => {
-                        match ts {
-                            ToySig::OSCMsg(mut msg) => {
-                                // Parse OSC msgs to toys commands
-                                //debug!("msg.addr = {} | msg.args = {:?}", msg.addr, msg.args);
-                                /*
-                                 * Do Penetration System parsing first?
-                                 * Then parameter parsing?
-                                 * Mode processor is a function now so it can be used in both!
-                                 */
-
-                                // msg args pop should go here
-                                //let newest_msg_addr = msg.addr.clone();
-                                let newest_msg_val = msg.args.pop().unwrap();
-
-                                /*
-                                 * Input mode processing
-                                 * Get all features with an enabled Input mode
-                                 * For each feature with a penetration system do processing for the current OSC input
-                                 * If get a value from processing check if the Input mode has a processing mode associated
-                                 *
-                                 */
-
-                                // Get all features with an enabled input processor?
-                                if let Some(input_processor_system_features) =
-                                    vc_toy_features.get_features_with_input_processors(&msg.addr)
-                                {
-                                    match newest_msg_val {
-                                        OscType::Float(lvl) => {
-                                            for feature in input_processor_system_features {
-                                                let float_level =
-                                                    ((lvl * 100.0).round() / 100.0) as f64;
-                                                // pen_system is checked for None in get_features_with_penetration_systems method.
-                                                // Give access to internal mode values here (input, internal_values)
-                                                if let Some(i_mode_processed_value) = feature
-                                                    .penetration_system
-                                                    .pen_system
-                                                    .as_mut()
-                                                    .unwrap()
-                                                    .process(
-                                                        msg.addr.as_str(),
-                                                        ModeProcessorInputType::Float(float_level),
-                                                    )
-                                                {
-                                                    // Send to mode processor if specified (Raw = no mode processing)
-                                                    if let ProcessingMode::Raw = feature
-                                                        .penetration_system
-                                                        .pen_system_processing_mode
-                                                    {
-                                                        command_toy(
-                                                            dev.clone(),
-                                                            feature.feature_type,
-                                                            i_mode_processed_value,
-                                                            feature.feature_index,
-                                                            feature.flip_input_float,
-                                                            feature.feature_levels,
-                                                        )
-                                                        .await;
-                                                    } else {
-                                                        // If mode processor returns a value send to toy
-                                                        if let Some(i) = mode_processor(ModeProcessorInput::InputProcessor((ModeProcessorInputType::Float(i_mode_processed_value), &mut feature.penetration_system.pen_system_processing_mode_values)), feature.feature_levels, feature.flip_input_float).await {
-                                                            command_toy(
-                                                                dev.clone(),
-                                                                feature.feature_type,
-                                                                i,
-                                                                feature.feature_index,
-                                                                feature.flip_input_float,
-                                                                feature.feature_levels,
-                                                            )
-                                                            .await;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        // Boolean can be supported in the process trait method
-                                        OscType::Bool(b) => {
-                                            for feature in input_processor_system_features {
-                                                // Boolean to float transformation here
-                                                if let Some(i_mode_processed_value) = feature
-                                                    .penetration_system
-                                                    .pen_system
-                                                    .as_mut()
-                                                    .unwrap()
-                                                    .process(
-                                                        msg.addr.as_str(),
-                                                        ModeProcessorInputType::Boolean(b),
-                                                    )
-                                                {
-                                                    // Send to mode processor if specified (Raw = no mode processing)
-                                                    if let ProcessingMode::Raw = feature
-                                                        .penetration_system
-                                                        .pen_system_processing_mode
-                                                    {
-                                                        command_toy(
-                                                            dev.clone(),
-                                                            feature.feature_type,
-                                                            i_mode_processed_value,
-                                                            feature.feature_index,
-                                                            feature.flip_input_float,
-                                                            feature.feature_levels,
-                                                        )
-                                                        .await;
-                                                    } else if let Some(i) = mode_processor(
-                                                        ModeProcessorInput::InputProcessor((
-                                                            ModeProcessorInputType::Float(
-                                                                i_mode_processed_value,
-                                                            ),
-                                                            &mut feature
-                                                                .penetration_system
-                                                                .pen_system_processing_mode_values,
-                                                        )),
-                                                        feature.feature_levels,
-                                                        feature.flip_input_float,
-                                                    )
-                                                    .await
-                                                    {
-                                                        command_toy(
-                                                            dev.clone(),
-                                                            feature.feature_type,
-                                                            i,
-                                                            feature.feature_index,
-                                                            feature.flip_input_float,
-                                                            feature.feature_levels,
-                                                        )
-                                                        .await;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        _ => (),
-                                    } // End match OscType for Input processors
-                                } // End Input processing
-
-                                if let Some(features) =
-                                    vc_toy_features.get_features_from_param(&msg.addr)
-                                {
-                                    match newest_msg_val {
-                                        OscType::Float(lvl) => {
-                                            // Clamp float accuracy to hundredths and cast as 64 bit float
-                                            let float_level =
-                                                ((lvl * 100.0).round() / 100.0) as f64;
-                                            //debug!("Received and cast float lvl: {:.5}", float_level);
-
-                                            for feature in features {
-                                                // Get ToyParameter here
-                                                // We unwrap here because the call to get_features_from_param guarantees the parameter exists.
-                                                let mut toy_parameter = feature
-                                                    .osc_parameters
-                                                    .iter_mut()
-                                                    .filter_map(|param| {
-                                                        if param.parameter == msg.addr {
-                                                            Some(param)
-                                                        } else {
-                                                            None
-                                                        }
-                                                    })
-                                                    .collect::<Vec<&mut ToyParameter>>();
-
-                                                if let Some(first_toy_param) =
-                                                    toy_parameter.first_mut()
-                                                {
-                                                    if let Some(mode_processed_value) =
-                                                        mode_processor(
-                                                            ModeProcessorInput::RawInput(
-                                                                ModeProcessorInputType::Float(
-                                                                    float_level,
-                                                                ),
-                                                                first_toy_param,
-                                                            ),
-                                                            feature.feature_levels,
-                                                            feature.flip_input_float,
-                                                        )
-                                                        .await
-                                                    {
-                                                        command_toy(
-                                                            dev.clone(),
-                                                            feature.feature_type,
-                                                            mode_processed_value,
-                                                            feature.feature_index,
-                                                            feature.flip_input_float,
-                                                            feature.feature_levels,
-                                                        )
-                                                        .await;
-                                                    }
-                                                } // If no matching toy parameter skip feature
-                                            }
-                                        }
-                                        OscType::Bool(b) => {
-                                            info!("Got a Bool! {} = {}", msg.addr, b);
-                                            for feature in features {
-                                                // Get ToyParameter here
-                                                let mut toy_parameter = feature
-                                                    .osc_parameters
-                                                    .iter_mut()
-                                                    .filter_map(|param| {
-                                                        if param.parameter == msg.addr {
-                                                            Some(param)
-                                                        } else {
-                                                            None
-                                                        }
-                                                    })
-                                                    .collect::<Vec<&mut ToyParameter>>();
-
-                                                if let Some(first_toy_param) =
-                                                    toy_parameter.first_mut()
-                                                {
-                                                    if let Some(i) = mode_processor(
-                                                        ModeProcessorInput::RawInput(
-                                                            ModeProcessorInputType::Boolean(b),
-                                                            first_toy_param,
-                                                        ),
-                                                        feature.feature_levels,
-                                                        feature.flip_input_float,
-                                                    )
-                                                    .await
-                                                    {
-                                                        command_toy(
-                                                            dev.clone(),
-                                                            feature.feature_type,
-                                                            i,
-                                                            feature.feature_index,
-                                                            feature.flip_input_float,
-                                                            feature.feature_levels,
-                                                        )
-                                                        .await;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        _ => {} // Skip parameter because unsuppported OSC type
-                                    }
-                                }
-                            }
-                            ToySig::UpdateToy(toy) => {
-                                // Update feature map while toy running!
-                                if let ToyUpdate::AlterToy(new_toy) = toy {
-                                    if new_toy.toy_id == dev.index() {
-                                        vc_toy_features = new_toy.parsed_toy_features;
-                                        info!("Altered toy: {}", new_toy.toy_id);
-                                    }
-                                }
-                            }
-                        }
+                let Ok(ts) = toy_bcst_rx.recv().await else {
+                    continue;
+                };
+                match ts {
+                    ToySig::OSCMsg(mut msg) => {
+                        osc_message(&mut msg, dev.clone(), &mut vc_toy_features).await
                     }
-                    Err(_e) => {}
+                    ToySig::UpdateToy(toy) => update_toy(toy, dev.clone(), &mut vc_toy_features),
                 }
             }
             info!(
@@ -911,169 +666,409 @@ pub async fn toy_management_handler(
             } // Event handled
         }
 
-        if listening {
-            // This is a nested runtime maybe remove
-            // Would need to pass toy thread handles to VibeCheckState
-            let toy_async_rt = Runtime::new().unwrap();
-            info!("Started listening!");
-            // Recv events (listening)
-            // Create toy bcst channel
+        if !listening {
+            return;
+        }
 
-            // Toy threads
-            let mut running_toy_ths: HashMap<u32, JoinHandle<()>> = HashMap::new();
+        // This is a nested runtime maybe remove
+        // Would need to pass toy thread handles to VibeCheckState
+        let toy_async_rt = Runtime::new().unwrap();
+        info!("Started listening!");
+        // Recv events (listening)
+        // Create toy bcst channel
 
-            // Broadcast channels for toy commands
-            let (toy_bcst_tx, _toy_bcst_rx): (BSender<ToySig>, BReceiver<ToySig>) =
-                sync::broadcast::channel(1024);
+        // Toy threads
+        let mut running_toy_ths: HashMap<u32, JoinHandle<()>> = HashMap::new();
 
-            // Create toy threads
-            for toy in &core_toy_manager.online_toys {
-                let f_run = f(
-                    toy.1.device_handle.clone(),
-                    toy_bcst_tx.subscribe(),
-                    toy.1.parsed_toy_features.clone(),
-                );
-                running_toy_ths.insert(
-                    *toy.0,
-                    toy_async_rt.spawn(async move {
-                        f_run.await;
-                    }),
-                );
-                info!("Toy: {} started listening..", *toy.0);
+        // Broadcast channels for toy commands
+        let (toy_bcst_tx, _toy_bcst_rx): (BSender<ToySig>, BReceiver<ToySig>) =
+            sync::broadcast::channel(1024);
+
+        // Create toy threads
+        for toy in &core_toy_manager.online_toys {
+            let f_run = f(
+                toy.1.device_handle.clone(),
+                toy_bcst_tx.subscribe(),
+                toy.1.parsed_toy_features.clone(),
+            );
+            running_toy_ths.insert(
+                *toy.0,
+                toy_async_rt.spawn(async move {
+                    f_run.await;
+                }),
+            );
+            info!("Toy: {} started listening..", *toy.0);
+        }
+
+        // Create OSC listener thread
+        let toy_bcst_tx_osc = toy_bcst_tx.clone();
+        info!("Spawning OSC listener..");
+        let vc_conf_clone = vc_config.clone();
+        let tme_send_clone = tme_send.clone();
+        let app_handle_clone = app_handle.clone();
+        thread::spawn(move || {
+            toy_input_routine(
+                toy_bcst_tx_osc,
+                tme_send_clone,
+                app_handle_clone,
+                vc_conf_clone,
+            )
+        });
+
+        loop {
+            // Recv event (listening)
+            let event = tme_recv.recv().await;
+            let Some(event) = event else { continue };
+            match event {
+                // Handle Toy Update Signals
+                ToyManagementEvent::Tu(tu) => {
+                    match tu {
+                        ToyUpdate::AddToy(toy) => {
+                            core_toy_manager.online_toys.insert(toy.toy_id, toy.clone());
+                            let f_run = f(
+                                toy.device_handle,
+                                toy_bcst_tx.subscribe(),
+                                toy.parsed_toy_features.clone(),
+                            );
+                            running_toy_ths.insert(
+                                toy.toy_id,
+                                toy_async_rt.spawn(async move {
+                                    f_run.await;
+                                }),
+                            );
+                            info!("Toy: {} started listening..", toy.toy_id);
+                        }
+                        ToyUpdate::RemoveToy(id) => {
+                            // OSC Listener thread will only die on StopListening event
+                            if let Some(toy) = running_toy_ths.remove(&id) {
+                                toy.abort();
+                                match toy.await {
+                                    Ok(()) => info!("Toy {} thread finished", id),
+                                    Err(e) => {
+                                        warn!("Toy {} thread failed to reach completion: {}", id, e)
+                                    }
+                                }
+                                info!("[TOY ID: {}] Stopped listening. (ToyUpdate::RemoveToy)", id);
+                                running_toy_ths.remove(&id);
+                                core_toy_manager.online_toys.remove(&id);
+                            }
+                        }
+                        ToyUpdate::AlterToy(toy) => {
+                            match toy_bcst_tx
+                                .send(ToySig::UpdateToy(ToyUpdate::AlterToy(toy.clone())))
+                            {
+                                Ok(receivers) => {
+                                    info!("Sent ToyUpdate broadcast to {} toys", receivers - 1)
+                                }
+                                Err(e) => {
+                                    logerr!("Failed to send UpdateToy: {}", e)
+                                }
+                            }
+                            core_toy_manager.online_toys.insert(toy.toy_id, toy);
+                        }
+                    }
+                }
+                // Handle Management Signals
+                ToyManagementEvent::Sig(tm_sig) => {
+                    match tm_sig {
+                        TmSig::StartListening(osc_net) => {
+                            vc_config = osc_net;
+                            // Already listening
+                        }
+                        TmSig::StopListening => {
+                            // Stop listening on every device and clean running thread hashmap
+
+                            for toy in &mut running_toy_ths {
+                                toy.1.abort();
+                                match toy.1.await {
+                                    Ok(()) => {
+                                        info!("Toy {} thread finished", toy.0)
+                                    }
+                                    Err(e) => warn!(
+                                        "Toy {} thread failed to reach completion: {}",
+                                        toy.0, e
+                                    ),
+                                }
+                                info!("[TOY ID: {}] Stopped listening. (TMSIG)", toy.0);
+                            }
+                            running_toy_ths.clear();
+                            drop(_toy_bcst_rx); // Causes OSC listener to die
+                            toy_async_rt.shutdown_background();
+                            listening = false;
+                            info!("Toys: {}", core_toy_manager.online_toys.len());
+                            break; //Stop Listening
+                        }
+                        TmSig::TMHReset => {
+                            // Stop listening on every device and clean running thread hashmap
+                            info!("TMHReset");
+
+                            for toy in &mut running_toy_ths {
+                                toy.1.abort();
+                                match toy.1.await {
+                                    Ok(()) => {
+                                        info!("Toy {} thread finished", toy.0)
+                                    }
+                                    Err(e) => warn!(
+                                        "Toy {} thread failed to reach completion: {}",
+                                        toy.0, e
+                                    ),
+                                }
+                                info!("[TOY ID: {}] Stopped listening. (TMSIG)", toy.0);
+                            }
+                            running_toy_ths.clear();
+                            drop(_toy_bcst_rx); // Causes OSC listener to die
+                            toy_async_rt.shutdown_background();
+                            listening = false;
+                            info!("Toys: {}", core_toy_manager.online_toys.len());
+                            break; //Stop Listening
+                        }
+                        _ => {}
+                    }
+                } // Event handled
             }
+        }
+    } // Management loop
+}
 
-            // Create OSC listener thread
-            let toy_bcst_tx_osc = toy_bcst_tx.clone();
-            info!("Spawning OSC listener..");
-            let vc_conf_clone = vc_config.clone();
-            let tme_send_clone = tme_send.clone();
-            let app_handle_clone = app_handle.clone();
-            thread::spawn(move || {
-                toy_input_routine(
-                    toy_bcst_tx_osc,
-                    tme_send_clone,
-                    app_handle_clone,
-                    vc_conf_clone,
-                )
-            });
+#[inline(always)]
+async fn osc_message(
+    msg: &mut OscMessage,
+    dev: Arc<ButtplugClientDevice>,
+    vc_toy_features: &mut VCToyFeatures,
+) {
+    // Parse OSC msgs to toys commands
+    //debug!("msg.addr = {} | msg.args = {:?}", msg.addr, msg.args);
+    /*
+     * Do Penetration System parsing first?
+     * Then parameter parsing?
+     * Mode processor is a function now so it can be used in both!
+     */
 
-            loop {
-                // Recv event (listening)
-                let event = tme_recv.recv().await;
-                if let Some(event) = event {
-                    match event {
-                        // Handle Toy Update Signals
-                        ToyManagementEvent::Tu(tu) => {
-                            match tu {
-                                ToyUpdate::AddToy(toy) => {
-                                    core_toy_manager.online_toys.insert(toy.toy_id, toy.clone());
-                                    let f_run = f(
-                                        toy.device_handle,
-                                        toy_bcst_tx.subscribe(),
-                                        toy.parsed_toy_features.clone(),
-                                    );
-                                    running_toy_ths.insert(
-                                        toy.toy_id,
-                                        toy_async_rt.spawn(async move {
-                                            f_run.await;
-                                        }),
-                                    );
-                                    info!("Toy: {} started listening..", toy.toy_id);
-                                }
-                                ToyUpdate::RemoveToy(id) => {
-                                    // OSC Listener thread will only die on StopListening event
-                                    if let Some(toy) = running_toy_ths.remove(&id) {
-                                        toy.abort();
-                                        match toy.await {
-                                            Ok(()) => info!("Toy {} thread finished", id),
-                                            Err(e) => warn!(
-                                                "Toy {} thread failed to reach completion: {}",
-                                                id, e
-                                            ),
-                                        }
-                                        info!("[TOY ID: {}] Stopped listening. (ToyUpdate::RemoveToy)", id);
-                                        running_toy_ths.remove(&id);
-                                        core_toy_manager.online_toys.remove(&id);
-                                    }
-                                }
-                                ToyUpdate::AlterToy(toy) => {
-                                    match toy_bcst_tx
-                                        .send(ToySig::UpdateToy(ToyUpdate::AlterToy(toy.clone())))
-                                    {
-                                        Ok(receivers) => info!(
-                                            "Sent ToyUpdate broadcast to {} toys",
-                                            receivers - 1
-                                        ),
-                                        Err(e) => {
-                                            logerr!("Failed to send UpdateToy: {}", e)
-                                        }
-                                    }
-                                    core_toy_manager.online_toys.insert(toy.toy_id, toy);
-                                }
+    // msg args pop should go here
+    //let newest_msg_addr = msg.addr.clone();
+    let newest_msg_val = msg.args.pop().unwrap();
+
+    /*
+     * Input mode processing
+     * Get all features with an enabled Input mode
+     * For each feature with a penetration system do processing for the current OSC input
+     * If get a value from processing check if the Input mode has a processing mode associated
+     *
+     */
+
+    // Get all features with an enabled input processor?
+    if let Some(input_processor_system_features) =
+        vc_toy_features.get_features_with_input_processors(&msg.addr)
+    {
+        match newest_msg_val {
+            OscType::Float(lvl) => {
+                for feature in input_processor_system_features {
+                    let float_level = ((lvl * 100.0).round() / 100.0) as f64;
+                    // pen_system is checked for None in get_features_with_penetration_systems method.
+                    // Give access to internal mode values here (input, internal_values)
+                    if let Some(i_mode_processed_value) = feature
+                        .penetration_system
+                        .pen_system
+                        .as_mut()
+                        .unwrap()
+                        .process(
+                            msg.addr.as_str(),
+                            ModeProcessorInputType::Float(float_level),
+                        )
+                    {
+                        // Send to mode processor if specified (Raw = no mode processing)
+                        if let ProcessingMode::Raw =
+                            feature.penetration_system.pen_system_processing_mode
+                        {
+                            command_toy(
+                                dev.clone(),
+                                feature.feature_type,
+                                i_mode_processed_value,
+                                feature.feature_index,
+                                feature.flip_input_float,
+                                feature.feature_levels,
+                            )
+                            .await;
+                        } else {
+                            // If mode processor returns a value send to toy
+                            if let Some(i) = mode_processor(
+                                ModeProcessorInput::InputProcessor((
+                                    ModeProcessorInputType::Float(i_mode_processed_value),
+                                    &mut feature
+                                        .penetration_system
+                                        .pen_system_processing_mode_values,
+                                )),
+                                feature.feature_levels,
+                                feature.flip_input_float,
+                            )
+                            .await
+                            {
+                                command_toy(
+                                    dev.clone(),
+                                    feature.feature_type,
+                                    i,
+                                    feature.feature_index,
+                                    feature.flip_input_float,
+                                    feature.feature_levels,
+                                )
+                                .await;
                             }
                         }
-                        // Handle Management Signals
-                        ToyManagementEvent::Sig(tm_sig) => {
-                            match tm_sig {
-                                TmSig::StartListening(osc_net) => {
-                                    vc_config = osc_net;
-                                    // Already listening
-                                }
-                                TmSig::StopListening => {
-                                    // Stop listening on every device and clean running thread hashmap
-
-                                    for toy in &mut running_toy_ths {
-                                        toy.1.abort();
-                                        match toy.1.await {
-                                            Ok(()) => {
-                                                info!("Toy {} thread finished", toy.0)
-                                            }
-                                            Err(e) => warn!(
-                                                "Toy {} thread failed to reach completion: {}",
-                                                toy.0, e
-                                            ),
-                                        }
-                                        info!("[TOY ID: {}] Stopped listening. (TMSIG)", toy.0);
-                                    }
-                                    running_toy_ths.clear();
-                                    drop(_toy_bcst_rx); // Causes OSC listener to die
-                                    toy_async_rt.shutdown_background();
-                                    listening = false;
-                                    info!("Toys: {}", core_toy_manager.online_toys.len());
-                                    break; //Stop Listening
-                                }
-                                TmSig::TMHReset => {
-                                    // Stop listening on every device and clean running thread hashmap
-                                    info!("TMHReset");
-
-                                    for toy in &mut running_toy_ths {
-                                        toy.1.abort();
-                                        match toy.1.await {
-                                            Ok(()) => {
-                                                info!("Toy {} thread finished", toy.0)
-                                            }
-                                            Err(e) => warn!(
-                                                "Toy {} thread failed to reach completion: {}",
-                                                toy.0, e
-                                            ),
-                                        }
-                                        info!("[TOY ID: {}] Stopped listening. (TMSIG)", toy.0);
-                                    }
-                                    running_toy_ths.clear();
-                                    drop(_toy_bcst_rx); // Causes OSC listener to die
-                                    toy_async_rt.shutdown_background();
-                                    listening = false;
-                                    info!("Toys: {}", core_toy_manager.online_toys.len());
-                                    break; //Stop Listening
-                                }
-                                _ => {}
-                            }
-                        }
-                    } // Event handled
+                    }
                 }
             }
-        } //if listening
-    } // Management loop
+            // Boolean can be supported in the process trait method
+            OscType::Bool(b) => {
+                for feature in input_processor_system_features {
+                    // Boolean to float transformation here
+                    if let Some(i_mode_processed_value) = feature
+                        .penetration_system
+                        .pen_system
+                        .as_mut()
+                        .unwrap()
+                        .process(msg.addr.as_str(), ModeProcessorInputType::Boolean(b))
+                    {
+                        // Send to mode processor if specified (Raw = no mode processing)
+                        if let ProcessingMode::Raw =
+                            feature.penetration_system.pen_system_processing_mode
+                        {
+                            command_toy(
+                                dev.clone(),
+                                feature.feature_type,
+                                i_mode_processed_value,
+                                feature.feature_index,
+                                feature.flip_input_float,
+                                feature.feature_levels,
+                            )
+                            .await;
+                        } else if let Some(i) = mode_processor(
+                            ModeProcessorInput::InputProcessor((
+                                ModeProcessorInputType::Float(i_mode_processed_value),
+                                &mut feature.penetration_system.pen_system_processing_mode_values,
+                            )),
+                            feature.feature_levels,
+                            feature.flip_input_float,
+                        )
+                        .await
+                        {
+                            command_toy(
+                                dev.clone(),
+                                feature.feature_type,
+                                i,
+                                feature.feature_index,
+                                feature.flip_input_float,
+                                feature.feature_levels,
+                            )
+                            .await;
+                        }
+                    }
+                }
+            }
+            _ => (),
+        } // End match OscType for Input processors
+    } // End Input processing
+
+    if let Some(features) = vc_toy_features.get_features_from_param(&msg.addr) {
+        match newest_msg_val {
+            OscType::Float(lvl) => {
+                // Clamp float accuracy to hundredths and cast as 64 bit float
+                let float_level = ((lvl * 100.0).round() / 100.0) as f64;
+                //debug!("Received and cast float lvl: {:.5}", float_level);
+
+                for feature in features {
+                    // Get ToyParameter here
+                    // We unwrap here because the call to get_features_from_param guarantees the parameter exists.
+                    let mut toy_parameter = feature
+                        .osc_parameters
+                        .iter_mut()
+                        .filter_map(|param| {
+                            if param.parameter == msg.addr {
+                                Some(param)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<&mut ToyParameter>>();
+
+                    if let Some(first_toy_param) = toy_parameter.first_mut() {
+                        if let Some(mode_processed_value) = mode_processor(
+                            ModeProcessorInput::RawInput(
+                                ModeProcessorInputType::Float(float_level),
+                                first_toy_param,
+                            ),
+                            feature.feature_levels,
+                            feature.flip_input_float,
+                        )
+                        .await
+                        {
+                            command_toy(
+                                dev.clone(),
+                                feature.feature_type,
+                                mode_processed_value,
+                                feature.feature_index,
+                                feature.flip_input_float,
+                                feature.feature_levels,
+                            )
+                            .await;
+                        }
+                    } // If no matching toy parameter skip feature
+                }
+            }
+            OscType::Bool(b) => {
+                info!("Got a Bool! {} = {}", msg.addr, b);
+                for feature in features {
+                    // Get ToyParameter here
+                    let mut toy_parameter = feature
+                        .osc_parameters
+                        .iter_mut()
+                        .filter_map(|param| {
+                            if param.parameter == msg.addr {
+                                Some(param)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<&mut ToyParameter>>();
+
+                    if let Some(first_toy_param) = toy_parameter.first_mut() {
+                        if let Some(i) = mode_processor(
+                            ModeProcessorInput::RawInput(
+                                ModeProcessorInputType::Boolean(b),
+                                first_toy_param,
+                            ),
+                            feature.feature_levels,
+                            feature.flip_input_float,
+                        )
+                        .await
+                        {
+                            command_toy(
+                                dev.clone(),
+                                feature.feature_type,
+                                i,
+                                feature.feature_index,
+                                feature.flip_input_float,
+                                feature.feature_levels,
+                            )
+                            .await;
+                        }
+                    }
+                }
+            }
+            _ => {} // Skip parameter because unsuppported OSC type
+        }
+    }
+}
+
+#[inline(always)]
+fn update_toy(toy: ToyUpdate, dev: Arc<ButtplugClientDevice>, vc_toy_features: &mut VCToyFeatures) {
+    let ToyUpdate::AlterToy(new_toy) = toy else {
+        return;
+    };
+    if new_toy.toy_id != dev.index() {
+        return;
+    }
+    *vc_toy_features = new_toy.parsed_toy_features;
+    info!("Altered toy: {}", new_toy.toy_id);
 }
 
 /*
