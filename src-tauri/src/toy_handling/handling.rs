@@ -667,7 +667,7 @@ pub async fn toy_management_handler(
         }
 
         if !listening {
-            return;
+            continue;
         }
 
         // This is a nested runtime maybe remove
