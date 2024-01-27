@@ -615,7 +615,7 @@ pub async fn toy_management_handler(
                 };
                 match ts {
                     ToySig::OSCMsg(mut msg) => {
-                        osc_message(&mut msg, dev.clone(), &mut vc_toy_features).await
+                        parse_osc_message(&mut msg, dev.clone(), &mut vc_toy_features).await
                     }
                     ToySig::UpdateToy(toy) => update_toy(toy, dev.clone(), &mut vc_toy_features),
                 }
@@ -831,7 +831,7 @@ pub async fn toy_management_handler(
 }
 
 #[inline(always)]
-async fn osc_message(
+async fn parse_osc_message(
     msg: &mut OscMessage,
     dev: Arc<ButtplugClientDevice>,
     vc_toy_features: &mut VCToyFeatures,
