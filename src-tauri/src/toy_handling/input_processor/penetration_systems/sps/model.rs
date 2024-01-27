@@ -13,7 +13,8 @@ pub enum SPSParameterType {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
-pub struct SPSParameter {
+pub struct SPSMapping {
+    original_parameter: String,
     // Orf || Pen || Touch
     param_type: SPSParameterType,
     // The mesh name / identifier for the orifice or penetrator (blowjob/anal/etc.)
@@ -25,7 +26,7 @@ pub struct SPSParameter {
     related_osc_values: HashMap<String, f64>,
 }
 
-impl SPSParameter {
+impl SPSMapping {
     pub fn new(param: String) -> Option<Self> {
         // Parse out the parts of SPS parameter
         let param_split = param
@@ -33,7 +34,7 @@ impl SPSParameter {
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
 
-        // Potato check
+        // Potato check that parameter is valid SPS parameter
         if param_split.len() != 4 {
             return None;
         }
@@ -44,10 +45,15 @@ impl SPSParameter {
         let param_contact_type = param_split.last().unwrap().to_owned();
 
         Some(Self {
+            original_parameter: param,
             param_type,
             param_obj_id,
             param_contact_type,
             related_osc_values: HashMap::new(),
         })
+    }
+
+    pub fn get_probable_penetrator_length(&mut self) -> f64 {
+        todo!()
     }
 }

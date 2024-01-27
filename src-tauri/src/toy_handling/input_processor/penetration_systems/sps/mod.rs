@@ -7,7 +7,7 @@ use ts_rs::TS;
 
 use crate::toy_handling::{input_processor::InputProcessor, ModeProcessorInputType};
 
-use self::model::SPSParameter;
+use self::model::SPSMapping;
 
 /*
  * Identifier for each type/id combination - This should be HashMap key
@@ -16,7 +16,7 @@ use self::model::SPSParameter;
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize, TS)]
 pub struct SPSProcessor {
-    mappings: HashMap<String, SPSParameter>,
+    mappings: HashMap<String, SPSMapping>,
 }
 
 impl InputProcessor for SPSProcessor {
@@ -24,30 +24,69 @@ impl InputProcessor for SPSProcessor {
         param.starts_with("/avatar/parameters/OGB/")
     }
 
-    fn process(&mut self, _addr: &str, _input: ModeProcessorInputType) -> Option<f64> {
+    /**
+     * Inner workings of SPS according to SPS creator's app OGB (https://github.com/OscToys/OscGoesBrrr)
+     *
+     * addKey(OSC K,V) -> Overwrites values via param leaf key
+     * onKeyChange() -> Tests for Self|Other && NewRoot|NewTip
+     * Length Detectors -> update() method(NewRoot.value, NewTip.value)
+     * within update() -> test for bad samples (set bad sample) -> get length (len = NewTip.value - NewRoot.value) -> save if tip <= 0.99
+     * calculate length from samples -> if less than 4 samples return a bad sample
+     * if 4 or more samples do length decision algo
+     * motor level is calculated by
+     * ~
+     * activeDistance = 1 - NewRoot.value
+     * activeRatio = activeDistance / saved_mapping_length
+     * level = 1 - activeRatio
+     * ~
+     *
+     */
+
+    fn process(&mut self, addr: &str, _input: ModeProcessorInputType) -> Option<f64> {
         // Strip away VRChat avatar parameter prefix
-        let sps_param = _addr.strip_prefix("/avatar/parameters/")?;
-        let sps_param_split = sps_param.split('/').collect::<Vec<&str>>();
+        let sps_param = addr.strip_prefix("/avatar/parameters/")?;
 
-        // Orf/Pen/etc.
-        let p_type = sps_param_split[1];
-        let p_id = sps_param_split[2];
-        let sps_key = format!("{}__{}", p_type, p_id);
+        // Process SPS Param object key
+        let sps_key = SPSProcessor::get_sps_param_key(sps_param)?;
 
-        // If mapping exists use it
-        // If mapping does not exist, make a new one and use it
-        if let Some(_sps_mapping) = self.mappings.get_mut(&sps_key) {
-            todo!();
-            // return sps_mapping.internal_process;
-        } else {
-            let new_sps_param_obj = SPSParameter::new(sps_param.to_string())?;
-            self.mappings.insert(sps_key, new_sps_param_obj);
-        }
+        // Process parameter and create or get mutable ref to mapping
+        let mapping = self.populate_mapping(&sps_key)?;
+
+        // Update SPS parameter objects internal length
+
+        // Need routine for getting penetrator length
+        // Need routine for detecting change of each stored param
+        // If changed save it and returned changed value
 
         None
     }
 }
 
 impl SPSProcessor {
-    //fn process_length(&mut self, )
+    fn get_sps_param_key(osc_addr: &str) -> Option<String> {
+        let sps_param_split = osc_addr.split('/').collect::<Vec<&str>>();
+
+        if sps_param_split.len() != 4 {
+            return None;
+        };
+
+        // Orf/Pen/etc.
+        let p_type = sps_param_split[1];
+        // Unity Object name
+        let p_id = sps_param_split[2];
+        // SPS Key
+        Some(format!("{}__{}", p_type, p_id))
+    }
+
+    fn populate_mapping(&mut self, sps_key: &str) -> Option<&mut SPSMapping> {
+        if !self.mappings.contains_key(sps_key) {
+            let Some(new_sps_param_obj) = SPSMapping::new(sps_key.to_string()) else {
+                return None;
+            };
+
+            self.mappings.insert(sps_key.to_string(), new_sps_param_obj);
+        }
+
+        self.mappings.get_mut(sps_key)
+    }
 }
