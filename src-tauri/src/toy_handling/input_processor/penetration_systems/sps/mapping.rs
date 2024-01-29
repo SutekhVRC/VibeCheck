@@ -1,7 +1,7 @@
+use log::{debug, trace};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::str::FromStr;
-use std::string::ToString;
+use std::{cmp::Ordering, collections::HashMap};
 use strum::{Display, EnumString};
 use ts_rs::TS;
 
@@ -17,7 +17,6 @@ pub enum SPSParameterType {
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct SPSMapping {
-    original_parameter: String,
     // Orf || Pen || Touch
     param_type: SPSParameterType,
     // The mesh name / identifier for the orifice or penetrator (blowjob/anal/etc.)
@@ -34,24 +33,12 @@ pub struct SPSMapping {
 }
 
 impl SPSMapping {
-    pub fn new(param: String) -> Option<Self> {
-        // Parse out the parts of SPS parameter
-        let param_split = param
-            .split('/')
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>();
-
-        // Potato check that parameter is valid SPS parameter
-        if param_split.len() != 4 {
-            return None;
-        }
-
-        let param_type = SPSParameterType::from_str(param_split[1].as_str())
-            .expect("parameter_type convert enum string");
-        let param_obj_id = param_split[2].to_owned();
+    pub fn new(sps_type: String, sps_obj_id: String) -> Option<Self> {
+        let param_type =
+            SPSParameterType::from_str(&sps_type).expect("parameter_type convert enum string");
+        let param_obj_id = sps_obj_id;
 
         Some(Self {
-            original_parameter: param,
             param_type,
             param_obj_id,
             length_values_others: Vec::with_capacity(SAVED_LENGTH_VALUES_MAX + 1),
@@ -83,8 +70,10 @@ impl SPSMapping {
     pub fn update_mapping_length_values(&mut self, others: bool) {
         // Logic needs to be optimized (polymorphism/whatever)
         let Some((root_value, tip_value)) = self.get_root_tip_osc_values(others) else {
+            debug!("Failed to get root & tip values!");
             return;
         };
+        trace!("Got root & tip values");
 
         if root_value < 0.01 || tip_value < 0.01 {
             if others {
@@ -99,6 +88,7 @@ impl SPSMapping {
         }
 
         let temp_length = tip_value - root_value;
+        debug!("Length Calculation: {}", temp_length);
 
         if temp_length < 0.02 {
             return;
@@ -111,6 +101,7 @@ impl SPSMapping {
             if others {
                 self.length_values_others.insert(0, temp_length);
                 self.length_values_others.truncate(SAVED_LENGTH_VALUES_MAX);
+                debug!("Added length value");
             } else {
                 self.length_values_self.insert(0, temp_length);
                 self.length_values_self.truncate(SAVED_LENGTH_VALUES_MAX);
@@ -126,8 +117,29 @@ impl SPSMapping {
         };
         // Enough stored length values?
         if values_len < SAVED_LENGTH_VALUES_MIN {
-            // Just don't update length?
+            // Just don't update length? Or give a bad length?
             return;
+        }
+
+        if others {
+            self.length_values_others
+                .sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
+            self.others_stored_length = self
+                .length_values_others
+                .windows(2)
+                .map(|length_value| (length_value[0] - length_value[1]).abs())
+                .min_by(|low, high| low.partial_cmp(high).unwrap_or(Ordering::Less))
+                .unwrap();
+            debug!("Length Calculated! {}", self.others_stored_length);
+        } else {
+            self.length_values_self
+                .sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
+            self.self_stored_length = self
+                .length_values_others
+                .windows(2)
+                .map(|length_value| (length_value[0] - length_value[1]).abs())
+                .min_by(|low, high| low.partial_cmp(high).unwrap_or(Ordering::Less))
+                .unwrap();
         }
     }
 
@@ -138,13 +150,17 @@ impl SPSMapping {
         } else {
             self.self_stored_length
         };
+        debug!("Stored Length: {}", stored_length);
+
         if stored_length > 0. && tip_value > 0.99 {
             let active_length = 1. - root_value;
             let active_ratio = active_length / stored_length;
             let level = 1. - active_ratio;
+            debug!("SPS Calculated Level: {}", level);
             return Some(level);
         }
 
+        debug!("Did not update level!");
         None
     }
 }
