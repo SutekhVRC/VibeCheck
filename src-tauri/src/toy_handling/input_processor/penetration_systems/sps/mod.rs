@@ -1,4 +1,4 @@
-pub mod model;
+pub mod mapping;
 
 use std::collections::HashMap;
 
@@ -7,7 +7,7 @@ use ts_rs::TS;
 
 use crate::toy_handling::{input_processor::InputProcessor, ModeProcessorInputType};
 
-use self::model::SPSMapping;
+use self::mapping::SPSMapping;
 
 /*
  * Identifier for each type/id combination - This should be HashMap key
@@ -33,7 +33,7 @@ impl InputProcessor for SPSProcessor {
      * onKeyChange() -> Tests for Self|Other && NewRoot|NewTip
      * Length Detectors -> update() method(NewRoot.value, NewTip.value)
      * within update() -> test for bad samples (set bad sample) -> get length (len = NewTip.value - NewRoot.value) -> save if tip <= 0.99
-     * calculate length from samples -> if less than 4 samples return a bad sample
+     * calculate length from samples -> if less than 4 samples use old / bad sample if <4
      * if 4 or more samples do length decision algo
      * motor level is calculated by
      * ~
@@ -65,8 +65,11 @@ impl InputProcessor for SPSProcessor {
             _ => return None,
         };
 
+        // Add good length calculations to mapping (self/other)
         mapping.update_mapping_length_values(others);
+        // Update internal mapping length based on stored length calculations
         mapping.update_mapping_length(others);
+        // Get updated feature level (bzz level)
         mapping.update_level(others)
     }
 }

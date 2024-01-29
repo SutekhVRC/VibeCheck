@@ -115,7 +115,8 @@ impl SPSMapping {
             }
 
             if tip_value > 0.99 {
-                todo!()
+                // Use last value
+                // Should we have a bad length ?
             } else {
                 self.length_values_others.insert(0, temp_length);
                 self.length_values_others.truncate(SAVED_LENGTH_VALUES_MAX);
@@ -140,7 +141,8 @@ impl SPSMapping {
             }
 
             if tip_value > 0.99 {
-                todo!()
+                // Use last value
+                // Should we have a bad length ?
             } else {
                 self.length_values_self.insert(0, temp_length);
                 self.length_values_self.truncate(SAVED_LENGTH_VALUES_MAX);
