@@ -270,7 +270,7 @@ export default function FeatureForm({
                   />
                 )}
                 <FourPanel
-                  text="Idle"
+                  text="Idle Speed"
                   tooltip="Set the idle motor speed for this feature. Idle activates when there is no input. Your set idle speed won't activate until you send at least one float value in the valid min/max range you have set."
                   flipped={feature.flip_input_float}
                   three={
