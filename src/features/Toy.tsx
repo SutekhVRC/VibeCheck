@@ -19,21 +19,21 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
 
   return (
     <div className="h-full w-full">
-      <div className="flex items-center justify-between px-6 text-4xl">
+      <div className="flex items-center justify-between px-2 text-4xl">
         <div>{nameInfo.shortName}</div>
         <ToyInfo nameInfo={nameInfo} toyPower={toy.toy_power} />
       </div>
-      <div className="m-4 h-full">
+      <div className="px-8">
         <ToySettings toy={toy} />
-        <div className="scrollbar flex w-[calc(100vw-300px)] select-none overflow-x-scroll">
+        <div className="scrollbar flex w-[calc(100vw-340px)] select-none gap-4 overflow-x-scroll">
           {toy.features.map((feature, featureArrayIndex) => (
             <button
               key={`${feature.feature_type} ${feature.feature_index}`}
               onClick={() => setSelectedFeatureIndex(featureArrayIndex)}
               className={cn(
-                featureArrayIndex == selectedFeatureIndex && "outline",
+                "whitespace-nowrap rounded-md border-2 border-transparent bg-zinc-700 px-4 py-1 hover:bg-cyan-600",
                 feature.feature_enabled ? "text-zinc-200" : "text-zinc-500",
-                "m-2 whitespace-nowrap rounded-md bg-zinc-700 px-4 py-1 outline-2 outline-cyan-500 hover:bg-cyan-600",
+                featureArrayIndex == selectedFeatureIndex && "border-cyan-500",
               )}
             >
               {feature.feature_type} {feature.feature_index}
