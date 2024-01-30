@@ -164,7 +164,7 @@ export default function App() {
               />
             </UpdatePing>
             <Tooltip
-              text={isEnabled ? "Disable OSC" : "Enable OSC"}
+              text={isEnabled ? "Disable App" : "Enable App"}
               asChild={false}
             >
               <Switch
