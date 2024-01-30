@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FeVCToyFeature } from "src-tauri/bindings/FeVCToyFeature";
 import { ToyPower } from "src-tauri/bindings/ToyPower";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import lovenseLogo from "../assets/Lovense.png";
@@ -14,8 +15,13 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
   const nameInfo = NameInfo(toy);
 
   useEffect(() => {
+    // update from external - because toy could go online/offline and be 'different'
     if (selectedFeatureIndex >= toy.features.length) setSelectedFeatureIndex(0);
   }, [toy]);
+
+  function toyFeatureKey(t: FeVCToy, f: FeVCToyFeature) {
+    return `${t.toy_name} ${t.sub_id} ${f.feature_type} ${f.feature_index}`;
+  }
 
   return (
     <div className="h-full w-full">
@@ -28,7 +34,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
         <div className="scrollbar flex w-[calc(100vw-340px)] select-none gap-4 overflow-x-scroll">
           {toy.features.map((feature, featureArrayIndex) => (
             <button
-              key={`${feature.feature_type} ${feature.feature_index}`}
+              key={toyFeatureKey(toy, feature)}
               onClick={() => setSelectedFeatureIndex(featureArrayIndex)}
               className={cn(
                 "whitespace-nowrap rounded-md border-2 border-transparent bg-zinc-700 px-4 py-1 hover:bg-cyan-600",
@@ -40,7 +46,11 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
             </button>
           ))}
         </div>
-        <FeatureForm toy={toy} selectedIndex={selectedFeatureIndex} />
+        <FeatureForm
+          toy={toy}
+          selectedIndex={selectedFeatureIndex}
+          key={toyFeatureKey(toy, toy.features[selectedFeatureIndex])}
+        />
       </div>
     </div>
   );

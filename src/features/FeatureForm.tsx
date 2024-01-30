@@ -3,7 +3,7 @@ import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
 import { Select } from "@/layout/Select";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { Plus, X } from "lucide-react";
-import { ChangeEvent, Fragment, ReactNode, useEffect, useState } from "react";
+import { ChangeEvent, Fragment, ReactNode, useState } from "react";
 import { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
 import { FeToyParameter } from "src-tauri/bindings/FeToyParameter";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
@@ -34,10 +34,6 @@ export default function FeatureForm({
   const submenuOptions = ["Parameters", "Advanced"] as const;
   type SubmenuOptions = (typeof submenuOptions)[number];
   const [subMenu, setSubMenu] = useState<SubmenuOptions>("Parameters");
-
-  useEffect(() => {
-    setToyFeature(toy.features[selectedIndex] ?? toy.features[0]);
-  }, [toy, selectedIndex]);
 
   const {
     simulateEnabled,
