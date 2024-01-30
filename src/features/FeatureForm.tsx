@@ -164,6 +164,30 @@ export default function FeatureForm({
               }
             />
           }
+        />{" "}
+        <FourPanel
+          text="Processor"
+          tooltip="The Input processor for this feature"
+          three={
+            <div className="flex gap-2">
+              <Select
+                name="pen_system_type"
+                value={feature.penetration_system.pen_system_type}
+                onChange={(e) => {
+                  handleInputProcessor(e);
+                }}
+                options={PenetrationSystems}
+              />
+              <Select
+                name="pen_system_processing_mode"
+                value={feature.penetration_system.pen_system_processing_mode}
+                onChange={(e) => {
+                  handleInputProcessor(e);
+                }}
+                options={ProcessingModes}
+              />
+            </div>
+          }
         />
       </FourPanelContainer>
       <div className="rounded-md">
@@ -305,32 +329,7 @@ export default function FeatureForm({
                     />
                   }
                 />
-                <FourPanel
-                  text="Processor"
-                  tooltip="The Input processor for this feature"
-                  three={
-                    <div className="flex gap-2">
-                      <Select
-                        name="pen_system_type"
-                        value={feature.penetration_system.pen_system_type}
-                        onChange={(e) => {
-                          handleInputProcessor(e);
-                        }}
-                        options={PenetrationSystems}
-                      />
-                      <Select
-                        name="pen_system_processing_mode"
-                        value={
-                          feature.penetration_system.pen_system_processing_mode
-                        }
-                        onChange={(e) => {
-                          handleInputProcessor(e);
-                        }}
-                        options={ProcessingModes}
-                      />
-                    </div>
-                  }
-                />
+
                 <FourPanel
                   text="Smooth Level"
                   tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
@@ -428,7 +427,7 @@ export default function FeatureForm({
 
 function HackyScrollArea({ children }: { children: ReactNode }) {
   return (
-    <ScrollArea className="scrollbar h-[calc(100vh-440px)] overflow-y-scroll">
+    <ScrollArea className="scrollbar h-[calc(100vh-470px)] overflow-y-scroll">
       {children}
     </ScrollArea>
   );
