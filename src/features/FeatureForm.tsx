@@ -107,8 +107,7 @@ export default function FeatureForm({
     setToyFeature((f) => {
       const newParams = [...f.osc_parameters];
       if (e.target.name == "osc_parameter") {
-        newParams[paramIndex].parameter =
-          `${OSC_PARAM_PREFIX}${e.target.value}`;
+        newParams[paramIndex].parameter = normalizeOscParameter(e.target.value);
       } else if (e.target.name == "osc_parameter_mode") {
         newParams[paramIndex].processing_mode = e.target
           .value as FeProcessingMode;
@@ -120,6 +119,10 @@ export default function FeatureForm({
       handleFeatureAlter(toy, newF);
       return newF;
     });
+  }
+
+  function normalizeOscParameter(p: string) {
+    return `${OSC_PARAM_PREFIX}${p.replaceAll(" ", "_")}`;
   }
 
   function handleInputProcessor(e: ChangeEvent<HTMLSelectElement>) {
