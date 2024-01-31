@@ -71,6 +71,11 @@ impl SPSMapping {
         // Logic needs to be optimized (polymorphism/whatever)
         let Some((root_value, tip_value)) = self.get_root_tip_osc_values(others) else {
             debug!("Failed to get root & tip values!");
+            if others {
+                self.length_values_others.clear();
+            } else {
+                self.length_values_self.clear();
+            }
             return;
         };
         trace!("Got root & tip values");
@@ -97,6 +102,7 @@ impl SPSMapping {
         if tip_value > 0.99 {
             // Use last value
             // Should we have a bad length ?
+            // No need for bad length just reuse last ??
         } else {
             if others {
                 self.length_values_others.insert(0, temp_length);
@@ -124,22 +130,41 @@ impl SPSMapping {
         if others {
             self.length_values_others
                 .sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
-            self.others_stored_length = self
-                .length_values_others
-                .windows(2)
-                .map(|length_value| (length_value[0] - length_value[1]).abs())
-                .min_by(|low, high| low.partial_cmp(high).unwrap_or(Ordering::Less))
-                .unwrap();
+
+            let stacks: Vec<&[f64]> = self.length_values_others.windows(2).collect();
+
+            let mut smallest_diff = 1.;
+            let mut iterator = 0;
+
+            for stack in &stacks {
+                let diff = (stack[1] - stack[0]).abs();
+                if diff < smallest_diff {
+                    smallest_diff = diff;
+                    iterator += 1;
+                }
+            }
+
+            self.others_stored_length = stacks[iterator][0];
             debug!("Length Calculated! {}", self.others_stored_length);
         } else {
             self.length_values_self
                 .sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
-            self.self_stored_length = self
-                .length_values_others
-                .windows(2)
-                .map(|length_value| (length_value[0] - length_value[1]).abs())
-                .min_by(|low, high| low.partial_cmp(high).unwrap_or(Ordering::Less))
-                .unwrap();
+
+            let stacks: Vec<&[f64]> = self.length_values_self.windows(2).collect();
+
+            let mut smallest_diff = 1.;
+            let mut iterator = 0;
+
+            for stack in &stacks {
+                let diff = (stack[1] - stack[0]).abs();
+                if diff < smallest_diff {
+                    smallest_diff = diff;
+                    iterator += 1;
+                }
+            }
+
+            self.self_stored_length = stacks[iterator][0];
+            debug!("Length Calculated! {}", self.self_stored_length);
         }
     }
 
