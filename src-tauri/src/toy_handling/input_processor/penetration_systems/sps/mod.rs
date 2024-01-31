@@ -10,10 +10,12 @@ use crate::toy_handling::{input_processor::InputProcessor, ModeProcessorInputTyp
 
 use self::mapping::SPSMapping;
 
-/*
- * Identifier for each type/id combination - This should be HashMap key
- * Try
- */
+#[derive(Debug, Copy, Clone)]
+pub enum SPSWho {
+    Others,
+    _Self,
+    Pass,
+}
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize, TS)]
 pub struct SPSProcessor {
@@ -47,9 +49,9 @@ impl InputProcessor for SPSProcessor {
 
     fn process(&mut self, addr: &str, input: ModeProcessorInputType) -> Option<f64> {
         // Don't support booleans
-        let ModeProcessorInputType::Float(float_input) = input else {
-            return None;
-        };
+        //let ModeProcessorInputType::Float(float_input) = input else {
+        //    return None;
+        //};
 
         // Strip away VRChat avatar parameter prefix
         let sps_param = addr.strip_prefix("/avatar/parameters/")?;
@@ -60,23 +62,63 @@ impl InputProcessor for SPSProcessor {
         //debug!("SPS Key: {} | SPS Leaf: {}", sps_key, sps_leaf);
 
         // Process parameter and create or get mutable ref to mapping
-        let (mapping, leaf) = self.populate_mapping(&sps_param, float_input)?;
+        let (mapping, leaf) = self.populate_mapping(&sps_param, input)?;
 
-        let others = match leaf.as_str() {
-            "PenOthersNewRoot" | "PenOthersNewTip" => true,
-            "PenSelfNewRoot" | "PenSelfNewTip" => false,
+        let others: SPSWho = match leaf.as_str() {
+            "TouchOthers" => SPSWho::Others,
+            "TouchSelf" => SPSWho::_Self,
+            "PenOthersNewRoot" | "PenOthersNewTip" => SPSWho::Others,
+            "PenSelfNewRoot" | "PenSelfNewTip" => SPSWho::_Self,
+            "TouchOthersClose" => {
+                // If this parameter is not a bool then skip and return None
+                let b = input.try_bool()?;
+
+                if b {
+                    mapping.others_touch_enabled = true;
+                } else {
+                    mapping.others_touch_enabled = false;
+                    return Some(0.);
+                }
+
+                SPSWho::Others
+            }
+            "TouchSelfClose" => {
+                // If this parameter is not a bool then skip and return None
+                let b = input.try_bool()?;
+
+                if b {
+                    mapping.self_touch_enabled = true;
+                } else {
+                    mapping.self_touch_enabled = false;
+                    return Some(0.);
+                }
+
+                SPSWho::_Self
+            }
             _ => {
-                trace!("No Leaf Match for Other | Self");
-                return None;
+                warn!(
+                    "No Leaf Match for Other | Self - Unhandled OGB parameter?: {}",
+                    leaf
+                );
+                SPSWho::Pass
             }
         };
 
-        debug!("OTHERS: {}", others);
+        debug!(
+            "WHO: {:?} | TOUCH: O{}/S{}",
+            others, mapping.others_touch_enabled, mapping.self_touch_enabled
+        );
 
-        // Add good length calculations to mapping (self/other)
-        mapping.update_mapping_length_values(others);
-        // Update internal mapping length based on stored length calculations
-        mapping.update_mapping_length(others);
+        if let SPSWho::Pass = others {
+            return None;
+        }
+
+        if !mapping.is_touch() {
+            // Add good length calculations to mapping (self/other)
+            mapping.update_mapping_length_values(others);
+            // Update internal mapping length based on stored length calculations
+            mapping.update_mapping_length(others);
+        }
         // Get updated feature level (bzz level)
         mapping.update_level(others)
     }
@@ -114,7 +156,7 @@ impl SPSProcessor {
     fn populate_mapping(
         &mut self,
         sps_param: &str,
-        float_value: f64,
+        osc_input_value: ModeProcessorInputType,
     ) -> Option<(&mut SPSMapping, String)> {
         let Some((sps_key, sps_type, _sps_obj_id, sps_leaf)) =
             SPSProcessor::get_sps_param_parsed(&sps_param)
@@ -138,7 +180,7 @@ impl SPSProcessor {
         mapping
             .as_mut()
             .unwrap()
-            .add_osc_value(sps_leaf.to_string(), float_value);
+            .add_osc_value(sps_leaf.to_string(), osc_input_value);
 
         Some((mapping.unwrap(), sps_leaf))
     }

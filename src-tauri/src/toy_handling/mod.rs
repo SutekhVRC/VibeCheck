@@ -32,11 +32,26 @@ pub enum ModeProcessorInput<'processor> {
     RawInput(ModeProcessorInputType, &'processor mut ToyParameter),
 }
 
-
-
+#[derive(Debug, Clone, TS, Serialize, Deserialize, Copy)]
 pub enum ModeProcessorInputType {
     Float(f64),
     Boolean(bool),
+}
+
+impl ModeProcessorInputType {
+    pub fn try_float(&self) -> Option<f64> {
+        match self {
+            Self::Float(f) => Some(*f),
+            _ => None,
+        }
+    }
+
+    pub fn try_bool(&self) -> Option<bool> {
+        match self {
+            Self::Boolean(b) => Some(*b),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, TS, Clone)]

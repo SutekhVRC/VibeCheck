@@ -5,6 +5,10 @@ use std::{cmp::Ordering, collections::HashMap};
 use strum::{Display, EnumString};
 use ts_rs::TS;
 
+use crate::toy_handling::ModeProcessorInputType;
+
+use super::SPSWho;
+
 const SAVED_LENGTH_VALUES_MAX: usize = 8;
 const SAVED_LENGTH_VALUES_MIN: usize = 4;
 
@@ -27,9 +31,11 @@ pub struct SPSMapping {
     length_values_self: Vec<f64>,
     self_stored_length: f64,
 
+    pub others_touch_enabled: bool,
+    pub self_touch_enabled: bool,
     // K: Contact type | V: OSCValue
     // Values are leaf param's values
-    osc_values: HashMap<String, f64>,
+    osc_values: HashMap<String, ModeProcessorInputType>,
 }
 
 impl SPSMapping {
@@ -45,33 +51,54 @@ impl SPSMapping {
             others_stored_length: 0.,
             length_values_self: Vec::with_capacity(SAVED_LENGTH_VALUES_MAX + 1),
             self_stored_length: 0.,
+            others_touch_enabled: false,
+            self_touch_enabled: false,
             osc_values: HashMap::new(),
         })
     }
 
-    fn get_root_tip_osc_values(&self, others: bool) -> Option<(f64, f64)> {
-        let values: (f64, f64) = if others {
-            let root_value = *self.osc_values.get("PenOthersNewRoot")?;
-            let tip_value = *self.osc_values.get("PenOthersNewTip")?;
+    fn get_root_tip_osc_values(&self, others: SPSWho) -> Option<(f64, f64)> {
+        let values: (f64, f64) = if let SPSWho::Others = others {
+            let root_value = self.osc_values.get("PenOthersNewRoot")?.try_float()?;
+            let tip_value = self.osc_values.get("PenOthersNewTip")?.try_float()?;
             (root_value, tip_value)
         } else {
-            let root_value = *self.osc_values.get("PenSelfNewRoot")?;
-            let tip_value = *self.osc_values.get("PenSelfNewTip")?;
+            let root_value = self.osc_values.get("PenSelfNewRoot")?.try_float()?;
+            let tip_value = self.osc_values.get("PenSelfNewTip")?.try_float()?;
             (root_value, tip_value)
         };
 
         Some(values)
     }
 
-    pub fn add_osc_value(&mut self, leaf: String, value: f64) {
+    pub fn is_touch(&self) -> bool {
+        if self.others_touch_enabled | self.self_touch_enabled {
+            return true;
+        }
+        false
+    }
+
+    pub fn get_touch_value(&self, others: SPSWho) -> Option<f64> {
+        if !self.is_touch() {
+            return None;
+        }
+
+        if let SPSWho::Others = others {
+            self.osc_values.get("TouchOthers")?.try_float()
+        } else {
+            self.osc_values.get("TouchSelf")?.try_float()
+        }
+    }
+
+    pub fn add_osc_value(&mut self, leaf: String, value: ModeProcessorInputType) {
         self.osc_values.insert(leaf, value);
     }
 
-    pub fn update_mapping_length_values(&mut self, others: bool) {
+    pub fn update_mapping_length_values(&mut self, others: SPSWho) {
         // Logic needs to be optimized (polymorphism/whatever)
         let Some((root_value, tip_value)) = self.get_root_tip_osc_values(others) else {
             debug!("Failed to get root & tip values!");
-            if others {
+            if let SPSWho::Others = others {
                 self.length_values_others.clear();
             } else {
                 self.length_values_self.clear();
@@ -81,7 +108,7 @@ impl SPSMapping {
         trace!("Got root & tip values");
 
         if root_value < 0.01 || tip_value < 0.01 {
-            if others {
+            if let SPSWho::Others = others {
                 self.length_values_others.clear();
             } else {
                 self.length_values_self.clear();
@@ -104,7 +131,7 @@ impl SPSMapping {
             // Should we have a bad length ?
             // No need for bad length just reuse last ??
         } else {
-            if others {
+            if let SPSWho::Others = others {
                 self.length_values_others.insert(0, temp_length);
                 self.length_values_others.truncate(SAVED_LENGTH_VALUES_MAX);
                 debug!("Added length value");
@@ -115,8 +142,8 @@ impl SPSMapping {
         }
     }
 
-    pub fn update_mapping_length(&mut self, others: bool) {
-        let values_len = if others {
+    pub fn update_mapping_length(&mut self, others: SPSWho) {
+        let values_len = if let SPSWho::Others = others {
             self.length_values_others.len()
         } else {
             self.length_values_self.len()
@@ -127,7 +154,7 @@ impl SPSMapping {
             return;
         }
 
-        if others {
+        if let SPSWho::Others = others {
             self.length_values_others
                 .sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Less));
 
@@ -168,9 +195,15 @@ impl SPSMapping {
         }
     }
 
-    pub fn update_level(&mut self, others: bool) -> Option<f64> {
+    pub fn update_level(&mut self, others: SPSWho) -> Option<f64> {
+        if self.is_touch() {
+            let new_touch_value = self.get_touch_value(others)?;
+            debug!("TOUCH VALUE: {}", new_touch_value);
+            return Some(new_touch_value);
+        }
+
         let (root_value, tip_value) = self.get_root_tip_osc_values(others)?;
-        let stored_length = if others {
+        let stored_length = if let SPSWho::Others = others {
             self.others_stored_length
         } else {
             self.self_stored_length
