@@ -354,9 +354,9 @@ export default function FeatureForm({
                     feature.penetration_system.pen_system_processing_mode ==
                     "Rate"
                   }
-                  min={1}
-                  max={20}
-                  step={1}
+                  min={0.1}
+                  max={2}
+                  step={0.05}
                   value={[levels.rate_tune]}
                   onValueChange={(e) => handleLevels("rate_tune", e[0])}
                   onValueCommit={handleCommit}
