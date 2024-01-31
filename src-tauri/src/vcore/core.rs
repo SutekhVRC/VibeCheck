@@ -379,7 +379,6 @@ pub async fn native_vibecheck_disable(
         return Err(frontend::VCFeError::DisableFailure);
     }
 
-    //Delay::new(Duration::from_secs(10)).await;
     trace!("Calling destroy_toy_update_handler()");
     vc_lock.destroy_toy_update_handler().await;
     trace!("TUH destroyed");
@@ -387,27 +386,15 @@ pub async fn native_vibecheck_disable(
     let bpc = vc_lock.bp_client.as_ref().unwrap();
     let _ = bpc.stop_scanning().await;
     let _ = bpc.stop_all_devices().await;
-    //let _ = bpc.disconnect().await;
-    //Delay::new(Duration::from_secs(10)).await;
-    //drop(bpc);
+
     info!("ButtplugClient stopped operations");
 
-    // CEH no longer gets destroyed
-    //trace!("Calling destroy_ceh()");
-    //vc_lock.destroy_ceh().await;
-    //info!("CEH destroyed");
-
-    //Delay::new(Duration::from_secs(10)).await;
     vc_lock
         .tme_send_tx
         .send(ToyManagementEvent::Sig(TmSig::TMHReset))
         .unwrap();
     info!("Sent TMHReset signal");
 
-    // Dont clear toys anymore
-    //vc_lock.toys.clear();
-    //info!("Cleared toys in VibeCheckState");
-    //let _ = vc_lock.bp_client.as_ref().unwrap().stop_all_devices().await;
     vc_lock.running = RunningState::Stopped;
 
     info!("Starting disabled state OSC cmd listener");
