@@ -347,6 +347,10 @@ impl SPSMapping {
 
             let stacks: Vec<&[f64]> = self.length_values_others.windows(2).collect();
 
+            if stacks.len() < 2 {
+                return;
+            }
+
             let mut smallest_diff = 1.;
             let mut iterator = 0;
 
