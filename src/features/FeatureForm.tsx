@@ -11,7 +11,7 @@ import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import FourPanel from "../components/FourPanel";
 import FourPanelContainer from "../components/FourPanelContainer";
-import { OSC_PARAM_PREFIX } from "../data/constants";
+import { OSC, ObjectValues } from "../data/constants";
 import useSimulate from "../hooks/useSimulate";
 import { handleFeatureAlter } from "../hooks/useToys";
 import Slider from "../layout/Slider";
@@ -23,6 +23,11 @@ type ToyFeatureFormProps = {
   selectedIndex: number;
 };
 
+const SUB_MENU = {
+  BASIC: "BASIC",
+  ADVANCED: "ADVANCED",
+} as const;
+
 export default function FeatureForm({
   toy,
   selectedIndex,
@@ -31,9 +36,9 @@ export default function FeatureForm({
     toy.features[selectedIndex] ?? toy.features[0],
   );
   const levels = feature.feature_levels;
-  const submenuOptions = ["Parameters", "Advanced"] as const;
-  type SubmenuOptions = (typeof submenuOptions)[number];
-  const [subMenu, setSubMenu] = useState<SubmenuOptions>("Parameters");
+  const [subMenu, setSubMenu] = useState<ObjectValues<typeof SUB_MENU>>(
+    SUB_MENU.BASIC,
+  );
 
   const {
     simulateEnabled,
@@ -78,7 +83,7 @@ export default function FeatureForm({
 
   function addParam() {
     setToyFeature((f) => {
-      const newParam = `${OSC_PARAM_PREFIX}param-${findParamName(
+      const newParam = `${OSC.PARAM_PREFIX}param-${findParamName(
         f.osc_parameters,
       )}`;
       const newF = {
@@ -118,7 +123,7 @@ export default function FeatureForm({
   }
 
   function normalizeOscParameter(p: string) {
-    return `${OSC_PARAM_PREFIX}${p.replaceAll(" ", "_")}`;
+    return `${OSC.PARAM_PREFIX}${p.replaceAll(" ", "_")}`;
   }
 
   function handleInputProcessor(e: ChangeEvent<HTMLSelectElement>) {
@@ -192,15 +197,17 @@ export default function FeatureForm({
       <div className="flex justify-end">
         <Button
           onClick={() =>
-            setSubMenu((s) => (s == "Advanced" ? "Parameters" : "Advanced"))
+            setSubMenu((s) =>
+              s == SUB_MENU.ADVANCED ? SUB_MENU.BASIC : SUB_MENU.ADVANCED,
+            )
           }
-          variant={subMenu == "Advanced" ? "secondary" : "ghost"}
+          variant={subMenu == SUB_MENU.ADVANCED ? "secondary" : "ghost"}
           size="sm"
         >
           Advanced
         </Button>
       </div>
-      {subMenu == "Parameters" ? (
+      {subMenu == SUB_MENU.BASIC ? (
         <>
           <div className="flex items-center gap-2">
             <div>Parameters</div>
@@ -221,7 +228,7 @@ export default function FeatureForm({
                     <input
                       className="w-full rounded-sm px-4 text-zinc-800 outline-none"
                       name="osc_parameter"
-                      value={param.parameter.replace(OSC_PARAM_PREFIX, "")}
+                      value={param.parameter.replace(OSC.PARAM_PREFIX, "")}
                       onChange={(e) => handleOscParam(e, paramIndex)}
                     />
                     <Select

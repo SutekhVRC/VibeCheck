@@ -4,7 +4,7 @@ import { FeVCToyAnatomy } from "../../src-tauri/bindings/FeVCToyAnatomy";
 import FourPanel from "../components/FourPanel";
 import FourPanelContainer from "../components/FourPanelContainer";
 import { createToast } from "../components/Toast";
-import { OSC_DATA_PREFIX } from "../data/constants";
+import { OSC } from "../data/constants";
 import { ToyAnatomyArray } from "../data/stringArrayTypes";
 import { handleToyAlter } from "../hooks/useToys";
 import { Select } from "../layout/Select";
@@ -16,7 +16,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
     .replace("Lovense Connect", "Lovense")
     .replaceAll(" ", "_")
     .toLowerCase();
-  const osc_data_addr = `${OSC_DATA_PREFIX}${parsed_toy_name}/${toy.sub_id}/battery`;
+  const osc_data_addr = `${OSC.DATA_PREFIX}${parsed_toy_name}/${toy.sub_id}/battery`;
 
   async function handleCopy() {
     try {

@@ -5,16 +5,10 @@ import type { FeCoreEvent } from "../../src-tauri/bindings/FeCoreEvent";
 import { FeStateEvent } from "../../src-tauri/bindings/FeStateEvent";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 import { createToast } from "../components/Toast";
-import {
-  CORE_EVENT,
-  DISABLE,
-  ENABLE,
-  GET_CONFIG,
-  SCAN_LENGTH,
-  START_SCAN,
-  STOP_SCAN,
-} from "../data/constants";
+import { INVOKE, LISTEN } from "../data/constants";
 import { assertExhaustive } from "../utils";
+
+const SCAN_LENGTH = 10000;
 
 export function useCoreEvents() {
   const [isEnabled, setIsEnabled] = useState(false);
@@ -23,7 +17,7 @@ export function useCoreEvents() {
 
   async function enable() {
     try {
-      await invoke(ENABLE);
+      await invoke(INVOKE.ENABLE);
       setIsEnabled(true);
     } catch (e) {
       createToast("error", "Could not enable!", JSON.stringify(e));
@@ -33,7 +27,7 @@ export function useCoreEvents() {
   async function stopScanAndDisable() {
     try {
       await stopScan();
-      await invoke(DISABLE);
+      await invoke(INVOKE.DISABLE);
       setIsEnabled(false);
     } catch (e) {
       createToast("error", "Could not disable!", JSON.stringify(e));
@@ -51,7 +45,7 @@ export function useCoreEvents() {
   async function enableAndStartScan() {
     try {
       await enable();
-      await invoke(START_SCAN);
+      await invoke(INVOKE.START_SCAN);
       setIsScanning(true);
     } catch (e) {
       createToast("error", "Could not start scan!", JSON.stringify(e));
@@ -60,7 +54,7 @@ export function useCoreEvents() {
 
   async function stopScan() {
     try {
-      await invoke(STOP_SCAN);
+      await invoke(INVOKE.STOP_SCAN);
       setIsScanning(false);
     } catch (e) {
       createToast("error", "Could not stop scan!", JSON.stringify(e));
@@ -108,7 +102,7 @@ export function useCoreEvents() {
   }
 
   useEffect(() => {
-    const unlistenPromise = listen<FeCoreEvent>(CORE_EVENT, (event) =>
+    const unlistenPromise = listen<FeCoreEvent>(LISTEN.CORE_EVENT, (event) =>
       handleCoreEvent(event.payload),
     );
 
@@ -119,7 +113,7 @@ export function useCoreEvents() {
 
   async function refreshConfig() {
     try {
-      const config = await invoke<FeVibeCheckConfig>(GET_CONFIG);
+      const config = await invoke<FeVibeCheckConfig>(INVOKE.GET_CONFIG);
       setConfig(config);
     } catch {
       setConfig(null);
@@ -129,7 +123,7 @@ export function useCoreEvents() {
   useEffect(() => {
     async function getConfig() {
       try {
-        const config = await invoke<FeVibeCheckConfig>(GET_CONFIG);
+        const config = await invoke<FeVibeCheckConfig>(INVOKE.GET_CONFIG);
         setConfig(config);
       } catch {
         setConfig(null);

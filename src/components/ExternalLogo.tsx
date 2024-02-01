@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api";
 import type { FeSocialLink } from "../../src-tauri/bindings/FeSocialLink";
-import { OPEN_BROWSER } from "../data/constants";
+import { INVOKE } from "../data/constants";
 import Tooltip from "../layout/Tooltip";
 import { createToast } from "./Toast";
 
@@ -17,7 +17,7 @@ export default function ExternalLogo({
 }: ExternalLogoProps) {
   async function openBrowser() {
     try {
-      await invoke(OPEN_BROWSER, { link: link });
+      await invoke(INVOKE.OPEN_BROWSER, { link: link });
     } catch (e) {
       createToast("error", "Could not open browser", JSON.stringify(e));
     }
