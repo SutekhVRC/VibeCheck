@@ -3,7 +3,7 @@ export type ObjectValues<T> = T[keyof T];
 export const LISTEN = {
   CORE_EVENT: "fe_core_event",
   TOY_EVENT: "fe_toy_event",
-};
+} as const;
 
 export const INVOKE = {
   ALTER_TOY: "alter_toy",
@@ -23,4 +23,4 @@ export const INVOKE = {
 export const OSC = {
   PARAM_PREFIX: "/avatar/parameters/",
   DATA_PREFIX: "vibecheck/osc_data/",
-};
+} as const;
