@@ -27,7 +27,7 @@ use tauri::Manager;
  */
 #[tauri::command]
 pub fn vibecheck_version(app_handle: tauri::AppHandle) -> String {
-    format!("{} windows", app_handle.package_info().version)
+    format!("{}-beta windows", app_handle.package_info().version)
 }
 
 /*

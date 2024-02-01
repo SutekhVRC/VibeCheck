@@ -5355,7 +5355,7 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "vibecheck"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "btleplug 0.10.5",
  "buttplug",
