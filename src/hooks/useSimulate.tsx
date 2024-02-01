@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
 import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import { createToast } from "../components/Toast";
-import { SIMULATE_TOY_FEATURE } from "../data/constants";
+import { INVOKE } from "../data/constants";
 import { useUpdateEffect } from "./useUpdateEffect";
 
 export default function useSimulate(
@@ -46,7 +46,7 @@ export default function useSimulate(
   async function invokeSimulation(floatLevel: number) {
     if (toyId == null) return;
     try {
-      await invoke(SIMULATE_TOY_FEATURE, {
+      await invoke(INVOKE.SIMULATE_TOY_FEATURE, {
         toyId,
         featureIndex: feature.feature_index,
         featureType: feature.feature_type,

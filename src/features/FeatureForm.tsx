@@ -2,8 +2,9 @@ import { Button } from "@/components/ui/button";
 import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
 import { Select } from "@/layout/Select";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
+import { debounce } from "lodash";
 import { Plus, X } from "lucide-react";
-import { ChangeEvent, Fragment, ReactNode, useState } from "react";
+import { ChangeEvent, Fragment, ReactNode, useCallback, useState } from "react";
 import { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
 import { FeToyParameter } from "src-tauri/bindings/FeToyParameter";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
@@ -11,7 +12,7 @@ import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import FourPanel from "../components/FourPanel";
 import FourPanelContainer from "../components/FourPanelContainer";
-import { OSC_PARAM_PREFIX } from "../data/constants";
+import { OSC, ObjectValues } from "../data/constants";
 import useSimulate from "../hooks/useSimulate";
 import { handleFeatureAlter } from "../hooks/useToys";
 import Slider from "../layout/Slider";
@@ -23,6 +24,11 @@ type ToyFeatureFormProps = {
   selectedIndex: number;
 };
 
+const SUB_MENU = {
+  BASIC: "BASIC",
+  ADVANCED: "ADVANCED",
+} as const;
+
 export default function FeatureForm({
   toy,
   selectedIndex,
@@ -31,9 +37,9 @@ export default function FeatureForm({
     toy.features[selectedIndex] ?? toy.features[0],
   );
   const levels = feature.feature_levels;
-  const submenuOptions = ["Parameters", "Advanced"] as const;
-  type SubmenuOptions = (typeof submenuOptions)[number];
-  const [subMenu, setSubMenu] = useState<SubmenuOptions>("Parameters");
+  const [subMenu, setSubMenu] = useState<ObjectValues<typeof SUB_MENU>>(
+    SUB_MENU.BASIC,
+  );
 
   const {
     simulateEnabled,
@@ -42,6 +48,13 @@ export default function FeatureForm({
     simulateOnValueChange,
     simulateOnValueCommit,
   } = useSimulate(toy.toy_id, feature);
+
+  // Only need debounce for input fields, levels work with onValueCommit
+  // Fast debounce because otherwise we'd have to merge with other updates
+  const debouncedAlter = useCallback(
+    debounce((t, f) => handleFeatureAlter(t, f), 100),
+    [],
+  );
 
   function handleBool(checked: boolean, name: keyof FeVCToyFeature) {
     setToyFeature((f) => {
@@ -78,7 +91,7 @@ export default function FeatureForm({
 
   function addParam() {
     setToyFeature((f) => {
-      const newParam = `${OSC_PARAM_PREFIX}param-${findParamName(
+      const newParam = `${OSC.PARAM_PREFIX}param-${findParamName(
         f.osc_parameters,
       )}`;
       const newF = {
@@ -87,7 +100,7 @@ export default function FeatureForm({
           ...f.osc_parameters,
           {
             parameter: newParam,
-            processing_mode: "Raw" as FeProcessingMode,
+            processing_mode: "Raw" as const,
           },
         ],
       };
@@ -97,17 +110,29 @@ export default function FeatureForm({
   }
 
   function handleOscParam(
-    e: ChangeEvent<HTMLInputElement> | ChangeEvent<HTMLSelectElement>,
+    e: ChangeEvent<HTMLInputElement>,
     paramIndex: number,
   ) {
     setToyFeature((f) => {
       const newParams = [...f.osc_parameters];
-      if (e.target.name == "osc_parameter") {
-        newParams[paramIndex].parameter = normalizeOscParameter(e.target.value);
-      } else if (e.target.name == "osc_parameter_mode") {
-        newParams[paramIndex].processing_mode = e.target
-          .value as FeProcessingMode;
-      }
+      newParams[paramIndex].parameter = normalizeOscParameter(e.target.value);
+      const newF = {
+        ...f,
+        osc_parameters: newParams,
+      };
+      debouncedAlter(toy, newF);
+      return newF;
+    });
+  }
+
+  function handleOscParamMode(
+    e: ChangeEvent<HTMLSelectElement>,
+    paramIndex: number,
+  ) {
+    setToyFeature((f) => {
+      const newParams = [...f.osc_parameters];
+      newParams[paramIndex].processing_mode = e.target
+        .value as FeProcessingMode;
       const newF = {
         ...f,
         osc_parameters: newParams,
@@ -118,7 +143,7 @@ export default function FeatureForm({
   }
 
   function normalizeOscParameter(p: string) {
-    return `${OSC_PARAM_PREFIX}${p.replaceAll(" ", "_")}`;
+    return `${OSC.PARAM_PREFIX}${p.replaceAll(" ", "_")}`;
   }
 
   function handleInputProcessor(e: ChangeEvent<HTMLSelectElement>) {
@@ -192,15 +217,17 @@ export default function FeatureForm({
       <div className="flex justify-end">
         <Button
           onClick={() =>
-            setSubMenu((s) => (s == "Advanced" ? "Parameters" : "Advanced"))
+            setSubMenu((s) =>
+              s == SUB_MENU.ADVANCED ? SUB_MENU.BASIC : SUB_MENU.ADVANCED,
+            )
           }
-          variant={subMenu == "Advanced" ? "secondary" : "ghost"}
+          variant={subMenu == SUB_MENU.ADVANCED ? "secondary" : "ghost"}
           size="sm"
         >
           Advanced
         </Button>
       </div>
-      {subMenu == "Parameters" ? (
+      {subMenu == SUB_MENU.BASIC ? (
         <>
           <div className="flex items-center gap-2">
             <div>Parameters</div>
@@ -221,14 +248,14 @@ export default function FeatureForm({
                     <input
                       className="w-full rounded-sm px-4 text-zinc-800 outline-none"
                       name="osc_parameter"
-                      value={param.parameter.replace(OSC_PARAM_PREFIX, "")}
+                      value={param.parameter.replace(OSC.PARAM_PREFIX, "")}
                       onChange={(e) => handleOscParam(e, paramIndex)}
                     />
                     <Select
                       name="osc_parameter_mode"
                       value={param.processing_mode}
                       onChange={(e) => {
-                        handleOscParam(e, paramIndex);
+                        handleOscParamMode(e, paramIndex);
                       }}
                       options={ProcessingModes}
                     />

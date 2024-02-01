@@ -3,7 +3,7 @@ import { ChangeEvent, FormEvent, useState } from "react";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 import { createToast } from "../components/Toast";
 import UpdateButton from "../components/UpdateButton";
-import { CLEAR_OSC_CONFIG, SET_CONFIG } from "../data/constants";
+import { INVOKE } from "../data/constants";
 import Button from "../layout/Button";
 import Switch from "../layout/Switch";
 import { TooltipLabel } from "../layout/Tooltip";
@@ -53,7 +53,7 @@ export default function Config({
       ) {
         await disableOnPortChange();
       }
-      await invoke(SET_CONFIG, { feVcConfig: newConfig });
+      await invoke(INVOKE.SET_CONFIG, { feVcConfig: newConfig });
       createToast("info", "Saved config");
     } catch (e) {
       createToast("error", "Could not set config!", JSON.stringify(e));
@@ -62,7 +62,7 @@ export default function Config({
 
   async function clearOsc() {
     try {
-      await invoke(CLEAR_OSC_CONFIG);
+      await invoke(INVOKE.CLEAR_OSC_CONFIG);
       createToast(
         "info",
         "Cleared avatar OSC configs",
