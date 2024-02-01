@@ -2,7 +2,7 @@ pub mod mapping;
 
 use std::collections::HashMap;
 
-use log::{debug, trace, warn};
+use log::{trace, warn};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -15,6 +15,8 @@ pub enum SPSWho {
     Others,
     _Self,
     Pass,
+    Bypass(Option<f64>),
+    Stop, // For when a boolean param is zeroed we need to zero the power due to in game inaccuracies
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize, TS)]
@@ -55,65 +57,25 @@ impl InputProcessor for SPSProcessor {
 
         // Strip away VRChat avatar parameter prefix
         let sps_param = addr.strip_prefix("/avatar/parameters/")?;
-        debug!("SPS Param: {}", sps_param);
+        trace!("SPS Param: {}", sps_param);
 
         // Process SPS Param object key
         //let (sps_key, sps_leaf, sps_type) = SPSProcessor::get_sps_param_key_leaf(sps_param)?;
         //debug!("SPS Key: {} | SPS Leaf: {}", sps_key, sps_leaf);
 
         // Process parameter and create or get mutable ref to mapping
-        let (mapping, leaf) = self.populate_mapping(&sps_param, input)?;
+        let (mapping, _sps_type, leaf) = self.populate_mapping(&sps_param, input)?;
 
-        let others: SPSWho = match leaf.as_str() {
-            "TouchOthers" => SPSWho::Others,
-            "TouchSelf" => SPSWho::_Self,
-            "PenOthersNewRoot" | "PenOthersNewTip" => SPSWho::Others,
-            "PenSelfNewRoot" | "PenSelfNewTip" => SPSWho::_Self,
-            "TouchOthersClose" => {
-                // If this parameter is not a bool then skip and return None
-                let b = input.try_bool()?;
+        let others = mapping.parse_features_get_who(leaf.as_str(), input);
 
-                if b {
-                    mapping.others_touch_enabled = true;
-                } else {
-                    mapping.others_touch_enabled = false;
-                    return Some(0.);
-                }
-
-                SPSWho::Others
-            }
-            "TouchSelfClose" => {
-                // If this parameter is not a bool then skip and return None
-                let b = input.try_bool()?;
-
-                if b {
-                    mapping.self_touch_enabled = true;
-                } else {
-                    mapping.self_touch_enabled = false;
-                    return Some(0.);
-                }
-
-                SPSWho::_Self
-            }
-            _ => {
-                warn!(
-                    "No Leaf Match for Other | Self - Unhandled OGB parameter?: {}",
-                    leaf
-                );
-                SPSWho::Pass
-            }
-        };
-
-        debug!(
-            "WHO: {:?} | TOUCH: O{}/S{}",
-            others, mapping.others_touch_enabled, mapping.self_touch_enabled
-        );
-
-        if let SPSWho::Pass = others {
-            return None;
+        match others {
+            SPSWho::Pass => return None, // OSC Address does not apply to below calculations
+            SPSWho::Stop => return Some(0.), // Stop feature's motor due to a bool flag being flipped
+            SPSWho::Bypass(l) => return l,
+            _ => {}
         }
 
-        if !mapping.is_touch() {
+        if !mapping.is_touch() && !mapping.is_legacy_orf() && !mapping.is_frot() {
             // Add good length calculations to mapping (self/other)
             mapping.update_mapping_length_values(others);
             // Update internal mapping length based on stored length calculations
@@ -157,7 +119,7 @@ impl SPSProcessor {
         &mut self,
         sps_param: &str,
         osc_input_value: ModeProcessorInputType,
-    ) -> Option<(&mut SPSMapping, String)> {
+    ) -> Option<(&mut SPSMapping, String, String)> {
         let Some((sps_key, sps_type, _sps_obj_id, sps_leaf)) =
             SPSProcessor::get_sps_param_parsed(&sps_param)
         else {
@@ -182,6 +144,6 @@ impl SPSProcessor {
             .unwrap()
             .add_osc_value(sps_leaf.to_string(), osc_input_value);
 
-        Some((mapping.unwrap(), sps_leaf))
+        Some((mapping.unwrap(), sps_type, sps_leaf))
     }
 }
