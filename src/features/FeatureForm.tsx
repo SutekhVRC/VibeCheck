@@ -2,8 +2,9 @@ import { Button } from "@/components/ui/button";
 import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
 import { Select } from "@/layout/Select";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
+import { debounce } from "lodash";
 import { Plus, X } from "lucide-react";
-import { ChangeEvent, Fragment, ReactNode, useState } from "react";
+import { ChangeEvent, Fragment, ReactNode, useCallback, useState } from "react";
 import { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
 import { FeToyParameter } from "src-tauri/bindings/FeToyParameter";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
@@ -47,6 +48,13 @@ export default function FeatureForm({
     simulateOnValueChange,
     simulateOnValueCommit,
   } = useSimulate(toy.toy_id, feature);
+
+  // Only need debounce for input fields, levels work with onValueCommit
+  // Fast debounce because otherwise we'd have to merge with other updates
+  const debouncedAlter = useCallback(
+    debounce((t, f) => handleFeatureAlter(t, f), 100),
+    [],
+  );
 
   function handleBool(checked: boolean, name: keyof FeVCToyFeature) {
     setToyFeature((f) => {
@@ -92,7 +100,7 @@ export default function FeatureForm({
           ...f.osc_parameters,
           {
             parameter: newParam,
-            processing_mode: "Raw" as FeProcessingMode,
+            processing_mode: "Raw" as const,
           },
         ],
       };
@@ -102,17 +110,29 @@ export default function FeatureForm({
   }
 
   function handleOscParam(
-    e: ChangeEvent<HTMLInputElement> | ChangeEvent<HTMLSelectElement>,
+    e: ChangeEvent<HTMLInputElement>,
     paramIndex: number,
   ) {
     setToyFeature((f) => {
       const newParams = [...f.osc_parameters];
-      if (e.target.name == "osc_parameter") {
-        newParams[paramIndex].parameter = normalizeOscParameter(e.target.value);
-      } else if (e.target.name == "osc_parameter_mode") {
-        newParams[paramIndex].processing_mode = e.target
-          .value as FeProcessingMode;
-      }
+      newParams[paramIndex].parameter = normalizeOscParameter(e.target.value);
+      const newF = {
+        ...f,
+        osc_parameters: newParams,
+      };
+      debouncedAlter(toy, newF);
+      return newF;
+    });
+  }
+
+  function handleOscParamMode(
+    e: ChangeEvent<HTMLSelectElement>,
+    paramIndex: number,
+  ) {
+    setToyFeature((f) => {
+      const newParams = [...f.osc_parameters];
+      newParams[paramIndex].processing_mode = e.target
+        .value as FeProcessingMode;
       const newF = {
         ...f,
         osc_parameters: newParams,
@@ -235,7 +255,7 @@ export default function FeatureForm({
                       name="osc_parameter_mode"
                       value={param.processing_mode}
                       onChange={(e) => {
-                        handleOscParam(e, paramIndex);
+                        handleOscParamMode(e, paramIndex);
                       }}
                       options={ProcessingModes}
                     />
