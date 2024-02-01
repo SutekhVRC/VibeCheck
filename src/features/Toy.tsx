@@ -29,9 +29,10 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
         <div>{nameInfo.shortName}</div>
         <ToyInfo nameInfo={nameInfo} toyPower={toy.toy_power} />
       </div>
-      <div className="px-8">
+      <div className="px-6">
         <ToySettings toy={toy} />
-        <div className="scrollbar flex w-[calc(100vw-340px)] select-none gap-4 overflow-x-scroll">
+        {/* pt-2 because scrollbar gap is bottom */}
+        <div className="scrollbar flex w-[calc(100vw-320px)] select-none  items-center gap-4 overflow-x-scroll pt-2 md:w-[calc(100vw-340px)]">
           {toy.features.map((feature, featureArrayIndex) => (
             <button
               key={toyFeatureKey(toy, feature)}

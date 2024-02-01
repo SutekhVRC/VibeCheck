@@ -28,7 +28,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
   }
 
   return (
-    <div className="pb-4 text-sm">
+    <div className="rounded-md bg-zinc-700 px-2 text-sm">
       <FourPanelContainer>
         <div className="flex items-center gap-1">
           <TooltipLabel
