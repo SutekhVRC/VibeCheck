@@ -551,7 +551,7 @@ function HackyScrollArea({ children }: { children: ReactNode }) {
   return (
     <ScrollArea
       className={cn(
-        "scrollbar overflow-y-scroll",
+        "scrollbar overflow-y-hidden pr-2 hover:overflow-y-scroll hover:pr-0",
         config?.show_toy_advanced
           ? "h-[calc(100vh-300px)] md:h-[calc(100vh-280px)]"
           : "h-[calc(100vh-200px)]",
