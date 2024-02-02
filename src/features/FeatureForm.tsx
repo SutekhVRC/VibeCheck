@@ -182,7 +182,7 @@ function InputProcessor() {
   return (
     <FourPanel
       text="Processor"
-      tooltip="The Input processor for this feature"
+      tooltip="Choose the way VibeCheck processes input. Example: If your avatar is using SPS and you want VibeCheck to interact with it, switch to SPS."
       three={
         <div className="flex gap-2">
           <Select
