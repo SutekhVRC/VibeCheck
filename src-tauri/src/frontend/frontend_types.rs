@@ -20,6 +20,8 @@ pub struct FeVibeCheckConfig {
     pub minimize_on_exit: bool,
     pub desktop_notifications: bool,
     pub lc_override: Option<String>,
+    pub show_toy_advanced: bool,
+    pub show_feature_advanced: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]

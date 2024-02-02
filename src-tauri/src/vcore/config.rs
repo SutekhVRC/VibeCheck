@@ -45,6 +45,8 @@ pub struct VibeCheckConfig {
     pub minimize_on_exit: bool,
     pub desktop_notifications: bool,
     pub lc_override: Option<Ipv4Addr>,
+    pub show_toy_advanced: bool,
+    pub show_feature_advanced: bool,
 }
 
 pub fn config_load() -> VibeCheckConfig {
@@ -76,6 +78,8 @@ pub fn config_load() -> VibeCheckConfig {
                 minimize_on_exit: false,
                 desktop_notifications: false,
                 lc_override: None,
+                show_toy_advanced: false,
+                show_feature_advanced: false,
             })
             .unwrap(),
         )
@@ -109,6 +113,8 @@ pub fn config_load() -> VibeCheckConfig {
                     minimize_on_exit: false,
                     desktop_notifications: false,
                     lc_override: None,
+                    show_toy_advanced: false,
+                    show_feature_advanced: false,
                 };
 
                 fs::write(&vc_config_file, serde_json::to_string(&def_conf).unwrap()).unwrap();
@@ -130,6 +136,8 @@ pub fn config_load() -> VibeCheckConfig {
                 minimize_on_exit: false,
                 desktop_notifications: false,
                 lc_override: None,
+                show_toy_advanced: false,
+                show_feature_advanced: false
             };
             fs::write(&vc_config_file, serde_json::to_string(&def_conf).unwrap()).unwrap();
             trace!("Wrote VibeCheck config file");
