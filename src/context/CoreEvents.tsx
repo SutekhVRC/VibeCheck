@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import type { FeCoreEvent } from "../../src-tauri/bindings/FeCoreEvent";
 import { FeStateEvent } from "../../src-tauri/bindings/FeStateEvent";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
@@ -10,10 +10,38 @@ import { assertExhaustive } from "../utils";
 
 const SCAN_LENGTH = 10000;
 
-export function useCoreEvents() {
+type CoreEventContextProps = {
+  isScanning: boolean;
+  isEnabled: boolean;
+  toggleIsEnabled: () => Promise<void>;
+  toggleScan: () => Promise<void>;
+  config: FeVibeCheckConfig | undefined;
+  refreshConfig: () => Promise<void>;
+};
+
+const CoreEventContext = createContext<CoreEventContextProps>({
+  isScanning: false,
+  isEnabled: false,
+  toggleIsEnabled: () => new Promise(() => null),
+  toggleScan: () => new Promise(() => null),
+  config: undefined,
+  refreshConfig: () => new Promise(() => null),
+});
+
+export function useCoreEventContext() {
+  const context = useContext(CoreEventContext);
+  if (!context) {
+    throw new Error("useCoreEventContext not within context provider");
+  }
+  return context;
+}
+
+export function CoreEventProvider({ children }: { children: React.ReactNode }) {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [config, setConfig] = useState<FeVibeCheckConfig | null>(null);
+  const [config, setConfig] = useState<FeVibeCheckConfig | undefined>(
+    undefined,
+  );
 
   async function enable() {
     try {
@@ -116,7 +144,7 @@ export function useCoreEvents() {
       const config = await invoke<FeVibeCheckConfig>(INVOKE.GET_CONFIG);
       setConfig(config);
     } catch {
-      setConfig(null);
+      setConfig(undefined);
     }
   }
 
@@ -126,18 +154,24 @@ export function useCoreEvents() {
         const config = await invoke<FeVibeCheckConfig>(INVOKE.GET_CONFIG);
         setConfig(config);
       } catch {
-        setConfig(null);
+        setConfig(undefined);
       }
     }
     getConfig();
   }, []);
 
-  return {
-    isScanning,
-    isEnabled,
-    toggleIsEnabled,
-    toggleScan,
-    config,
-    refreshConfig,
-  };
+  return (
+    <CoreEventContext.Provider
+      value={{
+        isScanning,
+        isEnabled,
+        toggleIsEnabled,
+        toggleScan,
+        config,
+        refreshConfig,
+      }}
+    >
+      {children}
+    </CoreEventContext.Provider>
+  );
 }

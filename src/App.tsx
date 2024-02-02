@@ -11,9 +11,9 @@ import VrchatLogo from "./assets/vrchat-192x192.png";
 import ExternalLogo from "./components/ExternalLogo";
 import Loading from "./components/Loading";
 import UpdatePing from "./components/UpdatePing";
+import { useCoreEventContext } from "./context/CoreEvents";
 import Config from "./features/Config";
 import Toy from "./features/Toy";
-import { useCoreEvents } from "./hooks/useCoreEvents";
 import { parseName, toyKey, useToys } from "./hooks/useToys";
 import { useUpdate } from "./hooks/useUpdate";
 import { useVersion } from "./hooks/useVersion";
@@ -48,7 +48,7 @@ export default function App() {
     toggleIsEnabled,
     config,
     refreshConfig,
-  } = useCoreEvents();
+  } = useCoreEventContext();
   const { canUpdate } = useUpdate();
   const { version } = useVersion();
 
