@@ -1,3 +1,4 @@
+import { useCoreEventContext } from "@/context/CoreEvents";
 import { useEffect, useState } from "react";
 import { FeVCToyFeature } from "src-tauri/bindings/FeVCToyFeature";
 import { ToyPower } from "src-tauri/bindings/ToyPower";
@@ -14,6 +15,8 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
   const nameInfo = NameInfo(toy);
 
+  const { config } = useCoreEventContext();
+
   useEffect(() => {
     // update from external - because toy could go online/offline and be 'different'
     if (selectedFeatureIndex >= toy.features.length) setSelectedFeatureIndex(0);
@@ -29,8 +32,8 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
         <div>{nameInfo.shortName}</div>
         <ToyInfo nameInfo={nameInfo} toyPower={toy.toy_power} />
       </div>
-      <div className="px-6">
-        <ToySettings toy={toy} />
+      <div className="px-2">
+        {config?.show_toy_advanced && <ToySettings toy={toy} />}
         {/* pt-2 because scrollbar gap is bottom */}
         <div className="scrollbar flex w-[calc(100vw-320px)] select-none  items-center gap-4 overflow-x-scroll pt-2 md:w-[calc(100vw-340px)]">
           {toy.features.map((feature, featureArrayIndex) => (
