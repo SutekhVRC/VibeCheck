@@ -1,5 +1,7 @@
+import { useCoreEventContext } from "@/context/CoreEvents";
 import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
 import { Select } from "@/layout/Select";
+import { cn } from "@/lib/utils";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { DebouncedFunc, debounce } from "lodash";
 import { Plus, X } from "lucide-react";
@@ -28,11 +30,6 @@ import Slider from "../layout/Slider";
 import Switch from "../layout/Switch";
 import { round0 } from "../utils";
 
-type ToyFeatureFormProps = {
-  toy: FeVCToy;
-  selectedIndex: number;
-};
-
 type FeatureFormContextProps = {
   feature: FeVCToyFeature;
   setToyFeature: Dispatch<SetStateAction<FeVCToyFeature>>;
@@ -59,6 +56,11 @@ const useFeatureFormContext = () => {
   return context;
 };
 
+type ToyFeatureFormProps = {
+  toy: FeVCToy;
+  selectedIndex: number;
+};
+
 export default function FeatureForm({
   toy,
   selectedIndex,
@@ -67,6 +69,7 @@ export default function FeatureForm({
     toy.features[selectedIndex] ?? toy.features[0],
   );
   const levels = feature.feature_levels;
+  const { config } = useCoreEventContext();
 
   // Only need debounce for input fields, levels work with onValueCommit
   // Fast debounce because otherwise we'd have to merge with other updates
@@ -109,23 +112,28 @@ export default function FeatureForm({
         handleLevels,
       }}
     >
-      <div className="rounded-md bg-zinc-700 px-4">
-        <FourPanelContainer>
-          <Enabled />
-          <InputProcessor />
-          <Range />
-          {processingMode == "Smooth" && <Smooth />}
-          {processingMode == "Rate" && <Rate />}
-          {processingMode == "Constant" && <Constant />}
-          {processingMode == "Raw" && <div className="col-span-4 h-5" />}
-        </FourPanelContainer>
+      <div className="rounded-md bg-zinc-700 p-4">
         <HackyScrollArea>
           <FourPanelContainer>
-            <Idle />
-            <FlipInput />
-            {feature.feature_type == "Linear" && <Linear />}
-            <Simulate toy={toy} />
+            <Enabled />
+            <InputProcessor />
+            <Range />
+            {processingMode == "Smooth" && <Smooth />}
+            {processingMode == "Rate" && <Rate />}
+            {processingMode == "Constant" && <Constant />}
+            {processingMode == "Raw" && (
+              <div className="col-span-2 h-5 md:col-span-4" />
+            )}
+            {config?.show_feature_advanced && (
+              <>
+                <Idle />
+                <FlipInput />
+                {feature.feature_type == "Linear" && <Linear />}
+                <Simulate toy={toy} />
+              </>
+            )}
           </FourPanelContainer>
+          <div className="text-left">Parameters</div>
           <FourPanelContainer>
             <Parameters />
           </FourPanelContainer>
@@ -296,7 +304,7 @@ function Parameters() {
           <Fragment key={paramIndex}>
             {/* Adding debounce on this makes it more complex b/c separate state, plus parent key on index */}
             <input
-              className="col-span-2 w-full rounded-sm px-4 text-zinc-800 outline-none"
+              className="col-span-1 w-full rounded-sm px-4 text-zinc-800 outline-none md:col-span-2"
               name="osc_parameter"
               value={param.parameter.replace(OSC.PARAM_PREFIX, "")}
               onChange={(e) => handleOscParam(e, paramIndex)}
@@ -318,8 +326,8 @@ function Parameters() {
           </Fragment>
         );
       })}
-      <div className="col-span-3" />
-      <div className="flex justify-center">
+      <div className="col-span-3"></div>
+      <div className="col-span-2 flex justify-center md:col-span-1">
         <button onClick={addParam}>
           <Plus className="h-5" />
         </button>
@@ -538,8 +546,17 @@ function Simulate({ toy }: { toy: FeVCToy }) {
 }
 
 function HackyScrollArea({ children }: { children: ReactNode }) {
+  // extremely hacky
+  const { config } = useCoreEventContext();
   return (
-    <ScrollArea className="scrollbar h-[calc(100vh-432px)] overflow-y-scroll md:h-[calc(100vh-330px)]">
+    <ScrollArea
+      className={cn(
+        "scrollbar overflow-y-scroll",
+        config?.show_toy_advanced
+          ? "h-[calc(100vh-300px)] md:h-[calc(100vh-280px)]"
+          : "h-[calc(100vh-200px)]",
+      )}
+    >
       {children}
     </ScrollArea>
   );

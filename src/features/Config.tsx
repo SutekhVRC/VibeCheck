@@ -195,6 +195,30 @@ export default function Config({
               size="small"
             />
             <div />
+            <TooltipLabel
+              text="Advanced toy options"
+              tooltip="Show advanced toy options like osc data and anatomy"
+            />
+            <Switch
+              checked={newConfig.show_toy_advanced}
+              onCheckedChange={(checked) =>
+                onCheckSwitch(checked, "show_toy_advanced")
+              }
+              size="small"
+            />
+            <div />
+            <TooltipLabel
+              text="Advanced feature options"
+              tooltip="Show advanced options for features [vibrator, constrict, oscillate, etc], will show options like idle speed, flip input, simulate"
+            />
+            <Switch
+              checked={newConfig.show_feature_advanced}
+              onCheckedChange={(checked) =>
+                onCheckSwitch(checked, "show_feature_advanced")
+              }
+              size="small"
+            />
+            <div />
           </div>
         </form>
         <div className="flex justify-around">
