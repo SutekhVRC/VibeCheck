@@ -99,7 +99,13 @@ export default function FeatureForm({
     });
   }
 
-  const processingMode = feature.penetration_system.pen_system_processing_mode;
+  const tweakSliders = feature.osc_parameters.reduce(
+    (seenModes, oscParam) => {
+      seenModes.add(oscParam.processing_mode);
+      return seenModes;
+    },
+    new Set<string>([feature.penetration_system.pen_system_processing_mode]),
+  );
 
   return (
     <FeatureFormContext.Provider
@@ -118,17 +124,14 @@ export default function FeatureForm({
             <Enabled />
             <InputProcessor />
             <Range />
-            {processingMode == "Smooth" && <Smooth />}
-            {processingMode == "Rate" && <Rate />}
-            {processingMode == "Constant" && <Constant />}
-            {processingMode == "Raw" && (
-              <div className="col-span-2 h-5 md:col-span-4" />
-            )}
             {config?.show_feature_advanced && (
               <>
                 <Idle />
                 <FlipInput />
                 {feature.feature_type == "Linear" && <Linear />}
+                {tweakSliders.has("Smooth") && <Smooth />}
+                {tweakSliders.has("Rate") && <Rate />}
+                {tweakSliders.has("Constant") && <Constant />}
                 <Simulate toy={toy} />
               </>
             )}
