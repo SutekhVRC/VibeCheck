@@ -3,25 +3,23 @@ use ts_rs::TS;
 
 use crate::toy_handling::{input_processor::InputProcessor, ModeProcessorInputType};
 
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize, TS)]
 pub struct TPSProcessor {
     pub parameter_list: Vec<String>,
 }
 
-impl Default for TPSProcessor {
-    fn default() -> Self {
-        Self {
-            parameter_list: vec![],
-        }
-    }
-}
-
 impl InputProcessor for TPSProcessor {
     fn is_parameter(&self, param: &String) -> bool {
-        self.parameter_list.contains(param)
+        param.starts_with("/avatar/parameters/TPS_Internal/")
     }
 
-    fn process(&mut self, _addr: &str, _input: ModeProcessorInputType) -> Option<f64> {
-        todo!()
+    fn process(&mut self, addr: &str, input: ModeProcessorInputType) -> Option<f64> {
+        let tps_param = addr.strip_prefix("/avatar/parameters/")?;
+
+        if tps_param.ends_with("Depth_In") || tps_param.ends_with("RootRoot") {
+            input.try_float()
+        } else {
+            None
+        }
     }
 }

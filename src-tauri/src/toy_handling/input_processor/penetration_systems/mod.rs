@@ -59,8 +59,8 @@ impl FromFrontend<FePenetrationSystem> for PenetrationSystem {
         // Allocate / Instantiate new Penetration system structure based on user's choice
         match frontend_type.pen_system_type {
             PenetrationSystemType::NONE => self.pen_system = None,
-            PenetrationSystemType::SPS => self.pen_system = Some(Box::new(SPSProcessor::default())),
-            PenetrationSystemType::TPS => self.pen_system = Some(Box::new(TPSProcessor::default())),
+            PenetrationSystemType::SPS => self.pen_system = Some(Box::<SPSProcessor>::default()),
+            PenetrationSystemType::TPS => self.pen_system = Some(Box::<TPSProcessor>::default()),
         }
         self.pen_system_type = frontend_type.pen_system_type;
         let backend_pspm = frontend_type.pen_system_processing_mode.to_backend();

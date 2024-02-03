@@ -29,7 +29,7 @@ export default function Slider(
       {...props}
       aria-label="Slider"
     >
-      <SliderPrimitive.Track className="relative flex h-2 flex-grow rounded-full bg-zinc-700">
+      <SliderPrimitive.Track className="relative flex h-2 flex-grow rounded-full bg-zinc-700 outline outline-1 outline-zinc-500">
         <SliderPrimitive.Range
           className={cn(
             "absolute h-full rounded-full bg-zinc-100 transition-all data-[disabled]:bg-zinc-600",

@@ -5,7 +5,7 @@ import type { FeToyEvent } from "../../src-tauri/bindings/FeToyEvent";
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import { createToast } from "../components/Toast";
-import { ALTER_TOY, OFFLINE_SYNC, TOY_EVENT } from "../data/constants";
+import { INVOKE, LISTEN } from "../data/constants";
 import { assertExhaustive } from "../utils";
 
 type ToyMap = {
@@ -15,11 +15,11 @@ type ToyMap = {
 export async function handleToyAlter(newToy: FeVCToy) {
   try {
     if (newToy.toy_connected) {
-      await invoke(ALTER_TOY, {
+      await invoke(INVOKE.ALTER_TOY, {
         mutate: { Connected: newToy },
       });
     } else {
-      await invoke(ALTER_TOY, {
+      await invoke(INVOKE.ALTER_TOY, {
         mutate: { Disconnected: newToy },
       });
     }
@@ -78,7 +78,7 @@ export function useToys() {
 
   async function syncOfflineToys() {
     try {
-      const offlineToys = await invoke<FeVCToy[]>(OFFLINE_SYNC, {
+      const offlineToys = await invoke<FeVCToy[]>(INVOKE.OFFLINE_SYNC, {
         refreshToys: true,
       });
       setOfflineToys(
@@ -142,7 +142,7 @@ export function useToys() {
   }
 
   useEffect(() => {
-    const unlistenPromise = listen<FeToyEvent>(TOY_EVENT, (event) =>
+    const unlistenPromise = listen<FeToyEvent>(LISTEN.TOY_EVENT, (event) =>
       handleToyEvent(event.payload),
     );
 

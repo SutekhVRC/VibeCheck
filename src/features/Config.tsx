@@ -3,7 +3,7 @@ import { ChangeEvent, FormEvent, useState } from "react";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 import { createToast } from "../components/Toast";
 import UpdateButton from "../components/UpdateButton";
-import { CLEAR_OSC_CONFIG, SET_CONFIG } from "../data/constants";
+import { INVOKE, TOOLTIP } from "../data/constants";
 import Button from "../layout/Button";
 import Switch from "../layout/Switch";
 import { TooltipLabel } from "../layout/Tooltip";
@@ -53,7 +53,7 @@ export default function Config({
       ) {
         await disableOnPortChange();
       }
-      await invoke(SET_CONFIG, { feVcConfig: newConfig });
+      await invoke(INVOKE.SET_CONFIG, { feVcConfig: newConfig });
       createToast("info", "Saved config");
     } catch (e) {
       createToast("error", "Could not set config!", JSON.stringify(e));
@@ -62,7 +62,7 @@ export default function Config({
 
   async function clearOsc() {
     try {
-      await invoke(CLEAR_OSC_CONFIG);
+      await invoke(INVOKE.CLEAR_OSC_CONFIG);
       createToast(
         "info",
         "Cleared avatar OSC configs",
@@ -91,10 +91,7 @@ export default function Config({
       <div className="flex w-full flex-col justify-between">
         <form id="config" onSubmit={handleSubmit}>
           <div className="mx-8 my-4 grid grid-cols-[minmax(10rem,4fr)_1fr_minmax(4rem,_4fr)] gap-1 text-justify text-sm">
-            <TooltipLabel
-              text="OSC Bind"
-              tooltip="OSC Receive Port (Default: 127.0.0.1:9001)"
-            />
+            <TooltipLabel text="OSC Bind" tooltip={TOOLTIP.OSC_Bind} />
             <div />
             <input
               name="bind"
@@ -111,10 +108,7 @@ export default function Config({
                 (e.target as HTMLInputElement).setCustomValidity("")
               }
             />
-            <TooltipLabel
-              text="OSC Remote"
-              tooltip="OSC Send Port (Default: 127.0.0.1:9000)"
-            />
+            <TooltipLabel text="OSC Remote" tooltip={TOOLTIP.OSC_Remote} />
             <div />
             <input
               name="remote"
@@ -133,7 +127,7 @@ export default function Config({
             />
             <TooltipLabel
               text="Lovense Connect Override"
-              tooltip="Override and force the Lovense Connect host to connect to."
+              tooltip={TOOLTIP.LC_Override}
             />
             <Switch
               checked={newConfig.lc_override != null}
@@ -161,7 +155,7 @@ export default function Config({
             )}
             <TooltipLabel
               text="Scan On Disconnect"
-              tooltip="Automatically start scanning when a toy disconnects."
+              tooltip={TOOLTIP.ScanOnDisconnect}
             />
             <Switch
               checked={newConfig.scan_on_disconnect}
@@ -173,7 +167,7 @@ export default function Config({
             <div />
             <TooltipLabel
               text="Minimize On Exit"
-              tooltip="Minimize VibeCheck instead of exiting."
+              tooltip={TOOLTIP.MinimizeOnExit}
             />
             <Switch
               checked={newConfig.minimize_on_exit}
@@ -185,12 +179,36 @@ export default function Config({
             <div />
             <TooltipLabel
               text="Desktop Notifications"
-              tooltip="Notifications for toy connect and disconnect."
+              tooltip={TOOLTIP.DesktopNotifications}
             />
             <Switch
               checked={newConfig.desktop_notifications}
               onCheckedChange={(checked) =>
                 onCheckSwitch(checked, "desktop_notifications")
+              }
+              size="small"
+            />
+            <div />
+            <TooltipLabel
+              text="Advanced toy options"
+              tooltip={TOOLTIP.AdvancedToy}
+            />
+            <Switch
+              checked={newConfig.show_toy_advanced}
+              onCheckedChange={(checked) =>
+                onCheckSwitch(checked, "show_toy_advanced")
+              }
+              size="small"
+            />
+            <div />
+            <TooltipLabel
+              text="Advanced feature options"
+              tooltip={TOOLTIP.AdvancedFeature}
+            />
+            <Switch
+              checked={newConfig.show_feature_advanced}
+              onCheckedChange={(checked) =>
+                onCheckSwitch(checked, "show_feature_advanced")
               }
               size="small"
             />

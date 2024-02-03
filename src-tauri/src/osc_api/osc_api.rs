@@ -11,7 +11,7 @@ pub fn vibecheck_osc_api(
     app_handle: &AppHandle,
     toy_bcst_tx: &BSender<ToySig>,
 ) -> bool {
-    match recv_osc_cmd(&bind_sock) {
+    match recv_osc_cmd(bind_sock) {
         Some(msg) => {
             // Stop toys on avatar change
             if msg.addr.starts_with("/avatar/change") {
@@ -22,34 +22,36 @@ pub fn vibecheck_osc_api(
                         .0
                         .clone();
                     let vc_lock = vc_pointer.lock();
-                    let _ = vc_lock
+                    vc_lock
                         .async_rt
                         .block_on(async {
                             vc_lock.bp_client.as_ref().unwrap().stop_all_devices().await
                         })
                         .unwrap();
                 }
-                return true;
+                true
             } else if msg.addr.starts_with("/avatar/parameters/vibecheck/api/") {
                 trace!("[*] VibeCheck API: {:?}", msg);
-                APIProcessor::parse(msg, &app_handle);
-                return true;
+                APIProcessor::parse(msg, app_handle);
+                true
             } else {
                 // Not a vibecheck OSC command, broadcast to toys
-
-                if let Err(_) = toy_bcst_tx.send(ToySig::OSCMsg(msg)) {
+                if toy_bcst_tx.send(ToySig::OSCMsg(msg)).is_err() {
                     info!("BCST TX is disconnected. Shutting down toy input routine!");
-                    return false; // Shutting down handler_routine
+                    // Shutting down handler_routine
+                    false
+                } else {
+                    true
                 }
-                return true;
             }
         }
         None => {
             if toy_bcst_tx.receiver_count() == 0 {
                 info!("BCST TX is disconnected (RECV C=0). Shutting down toy input routine!");
-                return false;
+                false
+            } else {
+                true
             }
-            return true;
         }
     }
 }

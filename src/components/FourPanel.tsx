@@ -1,3 +1,5 @@
+import { TOOLTIP } from "@/data/constants";
+import { ObjectValues } from "@/utils";
 import { ArrowRightLeft } from "lucide-react";
 import { ReactNode } from "react";
 import { TooltipLabel } from "../layout/Tooltip";
@@ -11,7 +13,7 @@ export default function FourPanel({
   four,
 }: {
   text: string;
-  tooltip?: string;
+  tooltip?: string | ObjectValues<typeof TOOLTIP>;
   flipped?: boolean;
   two?: ReactNode;
   three?: ReactNode;
@@ -32,8 +34,8 @@ export default function FourPanel({
       ) : (
         label
       )}
-      <div>{two}</div>
-      <div className="col-span-2 flex w-full flex-col text-right md:col-span-1">
+      <div className="flex items-center">{two}</div>
+      <div className="col-span-2 flex w-full flex-col justify-center text-right md:col-span-1">
         {three}
       </div>
       <div className="hidden text-right md:inline">{four}</div>

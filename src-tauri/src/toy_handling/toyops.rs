@@ -107,8 +107,8 @@ impl VCToy {
                 .iter()
                 .for_each(|scalar_feature| {
                     // Filter out Rotators
-                    match scalar_feature.actuator_type() {
-                        &ActuatorType::Rotate => {
+                    match *scalar_feature.actuator_type() {
+                        ActuatorType::Rotate => {
                             self.parsed_toy_features.features.push(VCToyFeature::new(
                                 vec![],
                                 indexer,
@@ -117,7 +117,7 @@ impl VCToy {
 
                             indexer += 1;
                         }
-                        &ActuatorType::Vibrate => {
+                        ActuatorType::Vibrate => {
                             self.parsed_toy_features.features.push(VCToyFeature::new(
                                 vec![],
                                 indexer,
@@ -126,7 +126,7 @@ impl VCToy {
 
                             indexer += 1;
                         }
-                        &ActuatorType::Constrict => {
+                        ActuatorType::Constrict => {
                             self.parsed_toy_features.features.push(VCToyFeature::new(
                                 vec![],
                                 indexer,
@@ -135,7 +135,7 @@ impl VCToy {
 
                             indexer += 1;
                         }
-                        &ActuatorType::Inflate => {
+                        ActuatorType::Inflate => {
                             self.parsed_toy_features.features.push(VCToyFeature::new(
                                 vec![],
                                 indexer,
@@ -144,7 +144,7 @@ impl VCToy {
 
                             indexer += 1;
                         }
-                        &ActuatorType::Oscillate => {
+                        ActuatorType::Oscillate => {
                             self.parsed_toy_features.features.push(VCToyFeature::new(
                                 vec![],
                                 indexer,
@@ -153,7 +153,7 @@ impl VCToy {
 
                             indexer += 1;
                         }
-                        &ActuatorType::Position => {
+                        ActuatorType::Position => {
                             self.parsed_toy_features.features.push(VCToyFeature::new(
                                 vec![],
                                 indexer,
@@ -162,7 +162,7 @@ impl VCToy {
 
                             indexer += 1;
                         }
-                        &ActuatorType::Unknown => {}
+                        ActuatorType::Unknown => {}
                     }
                 });
             info!("Populated {} scalars", indexer);
@@ -242,11 +242,11 @@ impl VCToy {
                         PenetrationSystemType::NONE => feature.penetration_system.pen_system = None,
                         PenetrationSystemType::SPS => {
                             feature.penetration_system.pen_system =
-                                Some(Box::new(SPSProcessor::default()))
+                                Some(Box::<SPSProcessor>::default())
                         }
                         PenetrationSystemType::TPS => {
                             feature.penetration_system.pen_system =
-                                Some(Box::new(TPSProcessor::default()))
+                                Some(Box::<TPSProcessor>::default())
                         }
                     }
 
@@ -278,7 +278,7 @@ impl VCToy {
 
         if !file_exists(&config_path) {
             self.config = None;
-            return Ok(());
+            Ok(())
         } else {
             let con = fs::read_to_string(config_path).unwrap();
 
@@ -291,7 +291,7 @@ impl VCToy {
             };
             debug!("Loaded & parsed toy config successfully!");
             self.config = Some(config);
-            return Ok(());
+            Ok(())
         }
     }
 
@@ -309,11 +309,9 @@ impl VCToy {
                 match fs::write(&config_path, json_string) {
                     Ok(()) => {
                         info!("Saved toy config: {}", self.toy_name);
-                        return;
                     }
                     Err(e) => {
                         logerr!("Failed to write to file: {}", e);
-                        return;
                     }
                 }
             } else {
@@ -334,7 +332,7 @@ impl VCToy {
                 });
             return true;
         }
-        return false;
+        false
     }
 }
 
@@ -408,11 +406,7 @@ pub struct ToyParameter {
 
 impl ToyParameter {
     fn is_assigned_param(&self, param: &String) -> bool {
-        if self.parameter == *param {
-            true
-        } else {
-            false
-        }
+        self.parameter == *param
     }
 }
 
@@ -499,7 +493,7 @@ impl VCToyFeature {
                 }
             }
         }
-        return None;
+        None
     }
 
     /*
@@ -596,10 +590,6 @@ impl Eq for VCFeatureType {}
 impl PartialEq<FeVCFeatureType> for VCFeatureType {
     fn eq(&self, other: &FeVCFeatureType) -> bool {
         *self as u32 == *other as u32
-    }
-
-    fn ne(&self, other: &FeVCFeatureType) -> bool {
-        !self.eq(other)
     }
 }
 
@@ -753,7 +743,7 @@ impl VCToyFeatures {
 
         for f in &mut self.features {
             // If penetration system not set for feature move to next feature
-            if let None = f.penetration_system.pen_system {
+            if f.penetration_system.pen_system.is_none() {
                 continue;
             }
 

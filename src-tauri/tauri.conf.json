@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "VibeCheck",
-    "version": "0.3.2"
+    "version": "0.4.0"
   },
   "tauri": {
     "systemTray": {
@@ -74,8 +74,8 @@
         "title": "VibeCheck",
         "width": 900,
         "height": 600,
-        "minWidth": 600,
-        "minHeight": 600
+        "minWidth": 620,
+        "minHeight": 400
       }
     ]
   }

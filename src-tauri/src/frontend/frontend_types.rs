@@ -20,6 +20,8 @@ pub struct FeVibeCheckConfig {
     pub minimize_on_exit: bool,
     pub desktop_notifications: bool,
     pub lc_override: Option<String>,
+    pub show_toy_advanced: bool,
+    pub show_feature_advanced: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]
@@ -64,10 +66,12 @@ pub enum FeCoreEvent {
 
 #[derive(Deserialize, Clone, TS)]
 #[ts(export)]
-pub enum FeSocialLink {
+pub enum FeBrowserLink {
     Github,
     VRChatGroup,
     Discord,
+    ToyOptions,
+    FeatureOptions,
 }
 
 #[derive(Serialize, Deserialize, Clone, TS, Debug)]
@@ -228,9 +232,5 @@ impl FeVCFeatureType {
 impl PartialEq<VCFeatureType> for FeVCFeatureType {
     fn eq(&self, other: &VCFeatureType) -> bool {
         *self as u32 == *other as u32
-    }
-
-    fn ne(&self, other: &VCFeatureType) -> bool {
-        !self.eq(other)
     }
 }

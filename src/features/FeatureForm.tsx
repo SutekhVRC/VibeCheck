@@ -1,9 +1,21 @@
-import { Button } from "@/components/ui/button";
+import { useCoreEventContext } from "@/context/CoreEvents";
 import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
 import { Select } from "@/layout/Select";
+import { cn } from "@/lib/utils";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
+import { DebouncedFunc, debounce } from "lodash";
 import { Plus, X } from "lucide-react";
-import { ChangeEvent, Fragment, ReactNode, useEffect, useState } from "react";
+import {
+  ChangeEvent,
+  Dispatch,
+  Fragment,
+  ReactNode,
+  SetStateAction,
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+} from "react";
 import { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
 import { FeToyParameter } from "src-tauri/bindings/FeToyParameter";
 import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
@@ -11,12 +23,38 @@ import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import FourPanel from "../components/FourPanel";
 import FourPanelContainer from "../components/FourPanelContainer";
-import { OSC_PARAM_PREFIX } from "../data/constants";
+import { OSC, TOOLTIP } from "../data/constants";
 import useSimulate from "../hooks/useSimulate";
-import { handleFeatureAlter } from "../hooks/useToys";
+import { handleFeatureAlter as handleToyFeatureAlter } from "../hooks/useToys";
 import Slider from "../layout/Slider";
 import Switch from "../layout/Switch";
 import { round0 } from "../utils";
+
+type FeatureFormContextProps = {
+  feature: FeVCToyFeature;
+  setToyFeature: Dispatch<SetStateAction<FeVCToyFeature>>;
+  debouncedAlter: DebouncedFunc<(f: FeVCToyFeature) => void>;
+  handleFeatureAlter: (f: FeVCToyFeature) => void;
+  handleBool: (checked: boolean, name: keyof FeVCToyFeature) => void;
+  handleLevels: (key: keyof FeLevelTweaks, value: number) => void;
+};
+
+const FeatureFormContext = createContext<FeatureFormContextProps>({
+  feature: {} as FeVCToyFeature,
+  setToyFeature: () => null,
+  debouncedAlter: debounce(() => null, 1000),
+  handleFeatureAlter: () => null,
+  handleBool: () => null,
+  handleLevels: () => null,
+});
+
+const useFeatureFormContext = () => {
+  const context = useContext(FeatureFormContext);
+  if (!context) {
+    throw new Error("useFeatureFormContext not within context provider");
+  }
+  return context;
+};
 
 type ToyFeatureFormProps = {
   toy: FeVCToy;
@@ -31,29 +69,150 @@ export default function FeatureForm({
     toy.features[selectedIndex] ?? toy.features[0],
   );
   const levels = feature.feature_levels;
-  const submenuOptions = ["Parameters", "Advanced"] as const;
-  type SubmenuOptions = (typeof submenuOptions)[number];
-  const [subMenu, setSubMenu] = useState<SubmenuOptions>("Parameters");
+  const { config } = useCoreEventContext();
 
-  useEffect(() => {
-    setToyFeature(toy.features[selectedIndex] ?? toy.features[0]);
-  }, [toy, selectedIndex]);
+  // Only need debounce for input fields, levels work with onValueCommit
+  // Fast debounce because otherwise we'd have to merge with other updates
+  const debouncedAlter = useCallback(
+    debounce((f) => handleFeatureAlter(f), 100),
+    [],
+  );
 
-  const {
-    simulateEnabled,
-    simulateLevel,
-    toggleSimulate,
-    simulateOnValueChange,
-    simulateOnValueCommit,
-  } = useSimulate(toy.toy_id, feature);
+  function handleFeatureAlter(feature: FeVCToyFeature) {
+    handleToyFeatureAlter(toy, feature);
+  }
 
   function handleBool(checked: boolean, name: keyof FeVCToyFeature) {
     setToyFeature((f) => {
       const newF = { ...f, [name]: checked } as FeVCToyFeature;
-      handleFeatureAlter(toy, newF);
+      handleFeatureAlter(newF);
       return newF;
     });
   }
+
+  function handleLevels(key: keyof FeLevelTweaks, value: number) {
+    setToyFeature((feature) => {
+      return {
+        ...feature,
+        feature_levels: { ...levels, [key]: value },
+      };
+    });
+  }
+
+  const tweakSliders = feature.osc_parameters.reduce(
+    (seenModes, oscParam) => {
+      seenModes.add(oscParam.processing_mode);
+      return seenModes;
+    },
+    new Set<string>([feature.penetration_system.pen_system_processing_mode]),
+  );
+
+  return (
+    <FeatureFormContext.Provider
+      value={{
+        feature,
+        setToyFeature,
+        debouncedAlter,
+        handleFeatureAlter,
+        handleBool,
+        handleLevels,
+      }}
+    >
+      <div className="rounded-md bg-zinc-700 p-4">
+        <HackyScrollArea>
+          <FourPanelContainer>
+            <Enabled />
+            <InputProcessor />
+            <Range />
+            {config?.show_feature_advanced && (
+              <>
+                <Idle />
+                <FlipInput />
+                {feature.feature_type == "Linear" && <Linear />}
+                {tweakSliders.has("Smooth") && <Smooth />}
+                {tweakSliders.has("Rate") && <Rate />}
+                {tweakSliders.has("Constant") && <Constant />}
+                <Simulate toy={toy} />
+              </>
+            )}
+          </FourPanelContainer>
+          <div className="text-left">Parameters</div>
+          <FourPanelContainer>
+            <Parameters />
+          </FourPanelContainer>
+        </HackyScrollArea>
+      </div>
+    </FeatureFormContext.Provider>
+  );
+}
+
+function Enabled() {
+  const { feature, handleBool } = useFeatureFormContext();
+
+  return (
+    <FourPanel
+      text="Enabled"
+      tooltip={TOOLTIP.Enabled}
+      two={
+        <Switch
+          size="small"
+          checked={feature.feature_enabled}
+          onCheckedChange={(checked) => handleBool(checked, "feature_enabled")}
+        />
+      }
+    />
+  );
+}
+
+function InputProcessor() {
+  const { feature, setToyFeature, handleFeatureAlter } =
+    useFeatureFormContext();
+
+  function handleInputProcessor(e: ChangeEvent<HTMLSelectElement>) {
+    setToyFeature((f) => {
+      const newF = {
+        ...f,
+        penetration_system: {
+          ...f.penetration_system,
+          [e.target.name]: e.target.value,
+        },
+      };
+      handleFeatureAlter(newF);
+      return newF;
+    });
+  }
+
+  return (
+    <FourPanel
+      text="Processor"
+      tooltip={TOOLTIP.InputProcessor}
+      three={
+        <div className="flex gap-2">
+          <Select
+            name="pen_system_type"
+            value={feature.penetration_system.pen_system_type}
+            onChange={(e) => {
+              handleInputProcessor(e);
+            }}
+            options={PenetrationSystems}
+          />
+          <Select
+            name="pen_system_processing_mode"
+            value={feature.penetration_system.pen_system_processing_mode}
+            onChange={(e) => {
+              handleInputProcessor(e);
+            }}
+            options={ProcessingModes}
+          />
+        </div>
+      }
+    />
+  );
+}
+
+function Parameters() {
+  const { feature, setToyFeature, handleFeatureAlter, debouncedAlter } =
+    useFeatureFormContext();
 
   function removeParam(parameter: string) {
     setToyFeature((f) => {
@@ -63,7 +222,7 @@ export default function FeatureForm({
           (param) => param.parameter != parameter,
         ),
       };
-      handleFeatureAlter(toy, newF);
+      handleFeatureAlter(newF);
       return newF;
     });
   }
@@ -82,7 +241,7 @@ export default function FeatureForm({
 
   function addParam() {
     setToyFeature((f) => {
-      const newParam = `${OSC_PARAM_PREFIX}param-${findParamName(
+      const newParam = `${OSC.PARAM_PREFIX}param-${findParamName(
         f.osc_parameters,
       )}`;
       const newF = {
@@ -91,344 +250,316 @@ export default function FeatureForm({
           ...f.osc_parameters,
           {
             parameter: newParam,
-            processing_mode: "Raw" as FeProcessingMode,
+            processing_mode: "Raw" as const,
           },
         ],
       };
-      handleFeatureAlter(toy, newF);
+      handleFeatureAlter(newF);
       return newF;
     });
   }
 
   function handleOscParam(
-    e: ChangeEvent<HTMLInputElement> | ChangeEvent<HTMLSelectElement>,
+    e: ChangeEvent<HTMLInputElement>,
     paramIndex: number,
   ) {
     setToyFeature((f) => {
       const newParams = [...f.osc_parameters];
-      if (e.target.name == "osc_parameter") {
-        newParams[paramIndex].parameter =
-          `${OSC_PARAM_PREFIX}${e.target.value}`;
-      } else if (e.target.name == "osc_parameter_mode") {
-        newParams[paramIndex].processing_mode = e.target
-          .value as FeProcessingMode;
-      }
+      newParams[paramIndex].parameter = normalizeOscParameter(e.target.value);
       const newF = {
         ...f,
         osc_parameters: newParams,
       };
-      handleFeatureAlter(toy, newF);
+      debouncedAlter(newF);
       return newF;
     });
   }
 
-  function handleInputProcessor(e: ChangeEvent<HTMLSelectElement>) {
+  function handleOscParamMode(
+    e: ChangeEvent<HTMLSelectElement>,
+    paramIndex: number,
+  ) {
     setToyFeature((f) => {
+      const newParams = [...f.osc_parameters];
+      newParams[paramIndex].processing_mode = e.target
+        .value as FeProcessingMode;
       const newF = {
         ...f,
-        penetration_system: {
-          ...f.penetration_system,
-          [e.target.name]: e.target.value,
-        },
+        osc_parameters: newParams,
       };
-      handleFeatureAlter(toy, newF);
+      handleFeatureAlter(newF);
       return newF;
     });
   }
 
-  function handleLevels(key: keyof FeLevelTweaks, value: number) {
-    setToyFeature((feature) => {
-      return {
-        ...feature,
-        feature_levels: { ...levels, [key]: value },
-      };
-    });
-  }
-
-  function handleCommit() {
-    handleFeatureAlter(toy, feature);
+  function normalizeOscParameter(p: string) {
+    return `${OSC.PARAM_PREFIX}${p.replaceAll(" ", "_")}`;
   }
 
   return (
     <>
-      <FourPanelContainer>
-        <FourPanel
-          text="Enabled"
-          tooltip="Enable/Disable this feature."
-          two={
-            <Switch
-              size="small"
-              checked={feature.feature_enabled}
-              onCheckedChange={(checked) =>
-                handleBool(checked, "feature_enabled")
-              }
+      {/* <div className="grid grid-cols-[minmax(6rem,20fr),minmax(6rem,6fr),minmax(1rem,1fr)] gap-x-6 gap-y-2 text-justify text-sm"> */}
+      {feature.osc_parameters.map((param, paramIndex) => {
+        // TODO: Using index is generally an anti-pattern, but I think it's required in this specific scenario
+        // If we key on a parameter or other identifiers, typing the parameter name would trigger a refresh from the backend
+        // This would then deselect the input element while typing
+        return (
+          <Fragment key={paramIndex}>
+            {/* Adding debounce on this makes it more complex b/c separate state, plus parent key on index */}
+            <input
+              className="col-span-1 w-full rounded-sm px-4 text-zinc-800 outline-none md:col-span-2"
+              name="osc_parameter"
+              value={param.parameter.replace(OSC.PARAM_PREFIX, "")}
+              onChange={(e) => handleOscParam(e, paramIndex)}
             />
-          }
-        />
-      </FourPanelContainer>
-      <div className="rounded-md">
-        <>
-          <div className="flex justify-end">
-            <Button
-              onClick={() =>
-                setSubMenu((s) => (s == "Advanced" ? "Parameters" : "Advanced"))
-              }
-              variant={subMenu == "Advanced" ? "secondary" : "ghost"}
-              size="sm"
+            <Select
+              name="osc_parameter_mode"
+              value={param.processing_mode}
+              onChange={(e) => {
+                handleOscParamMode(e, paramIndex);
+              }}
+              options={ProcessingModes}
+            />
+            <button
+              className="flex justify-center"
+              onClick={() => removeParam(param.parameter)}
             >
-              Advanced
-            </Button>
-          </div>
-          {subMenu == "Parameters" ? (
-            <>
-              <div className="flex items-center gap-2">
-                <div>Parameters</div>
-                <button onClick={() => addParam()}>
-                  <Plus className="h-5" />
-                </button>
-                <div className="m-2 flex gap-4"></div>
-              </div>
-              <HackyScrollArea>
-                <div className="grid grid-cols-[minmax(6rem,20fr),minmax(6rem,6fr),minmax(1rem,1fr)] gap-x-6 gap-y-2 p-4 text-justify text-sm">
-                  {feature.osc_parameters.map((param, paramIndex) => {
-                    // TODO: Using index is generally an anti-pattern, but I think it's required in this specific scenario
-                    // If we key on a parameter or other identifiers, typing the parameter name would trigger a refresh from the backend
-                    // This would then deselect the input element while typing
-                    return (
-                      <Fragment key={paramIndex}>
-                        {/* Adding debounce on this makes it more complex b/c separate state, plus parent key on index */}
-                        <input
-                          className="w-full rounded-sm px-4 text-zinc-800 outline-none"
-                          name="osc_parameter"
-                          value={param.parameter.replace(OSC_PARAM_PREFIX, "")}
-                          onChange={(e) => handleOscParam(e, paramIndex)}
-                        />
-                        <Select
-                          name="osc_parameter_mode"
-                          value={param.processing_mode}
-                          onChange={(e) => {
-                            handleOscParam(e, paramIndex);
-                          }}
-                          options={ProcessingModes}
-                        />
-                        <button
-                          className="flex justify-center"
-                          onClick={() => removeParam(param.parameter)}
-                        >
-                          <X className="h-5" />
-                        </button>
-                      </Fragment>
-                    );
-                  })}
-                </div>
-              </HackyScrollArea>
-            </>
-          ) : (
-            <HackyScrollArea>
-              <FourPanelContainer>
-                {feature.feature_type == "Linear" && (
-                  <FourPanel
-                    text="Linear Speed"
-                    tooltip="Linear positional duration speed in milliseconds. Speed is determined by the toy itself, this is only requested speed."
-                    three={
-                      <Slider
-                        min={10}
-                        max={1000}
-                        step={1}
-                        value={[levels.linear_position_speed]}
-                        onValueChange={(e) =>
-                          handleLevels("linear_position_speed", e[0])
-                        }
-                        onValueCommit={handleCommit}
-                      />
-                    }
-                    four={levels.linear_position_speed.toString()}
-                  />
-                )}
-                <FourPanel
-                  text="Idle"
-                  tooltip="Set the idle motor speed for this feature. Idle activates when there is no input. Your set idle speed won't activate until you send at least one float value in the valid min/max range you have set."
-                  flipped={feature.flip_input_float}
-                  three={
-                    <Slider
-                      multiply={100}
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      value={[levels.idle_level]}
-                      onValueChange={(e) => handleLevels("idle_level", e[0])}
-                      onValueCommit={handleCommit}
-                    />
-                  }
-                  four={round0.format(levels.idle_level * 100)}
-                />
-                <FourPanel
-                  text="Range"
-                  tooltip="The minimum/maximum motor speed that will be sent to the feature's motor."
-                  flipped={feature.flip_input_float}
-                  three={
-                    <Slider
-                      multiply={100}
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      value={[levels.minimum_level, levels.maximum_level]}
-                      onValueChange={(e) => {
-                        setToyFeature((f) => {
-                          return {
-                            ...f,
-                            feature_levels: {
-                              ...levels,
-                              minimum_level: e[0],
-                              maximum_level: e[1],
-                            },
-                          };
-                        });
-                      }}
-                      onValueCommit={handleCommit}
-                    />
-                  }
-                  four={`${round0.format(
-                    levels.minimum_level * 100,
-                  )}-${round0.format(levels.maximum_level * 100)}`}
-                />
-                <FourPanel
-                  text="Flip Input"
-                  tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
-                  two={
-                    <Switch
-                      size="small"
-                      checked={feature.flip_input_float}
-                      onCheckedChange={(checked) =>
-                        handleBool(checked, "flip_input_float")
-                      }
-                    />
-                  }
-                />
-                <FourPanel
-                  text="Processor"
-                  tooltip="The Input processor for this feature"
-                  three={
-                    <div className="flex gap-2">
-                      <Select
-                        name="pen_system_type"
-                        value={feature.penetration_system.pen_system_type}
-                        onChange={(e) => {
-                          handleInputProcessor(e);
-                        }}
-                        options={PenetrationSystems}
-                      />
-                      <Select
-                        name="pen_system_processing_mode"
-                        value={
-                          feature.penetration_system.pen_system_processing_mode
-                        }
-                        onChange={(e) => {
-                          handleInputProcessor(e);
-                        }}
-                        options={ProcessingModes}
-                      />
-                    </div>
-                  }
-                />
-                <FourPanel
-                  text="Smooth Level"
-                  tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
-                  three={
-                    <Slider
-                      accent={
-                        feature.penetration_system.pen_system_processing_mode ==
-                        "Smooth"
-                      }
-                      min={1}
-                      max={20}
-                      step={1}
-                      value={[levels.smooth_rate]}
-                      onValueChange={(e) => handleLevels("smooth_rate", e[0])}
-                      onValueCommit={handleCommit}
-                    />
-                  }
-                  four={levels.smooth_rate.toString()}
-                />
-                <FourPanel
-                  text="Rate Level"
-                  tooltip="This uses rate mode on the float input."
-                  three={
-                    <Slider
-                      accent={
-                        feature.penetration_system.pen_system_processing_mode ==
-                        "Rate"
-                      }
-                      min={1}
-                      max={20}
-                      step={1}
-                      value={[levels.rate_tune]}
-                      onValueChange={(e) => handleLevels("rate_tune", e[0])}
-                      onValueCommit={handleCommit}
-                    />
-                  }
-                  four={levels.rate_tune.toString()}
-                />
-                <FourPanel
-                  text="Constant Level"
-                  tooltip="The intensity your toy will activate when you have constant mode enabled."
-                  three={
-                    <Slider
-                      accent={
-                        feature.penetration_system.pen_system_processing_mode ==
-                        "Constant"
-                      }
-                      min={0.01}
-                      max={1.0}
-                      step={0.01}
-                      value={[levels.constant_level]}
-                      onValueChange={(e) =>
-                        handleLevels("constant_level", e[0])
-                      }
-                      onValueCommit={handleCommit}
-                    />
-                  }
-                  four={levels.constant_level.toString()}
-                />
-                {simulateEnabled != null && (
-                  <FourPanel
-                    text="Simulate"
-                    tooltip="Test feature power level."
-                    flipped={feature.flip_input_float}
-                    two={
-                      <Switch
-                        size="small"
-                        checked={simulateEnabled}
-                        onCheckedChange={toggleSimulate}
-                      />
-                    }
-                    three={
-                      <Slider
-                        multiply={100}
-                        disabled={!simulateEnabled}
-                        min={0}
-                        max={1}
-                        step={0.01}
-                        value={[simulateLevel]}
-                        onValueChange={(e) => simulateOnValueChange(e[0])}
-                        onValueCommit={() => simulateOnValueCommit()}
-                      />
-                    }
-                    four={round0.format(simulateLevel * 100)}
-                  />
-                )}
-              </FourPanelContainer>
-            </HackyScrollArea>
-          )}
-        </>
+              <X className="h-5" />
+            </button>
+          </Fragment>
+        );
+      })}
+      <div className="col-span-3"></div>
+      <div className="col-span-2 flex justify-center md:col-span-1">
+        <button onClick={addParam}>
+          <Plus className="h-5" />
+        </button>
       </div>
     </>
   );
 }
 
-function HackyScrollArea({ children }: { children: ReactNode }) {
+function Linear() {
+  const { feature, handleLevels, handleFeatureAlter } = useFeatureFormContext();
+  const levels = feature.feature_levels;
   return (
-    <ScrollArea className="scrollbar h-[calc(100vh-440px)] overflow-y-scroll">
+    <FourPanel
+      text="Linear Speed"
+      tooltip={TOOLTIP.LinearSpeed}
+      three={
+        <Slider
+          min={10}
+          max={1000}
+          step={1}
+          value={[levels.linear_position_speed]}
+          onValueChange={(e) => handleLevels("linear_position_speed", e[0])}
+          onValueCommit={() => handleFeatureAlter(feature)}
+        />
+      }
+      four={levels.linear_position_speed.toString()}
+    />
+  );
+}
+
+function Idle() {
+  const { feature, handleLevels, handleFeatureAlter } = useFeatureFormContext();
+  const levels = feature.feature_levels;
+  return (
+    <FourPanel
+      text="Idle Speed"
+      tooltip={TOOLTIP.Idle}
+      flipped={feature.flip_input_float}
+      three={
+        <Slider
+          multiply={100}
+          min={0}
+          max={1}
+          step={0.01}
+          value={[levels.idle_level]}
+          onValueChange={(e) => handleLevels("idle_level", e[0])}
+          onValueCommit={() => handleFeatureAlter(feature)}
+        />
+      }
+      four={round0.format(levels.idle_level * 100)}
+    />
+  );
+}
+
+function Range() {
+  const { feature, setToyFeature, handleFeatureAlter } =
+    useFeatureFormContext();
+  const levels = feature.feature_levels;
+  return (
+    <FourPanel
+      text="Range"
+      tooltip={TOOLTIP.Range}
+      flipped={feature.flip_input_float}
+      three={
+        <Slider
+          multiply={100}
+          min={0}
+          max={1}
+          step={0.01}
+          value={[levels.minimum_level, levels.maximum_level]}
+          onValueChange={(e) => {
+            setToyFeature((f) => {
+              return {
+                ...f,
+                feature_levels: {
+                  ...levels,
+                  minimum_level: e[0],
+                  maximum_level: e[1],
+                },
+              };
+            });
+          }}
+          onValueCommit={() => handleFeatureAlter(feature)}
+        />
+      }
+      four={`${round0.format(levels.minimum_level * 100)}-${round0.format(
+        levels.maximum_level * 100,
+      )}`}
+    />
+  );
+}
+
+function FlipInput() {
+  const { feature, handleBool } = useFeatureFormContext();
+  return (
+    <FourPanel
+      text="Flip Input"
+      tooltip={TOOLTIP.FlipInput}
+      two={
+        <Switch
+          size="small"
+          checked={feature.flip_input_float}
+          onCheckedChange={(checked) => handleBool(checked, "flip_input_float")}
+        />
+      }
+    />
+  );
+}
+
+function Smooth() {
+  const { feature, handleLevels, handleFeatureAlter } = useFeatureFormContext();
+  const levels = feature.feature_levels;
+  return (
+    <FourPanel
+      text="Smooth Level"
+      tooltip={TOOLTIP.Smooth}
+      three={
+        <Slider
+          min={1}
+          max={20}
+          step={1}
+          value={[levels.smooth_rate]}
+          onValueChange={(e) => handleLevels("smooth_rate", e[0])}
+          onValueCommit={() => handleFeatureAlter(feature)}
+        />
+      }
+      four={levels.smooth_rate.toString()}
+    />
+  );
+}
+
+function Rate() {
+  const { feature, handleLevels, handleFeatureAlter } = useFeatureFormContext();
+  const levels = feature.feature_levels;
+  return (
+    <FourPanel
+      text="Rate Level"
+      tooltip={TOOLTIP.Rate}
+      three={
+        <Slider
+          min={0.1}
+          max={2}
+          step={0.05}
+          value={[levels.rate_tune]}
+          onValueChange={(e) => handleLevels("rate_tune", e[0])}
+          onValueCommit={() => handleFeatureAlter(feature)}
+        />
+      }
+      four={levels.rate_tune.toString()}
+    />
+  );
+}
+
+function Constant() {
+  const { feature, handleLevels, handleFeatureAlter } = useFeatureFormContext();
+  const levels = feature.feature_levels;
+  return (
+    <FourPanel
+      text="Constant Level"
+      tooltip={TOOLTIP.Constant}
+      three={
+        <Slider
+          min={0.01}
+          max={1.0}
+          step={0.01}
+          value={[levels.constant_level]}
+          onValueChange={(e) => handleLevels("constant_level", e[0])}
+          onValueCommit={() => handleFeatureAlter(feature)}
+        />
+      }
+      four={levels.constant_level.toString()}
+    />
+  );
+}
+
+function Simulate({ toy }: { toy: FeVCToy }) {
+  const { feature } = useFeatureFormContext();
+  const {
+    simulateEnabled,
+    simulateLevel,
+    toggleSimulate,
+    simulateOnValueChange,
+    simulateOnValueCommit,
+  } = useSimulate(toy.toy_id, feature);
+  return (
+    <>
+      {simulateEnabled !== null && (
+        <FourPanel
+          text="Simulate"
+          tooltip={TOOLTIP.Simulate}
+          flipped={feature.flip_input_float}
+          two={
+            <Switch
+              size="small"
+              checked={simulateEnabled}
+              onCheckedChange={toggleSimulate}
+            />
+          }
+          three={
+            <Slider
+              multiply={100}
+              disabled={!simulateEnabled}
+              min={0}
+              max={1}
+              step={0.01}
+              value={[simulateLevel]}
+              onValueChange={(e) => simulateOnValueChange(e[0])}
+              onValueCommit={() => simulateOnValueCommit()}
+            />
+          }
+          four={round0.format(simulateLevel * 100)}
+        />
+      )}
+    </>
+  );
+}
+
+function HackyScrollArea({ children }: { children: ReactNode }) {
+  // extremely hacky
+  const { config } = useCoreEventContext();
+  return (
+    <ScrollArea
+      className={cn(
+        "scrollbar overflow-y-hidden pr-2 hover:overflow-y-scroll hover:pr-0",
+        config?.show_toy_advanced
+          ? "h-[calc(100vh-300px)] md:h-[calc(100vh-280px)]"
+          : "h-[calc(100vh-200px)]",
+      )}
+    >
       {children}
     </ScrollArea>
   );
