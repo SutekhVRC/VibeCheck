@@ -4,7 +4,7 @@ import { FeVCToyAnatomy } from "../../src-tauri/bindings/FeVCToyAnatomy";
 import FourPanel from "../components/FourPanel";
 import FourPanelContainer from "../components/FourPanelContainer";
 import { createToast } from "../components/Toast";
-import { OSC } from "../data/constants";
+import { OSC, TOOLTIP } from "../data/constants";
 import { ToyAnatomyArray } from "../data/stringArrayTypes";
 import { handleToyAlter } from "../hooks/useToys";
 import { Select } from "../layout/Select";
@@ -31,10 +31,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
     <div className="rounded-md bg-zinc-700 px-4 text-sm">
       <FourPanelContainer>
         <div className="flex items-center gap-1">
-          <TooltipLabel
-            text="OSC Data"
-            tooltip="If vibecheck should send OSC data to VRChat"
-          />
+          <TooltipLabel text="OSC Data" tooltip={TOOLTIP.OSC_Data} />
           {toy.toy_connected && (
             <Tooltip text="Copy osc data address to clipboard">
               <ClipboardCopy
@@ -55,7 +52,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
         <div></div>
         <FourPanel
           text="Anatomy"
-          tooltip="Anatomy types can be used as a category filter to disable/enable multiple toys at the same time from VRChat using the VibeCheck OSC API"
+          tooltip={TOOLTIP.Anatomy}
           three={
             <Select
               value={toy.toy_anatomy}

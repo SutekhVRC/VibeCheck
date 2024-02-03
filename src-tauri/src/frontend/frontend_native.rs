@@ -7,7 +7,7 @@ use crate::{
     config::toy::VCToyConfig,
     frontend::{
         frontend_types::{
-            FeSocialLink, FeToyAlter, FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig,
+            FeBrowserLink, FeToyAlter, FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig,
         },
         FromFrontend, ToFrontend,
     },
@@ -246,16 +246,26 @@ pub fn alter_toy(
  * Opens the social link specified
  */
 #[tauri::command(async)]
-pub fn open_default_browser(link: FeSocialLink) {
+pub fn open_default_browser(link: FeBrowserLink) {
     match link {
-        FeSocialLink::Discord => {
+        FeBrowserLink::Discord => {
             let _ = open::that("https://discord.gg/g6kUFtMtpw");
         }
-        FeSocialLink::Github => {
+        FeBrowserLink::Github => {
             let _ = open::that("https://github.com/SutekhVRC/VibeCheck");
         }
-        FeSocialLink::VRChatGroup => {
+        FeBrowserLink::VRChatGroup => {
             let _ = open::that("https://vrc.group/VIBE.9503");
+        }
+        FeBrowserLink::ToyOptions => {
+            let _ = open::that(
+                "https://github.com/SutekhVRC/VibeCheck/wiki/Toy-Options-List#toy-options",
+            );
+        }
+        FeBrowserLink::FeatureOptions => {
+            let _ = open::that(
+                "https://github.com/SutekhVRC/VibeCheck/wiki/Toy-Options-List#toy-feature-options",
+            );
         }
     };
 }

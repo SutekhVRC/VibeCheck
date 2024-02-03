@@ -66,10 +66,12 @@ pub enum FeCoreEvent {
 
 #[derive(Deserialize, Clone, TS)]
 #[ts(export)]
-pub enum FeSocialLink {
+pub enum FeBrowserLink {
     Github,
     VRChatGroup,
     Discord,
+    ToyOptions,
+    FeatureOptions,
 }
 
 #[derive(Serialize, Deserialize, Clone, TS, Debug)]

@@ -3,7 +3,7 @@ import { ChangeEvent, FormEvent, useState } from "react";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 import { createToast } from "../components/Toast";
 import UpdateButton from "../components/UpdateButton";
-import { INVOKE } from "../data/constants";
+import { INVOKE, TOOLTIP } from "../data/constants";
 import Button from "../layout/Button";
 import Switch from "../layout/Switch";
 import { TooltipLabel } from "../layout/Tooltip";
@@ -91,10 +91,7 @@ export default function Config({
       <div className="flex w-full flex-col justify-between">
         <form id="config" onSubmit={handleSubmit}>
           <div className="mx-8 my-4 grid grid-cols-[minmax(10rem,4fr)_1fr_minmax(4rem,_4fr)] gap-1 text-justify text-sm">
-            <TooltipLabel
-              text="OSC Bind"
-              tooltip="OSC Receive Port (Default: 127.0.0.1:9001)"
-            />
+            <TooltipLabel text="OSC Bind" tooltip={TOOLTIP.OSC_Bind} />
             <div />
             <input
               name="bind"
@@ -111,10 +108,7 @@ export default function Config({
                 (e.target as HTMLInputElement).setCustomValidity("")
               }
             />
-            <TooltipLabel
-              text="OSC Remote"
-              tooltip="OSC Send Port (Default: 127.0.0.1:9000)"
-            />
+            <TooltipLabel text="OSC Remote" tooltip={TOOLTIP.OSC_Remote} />
             <div />
             <input
               name="remote"
@@ -133,7 +127,7 @@ export default function Config({
             />
             <TooltipLabel
               text="Lovense Connect Override"
-              tooltip="Override and force the Lovense Connect host to connect to."
+              tooltip={TOOLTIP.LC_Override}
             />
             <Switch
               checked={newConfig.lc_override != null}
@@ -161,7 +155,7 @@ export default function Config({
             )}
             <TooltipLabel
               text="Scan On Disconnect"
-              tooltip="Automatically start scanning when a toy disconnects."
+              tooltip={TOOLTIP.ScanOnDisconnect}
             />
             <Switch
               checked={newConfig.scan_on_disconnect}
@@ -173,7 +167,7 @@ export default function Config({
             <div />
             <TooltipLabel
               text="Minimize On Exit"
-              tooltip="Minimize VibeCheck instead of exiting."
+              tooltip={TOOLTIP.MinimizeOnExit}
             />
             <Switch
               checked={newConfig.minimize_on_exit}
@@ -185,7 +179,7 @@ export default function Config({
             <div />
             <TooltipLabel
               text="Desktop Notifications"
-              tooltip="Notifications for toy connect and disconnect."
+              tooltip={TOOLTIP.DesktopNotifications}
             />
             <Switch
               checked={newConfig.desktop_notifications}
@@ -197,7 +191,7 @@ export default function Config({
             <div />
             <TooltipLabel
               text="Advanced toy options"
-              tooltip="Show advanced toy options like osc data and anatomy"
+              tooltip={TOOLTIP.AdvancedToy}
             />
             <Switch
               checked={newConfig.show_toy_advanced}
@@ -209,7 +203,7 @@ export default function Config({
             <div />
             <TooltipLabel
               text="Advanced feature options"
-              tooltip="Show advanced options for features [vibrator, constrict, oscillate, etc], will show options like idle speed, flip input, simulate"
+              tooltip={TOOLTIP.AdvancedFeature}
             />
             <Switch
               checked={newConfig.show_feature_advanced}

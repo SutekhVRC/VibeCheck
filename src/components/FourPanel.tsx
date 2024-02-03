@@ -1,3 +1,5 @@
+import { TOOLTIP } from "@/data/constants";
+import { ObjectValues } from "@/utils";
 import { ArrowRightLeft } from "lucide-react";
 import { ReactNode } from "react";
 import { TooltipLabel } from "../layout/Tooltip";
@@ -11,7 +13,7 @@ export default function FourPanel({
   four,
 }: {
   text: string;
-  tooltip?: string;
+  tooltip?: string | ObjectValues<typeof TOOLTIP>;
   flipped?: boolean;
   two?: ReactNode;
   three?: ReactNode;

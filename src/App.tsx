@@ -12,6 +12,7 @@ import ExternalLogo from "./components/ExternalLogo";
 import Loading from "./components/Loading";
 import UpdatePing from "./components/UpdatePing";
 import { useCoreEventContext } from "./context/CoreEvents";
+import { TOOLTIP } from "./data/constants";
 import Config from "./features/Config";
 import Toy from "./features/Toy";
 import { parseName, toyKey, useToys } from "./hooks/useToys";
@@ -104,21 +105,9 @@ export default function App() {
         <div className="flex flex-col gap-1">
           <img className="h-14 object-contain" src={VibecheckLogo} />
           <div className="mb-1 mt-2 flex items-center justify-around">
-            <ExternalLogo
-              src={VrchatLogo}
-              link="VRChatGroup"
-              tooltip="Vibecheck VRChat Group"
-            />
-            <ExternalLogo
-              src={DiscordLogo}
-              link="Discord"
-              tooltip="Vibecheck Discord"
-            />
-            <ExternalLogo
-              src={GithubLogo}
-              link="Github"
-              tooltip="Vibecheck Github"
-            />
+            <ExternalLogo src={VrchatLogo} tooltip={TOOLTIP.VrChatGroup} />
+            <ExternalLogo src={DiscordLogo} tooltip={TOOLTIP.Discord} />
+            <ExternalLogo src={GithubLogo} tooltip={TOOLTIP.Github} />
           </div>
           <div className="flex h-[calc(100vh-185px)] flex-col justify-between overflow-hidden rounded-md bg-zinc-800">
             <div className="scrollbar flex select-none flex-col overflow-y-scroll pl-2">

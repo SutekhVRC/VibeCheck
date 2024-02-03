@@ -23,7 +23,7 @@ import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import FourPanel from "../components/FourPanel";
 import FourPanelContainer from "../components/FourPanelContainer";
-import { OSC } from "../data/constants";
+import { OSC, TOOLTIP } from "../data/constants";
 import useSimulate from "../hooks/useSimulate";
 import { handleFeatureAlter as handleToyFeatureAlter } from "../hooks/useToys";
 import Slider from "../layout/Slider";
@@ -149,7 +149,7 @@ function Enabled() {
   return (
     <FourPanel
       text="Enabled"
-      tooltip="Enable/Disable this feature."
+      tooltip={TOOLTIP.Enabled}
       two={
         <Switch
           size="small"
@@ -182,7 +182,7 @@ function InputProcessor() {
   return (
     <FourPanel
       text="Processor"
-      tooltip="Choose the way VibeCheck processes input. Example: If your avatar is using SPS and you want VibeCheck to interact with it, switch to SPS."
+      tooltip={TOOLTIP.InputProcessor}
       three={
         <div className="flex gap-2">
           <Select
@@ -342,7 +342,7 @@ function Linear() {
   return (
     <FourPanel
       text="Linear Speed"
-      tooltip="Linear positional duration speed in milliseconds. Speed is determined by the toy itself, this is only requested speed."
+      tooltip={TOOLTIP.LinearSpeed}
       three={
         <Slider
           min={10}
@@ -364,7 +364,7 @@ function Idle() {
   return (
     <FourPanel
       text="Idle Speed"
-      tooltip="Set the idle motor speed for this feature. Idle activates when there is no input. Your set idle speed won't activate until you send at least one float value in the valid min/max range you have set."
+      tooltip={TOOLTIP.Idle}
       flipped={feature.flip_input_float}
       three={
         <Slider
@@ -389,7 +389,7 @@ function Range() {
   return (
     <FourPanel
       text="Range"
-      tooltip="The minimum/maximum motor speed that will be sent to the feature's motor."
+      tooltip={TOOLTIP.Range}
       flipped={feature.flip_input_float}
       three={
         <Slider
@@ -425,7 +425,7 @@ function FlipInput() {
   return (
     <FourPanel
       text="Flip Input"
-      tooltip="Some toys use a flipped float input. Enable this if your toy seems to do the opposite motor level you were expecting."
+      tooltip={TOOLTIP.FlipInput}
       two={
         <Switch
           size="small"
@@ -443,7 +443,7 @@ function Smooth() {
   return (
     <FourPanel
       text="Smooth Level"
-      tooltip="This smooths the float input by queueing the amount set with the slider, then transforming them into one value to send instead. If you aren't sending a lot of floats rapidly over OSC you probably want this disabled completely."
+      tooltip={TOOLTIP.Smooth}
       three={
         <Slider
           min={1}
@@ -465,7 +465,7 @@ function Rate() {
   return (
     <FourPanel
       text="Rate Level"
-      tooltip="This uses rate mode on the float input."
+      tooltip={TOOLTIP.Rate}
       three={
         <Slider
           min={0.1}
@@ -487,7 +487,7 @@ function Constant() {
   return (
     <FourPanel
       text="Constant Level"
-      tooltip="The intensity your toy will activate when you have constant mode enabled."
+      tooltip={TOOLTIP.Constant}
       three={
         <Slider
           min={0.01}
@@ -517,7 +517,7 @@ function Simulate({ toy }: { toy: FeVCToy }) {
       {simulateEnabled !== null && (
         <FourPanel
           text="Simulate"
-          tooltip="Test feature power level."
+          tooltip={TOOLTIP.Simulate}
           flipped={feature.flip_input_float}
           two={
             <Switch
