@@ -16,7 +16,7 @@ impl InputProcessor for TPSProcessor {
     fn process(&mut self, addr: &str, input: ModeProcessorInputType) -> Option<f64> {
         let tps_param = addr.strip_prefix("/avatar/parameters/")?;
 
-        if tps_param.ends_with("Depth_In") | tps_param.ends_with("RootRoot") {
+        if tps_param.ends_with("Depth_In") || tps_param.ends_with("RootRoot") {
             input.try_float()
         } else {
             None

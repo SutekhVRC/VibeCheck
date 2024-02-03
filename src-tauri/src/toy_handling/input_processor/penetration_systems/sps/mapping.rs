@@ -227,10 +227,7 @@ impl SPSMapping {
     }
 
     pub fn is_touch(&self) -> bool {
-        if self.others_touch_enabled | self.self_touch_enabled {
-            return true;
-        }
-        false
+        self.others_touch_enabled || self.self_touch_enabled
     }
 
     pub fn is_frot(&self) -> bool {
@@ -404,7 +401,7 @@ impl SPSMapping {
         // Mapping is legacy orifice or mapping is a Pen type
         // I will assume here that legacy orf mode applies to PenOthers & PenSelf
         // Assuming that when someone is PenSelf they are using the Self Tip/Root method
-        if self.is_legacy_orf() | self.param_type.is_pen() {
+        if self.is_legacy_orf() || self.param_type.is_pen() {
             let new_legacy_value = self.get_legacy_value(others)?;
             debug!("LEGACY VALUE: {}", new_legacy_value);
             return Some(new_legacy_value);
