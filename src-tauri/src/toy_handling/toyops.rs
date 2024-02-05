@@ -86,7 +86,7 @@ impl VCToy {
                     self.parsed_toy_features.features.push(VCToyFeature::new(
                         vec![],
                         indexer,
-                        VCFeatureType::Linear,
+                        VCFeatureType::Rotator,
                     ));
 
                     indexer += 1;
@@ -199,36 +199,53 @@ impl VCToy {
                 let mut conn_toy_feature_count = 0;
 
                 if self.toy_features.scalar_cmd().is_some() {
-                    conn_toy_feature_count += self
+                    debug!("Found Scalar CMD");
+                    let conf_file_scalar_count = conf.features.get_feature_scalar_count();
+                    let connected_toy_scalar_count = self
                         .toy_features
                         .scalar_cmd()
                         .as_ref()
                         .unwrap()
                         .iter()
                         .len();
+                    if conf_file_scalar_count == connected_toy_scalar_count {
+                        conn_toy_feature_count += connected_toy_scalar_count;
+                    }
                 }
 
                 if self.toy_features.rotate_cmd().is_some() {
-                    conn_toy_feature_count += self
+                    debug!("Found Rotate CMD");
+                    let conf_file_rotate_count = conf.features.get_feature_rotator_count();
+                    let connected_toy_rotate_count = self
                         .toy_features
                         .rotate_cmd()
                         .as_ref()
                         .unwrap()
                         .iter()
                         .len();
+                    if conf_file_rotate_count == connected_toy_rotate_count {
+                        conn_toy_feature_count += connected_toy_rotate_count;
+                    }
                 }
 
                 if self.toy_features.linear_cmd().is_some() {
-                    conn_toy_feature_count += self
+                    debug!("Found Linear CMD");
+                    let conf_file_linear_count = conf.features.get_feature_linear_count();
+                    let connected_toy_linear_count = self
                         .toy_features
                         .linear_cmd()
                         .as_ref()
                         .unwrap()
                         .iter()
                         .len();
+                    if conf_file_linear_count == connected_toy_linear_count {
+                        conn_toy_feature_count += connected_toy_linear_count;
+                    }
                 }
 
+                // If Toy has a different count of features repopulate config
                 if conn_toy_feature_count != conf.features.features.len() {
+                    warn!("Config is likely corrupted! Repopulating features!");
                     self.populate_routine();
                     return;
                 }
@@ -717,6 +734,44 @@ impl VCToyFeatures {
         VCToyFeatures {
             features: Vec::new(),
         }
+    }
+
+    pub fn get_feature_linear_count(&self) -> usize {
+        let mut count = 0;
+        for f in self.features.iter() {
+            match f.feature_type {
+                VCFeatureType::Linear => count += 1,
+                _ => {}
+            }
+        }
+        count
+    }
+
+    pub fn get_feature_rotator_count(&self) -> usize {
+        let mut count = 0;
+        for f in self.features.iter() {
+            match f.feature_type {
+                VCFeatureType::Rotator => count += 1,
+                _ => {}
+            }
+        }
+        count
+    }
+
+    pub fn get_feature_scalar_count(&self) -> usize {
+        let mut count = 0;
+        for f in self.features.iter() {
+            match f.feature_type {
+                VCFeatureType::Constrict => count += 1,
+                VCFeatureType::Inflate => count += 1,
+                VCFeatureType::Oscillate => count += 1,
+                VCFeatureType::Position => count += 1,
+                VCFeatureType::Vibrator => count += 1,
+                VCFeatureType::ScalarRotator => count += 1,
+                _ => {}
+            }
+        }
+        count
     }
 
     pub fn get_features_from_param(&mut self, param: &String) -> Option<Vec<&mut VCToyFeature>> {
