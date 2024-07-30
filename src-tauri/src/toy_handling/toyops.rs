@@ -809,8 +809,10 @@ impl VCToyFeatures {
                 .unwrap()
                 .is_parameter(param)
             {
-                // Add to features vector for features with a penetration system related to the input parameter
-                out.push(f);
+                if f.feature_enabled {
+                    // Add to features vector for features with a penetration system related to the input parameter
+                    out.push(f);
+                }
             }
         }
 
