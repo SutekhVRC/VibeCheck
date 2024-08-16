@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import { ChangeEvent, FormEvent, useState } from "react";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 import { createToast } from "../components/Toast";

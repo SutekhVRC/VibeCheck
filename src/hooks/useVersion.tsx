@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { createToast } from "../components/Toast";
 import { INVOKE } from "../data/constants";

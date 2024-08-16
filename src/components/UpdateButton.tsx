@@ -1,5 +1,5 @@
-import { relaunch } from "@tauri-apps/api/process";
-import { installUpdate } from "@tauri-apps/api/updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { check } from "@tauri-apps/plugin-updater";
 import Button from "../layout/Button";
 import { createToast } from "./Toast";
 import UpdatePing from "./UpdatePing";
@@ -7,7 +7,8 @@ import UpdatePing from "./UpdatePing";
 export default function UpdateButton({ enabled }: { enabled: boolean }) {
   async function handleUpdate() {
     try {
-      await installUpdate();
+      const checkUpdate = await check();
+      checkUpdate?.downloadAndInstall();
       await relaunch();
     } catch (e) {
       createToast("error", "Could not update!", JSON.stringify(e));

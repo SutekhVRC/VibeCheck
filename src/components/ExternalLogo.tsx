@@ -1,5 +1,5 @@
 import { ObjectValues } from "@/utils";
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import { INVOKE, TOOLTIP } from "../data/constants";
 import Tooltip from "../layout/Tooltip";
 import { createToast } from "./Toast";
