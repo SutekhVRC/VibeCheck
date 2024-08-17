@@ -8,7 +8,9 @@ use crate::{
     util::fs::{file_exists, get_config_dir},
 };
 use log::{debug, info, trace};
-use tauri::{api::dir::read_dir, AppHandle};
+use std::fs;
+use std::io::Read;
+use tauri::AppHandle;
 
 #[derive(Clone)]
 pub struct ToyManager {
@@ -47,23 +49,21 @@ impl ToyManager {
     }
 
     pub fn populate_configs(&mut self) {
-        let toy_config_dir = match read_dir(format!("{}\\ToyConfigs", get_config_dir()), false) {
+        let toy_config_dir = match fs::read_dir(format!("{}\\ToyConfigs", get_config_dir())) {
             Ok(config_paths) => config_paths,
             // Doesn't populate
             Err(_e) => return,
         };
 
         for f in toy_config_dir {
-            if !file_exists(&f.path) {
+            let path = f.unwrap().path();
+            if !path.is_file() {
                 continue;
             }
-
-            let con = match std::fs::read_to_string(f.path) {
-                Ok(contents) => contents,
-                Err(_e) => continue,
-            };
-
-            let config: VCToyConfig = match serde_json::from_str(&con) {
+            let mut file = fs::File::open(path).unwrap();
+            let mut data = String::new();
+            file.read_to_string(&mut data);
+            let config: VCToyConfig = match serde_json::from_str(&data) {
                 Ok(vc_toy_config) => vc_toy_config,
                 Err(_) => {
                     continue;

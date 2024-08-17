@@ -22,7 +22,7 @@ use crate::{
     toy_handling::toyops::VCToy,
 };
 use parking_lot::Mutex;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use vrcoscquery::OSCQuery;
@@ -722,7 +722,7 @@ pub fn native_alter_toy(
             .send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)))
     };
 
-    let _ = app_handle.emit_all(
+    let _ = app_handle.emit(
         "fe_toy_event",
         FeToyEvent::Update({
             FeVCToy {

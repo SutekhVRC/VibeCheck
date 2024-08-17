@@ -1,57 +1,39 @@
 use crate::config::OSCNetworking;
-use crate::frontend::frontend_types::FeCoreEvent;
-use crate::frontend::frontend_types::FeScanEvent;
-use crate::frontend::frontend_types::FeToyEvent;
-use crate::frontend::frontend_types::FeVCToy;
+use crate::frontend::frontend_types::{FeCoreEvent, FeScanEvent, FeToyEvent, FeVCToy};
 use crate::frontend::ToFrontend;
 use crate::osc::logic::toy_input_routine;
 use crate::toy_handling::toy_manager::ToyManager;
-use crate::toy_handling::toyops::LevelTweaks;
-use crate::toy_handling::toyops::ToyParameter;
-use crate::toy_handling::toyops::VCFeatureType;
-use crate::toy_handling::toyops::{VCToy, VCToyFeatures};
+use crate::toy_handling::toyops::{LevelTweaks, ToyParameter, VCFeatureType, VCToy, VCToyFeatures};
 use crate::toy_handling::ToyPower;
 use crate::toy_handling::ToySig;
-use crate::vcore::core::ToyManagementEvent;
-use crate::vcore::core::VibeCheckState;
-use crate::{vcore::core::TmSig, vcore::core::ToyUpdate, vcore::core::VCError};
-use buttplug::client::ButtplugClientDevice;
-use buttplug::client::ButtplugClientEvent;
+use crate::vcore::core::{TmSig, ToyManagementEvent, ToyUpdate, VCError, VibeCheckState};
 use buttplug::client::RotateCommand::RotateMap;
 use buttplug::client::ScalarCommand::ScalarMap;
+use buttplug::client::{ButtplugClientDevice, ButtplugClientEvent};
 use buttplug::core::message::ActuatorType;
 use futures::StreamExt;
 use futures_timer::Delay;
 use log::debug;
 use log::{error as logerr, info, trace, warn};
 use parking_lot::Mutex;
-use rosc::OscMessage;
-use rosc::OscType;
+use rosc::{OscMessage, OscType};
 use std::collections::HashMap;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
-use std::time::Instant;
-use tauri::api::notification::Notification;
-use tauri::AppHandle;
-use tauri::Manager;
+use std::time::{Duration, Instant};
+use tauri::{AppHandle, Emitter};
+use tauri_plugin_notification::NotificationExt;
 use tokio::runtime::Runtime;
-use tokio::sync::mpsc::UnboundedReceiver;
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::sync::{
     self,
     broadcast::{Receiver as BReceiver, Sender as BSender},
 };
 use tokio::task::JoinHandle;
 
-use super::toyops::ProcessingMode;
-use super::toyops::ProcessingModeValues;
-use super::toyops::RateProcessingValues;
-use super::ModeProcessorInput;
-use super::ModeProcessorInputType;
-use super::RateParser;
-use super::SmoothParser;
+use super::toyops::{ProcessingMode, ProcessingModeValues, RateProcessingValues};
+use super::{ModeProcessorInput, ModeProcessorInputType, RateParser, SmoothParser};
 
 /*
     This handler will handle the adding and removal of toys
@@ -157,7 +139,7 @@ pub async fn client_event_handler(
                         .send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone())))
                         .unwrap();
 
-                    let _ = app_handle.emit_all(
+                    let _ = app_handle.emit(
                         "fe_toy_event",
                         FeToyEvent::Add({
                             FeVCToy {
@@ -177,7 +159,9 @@ pub async fn client_event_handler(
                     {
                         let vc_lock = vibecheck_state_pointer.lock();
                         if vc_lock.config.desktop_notifications {
-                            let _ = Notification::new(identifier.clone())
+                            app_handle
+                                .notification()
+                                .builder()
                                 .title("Toy Connected")
                                 .body(
                                     format!("{} ({})", toy.toy_name, toy.toy_power.to_string())
@@ -211,13 +195,14 @@ pub async fn client_event_handler(
                             .send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(dev.index())))
                             .unwrap();
 
-                        let _ =
-                            app_handle.emit_all("fe_toy_event", FeToyEvent::Remove(dev.index()));
+                        let _ = app_handle.emit("fe_toy_event", FeToyEvent::Remove(dev.index()));
 
                         {
                             let vc_lock = vibecheck_state_pointer.lock();
                             if vc_lock.config.desktop_notifications {
-                                let _ = Notification::new(identifier.clone())
+                                app_handle
+                                    .notification()
+                                    .builder()
                                     .title("Toy Disconnected")
                                     .body(toy.toy_name.to_string())
                                     .show();
@@ -233,7 +218,7 @@ pub async fn client_event_handler(
                                     .spawn(vc_lock.bp_client.as_ref().unwrap().start_scanning());
                             }
                             let _ = app_handle
-                                .emit_all("fe_core_event", FeCoreEvent::Scan(FeScanEvent::Start));
+                                .emit("fe_core_event", FeCoreEvent::Scan(FeScanEvent::Start));
                         }
                     }
                 }

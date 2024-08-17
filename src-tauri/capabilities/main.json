@@ -1,0 +1,7 @@
+{
+  "identifier": "main-capabilities",
+  "description": "Capability for the main window",
+  "local": true,
+  "windows": ["main"],
+  "permissions": []
+}

@@ -6,7 +6,7 @@ use rosc::OscType;
 use rosc::{self, OscMessage, OscPacket};
 
 use tauri::AppHandle;
-use tauri::Manager;
+use tauri::Emitter;
 use tokio::net::UdpSocket as tUdpSocket;
 
 use tokio::sync::broadcast::Sender as BSender;
@@ -126,7 +126,7 @@ pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OS
                         if let Some(state_bool) = msg.args.pop().unwrap().bool() {
                             if state_bool {
                                 info!("Sending EnableAndScan event");
-                                let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend::frontend_types::FeStateEvent::EnableAndScan));
+                                let _ = app_handle.emit("fe_core_event", FeCoreEvent::State(crate::frontend::frontend_types::FeStateEvent::EnableAndScan));
                             }
                         }
                     }
@@ -220,7 +220,7 @@ pub async fn toy_refresh(
 
             toy.toy_power = toy_power.clone();
 
-            let _ = app_handle.emit_all(
+            let _ = app_handle.emit(
                 "fe_toy_event",
                 FeToyEvent::Update({
                     FeVCToy {
