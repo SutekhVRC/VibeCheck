@@ -41,7 +41,7 @@ jobs:
       - name: remove config pubkey
         run: |
           $json = Get-Content ./src-tauri/tauri.conf.json | ConvertFrom-Json
-          $json.PSObject.Properties.Remove('plugins')
+          $json.plugins.updater.PSObject.Properties.Remove("pubkey") 
           $json | ConvertTo-Json -Depth 32 | Set-Content ./src-tauri/tauri.conf.json
       - name: install app dependencies
         run: yarn
