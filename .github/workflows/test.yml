@@ -38,11 +38,11 @@ jobs:
         with:
           node-version: 20
           cache: "yarn"
+      - name: remove config pubkey
+        run: jq 'del(.plugins)' ./src-tauri/tauri.conf.json > conf.tmp && mv conf.tmp ./src-tauri/tauri.conf.json
       - name: install app dependencies
         run: yarn
       - name: test build
         uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: "-b msi"
