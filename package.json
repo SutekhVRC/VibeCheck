@@ -35,7 +35,6 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1.6.0",
     "@types/lodash": "^4.14.202",
     "@types/node": "^22.3.0",
     "@types/react": "^18.2.43",
