@@ -1,5 +1,5 @@
 {
-  "identifier": "main-capabilities",
+  "identifier": "main-capability",
   "description": "Capability for the main window",
   "local": true,
   "windows": ["main"],

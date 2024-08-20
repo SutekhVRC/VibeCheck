@@ -61,9 +61,7 @@ fn main() {
                 .show_all()
                 .build()?;
             app.set_menu(menu);
-            TrayIconBuilder::new().on_tray_icon_event(|app, event| {
-                tauri_plugin_positioner::on_tray_event(app.app_handle(), &event);
-            });
+
             app.updater();
             Ok(())
         })
