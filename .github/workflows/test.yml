@@ -10,24 +10,23 @@ jobs:
     runs-on: [ubuntu-latest]
     steps:
       - name: checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: "yarn"
       - name: install app dependencies and check frontend
         run: yarn && yarn lint:check && yarn format:check
 
   test-build:
     needs: check-frontend
-    if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
       fail-fast: false
     runs-on: [windows-latest]
     steps:
       - name: checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
       - name: Rust cache
@@ -35,9 +34,9 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
       - name: setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: "yarn"
       - name: install app dependencies
         run: yarn
