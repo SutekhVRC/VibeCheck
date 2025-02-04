@@ -1,10 +1,10 @@
 import { invoke } from "@tauri-apps/api";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import type { FeToyEvent } from "../../src-tauri/bindings/FeToyEvent";
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
-import { createToast } from "../components/Toast";
 import { INVOKE, LISTEN } from "../data/constants";
 import { assertExhaustive } from "../utils";
 
@@ -24,7 +24,7 @@ export async function handleToyAlter(newToy: FeVCToy) {
       });
     }
   } catch (e) {
-    createToast("error", "Could not alter toy!", JSON.stringify(e));
+    toast.error(`Could not alter toy!\n${JSON.stringify(e)}`);
   }
 }
 
@@ -88,7 +88,7 @@ export function useToys() {
         }, {} as ToyMap),
       );
     } catch (e) {
-      createToast("error", "Could not load offline toys", JSON.stringify(e));
+      toast.error(`Could not load offline toys\n${JSON.stringify(e)}`);
     }
   }
 

@@ -1,8 +1,8 @@
 import { ObjectValues } from "@/utils";
 import { invoke } from "@tauri-apps/api";
+import { toast } from "sonner";
 import { INVOKE, TOOLTIP } from "../data/constants";
 import Tooltip from "../layout/Tooltip";
-import { createToast } from "./Toast";
 
 type ExternalLogoProps = {
   src: string;
@@ -14,7 +14,7 @@ export default function ExternalLogo({ src, tooltip }: ExternalLogoProps) {
     try {
       await invoke(INVOKE.OPEN_BROWSER, { link: tooltip.link });
     } catch (e) {
-      createToast("error", "Could not open browser", JSON.stringify(e));
+      toast.error(`Could not open browser\n${JSON.stringify(e)}`);
     }
   }
   return (

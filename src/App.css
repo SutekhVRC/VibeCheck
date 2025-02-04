@@ -1,16 +1,6 @@
 #root {
   margin: 0 auto;
   text-align: center;
-  --blue: rgb(86, 205, 255);
-  --purple: rgb(167, 164, 217);
-  --pink: rgb(230, 37, 144);
-}
-
-.grad-forewards {
-  background: linear-gradient(90deg, var(--pink), var(--purple), var(--blue));
-}
-.grad-backwards {
-  background: linear-gradient(90deg, var(--blue), var(--purple), var(--pink));
 }
 
 .text-clip {

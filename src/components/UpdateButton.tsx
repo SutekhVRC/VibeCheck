@@ -1,7 +1,7 @@
 import { relaunch } from "@tauri-apps/api/process";
 import { installUpdate } from "@tauri-apps/api/updater";
+import { toast } from "sonner";
 import Button from "../layout/Button";
-import { createToast } from "./Toast";
 import UpdatePing from "./UpdatePing";
 
 export default function UpdateButton({ enabled }: { enabled: boolean }) {
@@ -10,7 +10,7 @@ export default function UpdateButton({ enabled }: { enabled: boolean }) {
       await installUpdate();
       await relaunch();
     } catch (e) {
-      createToast("error", "Could not update!", JSON.stringify(e));
+      toast.error(`Could not update!\n${JSON.stringify(e)}`);
     }
   }
   return (
