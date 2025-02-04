@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
-import { createToast } from "../components/Toast";
+import { toast } from "sonner";
 import { INVOKE } from "../data/constants";
 
 export function useVersion() {
@@ -11,7 +11,7 @@ export function useVersion() {
       const version = await invoke<string>(INVOKE.VERSION);
       setVersion(version);
     } catch (e) {
-      createToast("error", "Could not get version!", JSON.stringify(e));
+      toast.error(`Could not get version!\n${JSON.stringify(e)}`);
     }
   }
   useEffect(() => {

@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
-import { createToast } from "../components/Toast";
 import { INVOKE } from "../data/constants";
 import { useUpdateEffect } from "./useUpdateEffect";
 
@@ -54,11 +54,7 @@ export default function useSimulate(
         stop: false,
       });
     } catch (e) {
-      createToast(
-        "error",
-        "Could not simulate device feature!",
-        JSON.stringify(e),
-      );
+      toast.error(`Could not simulate device feature!\n${JSON.stringify(e)}`);
     }
   }
 

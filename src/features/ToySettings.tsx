@@ -1,9 +1,9 @@
 import { ClipboardCopy } from "lucide-react";
+import { toast } from "sonner";
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import { FeVCToyAnatomy } from "../../src-tauri/bindings/FeVCToyAnatomy";
 import FourPanel from "../components/FourPanel";
 import FourPanelContainer from "../components/FourPanelContainer";
-import { createToast } from "../components/Toast";
 import { OSC, TOOLTIP } from "../data/constants";
 import { ToyAnatomyArray } from "../data/stringArrayTypes";
 import { handleToyAlter } from "../hooks/useToys";
@@ -21,9 +21,9 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(osc_data_addr);
-      createToast("info", "Copied to clipboard", osc_data_addr);
+      toast.info(`Copied to clipboard\n${osc_data_addr}`);
     } catch (e) {
-      createToast("error", "Could not copy to clipboard!", JSON.stringify(e));
+      toast.error(`Could not copy to clipboard!\n${JSON.stringify(e)}`);
     }
   }
 

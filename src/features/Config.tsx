@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api";
 import { ChangeEvent, FormEvent, useState } from "react";
+import { toast } from "sonner";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
-import { createToast } from "../components/Toast";
 import UpdateButton from "../components/UpdateButton";
 import { INVOKE, TOOLTIP } from "../data/constants";
 import Button from "../layout/Button";
@@ -54,26 +54,20 @@ export default function Config({
         await disableOnPortChange();
       }
       await invoke(INVOKE.SET_CONFIG, { feVcConfig: newConfig });
-      createToast("info", "Saved config");
+      toast.info("Saved config");
     } catch (e) {
-      createToast("error", "Could not set config!", JSON.stringify(e));
+      toast.error("Could not set config!");
     }
   }
 
   async function clearOsc() {
     try {
       await invoke(INVOKE.CLEAR_OSC_CONFIG);
-      createToast(
-        "info",
-        "Cleared avatar OSC configs",
-        "Removed AppData\\LocalLow\\VRChat\\VRChat\\OSC",
+      toast.info(
+        "Cleared avatar OSC configs\nRemoved AppData\\LocalLow\\VRChat\\VRChat\\OSC",
       );
     } catch (e) {
-      createToast(
-        "error",
-        "Could not clear avatar OSC configs!",
-        JSON.stringify(e),
-      );
+      toast.error(`Could not clear avatar OSC configs!\n${JSON.stringify(e)}`);
     }
   }
 

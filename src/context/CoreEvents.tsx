@@ -1,10 +1,10 @@
 import { invoke } from "@tauri-apps/api";
 import { listen } from "@tauri-apps/api/event";
 import { createContext, useContext, useEffect, useState } from "react";
+import { toast } from "sonner";
 import type { FeCoreEvent } from "../../src-tauri/bindings/FeCoreEvent";
 import { FeStateEvent } from "../../src-tauri/bindings/FeStateEvent";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
-import { createToast } from "../components/Toast";
 import { INVOKE, LISTEN } from "../data/constants";
 import { assertExhaustive } from "../utils";
 
@@ -48,7 +48,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.ENABLE);
       setIsEnabled(true);
     } catch (e) {
-      createToast("error", "Could not enable!", JSON.stringify(e));
+      toast.error(`Could not enable!\n${JSON.stringify(e)}`);
     }
   }
 
@@ -58,7 +58,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.DISABLE);
       setIsEnabled(false);
     } catch (e) {
-      createToast("error", "Could not disable!", JSON.stringify(e));
+      toast.error(`Could not disable!\nJSON.stringify(e)`);
     }
   }
 
@@ -76,7 +76,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.START_SCAN);
       setIsScanning(true);
     } catch (e) {
-      createToast("error", "Could not start scan!", JSON.stringify(e));
+      toast.error(`Could not start scan!\nJSON.stringify(e)`);
     }
   }
 
@@ -85,7 +85,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.STOP_SCAN);
       setIsScanning(false);
     } catch (e) {
-      createToast("error", "Could not stop scan!", JSON.stringify(e));
+      toast.error(`Could not stop scan!\nJSON.stringify(e)`);
     }
   }
 
