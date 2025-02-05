@@ -137,7 +137,7 @@ pub fn config_load() -> VibeCheckConfig {
                 desktop_notifications: false,
                 lc_override: None,
                 show_toy_advanced: false,
-                show_feature_advanced: false
+                show_feature_advanced: false,
             };
             fs::write(&vc_config_file, serde_json::to_string(&def_conf).unwrap()).unwrap();
             trace!("Wrote VibeCheck config file");

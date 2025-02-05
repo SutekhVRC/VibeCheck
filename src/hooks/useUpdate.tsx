@@ -1,4 +1,4 @@
-import { UpdateResult, checkUpdate } from "@tauri-apps/api/updater";
+import { UpdateResult, checkUpdate } from "@tauri-apps/plugin-updater";
 import { useEffect, useState } from "react";
 
 export function useUpdate() {
