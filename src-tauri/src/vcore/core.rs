@@ -828,7 +828,7 @@ pub fn native_simulate_device_feature(
                 // Add stop flag bc FE invoke simulation: diff between stop & idle.
                 if stop {
                     debug!("Stopping Idle Simulate");
-                    handle_clone.stop();
+                    vc_lock.async_rt.spawn(handle_clone.stop());
                 } else {
                     vc_lock.async_rt.spawn(command_toy(
                         handle_clone,
