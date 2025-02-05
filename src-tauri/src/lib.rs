@@ -7,7 +7,11 @@ use std::sync::Arc;
 
 use log::{info, trace, warn};
 use parking_lot::Mutex;
-use tauri::{Manager, SystemTrayMenu};
+use tauri::{
+    menu::{MenuBuilder, MenuItemBuilder},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Manager, SystemTrayMenu,
+};
 
 use crate::{frontend::frontend_native, vcore::config};
 //use env_logger;
@@ -33,23 +37,6 @@ fn run() {
     )));
     trace!("VibeCheckState created");
 
-    let quit = tauri::CustomMenuItem::new("quit".to_string(), "Quit");
-    let restart = tauri::CustomMenuItem::new("restart".to_string(), "Restart");
-    let hide_app = tauri::CustomMenuItem::new("hide".to_string(), "Hide");
-    let show_app = tauri::CustomMenuItem::new("show".to_string(), "Show");
-    //let enable_osc = tauri::CustomMenuItem::new("enable_osc".to_string(), "Enable");
-    //let disable_osc = tauri::CustomMenuItem::new("disable_osc".to_string(), "Disable");
-
-    let tray_menu = SystemTrayMenu::new()
-        //.add_item(enable_osc)
-        //.add_item(disable_osc)
-        .add_native_item(tauri::SystemTrayMenuItem::Separator)
-        .add_item(hide_app)
-        .add_item(show_app)
-        .add_native_item(tauri::SystemTrayMenuItem::Separator)
-        .add_item(restart)
-        .add_item(quit);
-
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
@@ -69,32 +56,51 @@ fn run() {
             let window = app.get_window("main").unwrap();
             window.show().unwrap();
         }))
-        .setup(|_app| Ok(()))
-        .system_tray(tauri::SystemTray::new().with_menu(tray_menu))
-        .on_system_tray_event(|app, event| match event {
-            tauri::SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
-                "quit" => {
-                    app.exit(0);
-                }
-                "restart" => {
-                    app.restart();
-                }
-                "hide" => {
-                    let window = app.get_window("main").unwrap();
-                    window.hide().unwrap();
-                }
-                "show" => {
-                    let window = app.get_window("main").unwrap();
-                    window.show().unwrap();
-                }
-                _ => {}
-            },
-            tauri::SystemTrayEvent::LeftClick { .. } => {
-                let window = app.get_window("main").unwrap();
-                trace!("Opening window: {}", window.label());
-                window.show().unwrap();
-            }
-            _ => {}
+        .setup(|_app| {
+            let toggle = MenuItemBuilder::with_id("toggle", "Toggle").build(_app)?;
+            let quit = MenuItemBuilder::with_id("quit", "Quit").build(_app)?;
+            let restart = MenuItemBuilder::with_id("restart", "Restart").build(_app)?;
+            let hide_app = MenuItemBuilder::with_id("hide_app", "Hide App").build(_app)?;
+            let show_app = MenuItemBuilder::with_id("show_app", "Show App").build(_app)?;
+            let menu = MenuBuilder::new(_app)
+                .items(&[&toggle, &quit, &restart, &hide_app, &show_app])
+                .build()?;
+            let tray = TrayIconBuilder::new()
+                .menu(&menu)
+                .on_menu_event(move |app, event| match event.id().as_ref() {
+                    "toggle" => {
+                        println!("toggle clicked");
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    "restart" => {
+                        app.restart();
+                    }
+                    "hide_app" => {
+                        app.get_webview_window("main").unwrap().hide().unwrap();
+                    }
+                    "show_app" => {
+                        app.get_webview_window("main").unwrap().show().unwrap();
+                    }
+                    _ => (),
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(webview_window) = app.get_webview_window("main") {
+                            let _ = webview_window.show();
+                            let _ = webview_window.set_focus();
+                        }
+                    }
+                })
+                .build(_app)?;
+            Ok(())
         })
         .manage(vcore::core::VCStateMutex(vibecheck_state_pointer.clone()))
         .invoke_handler(tauri::generate_handler![
@@ -115,8 +121,9 @@ fn run() {
             frontend_native::osc_query_attempt_force_connect,
             //frontend_native::simulate_feature_osc_input,
         ])
-        .build(tauri::generate_context!())
+        .build()
         .expect("Failed to generate Tauri context");
+
     trace!("Tauri app built");
 
     let identifier = app.config().tauri.bundle.identifier.clone();
