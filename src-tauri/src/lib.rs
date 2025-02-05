@@ -126,7 +126,7 @@ fn run() {
 
     trace!("Tauri app built");
 
-    let identifier = app.config().tauri.bundle.identifier.clone();
+    let identifier = app.config().identifier.clone();
     info!("Got bundle id: {}", identifier);
 
     let vc_state_pointer = vibecheck_state_pointer.clone();
