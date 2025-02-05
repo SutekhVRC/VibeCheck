@@ -1,6 +1,6 @@
 [package]
 name = "vibecheck"
-version = "0.4.4"
+version = "0.4.5"
 edition = "2021"
 authors = ["SutekhVRC"]
 rust-version = "1.57"
@@ -9,7 +9,8 @@ rust-version = "1.57"
 tauri-build = { version = "1.5.0", features = [] }
 
 [dependencies]
-buttplug = {git = "https://github.com/SutekhVRC/buttplug", branch = "vibecheck"}
+buttplug = "9.0.6"
+#buttplug = {git = "https://github.com/SutekhVRC/buttplug", branch = "vibecheck"}
 #buttplug = {path = "../../../vibecheck-dev-buttplug/buttplug/buttplug"}
 #vrcoscquery = {path = "../../../vrcoscquery-rs"}
 vrcoscquery = {git = "https://github.com/SutekhVRC/VRCOSCQuery"}
@@ -32,7 +33,7 @@ log = "0.4.17"
 env_logger = "0.10.0"
 open = "3.2.0"
 dyn-clone = "1.0.16"
-tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "dev" }
+tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 strum = { version="0.25.0", features = ["derive"] }
 # Tauri dependencies
 tauri = { version = "1.5.2", features = ["api-all", "system-tray", "updater"] }
