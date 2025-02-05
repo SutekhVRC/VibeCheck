@@ -186,19 +186,6 @@ fn run() {
                 // Sync offline toys to frontend
                 //_app_handle.state::<vcore::VCStateMutex>().0.lock().core_toy_manager.as_ref().unwrap().sync_frontend();
             }
-            tauri::RunEvent::Updater(updater_event) => match updater_event {
-                tauri::UpdaterEvent::Error(err) => {
-                    log::error!("Update error: {}", err);
-                }
-                tauri::UpdaterEvent::UpdateAvailable {
-                    body: _,
-                    date: _,
-                    version,
-                } => {
-                    info!("Update available: {}", version);
-                }
-                _ => {}
-            },
             _ => {}
         }
     });
