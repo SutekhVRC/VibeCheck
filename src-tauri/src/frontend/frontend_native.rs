@@ -17,7 +17,7 @@ use crate::{
     vcore::vcerror::{backend, frontend},
 };
 use log::{error as logerr, trace};
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 /*
  * vibecheck_version
@@ -230,7 +230,7 @@ pub fn alter_toy(
 
                 offline_toy_config.save_offline_toy_config();
 
-                let _ = app_handle.emit_all("fe_toy_event", FeToyEvent::Update(fe_toy));
+                let _ = app_handle.emit("fe_toy_event", FeToyEvent::Update(fe_toy));
             } else {
                 return Err(frontend::VCFeError::AlterToyFailure(
                     frontend::ToyAlterError::ToyConnected,

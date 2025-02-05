@@ -35,6 +35,7 @@ use std::time::Duration;
 use std::time::Instant;
 use tauri::api::notification::Notification;
 use tauri::AppHandle;
+use tauri::Emitter;
 use tauri::Manager;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -157,7 +158,7 @@ pub async fn client_event_handler(
                         .send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone())))
                         .unwrap();
 
-                    let _ = app_handle.emit_all(
+                    let _ = app_handle.emit(
                         "fe_toy_event",
                         FeToyEvent::Add({
                             FeVCToy {
@@ -211,8 +212,7 @@ pub async fn client_event_handler(
                             .send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(dev.index())))
                             .unwrap();
 
-                        let _ =
-                            app_handle.emit_all("fe_toy_event", FeToyEvent::Remove(dev.index()));
+                        let _ = app_handle.emit("fe_toy_event", FeToyEvent::Remove(dev.index()));
 
                         {
                             let vc_lock = vibecheck_state_pointer.lock();
@@ -233,7 +233,7 @@ pub async fn client_event_handler(
                                     .spawn(vc_lock.bp_client.as_ref().unwrap().start_scanning());
                             }
                             let _ = app_handle
-                                .emit_all("fe_core_event", FeCoreEvent::Scan(FeScanEvent::Start));
+                                .emit("fe_core_event", FeCoreEvent::Scan(FeScanEvent::Start));
                         }
                     }
                 }

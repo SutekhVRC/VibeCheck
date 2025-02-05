@@ -1,6 +1,6 @@
 use log::{debug, info, trace};
 use rosc::OscMessage;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::{config::toy::VCToyAnatomy, frontend::frontend_types::FeCoreEvent, vcore};
 
@@ -27,7 +27,7 @@ impl APIProcessor {
                 return;
             };
             info!("State false: Sending Disable event");
-            let _ = app_handle.emit_all(
+            let _ = app_handle.emit(
                 "fe_core_event",
                 FeCoreEvent::State(crate::frontend::frontend_types::FeStateEvent::Disable),
             );

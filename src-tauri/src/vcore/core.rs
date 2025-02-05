@@ -722,7 +722,7 @@ pub fn native_alter_toy(
             .send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)))
     };
 
-    let _ = app_handle.emit_all(
+    let _ = app_handle.emit(
         "fe_toy_event",
         FeToyEvent::Update({
             FeVCToy {
