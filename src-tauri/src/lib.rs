@@ -120,9 +120,7 @@ fn run() {
             frontend_native::osc_query_stop,
             frontend_native::osc_query_attempt_force_connect,
             //frontend_native::simulate_feature_osc_input,
-        ])
-        .build()
-        .expect("Failed to generate Tauri context");
+        ]);
 
     trace!("Tauri app built");
 
