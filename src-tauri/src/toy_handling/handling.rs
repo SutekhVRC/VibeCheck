@@ -76,6 +76,7 @@ pub async fn client_event_handler(
         if let Some(event) = event_stream.next().await {
             match event {
                 ButtplugClientEvent::DeviceAdded(dev) => {
+                    info!("DeviceAdded");
                     Delay::new(Duration::from_secs(3)).await;
 
                     // Can use this to differ between toys with batteries and toys without!
@@ -238,8 +239,8 @@ pub async fn client_event_handler(
                     }
                 }
                 ButtplugClientEvent::ScanningFinished => info!("Scanning finished!"),
-                ButtplugClientEvent::ServerDisconnect => break,
-                ButtplugClientEvent::PingTimeout => break,
+                ButtplugClientEvent::ServerDisconnect => {warn!("ServerDisconnect");break},
+                ButtplugClientEvent::PingTimeout => {warn!("PingTimeout");break},
                 ButtplugClientEvent::Error(e) => {
                     logerr!("Client Event Error: {:?}", e);
                 }

@@ -1,10 +1,13 @@
 use btleplug::api::{Central, Manager as _};
 use btleplug::platform::Manager;
 use buttplug::client::ButtplugClient;
-use buttplug::core::connector::ButtplugInProcessClientConnectorBuilder; //new_json_ws_client_connector};
+use buttplug::core::connector::ButtplugInProcessClientConnectorBuilder;
+//new_json_ws_client_connector};
 use buttplug::server::device::hardware::communication::btleplug::BtlePlugCommunicationManagerBuilder;
-use buttplug::server::device::hardware::communication::lovense_connect_service::LovenseConnectServiceCommunicationManagerBuilder;
+use buttplug::server::device::hardware::communication::lovense_dongle::{LovenseHIDDongleCommunicationManagerBuilder, LovenseSerialDongleCommunicationManagerBuilder};
+use buttplug::server::device::ServerDeviceManagerBuilder;
 use buttplug::server::ButtplugServerBuilder;
+use buttplug::util::device_configuration::load_protocol_configs;
 use log::{error as logerr, info, trace, warn};
 
 #[allow(unused)]
@@ -31,17 +34,21 @@ pub async fn vc_toy_client_server_init(
     client_name: &str,
     allow_raw_messages: bool,
 ) -> ButtplugClient {
-    let mut server_builder = ButtplugServerBuilder::default();
-    server_builder.comm_manager(BtlePlugCommunicationManagerBuilder::default());
-    trace!("Added BtlePlug comm manager");
-    server_builder.comm_manager(LovenseConnectServiceCommunicationManagerBuilder::default());
-    trace!("Added Lovense Connect comm manager");
-    //new_json_ws_client_connector("ws://192.168.123.103:12345/buttplug")
-    //server_builder.comm_manager(WebsocketServerDeviceCommunicationManagerBuilder::default());
 
-    if allow_raw_messages {
-        server_builder.allow_raw_messages();
-    }
+    let dcm = load_protocol_configs(&None, &None, false).unwrap()
+    .allow_raw_messages(allow_raw_messages)
+    .finish()
+    .unwrap();
+
+    let mut device_manager_builder = ServerDeviceManagerBuilder::new(dcm);
+    device_manager_builder.comm_manager(BtlePlugCommunicationManagerBuilder::default());
+    trace!("Added BtlePlug comm manager");
+
+    device_manager_builder.comm_manager(LovenseHIDDongleCommunicationManagerBuilder::default());
+    device_manager_builder.comm_manager(LovenseSerialDongleCommunicationManagerBuilder::default());
+    trace!("Added Lovense Dongle HID/Serial managers");
+
+    let server_builder = ButtplugServerBuilder::new(device_manager_builder.finish().unwrap());
     let server = server_builder.finish().unwrap();
 
     /*

@@ -1,6 +1,6 @@
 use buttplug::{
     client::ButtplugClientDevice,
-    core::message::{ActuatorType, ClientDeviceMessageAttributes},
+    core::message::{ActuatorType, ClientDeviceMessageAttributesV3},
 };
 use core::fmt;
 use log::{debug, error as logerr, info, warn};
@@ -33,7 +33,7 @@ pub struct VCToy {
     pub toy_name: String,
     pub toy_power: ToyPower,
     pub toy_connected: bool,
-    pub toy_features: ClientDeviceMessageAttributes,
+    pub toy_features: ClientDeviceMessageAttributesV3,
     pub parsed_toy_features: VCToyFeatures,
     pub osc_data: bool,
     pub listening: bool,
@@ -43,7 +43,7 @@ pub struct VCToy {
 }
 
 impl VCToy {
-    fn populate_linears(&mut self, features: &ClientDeviceMessageAttributes) {
+    fn populate_linears(&mut self, features: &ClientDeviceMessageAttributesV3) {
         // Populate Linears
         if features.linear_cmd().is_some() {
             let mut indexer = 0;
@@ -73,7 +73,7 @@ impl VCToy {
         }
     }
 
-    fn populate_rotators(&mut self, features: &ClientDeviceMessageAttributes) {
+    fn populate_rotators(&mut self, features: &ClientDeviceMessageAttributesV3) {
         // Populate rotators
         if features.rotate_cmd().is_some() {
             let mut indexer = 0;
@@ -95,7 +95,7 @@ impl VCToy {
         }
     }
 
-    fn populate_scalars(&mut self, features: &ClientDeviceMessageAttributes) {
+    fn populate_scalars(&mut self, features: &ClientDeviceMessageAttributesV3) {
         // Populate scalars
         if features.scalar_cmd().is_some() {
             let mut indexer = 0;
