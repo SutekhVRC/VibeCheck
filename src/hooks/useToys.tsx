@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { FeToyEvent } from "../../src-tauri/bindings/FeToyEvent";
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
-import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
+import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import { INVOKE, LISTEN } from "../data/constants";
 import { assertExhaustive } from "../utils";
 

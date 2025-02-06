@@ -1,4 +1,4 @@
-import { ObjectValues } from "@/utils";
+import type { ObjectValues } from "@/utils";
 import { invoke } from "@tauri-apps/api";
 import { toast } from "sonner";
 import { INVOKE, TOOLTIP } from "../data/constants";

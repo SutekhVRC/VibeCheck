@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { FeCoreEvent } from "../../src-tauri/bindings/FeCoreEvent";
-import { FeStateEvent } from "../../src-tauri/bindings/FeStateEvent";
+import type { FeStateEvent } from "../../src-tauri/bindings/FeStateEvent";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 import { INVOKE, LISTEN } from "../data/constants";
 import { assertExhaustive } from "../utils";

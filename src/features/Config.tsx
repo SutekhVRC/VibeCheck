@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api";
-import { ChangeEvent, FormEvent, useState } from "react";
+import { type ChangeEvent, type FormEvent, useState } from "react";
 import { toast } from "sonner";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 import UpdateButton from "../components/UpdateButton";

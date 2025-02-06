@@ -1,5 +1,5 @@
 import * as SwitchPrimitive from "@radix-ui/react-switch";
-import { SwitchProps } from "@radix-ui/react-switch";
+import type { SwitchProps } from "@radix-ui/react-switch";
 import { cn } from "../lib/utils";
 
 const themeColors = {

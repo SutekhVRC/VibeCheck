@@ -1,8 +1,8 @@
 import { useCoreEventContext } from "@/context/CoreEvents";
 import { useEffect, useState } from "react";
-import { FeVCToyFeature } from "src-tauri/bindings/FeVCToyFeature";
-import { ToyPower } from "src-tauri/bindings/ToyPower";
-import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
+import type { FeVCToyFeature } from "src-tauri/bindings/FeVCToyFeature";
+import type { ToyPower } from "src-tauri/bindings/ToyPower";
+import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import lovenseLogo from "../assets/Lovense.png";
 import lovenseConnectLogo from "../assets/Lovense_Connect.png";
 import BatteryIcon from "../components/BatteryIcon";

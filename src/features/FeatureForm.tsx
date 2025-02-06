@@ -3,23 +3,23 @@ import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
 import { Select } from "@/layout/Select";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
-import { DebouncedFunc, debounce } from "lodash";
+import { type DebouncedFunc, debounce } from "lodash";
 import { Plus, X } from "lucide-react";
 import {
-  ChangeEvent,
-  Dispatch,
+  type ChangeEvent,
+  type Dispatch,
   Fragment,
-  ReactNode,
-  SetStateAction,
+  type ReactNode,
+  type SetStateAction,
   createContext,
   useCallback,
   useContext,
   useState,
 } from "react";
-import { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
-import { FeToyParameter } from "src-tauri/bindings/FeToyParameter";
-import { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
-import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
+import type { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
+import type { FeToyParameter } from "src-tauri/bindings/FeToyParameter";
+import type { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
+import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import FourPanel from "../components/FourPanel";
 import FourPanelContainer from "../components/FourPanelContainer";
