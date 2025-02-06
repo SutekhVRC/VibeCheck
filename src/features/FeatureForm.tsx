@@ -65,8 +65,8 @@ export default function FeatureForm({
   toy,
   selectedIndex,
 }: ToyFeatureFormProps) {
-  const [feature, setToyFeature] = useState(
-    toy.features[selectedIndex] ?? toy.features[0],
+  const [feature, setToyFeature] = useState<FeVCToyFeature>(
+    toy.features[selectedIndex] ?? toy.features[0]!,
   );
   const levels = feature.feature_levels;
   const { config } = useCoreEventContext();
@@ -231,7 +231,7 @@ function Parameters() {
     // A bit overpowered for need but :shrug:
     const seenSuffixes = params.reduce((acc, val) => {
       const [_, suffix] = val.parameter.split("param-").map((c) => parseInt(c));
-      if (isNaN(suffix)) return acc;
+      if (!suffix || isNaN(suffix)) return acc;
       acc.add(suffix);
       return acc;
     }, new Set<number>());

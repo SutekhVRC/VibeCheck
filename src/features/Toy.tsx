@@ -53,7 +53,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
         <FeatureForm
           toy={toy}
           selectedIndex={selectedFeatureIndex}
-          key={toyFeatureKey(toy, toy.features[selectedFeatureIndex])}
+          key={toyFeatureKey(toy, toy.features[selectedFeatureIndex]!)}
         />
       </div>
     </div>
