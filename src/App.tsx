@@ -104,13 +104,13 @@ export default function App() {
       <div className="grid grid-cols-[12rem,_1fr] gap-3">
         <div className="flex flex-col gap-1">
           <img className="h-14 object-contain" src={VibecheckLogo} />
-          <div className="mt-2 mb-1 flex items-center justify-around">
+          <div className="mb-1 mt-2 flex items-center justify-around">
             <ExternalLogo src={VrchatLogo} tooltip={TOOLTIP.VrChatGroup} />
             <ExternalLogo src={DiscordLogo} tooltip={TOOLTIP.Discord} />
             <ExternalLogo src={GithubLogo} tooltip={TOOLTIP.Github} />
           </div>
           <div className="flex h-[calc(100vh-185px)] flex-col justify-between overflow-hidden rounded-md bg-zinc-800">
-            <div className="scrollbar flex flex-col overflow-y-scroll pl-2 select-none">
+            <div className="scrollbar flex select-none flex-col overflow-y-scroll pl-2">
               <AnimatePresence>
                 {toysList.map((sidebarToy) => (
                   <button

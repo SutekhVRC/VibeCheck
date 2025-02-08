@@ -21,10 +21,6 @@ export default function Config({
 }) {
   const [newConfig, setNewConfig] = useState<FeVibeCheckConfig>(config);
 
-  const onChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setNewConfig({ ...newConfig, [e.target.name]: e.target.value });
-  };
-
   const onCheckSwitch = (checked: boolean, name: keyof FeVibeCheckConfig) => {
     setNewConfig({ ...newConfig, [name]: checked });
   };
