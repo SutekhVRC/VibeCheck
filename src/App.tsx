@@ -15,7 +15,7 @@ import { useCoreEventContext } from "./context/CoreEvents";
 import { TOOLTIP } from "./data/constants";
 import Config from "./features/Config";
 import Toy from "./features/Toy";
-import { parseName, toyKey, useToys } from "./hooks/useToys";
+import { toyKey, useToys } from "./hooks/useToys";
 import { useUpdate } from "./hooks/useUpdate";
 import { useVersion } from "./hooks/useVersion";
 import Button from "./layout/Button";
@@ -104,13 +104,13 @@ export default function App() {
       <div className="grid grid-cols-[12rem,_1fr] gap-3">
         <div className="flex flex-col gap-1">
           <img className="h-14 object-contain" src={VibecheckLogo} />
-          <div className="mb-1 mt-2 flex items-center justify-around">
+          <div className="mt-2 mb-1 flex items-center justify-around">
             <ExternalLogo src={VrchatLogo} tooltip={TOOLTIP.VrChatGroup} />
             <ExternalLogo src={DiscordLogo} tooltip={TOOLTIP.Discord} />
             <ExternalLogo src={GithubLogo} tooltip={TOOLTIP.Github} />
           </div>
           <div className="flex h-[calc(100vh-185px)] flex-col justify-between overflow-hidden rounded-md bg-zinc-800">
-            <div className="scrollbar flex select-none flex-col overflow-y-scroll pl-2">
+            <div className="scrollbar flex flex-col overflow-y-scroll pl-2 select-none">
               <AnimatePresence>
                 {toysList.map((sidebarToy) => (
                   <button
@@ -126,7 +126,7 @@ export default function App() {
                       "m-2 rounded-md bg-zinc-700 p-2 outline-2 outline-cyan-400 hover:bg-cyan-600",
                     )}
                   >
-                    {parseName(sidebarToy.toy_name)}
+                    {sidebarToy.toy_name}
                   </button>
                 ))}
               </AnimatePresence>
