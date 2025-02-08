@@ -244,7 +244,7 @@ pub async fn toy_refresh(
                     addr: format!(
                         "/avatar/parameters/vibecheck/osc_data/{}/{}/battery",
                         toy.toy_name
-                            .replace("Lovense Connect", "lovense")
+                            //.replace("Lovense Connect", "lovense")
                             .replace(" ", "_")
                             .to_lowercase(),
                         toy.sub_id

@@ -290,7 +290,7 @@ impl VCToy {
             "{}\\ToyConfigs\\{}.json",
             get_config_dir(),
             // - Transform Lovense Connect toys to load lovense configs
-            self.toy_name.replace("Lovense Connect ", "Lovense "),
+            self.toy_name/*.replace("Lovense Connect ", "Lovense ")*/,
         );
 
         if !file_exists(&config_path) {
@@ -317,7 +317,7 @@ impl VCToy {
         let config_path = format!(
             "{}\\ToyConfigs\\{}.json",
             get_config_dir(),
-            self.toy_name.replace("Lovense Connect ", "Lovense "),
+            self.toy_name/*.replace("Lovense Connect ", "Lovense ")*/,
         );
         info!("Saving toy config to: {}", config_path);
 

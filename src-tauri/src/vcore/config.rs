@@ -44,7 +44,7 @@ pub struct VibeCheckConfig {
     pub scan_on_disconnect: bool,
     pub minimize_on_exit: bool,
     pub desktop_notifications: bool,
-    pub lc_override: Option<Ipv4Addr>,
+    //pub lc_override: Option<Ipv4Addr>,
     pub show_toy_advanced: bool,
     pub show_feature_advanced: bool,
 }
@@ -77,7 +77,7 @@ pub fn config_load() -> VibeCheckConfig {
                 scan_on_disconnect: false,
                 minimize_on_exit: false,
                 desktop_notifications: false,
-                lc_override: None,
+                //lc_override: None,
                 show_toy_advanced: false,
                 show_feature_advanced: false,
             })
@@ -93,10 +93,11 @@ pub fn config_load() -> VibeCheckConfig {
         Ok(fc) => match serde_json::from_str::<VibeCheckConfig>(&fc) {
             Ok(o) => {
                 info!("Config Loaded Successfully!");
+                /*
                 if let Some(h) = o.lc_override {
                     std::env::set_var("VCLC_HOST_PORT", format!("{}:20010", h).as_str());
                     info!("Setting VCLC_HOST_PORT: {}", format!("{}:20010", h));
-                }
+                }*/
                 o
             }
             Err(_e) => {
@@ -112,7 +113,7 @@ pub fn config_load() -> VibeCheckConfig {
                     scan_on_disconnect: false,
                     minimize_on_exit: false,
                     desktop_notifications: false,
-                    lc_override: None,
+                    //lc_override: None,
                     show_toy_advanced: false,
                     show_feature_advanced: false,
                 };
@@ -135,7 +136,7 @@ pub fn config_load() -> VibeCheckConfig {
                 scan_on_disconnect: false,
                 minimize_on_exit: false,
                 desktop_notifications: false,
-                lc_override: None,
+                //lc_override: None,
                 show_toy_advanced: false,
                 show_feature_advanced: false
             };
@@ -298,7 +299,7 @@ pub mod toy {
             let config_path = format!(
                 "{}\\ToyConfigs\\{}.json",
                 get_config_dir(),
-                toy_name.replace("Lovense Connect ", "Lovense "),
+                toy_name/*.replace("Lovense Connect ", "Lovense ")*/,
             );
 
             if !file_exists(&config_path) {
@@ -321,7 +322,7 @@ pub mod toy {
             let config_path = format!(
                 "{}\\ToyConfigs\\{}.json",
                 get_config_dir(),
-                self.toy_name.replace("Lovense Connect ", "Lovense "),
+                self.toy_name/*.replace("Lovense Connect ", "Lovense ")*/,
             );
 
             info!("Saving toy config to: {}", config_path);

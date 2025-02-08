@@ -599,14 +599,14 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
         vc_lock.config.clone()
     };
 
-    let lc_or = config.lc_override.map(|host| host.to_string());
+    //let lc_or = config.lc_override.map(|host| host.to_string());
 
     FeVibeCheckConfig {
         networking: config.networking.to_fe(),
         scan_on_disconnect: config.scan_on_disconnect,
         minimize_on_exit: config.minimize_on_exit,
         desktop_notifications: config.desktop_notifications,
-        lc_override: lc_or,
+        //lc_override: lc_or,
         show_toy_advanced: config.show_toy_advanced,
         show_feature_advanced: config.show_feature_advanced,
     }
@@ -637,6 +637,7 @@ pub fn native_set_vibecheck_config(
         vc_lock.config.show_toy_advanced = fe_vc_config.show_toy_advanced;
         vc_lock.config.show_feature_advanced = fe_vc_config.show_feature_advanced;
 
+        /*
         if let Some(host) = fe_vc_config.lc_override {
             // Is valid IPv4?
             match Ipv4Addr::from_str(&host) {
@@ -666,7 +667,7 @@ pub fn native_set_vibecheck_config(
                     }
                 },
             }
-        }
+        }*/
 
         vc_lock.config.clone()
     };

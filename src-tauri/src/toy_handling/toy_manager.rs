@@ -94,7 +94,7 @@ impl ToyManager {
 
     fn check_toy_online(&self, config_toy_name: &String) -> bool {
         for online_toy in self.online_toys.iter() {
-            if *config_toy_name == online_toy.1.toy_name.replace("Lovense Connect", "Lovense") {
+            if *config_toy_name == online_toy.1.toy_name/*.replace("Lovense Connect", "Lovense")*/ {
                 return true;
             }
         }
