@@ -25,12 +25,6 @@
 
 # How to connect
 
-## Lovense Connect
-  - Download the [Lovense Connect](https://www.lovense.com/cam-model/guides/pc-dongle) app (Lovense Connect is a different app than Lovense Remote) either on your smartphone or on PC. If using the PC version you must have the Lovense adapter.
-  - Open the Lovense Connect app and connect your toys to it.
-  - Start VibeCheck
-  - VibeCheck will ask the Lovense Connect API for your devices. I recommend using the `Lovense Connect Override` option to tell VibeCheck to connect to the device directly instead of using the Lovense Connect API.
-
 ## Bluetooth
   - The bluetooth interface you are using must support LE.
   - I recommend using an adapter that can handle more than one device and has a **strong/long-range** connection.
@@ -38,27 +32,6 @@
   - If using a bluetooth adapter make sure to disable your onboard bluetooth device in device manager if you have one.
   - Plug in the bluetooth adapter.
   - Start VibeCheck!
-
-# Pros, Cons, Lovense Connect or Bluetooth?
-
-## Bluetooth Mode
-
-### Pros
-    - Generally has a faster response time
-    - Supports many different toys.
-
-### Cons
-    - Can be less stable than Lovense Connect if the Bluetooth LE adapter in use isn't very strong.
-
-## Lovense Connect Mode
-
-### Pros
-    - Can be a more stable alternative if you dont have a very good bluetooth LE adapter
-    - Don't need to buy any adapters if you have a smart phone and WiFi.
-    - Can use Lovense Connect on phone to take advantage of your WiFi's range.
-
-### Cons
-    - Can only be used with Lovense Toys.
 
 # Avatar Configuration
 
