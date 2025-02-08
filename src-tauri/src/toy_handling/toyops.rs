@@ -286,12 +286,7 @@ impl VCToy {
     pub fn load_toy_config(&mut self) -> Result<(), vcerror::backend::VibeCheckToyConfigError> {
         // Generate config path
 
-        let config_path = format!(
-            "{}\\ToyConfigs\\{}.json",
-            get_config_dir(),
-            // - Transform Lovense Connect toys to load lovense configs
-            self.toy_name/*.replace("Lovense Connect ", "Lovense ")*/,
-        );
+        let config_path = format!("{}\\ToyConfigs\\{}.json", get_config_dir(), self.toy_name);
 
         if !file_exists(&config_path) {
             self.config = None;
@@ -317,7 +312,7 @@ impl VCToy {
         let config_path = format!(
             "{}\\ToyConfigs\\{}.json",
             get_config_dir(),
-            self.toy_name/*.replace("Lovense Connect ", "Lovense ")*/,
+            self.toy_name,
         );
         info!("Saving toy config to: {}", config_path);
 

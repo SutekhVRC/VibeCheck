@@ -599,14 +599,11 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
         vc_lock.config.clone()
     };
 
-    //let lc_or = config.lc_override.map(|host| host.to_string());
-
     FeVibeCheckConfig {
         networking: config.networking.to_fe(),
         scan_on_disconnect: config.scan_on_disconnect,
         minimize_on_exit: config.minimize_on_exit,
         desktop_notifications: config.desktop_notifications,
-        //lc_override: lc_or,
         show_toy_advanced: config.show_toy_advanced,
         show_feature_advanced: config.show_feature_advanced,
     }
@@ -636,38 +633,6 @@ pub fn native_set_vibecheck_config(
         vc_lock.config.desktop_notifications = fe_vc_config.desktop_notifications;
         vc_lock.config.show_toy_advanced = fe_vc_config.show_toy_advanced;
         vc_lock.config.show_feature_advanced = fe_vc_config.show_feature_advanced;
-
-        /*
-        if let Some(host) = fe_vc_config.lc_override {
-            // Is valid IPv4?
-            match Ipv4Addr::from_str(&host) {
-                Ok(sa) => {
-                    // Force port because buttplug forces non http atm
-                    std::env::set_var("VCLC_HOST_PORT", format!("{}:20010", sa).as_str());
-                    match std::env::var("VCLC_HOST_PORT") {
-                        Ok(_) => {
-                            vc_lock.config.lc_override = Some(sa);
-                        }
-                        Err(_) => return Err(frontend::VCFeError::SetLCOverrideFailure),
-                    }
-                }
-                Err(_e) => return Err(frontend::VCFeError::InvalidLCHost),
-            };
-        } else {
-            std::env::remove_var("VCLC_HOST_PORT");
-            match std::env::var("VCLC_HOST_PORT") {
-                Ok(_) => return Err(frontend::VCFeError::UnsetLCOverrideFailure),
-                Err(e) => match e {
-                    std::env::VarError::NotPresent => {
-                        vc_lock.config.lc_override = None;
-                    }
-                    _ => {
-                        logerr!("Got Non unicode var during unset routine");
-                        return Err(frontend::VCFeError::UnsetLCOverrideFailure);
-                    }
-                },
-            }
-        }*/
 
         vc_lock.config.clone()
     };

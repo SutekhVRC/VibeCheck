@@ -44,7 +44,6 @@ pub struct VibeCheckConfig {
     pub scan_on_disconnect: bool,
     pub minimize_on_exit: bool,
     pub desktop_notifications: bool,
-    //pub lc_override: Option<Ipv4Addr>,
     pub show_toy_advanced: bool,
     pub show_feature_advanced: bool,
 }
@@ -77,7 +76,6 @@ pub fn config_load() -> VibeCheckConfig {
                 scan_on_disconnect: false,
                 minimize_on_exit: false,
                 desktop_notifications: false,
-                //lc_override: None,
                 show_toy_advanced: false,
                 show_feature_advanced: false,
             })
@@ -93,11 +91,6 @@ pub fn config_load() -> VibeCheckConfig {
         Ok(fc) => match serde_json::from_str::<VibeCheckConfig>(&fc) {
             Ok(o) => {
                 info!("Config Loaded Successfully!");
-                /*
-                if let Some(h) = o.lc_override {
-                    std::env::set_var("VCLC_HOST_PORT", format!("{}:20010", h).as_str());
-                    info!("Setting VCLC_HOST_PORT: {}", format!("{}:20010", h));
-                }*/
                 o
             }
             Err(_e) => {
@@ -113,7 +106,6 @@ pub fn config_load() -> VibeCheckConfig {
                     scan_on_disconnect: false,
                     minimize_on_exit: false,
                     desktop_notifications: false,
-                    //lc_override: None,
                     show_toy_advanced: false,
                     show_feature_advanced: false,
                 };
@@ -136,9 +128,8 @@ pub fn config_load() -> VibeCheckConfig {
                 scan_on_disconnect: false,
                 minimize_on_exit: false,
                 desktop_notifications: false,
-                //lc_override: None,
                 show_toy_advanced: false,
-                show_feature_advanced: false
+                show_feature_advanced: false,
             };
             fs::write(&vc_config_file, serde_json::to_string(&def_conf).unwrap()).unwrap();
             trace!("Wrote VibeCheck config file");
@@ -294,13 +285,8 @@ pub mod toy {
             toy_name: String,
         ) -> Result<VCToyConfig, vcerror::backend::VibeCheckToyConfigError> {
             // Generate config path
-            // - Transform Lovense Connect toys to load lovense configs
 
-            let config_path = format!(
-                "{}\\ToyConfigs\\{}.json",
-                get_config_dir(),
-                toy_name/*.replace("Lovense Connect ", "Lovense ")*/,
-            );
+            let config_path = format!("{}\\ToyConfigs\\{}.json", get_config_dir(), toy_name,);
 
             if !file_exists(&config_path) {
                 Err(vcerror::backend::VibeCheckToyConfigError::OfflineToyConfigNotFound)
@@ -319,11 +305,7 @@ pub mod toy {
         }
 
         pub fn save_offline_toy_config(&self) {
-            let config_path = format!(
-                "{}\\ToyConfigs\\{}.json",
-                get_config_dir(),
-                self.toy_name/*.replace("Lovense Connect ", "Lovense ")*/,
-            );
+            let config_path = format!("{}\\ToyConfigs\\{}.json", get_config_dir(), self.toy_name,);
 
             info!("Saving toy config to: {}", config_path);
 
