@@ -6,7 +6,6 @@ import type { FeToyEvent } from "../../src-tauri/bindings/FeToyEvent";
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import type { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import { INVOKE, LISTEN } from "../data/constants";
-import { assertExhaustive } from "../utils";
 
 type ToyMap = {
   [id: string]: FeVCToy;
@@ -96,7 +95,7 @@ export function useToys() {
     syncOfflineToys();
   }, []);
 
-  async function handleToyEvent(payload: FeToyEvent) {
+  async function handleToyEvent(payload: FeToyEvent): Promise<boolean> {
     switch (payload.kind) {
       case "Add":
         setOnlineToys((curOnlineToys) => {
@@ -105,7 +104,7 @@ export function useToys() {
             [toyKey(payload.data)]: payload.data,
           };
         });
-        break;
+        return true;
       case "Update":
         if (payload.data.toy_connected) {
           setOnlineToys((curOnlineToys) => {
@@ -122,8 +121,7 @@ export function useToys() {
             };
           });
         }
-
-        break;
+        return true;
       case "Remove":
         await syncOfflineToys();
         setOnlineToys((curOnlineToys) => {
@@ -135,9 +133,7 @@ export function useToys() {
             return acc;
           }, {} as ToyMap);
         });
-        break;
-      default:
-        assertExhaustive(payload);
+        return true;
     }
   }
 

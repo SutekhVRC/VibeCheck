@@ -6,7 +6,6 @@ import type { FeCoreEvent } from "../../src-tauri/bindings/FeCoreEvent";
 import type { FeStateEvent } from "../../src-tauri/bindings/FeStateEvent";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 import { INVOKE, LISTEN } from "../data/constants";
-import { assertExhaustive } from "../utils";
 
 const SCAN_LENGTH = 10000;
 
@@ -103,16 +102,14 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(i);
   }, [isScanning]);
 
-  function handleStateEvent(payload: FeStateEvent) {
+  function handleStateEvent(payload: FeStateEvent): boolean {
     switch (payload) {
       case "Disable":
         stopScanAndDisable();
-        break;
+        return true;
       case "EnableAndScan":
         enableAndStartScan();
-        break;
-      default:
-        assertExhaustive(payload);
+        return true;
     }
   }
 

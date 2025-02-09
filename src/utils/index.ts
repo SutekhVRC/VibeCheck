@@ -9,8 +9,4 @@ export const round0 = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
-export function assertExhaustive(e: never): never {
-  throw new Error("Non-Exhaustive switch statement", e);
-}
-
 export type ObjectValues<T> = T[keyof T];
