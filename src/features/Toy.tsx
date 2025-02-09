@@ -4,7 +4,6 @@ import type { FeVCToyFeature } from "src-tauri/bindings/FeVCToyFeature";
 import type { ToyPower } from "src-tauri/bindings/ToyPower";
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import lovenseLogo from "../assets/Lovense.png";
-import lovenseConnectLogo from "../assets/Lovense_Connect.png";
 import BatteryIcon from "../components/BatteryIcon";
 import Tooltip from "../layout/Tooltip";
 import { cn } from "../lib/utils";
@@ -69,22 +68,8 @@ type NameInfo = {
 function NameInfo(toy: FeVCToy): NameInfo {
   const name = toy.toy_name;
 
-  if (!toy.toy_connected)
-    return {
-      fullName: name,
-      // "Normalized" since Lovense toy_names are saved with whatever first connection method was
-      shortName: name.replace("Lovense Connect ", "Lovense "),
-      logo: undefined,
-    };
-
   // Shorten everything else since we have the badge
-  if (name.startsWith("Lovense Connect")) {
-    return {
-      fullName: name,
-      shortName: name.replace("Lovense Connect ", ""),
-      logo: lovenseConnectLogo,
-    };
-  } else if (name.startsWith("Lovense")) {
+  if (name.startsWith("Lovense")) {
     return {
       fullName: name,
       shortName: name.replace("Lovense ", ""),

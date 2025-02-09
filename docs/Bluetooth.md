@@ -22,7 +22,7 @@
 
 ## Cons
 
-- Can be less stable than Lovense Connect if the Bluetooth LE adapter in use isn't very strong.
+- Can be flaky if the Bluetooth LE adapter in use isn't very strong.
 
 ## Common Bluetooth Issues
 

@@ -52,12 +52,8 @@ export async function handleFeatureAlter(
   await handleToyAlter({ ...newToy, features: newFeatures });
 }
 
-export function parseName(s: string) {
-  return s.replace("Lovense Connect ", "Lovense ");
-}
-
 export function toyKey(t: FeVCToy) {
-  return `${parseName(t.toy_name)} ${t.sub_id}`;
+  return `${t.toy_name} ${t.sub_id}`;
 }
 
 export function useToys() {
@@ -66,13 +62,11 @@ export function useToys() {
   const toys = {} as ToyMap;
   const onlineToyNames = new Set();
   Object.values(onlineToys).forEach((t) => {
-    const name = parseName(t.toy_name);
-    onlineToyNames.add(name);
+    onlineToyNames.add(t.toy_name);
     toys[toyKey(t)] = t;
   });
   Object.values(offlineToys).forEach((t) => {
-    const name = parseName(t.toy_name);
-    if (!onlineToyNames.has(name)) toys[toyKey(t)] = t;
+    if (!onlineToyNames.has(t.toy_name)) toys[toyKey(t)] = t;
   });
 
   async function syncOfflineToys() {

@@ -15,7 +15,7 @@ import { useCoreEventContext } from "./context/CoreEvents";
 import { TOOLTIP } from "./data/constants";
 import Config from "./features/Config";
 import Toy from "./features/Toy";
-import { parseName, toyKey, useToys } from "./hooks/useToys";
+import { toyKey, useToys } from "./hooks/useToys";
 import { useUpdate } from "./hooks/useUpdate";
 import { useVersion } from "./hooks/useVersion";
 import Button from "./layout/Button";
@@ -126,7 +126,7 @@ export default function App() {
                       "m-2 rounded-md bg-zinc-700 p-2 outline-2 outline-cyan-400 hover:bg-cyan-600",
                     )}
                   >
-                    {parseName(sidebarToy.toy_name)}
+                    {sidebarToy.toy_name}
                   </button>
                 ))}
               </AnimatePresence>

@@ -3,7 +3,7 @@
 1. Run VibeCheck.
 2. If VibeCheck is your only OSC app that receives data from VRChat, skip step 3.
 3. If you are using multiple OSC apps that **Receive** data from VRChat consider using my OSC router app: [VOR](https://github.com/SutekhVRC/VOR/releases/latest). Then go to the 'Settings' tab and setup VibeCheck's OSC bind host/port to listen on.
-4. Setup connection via [Bluetooth](./Bluetooth.md) or [Lovense Connect](./LovenseConnect.md), and turn on your toy(s).
+4. Setup connection via [Bluetooth](./Bluetooth.md) and turn on your toy(s).
 5. Once your toy(s) are connected, configure them to use the parameters you want them to listen for (Floats only).
 
 ![Toy Config](./Toy_config.png)

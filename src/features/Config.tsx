@@ -21,18 +21,8 @@ export default function Config({
 }) {
   const [newConfig, setNewConfig] = useState<FeVibeCheckConfig>(config);
 
-  const onChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setNewConfig({ ...newConfig, [e.target.name]: e.target.value });
-  };
-
   const onCheckSwitch = (checked: boolean, name: keyof FeVibeCheckConfig) => {
     setNewConfig({ ...newConfig, [name]: checked });
-  };
-
-  const handleLcOverride = () => {
-    if (newConfig.lc_override == null)
-      setNewConfig({ ...newConfig, lc_override: "127.0.0.1" });
-    else setNewConfig({ ...newConfig, lc_override: null });
   };
 
   const onChangeNetworking = (e: ChangeEvent<HTMLInputElement>) => {
@@ -119,34 +109,6 @@ export default function Config({
                 (e.target as HTMLInputElement).setCustomValidity("")
               }
             />
-            <TooltipLabel
-              text="Lovense Connect Override"
-              tooltip={TOOLTIP.LC_Override}
-            />
-            <Switch
-              checked={newConfig.lc_override != null}
-              onCheckedChange={handleLcOverride}
-              size="small"
-            />
-            {newConfig.lc_override == null ? (
-              <div />
-            ) : (
-              <input
-                name="lc_override"
-                className="px-1 text-zinc-800"
-                value={newConfig.lc_override}
-                onChange={onChange}
-                pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$`}
-                onInvalid={(e) =>
-                  (e.target as HTMLInputElement).setCustomValidity(
-                    "Enter valid IP",
-                  )
-                }
-                onInput={(e) =>
-                  (e.target as HTMLInputElement).setCustomValidity("")
-                }
-              />
-            )}
             <TooltipLabel
               text="Scan On Disconnect"
               tooltip={TOOLTIP.ScanOnDisconnect}
