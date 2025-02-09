@@ -243,10 +243,7 @@ pub async fn toy_refresh(
                 let battery_level_msg = encoder::encode(&OscPacket::Message(OscMessage {
                     addr: format!(
                         "/avatar/parameters/vibecheck/osc_data/{}/{}/battery",
-                        toy.toy_name
-                            .replace("Lovense Connect", "lovense")
-                            .replace(" ", "_")
-                            .to_lowercase(),
+                        toy.toy_name.replace(" ", "_").to_lowercase(),
                         toy.sub_id
                     ),
                     args: vec![OscType::Float(toy_power.to_float() as f32)],

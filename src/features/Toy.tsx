@@ -4,7 +4,6 @@ import { FeVCToyFeature } from "src-tauri/bindings/FeVCToyFeature";
 import { ToyPower } from "src-tauri/bindings/ToyPower";
 import { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
 import lovenseLogo from "../assets/Lovense.png";
-import lovenseConnectLogo from "../assets/Lovense_Connect.png";
 import BatteryIcon from "../components/BatteryIcon";
 import Tooltip from "../layout/Tooltip";
 import { cn } from "../lib/utils";
@@ -35,7 +34,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
       <div className="px-2">
         {config?.show_toy_advanced && <ToySettings toy={toy} />}
         {/* pt-2 because scrollbar gap is bottom */}
-        <div className="scrollbar flex w-[calc(100vw-320px)] select-none  items-center gap-4 overflow-x-scroll pt-2 md:w-[calc(100vw-340px)]">
+        <div className="scrollbar flex w-[calc(100vw-320px)] select-none items-center gap-4 overflow-x-scroll pt-2 md:w-[calc(100vw-340px)]">
           {toy.features.map((feature, featureArrayIndex) => (
             <button
               key={toyFeatureKey(toy, feature)}
@@ -69,22 +68,8 @@ type NameInfo = {
 function NameInfo(toy: FeVCToy): NameInfo {
   const name = toy.toy_name;
 
-  if (!toy.toy_connected)
-    return {
-      fullName: name,
-      // "Normalized" since Lovense toy_names are saved with whatever first connection method was
-      shortName: name.replace("Lovense Connect ", "Lovense "),
-      logo: undefined,
-    };
-
   // Shorten everything else since we have the badge
-  if (name.startsWith("Lovense Connect")) {
-    return {
-      fullName: name,
-      shortName: name.replace("Lovense Connect ", ""),
-      logo: lovenseConnectLogo,
-    };
-  } else if (name.startsWith("Lovense")) {
+  if (name.startsWith("Lovense")) {
     return {
       fullName: name,
       shortName: name.replace("Lovense ", ""),

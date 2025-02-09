@@ -12,10 +12,7 @@ import Switch from "../layout/Switch";
 import Tooltip, { TooltipLabel } from "../layout/Tooltip";
 
 export default function ToySettings({ toy }: { toy: FeVCToy }) {
-  const parsed_toy_name = toy.toy_name
-    .replace("Lovense Connect", "Lovense")
-    .replaceAll(" ", "_")
-    .toLowerCase();
+  const parsed_toy_name = toy.toy_name.replaceAll(" ", "_").toLowerCase();
   const osc_data_addr = `${OSC.DATA_PREFIX}${parsed_toy_name}/${toy.sub_id}/battery`;
 
   async function handleCopy() {

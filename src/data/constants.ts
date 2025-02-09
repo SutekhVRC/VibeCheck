@@ -96,10 +96,6 @@ export const TOOLTIP = {
     text: "OSC Send Port (Default: 127.0.0.1:9000)",
     link: "",
   },
-  LC_Override: {
-    text: "Override and force the Lovense Connect host to connect to.",
-    link: "",
-  },
   ScanOnDisconnect: {
     text: "Automatically start scanning when a toy disconnects.",
     link: "",
