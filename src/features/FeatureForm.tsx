@@ -16,7 +16,6 @@ import {
   useContext,
   useState,
 } from "react";
-import type { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
 import type { FeToyParameter } from "src-tauri/bindings/FeToyParameter";
 import type { FeLevelTweaks } from "../../src-tauri/bindings/FeLevelTweaks";
 import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
@@ -264,11 +263,13 @@ function Parameters() {
     paramIndex: number,
   ) {
     setToyFeature((f) => {
-      const newParams = [...f.osc_parameters];
-      newParams[paramIndex].parameter = normalizeOscParameter(e.target.value);
+      if (!f.osc_parameters[paramIndex]) return f;
+      f.osc_parameters[paramIndex].parameter = normalizeOscParameter(
+        e.target.value,
+      );
       const newF = {
         ...f,
-        osc_parameters: newParams,
+        osc_parameters: [...f.osc_parameters],
       };
       debouncedAlter(newF);
       return newF;
@@ -280,12 +281,13 @@ function Parameters() {
     paramIndex: number,
   ) {
     setToyFeature((f) => {
-      const newParams = [...f.osc_parameters];
-      newParams[paramIndex].processing_mode = e.target
-        .value as FeProcessingMode;
+      if (!f.osc_parameters[paramIndex]) return f;
+      f.osc_parameters[paramIndex].parameter = normalizeOscParameter(
+        e.target.value,
+      );
       const newF = {
         ...f,
-        osc_parameters: newParams,
+        osc_parameters: [...f.osc_parameters],
       };
       handleFeatureAlter(newF);
       return newF;
@@ -352,7 +354,9 @@ function Linear() {
           max={1000}
           step={1}
           value={[levels.linear_position_speed]}
-          onValueChange={(e) => handleLevels("linear_position_speed", e[0])}
+          onValueChange={(e) =>
+            e[0] != undefined && handleLevels("linear_position_speed", e[0])
+          }
           onValueCommit={() => handleFeatureAlter(feature)}
         />
       }
@@ -376,7 +380,9 @@ function Idle() {
           max={1}
           step={0.01}
           value={[levels.idle_level]}
-          onValueChange={(e) => handleLevels("idle_level", e[0])}
+          onValueChange={(e) =>
+            e[0] != undefined && handleLevels("idle_level", e[0])
+          }
           onValueCommit={() => handleFeatureAlter(feature)}
         />
       }
@@ -403,6 +409,7 @@ function Range() {
           value={[levels.minimum_level, levels.maximum_level]}
           onValueChange={(e) => {
             setToyFeature((f) => {
+              if (e[0] == undefined || e[1] == undefined) return f;
               return {
                 ...f,
                 feature_levels: {
@@ -453,7 +460,9 @@ function Smooth() {
           max={20}
           step={1}
           value={[levels.smooth_rate]}
-          onValueChange={(e) => handleLevels("smooth_rate", e[0])}
+          onValueChange={(e) =>
+            e[0] != undefined && handleLevels("smooth_rate", e[0])
+          }
           onValueCommit={() => handleFeatureAlter(feature)}
         />
       }
@@ -475,7 +484,9 @@ function Rate() {
           max={2}
           step={0.05}
           value={[levels.rate_tune]}
-          onValueChange={(e) => handleLevels("rate_tune", e[0])}
+          onValueChange={(e) =>
+            e[0] != undefined && handleLevels("rate_tune", e[0])
+          }
           onValueCommit={() => handleFeatureAlter(feature)}
         />
       }
@@ -497,7 +508,9 @@ function Constant() {
           max={1.0}
           step={0.01}
           value={[levels.constant_level]}
-          onValueChange={(e) => handleLevels("constant_level", e[0])}
+          onValueChange={(e) =>
+            e[0] != undefined && handleLevels("constant_level", e[0])
+          }
           onValueCommit={() => handleFeatureAlter(feature)}
         />
       }
@@ -537,7 +550,9 @@ function Simulate({ toy }: { toy: FeVCToy }) {
               max={1}
               step={0.01}
               value={[simulateLevel]}
-              onValueChange={(e) => simulateOnValueChange(e[0])}
+              onValueChange={(e) =>
+                e[0] != undefined && simulateOnValueChange(e[0])
+              }
               onValueCommit={() => simulateOnValueCommit()}
             />
           }
