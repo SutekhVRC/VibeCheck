@@ -45,7 +45,7 @@ export default function Slider(
             </TooltipPrimitive.Trigger>
             <TooltipPrimitive.Portal>
               <TooltipPrimitive.Content
-                className="max-w-md rounded-md bg-zinc-600 pl-3 pr-3 text-zinc-50"
+                className="max-w-md rounded-md bg-zinc-600 pr-3 pl-3 text-zinc-50"
                 sideOffset={10}
                 key={first} // force update with key
               >
@@ -63,7 +63,7 @@ export default function Slider(
             </TooltipPrimitive.Trigger>
             <TooltipPrimitive.Portal>
               <TooltipPrimitive.Content
-                className="max-w-md rounded-md bg-zinc-600 pl-3 pr-3 text-zinc-50"
+                className="max-w-md rounded-md bg-zinc-600 pr-3 pl-3 text-zinc-50"
                 sideOffset={10}
                 key={second} // force update with key
               >

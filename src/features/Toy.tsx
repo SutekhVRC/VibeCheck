@@ -35,13 +35,13 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
       <div className="px-2">
         {config?.show_toy_advanced && <ToySettings toy={toy} />}
         {/* pt-2 because scrollbar gap is bottom */}
-        <div className="scrollbar flex w-[calc(100vw-320px)] select-none  items-center gap-4 overflow-x-scroll pt-2 md:w-[calc(100vw-340px)]">
+        <div className="scrollbar flex w-[calc(100vw-320px)] items-center gap-4 overflow-x-scroll pt-2 select-none md:w-[calc(100vw-340px)]">
           {toy.features.map((feature, featureArrayIndex) => (
             <button
               key={toyFeatureKey(toy, feature)}
               onClick={() => setSelectedFeatureIndex(featureArrayIndex)}
               className={cn(
-                "whitespace-nowrap rounded-md border-2 border-transparent bg-zinc-700 px-4 py-1 hover:bg-cyan-600",
+                "rounded-md border-2 border-transparent bg-zinc-700 px-4 py-1 whitespace-nowrap hover:bg-cyan-600",
                 feature.feature_enabled ? "text-zinc-200" : "text-zinc-500",
                 featureArrayIndex == selectedFeatureIndex && "border-cyan-500",
               )}

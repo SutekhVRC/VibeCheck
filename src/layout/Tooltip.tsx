@@ -23,7 +23,7 @@ export default function Tooltip({
         </TooltipPrimitive.Trigger>
         <TooltipPrimitive.Portal>
           <TooltipPrimitive.Content
-            className="pointer-events-none z-50 max-w-md cursor-pointer rounded-md bg-zinc-600 pl-3 pr-3 text-zinc-50"
+            className="pointer-events-none z-50 max-w-md cursor-pointer rounded-md bg-zinc-600 pr-3 pl-3 text-zinc-50"
             sideOffset={5}
           >
             {text}
@@ -51,7 +51,7 @@ export function TooltipLabel({ text, tooltip }: TooltipProps) {
           onClick={async () => {
             await invoke(INVOKE.OPEN_BROWSER, { link });
           }}
-          className="cursor-pointer select-none justify-self-start underline"
+          className="cursor-pointer justify-self-start underline select-none"
         >
           {text}
         </label>
