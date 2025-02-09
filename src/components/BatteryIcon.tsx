@@ -7,8 +7,8 @@ import {
   Plug,
   WifiOff,
 } from "lucide-react";
-import { CSSProperties } from "react";
-import { ToyPower } from "src-tauri/bindings/ToyPower";
+import type { CSSProperties } from "react";
+import type { ToyPower } from "src-tauri/bindings/ToyPower";
 import Tooltip from "../layout/Tooltip";
 import { percent } from "../utils";
 
