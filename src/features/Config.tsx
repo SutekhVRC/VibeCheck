@@ -56,7 +56,7 @@ export default function Config({
       await invoke(INVOKE.SET_CONFIG, { feVcConfig: newConfig });
       toast.info("Saved config");
     } catch (e) {
-      toast.error("Could not set config!");
+      toast.error(`Could not set config!\n${JSON.stringify(e)}`);
     }
   }
 

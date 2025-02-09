@@ -58,7 +58,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.DISABLE);
       setIsEnabled(false);
     } catch (e) {
-      toast.error(`Could not disable!\nJSON.stringify(e)`);
+      toast.error(`Could not disable!\n${JSON.stringify(e)}`);
     }
   }
 
@@ -76,7 +76,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.START_SCAN);
       setIsScanning(true);
     } catch (e) {
-      toast.error(`Could not start scan!\nJSON.stringify(e)`);
+      toast.error(`Could not start scan!\n${JSON.stringify(e)}`);
     }
   }
 
@@ -85,7 +85,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.STOP_SCAN);
       setIsScanning(false);
     } catch (e) {
-      toast.error(`Could not stop scan!\nJSON.stringify(e)`);
+      toast.error(`Could not stop scan!\n${JSON.stringify(e)}`);
     }
   }
 
@@ -124,8 +124,6 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       case "State":
         handleStateEvent(payload.data);
         break;
-      default:
-        assertExhaustive(payload);
     }
   }
 
