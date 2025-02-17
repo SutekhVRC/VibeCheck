@@ -10,7 +10,6 @@ tauri-build = { version = "1.5.0", features = [] }
 
 [dependencies]
 buttplug = "9.0.6"
-#buttplug = {git = "https://github.com/SutekhVRC/buttplug", branch = "vibecheck"}
 #buttplug = {path = "../../../vibecheck-dev-buttplug/buttplug/buttplug"}
 #vrcoscquery = {path = "../../../vrcoscquery-rs"}
 vrcoscquery = {git = "https://github.com/SutekhVRC/VRCOSCQuery"}
