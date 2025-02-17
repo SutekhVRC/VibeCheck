@@ -1,24 +1,18 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use self::toyops::{ProcessingModeValues, ToyParameter};
-
 pub mod errors;
-pub mod handling;
 pub mod input_processor;
 pub mod toy_manager;
 pub mod toyops;
+<<<<<<< HEAD
+=======
+pub mod runtime;
+pub mod osc_processor;
+pub mod mode_processor;
+pub mod toy_command_processor;
+>>>>>>> c1ba7ed (Break up entire handling module into distinct modules)
 
-pub enum SmoothParser {
-    Smoothed(f64),
-    SkipZero(f64),
-    Smoothing,
-}
-
-pub enum RateParser {
-    RateCalculated(f64, bool),
-    SkipZero,
-}
 
 #[derive(Clone, Debug)]
 pub enum ToySig {
@@ -27,32 +21,7 @@ pub enum ToySig {
     OSCMsg(rosc::OscMessage),
 }
 
-pub enum ModeProcessorInput<'processor> {
-    InputProcessor((ModeProcessorInputType, &'processor mut ProcessingModeValues)),
-    RawInput(ModeProcessorInputType, &'processor mut ToyParameter),
-}
 
-#[derive(Debug, Clone, TS, Serialize, Deserialize, Copy)]
-pub enum ModeProcessorInputType {
-    Float(f64),
-    Boolean(bool),
-}
-
-impl ModeProcessorInputType {
-    pub fn try_float(&self) -> Option<f64> {
-        match self {
-            Self::Float(f) => Some(*f),
-            _ => None,
-        }
-    }
-
-    pub fn try_bool(&self) -> Option<bool> {
-        match self {
-            Self::Boolean(b) => Some(*b),
-            _ => None,
-        }
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize, TS, Clone)]
 #[ts(export)]

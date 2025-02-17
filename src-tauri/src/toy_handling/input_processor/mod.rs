@@ -1,7 +1,7 @@
 use dyn_clone::DynClone;
 use std::fmt::Debug;
 
-use super::ModeProcessorInputType;
+use super::mode_processor::core::ModeProcessorInputType;
 
 pub mod penetration_systems;
 

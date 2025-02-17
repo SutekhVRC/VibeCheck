@@ -9,16 +9,18 @@ use std::sync::Arc;
 use crate::frontend::frontend_types::{FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig};
 use crate::frontend::ToFrontend;
 use crate::osc::logic::{toy_refresh, vc_disabled_osc_command_listen};
+use crate::toy_handling::errors::HandlerErr;
+use crate::toy_handling::runtime::client_event_handler::client_event_handler;
+use crate::toy_handling::toy_command_processor::command_toy;
 use crate::toy_handling::toy_manager::ToyManager;
 use crate::toy_handling::toyops::VCFeatureType;
-use crate::toy_handling::{errors::HandlerErr, handling::command_toy};
 use crate::util::bluetooth;
 use crate::util::fs::{get_config_dir, get_user_home_dir};
 use crate::util::net::{find_available_tcp_port, find_available_udp_port};
 use crate::vcore::vcerror::{backend, frontend};
 use crate::{
     config::{OSCNetworking, VibeCheckConfig},
-    toy_handling::handling::{client_event_handler, toy_management_handler},
+    toy_handling::runtime::toy_management_handler::toy_management_handler,
     toy_handling::toyops::VCToy,
 };
 use parking_lot::Mutex;

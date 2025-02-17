@@ -5,7 +5,8 @@ use std::{cmp::Ordering, collections::HashMap};
 use strum::{Display, EnumString};
 use ts_rs::TS;
 
-use crate::toy_handling::ModeProcessorInputType;
+
+use crate::toy_handling::mode_processor::core::ModeProcessorInputType;
 
 use super::SPSWho;
 
