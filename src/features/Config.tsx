@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api";
-import { ChangeEvent, FormEvent, useState } from "react";
+import { type ChangeEvent, type FormEvent, useState } from "react";
 import { toast } from "sonner";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 import UpdateButton from "../components/UpdateButton";
@@ -46,7 +46,7 @@ export default function Config({
       await invoke(INVOKE.SET_CONFIG, { feVcConfig: newConfig });
       toast.info("Saved config");
     } catch (e) {
-      toast.error("Could not set config!");
+      toast.error(`Could not set config!\n${JSON.stringify(e)}`);
     }
   }
 

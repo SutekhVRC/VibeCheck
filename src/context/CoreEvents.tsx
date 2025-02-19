@@ -3,10 +3,9 @@ import { listen } from "@tauri-apps/api/event";
 import { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { FeCoreEvent } from "../../src-tauri/bindings/FeCoreEvent";
-import { FeStateEvent } from "../../src-tauri/bindings/FeStateEvent";
+import type { FeStateEvent } from "../../src-tauri/bindings/FeStateEvent";
 import type { FeVibeCheckConfig } from "../../src-tauri/bindings/FeVibeCheckConfig";
 import { INVOKE, LISTEN } from "../data/constants";
-import { assertExhaustive } from "../utils";
 
 const SCAN_LENGTH = 10000;
 
@@ -58,7 +57,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.DISABLE);
       setIsEnabled(false);
     } catch (e) {
-      toast.error(`Could not disable!\nJSON.stringify(e)`);
+      toast.error(`Could not disable!\n${JSON.stringify(e)}`);
     }
   }
 
@@ -76,7 +75,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.START_SCAN);
       setIsScanning(true);
     } catch (e) {
-      toast.error(`Could not start scan!\nJSON.stringify(e)`);
+      toast.error(`Could not start scan!\n${JSON.stringify(e)}`);
     }
   }
 
@@ -85,7 +84,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.STOP_SCAN);
       setIsScanning(false);
     } catch (e) {
-      toast.error(`Could not stop scan!\nJSON.stringify(e)`);
+      toast.error(`Could not stop scan!\n${JSON.stringify(e)}`);
     }
   }
 
@@ -103,16 +102,14 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(i);
   }, [isScanning]);
 
-  function handleStateEvent(payload: FeStateEvent) {
+  function handleStateEvent(payload: FeStateEvent): boolean {
     switch (payload) {
       case "Disable":
         stopScanAndDisable();
-        break;
+        return true;
       case "EnableAndScan":
         enableAndStartScan();
-        break;
-      default:
-        assertExhaustive(payload);
+        return true;
     }
   }
 
@@ -124,8 +121,6 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       case "State":
         handleStateEvent(payload.data);
         break;
-      default:
-        assertExhaustive(payload);
     }
   }
 
