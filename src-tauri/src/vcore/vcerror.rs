@@ -22,10 +22,6 @@ pub mod frontend {
         SerializeFailure,
         WriteFailure,
         //InvalidIpv4Host,
-        UnsetLCOverrideFailure,
-        SetLCOverrideFailure,
-        InvalidLCHost,
-
         ToyManagerNotReady,
     }
 
