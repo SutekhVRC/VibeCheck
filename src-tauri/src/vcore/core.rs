@@ -20,7 +20,7 @@ use crate::util::net::{find_available_tcp_port, find_available_udp_port};
 use crate::vcore::vcerror::{backend, frontend};
 use crate::{
     config::{OSCNetworking, VibeCheckConfig},
-    toy_handling::handling::toy_management_handler,
+    toy_handling::runtime::toy_management_handler::toy_management_handler,
     toy_handling::toyops::VCToy,
 };
 use parking_lot::Mutex;

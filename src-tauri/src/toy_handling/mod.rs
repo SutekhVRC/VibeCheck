@@ -9,18 +9,6 @@ pub mod runtime;
 pub mod toy_command_processor;
 pub mod toy_manager;
 pub mod toyops;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-pub mod runtime;
-pub mod osc_processor;
-pub mod mode_processor;
-pub mod toy_command_processor;
->>>>>>> c1ba7ed (Break up entire handling module into distinct modules)
-=======
-pub mod runtime;
->>>>>>> 81b9e17 (Create runtime module)
-
 
 #[derive(Clone, Debug)]
 pub enum ToySig {
@@ -28,8 +16,6 @@ pub enum ToySig {
     UpdateToy(crate::vcore::core::ToyUpdate),
     OSCMsg(rosc::OscMessage),
 }
-
-
 
 #[derive(Debug, Serialize, Deserialize, TS, Clone)]
 #[ts(export)]
