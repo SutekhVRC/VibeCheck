@@ -24,10 +24,11 @@ use crate::frontend::ToFrontend;
 use crate::osc_api::osc_api::vibecheck_osc_api;
 use crate::toy_handling::ToyPower;
 use crate::toy_handling::ToySig;
-use crate::vcore::config::OSCNetworking;
-use crate::vcore::core::TmSig;
-use crate::vcore::core::ToyManagementEvent;
-use crate::vcore::core::VibeCheckState;
+use crate::vcore::ipc::call_plane::TmSig;
+use crate::vcore::ipc::call_plane::ToyManagementEvent;
+use crate::vcore::state::VibeCheckState;
+
+use super::OSCNetworking;
 
 /*
     This subroutine

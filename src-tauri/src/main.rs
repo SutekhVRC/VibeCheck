@@ -20,7 +20,6 @@ mod util;
 mod vcore;
 
 fn main() {
-
     #[cfg(debug_assertions)]
     {
         //tracing_subscriber::fmt::init();
@@ -29,8 +28,8 @@ fn main() {
         log_builder.init();
     }
 
-    let vibecheck_state_pointer = Arc::new(Mutex::new(vcore::core::VibeCheckState::new(
-        config::config_load(),
+    let vibecheck_state_pointer = Arc::new(Mutex::new(vcore::state::VibeCheckState::new(
+        crate::config::app::config_load(),
     )));
     trace!("VibeCheckState created");
 
@@ -87,7 +86,7 @@ fn main() {
             }
             _ => {}
         })
-        .manage(vcore::core::VCStateMutex(vibecheck_state_pointer.clone()))
+        .manage(vcore::state::VCStateMutex(vibecheck_state_pointer.clone()))
         .invoke_handler(tauri::generate_handler![
             frontend_native::vibecheck_version,
             frontend_native::vibecheck_enable,
@@ -141,7 +140,7 @@ fn main() {
             } => {
                 let minimize_on_exit = {
                     _app_handle
-                        .state::<vcore::core::VCStateMutex>()
+                        .state::<vcore::state::VCStateMutex>()
                         .0
                         .lock()
                         .config

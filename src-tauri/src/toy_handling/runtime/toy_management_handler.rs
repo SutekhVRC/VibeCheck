@@ -11,9 +11,19 @@ use std::{collections::HashMap, sync::Arc, thread};
 use buttplug::client::ButtplugClientDevice;
 use log::{error as logerr, info, warn};
 use tauri::AppHandle;
-use tokio::{runtime::Runtime, sync::mpsc::{UnboundedReceiver, UnboundedSender}, task::JoinHandle};
+use tokio::{
+    runtime::Runtime,
+    sync::mpsc::{UnboundedReceiver, UnboundedSender},
+    task::JoinHandle,
+};
 
-use crate::{osc::logic::toy_input_routine, toy_handling::{osc_processor::parse_osc_message, toy_manager::ToyManager, toyops::VCToyFeatures, ToySig}, vcore::{config::OSCNetworking, core::{TmSig, ToyManagementEvent, ToyUpdate}}};
+use crate::{
+    osc::{logic::toy_input_routine, OSCNetworking},
+    toy_handling::{
+        osc_processor::parse_osc_message, toy_manager::ToyManager, toyops::VCToyFeatures, ToySig,
+    },
+    vcore::ipc::call_plane::{TmSig, ToyManagementEvent, ToyUpdate},
+};
 
 use tokio::sync::{
     self,

@@ -18,7 +18,7 @@ pub fn vibecheck_osc_api(
                 info!("Avatar Changed: Halting toy actions");
                 {
                     let vc_pointer = app_handle
-                        .state::<crate::vcore::core::VCStateMutex>()
+                        .state::<crate::vcore::state::VCStateMutex>()
                         .0
                         .clone();
                     let vc_lock = vc_pointer.lock();

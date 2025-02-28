@@ -1,14 +1,28 @@
 use std::{sync::Arc, time::Duration};
 
+use crate::{
+    frontend::{
+        frontend_types::{FeCoreEvent, FeScanEvent, FeToyEvent, FeVCToy},
+        ToFrontend,
+    },
+    toy_handling::{
+        toyops::{VCToy, VCToyFeatures},
+        ToyPower,
+    },
+    vcore::{
+        ipc::call_plane::{ToyManagementEvent, ToyUpdate},
+        state::VibeCheckState,
+        vcerror::VCError,
+    },
+};
 use buttplug::client::ButtplugClientEvent;
+use futures::StreamExt;
 use futures_timer::Delay;
 use log::{error as logerr, info, trace, warn};
 use parking_lot::Mutex;
+use std::sync::mpsc::Sender;
 use tauri::{api::notification::Notification, AppHandle, Manager};
 use tokio::sync::mpsc::UnboundedSender;
-use std::sync::mpsc::Sender;
-use futures::StreamExt;
-use crate::{frontend::{frontend_types::{FeCoreEvent, FeScanEvent, FeToyEvent, FeVCToy}, ToFrontend}, toy_handling::{toyops::{VCToy, VCToyFeatures}, ToyPower}, vcore::core::{ToyManagementEvent, ToyUpdate, VCError, VibeCheckState}};
 
 /*
     This handler will handle the adding and removal of toys
@@ -196,8 +210,14 @@ pub async fn client_event_handler(
                     }
                 }
                 ButtplugClientEvent::ScanningFinished => info!("Scanning finished!"),
-                ButtplugClientEvent::ServerDisconnect => {warn!("ServerDisconnect");break},
-                ButtplugClientEvent::PingTimeout => {warn!("PingTimeout");break},
+                ButtplugClientEvent::ServerDisconnect => {
+                    warn!("ServerDisconnect");
+                    break;
+                }
+                ButtplugClientEvent::PingTimeout => {
+                    warn!("PingTimeout");
+                    break;
+                }
                 ButtplugClientEvent::Error(e) => {
                     logerr!("Client Event Error: {:?}", e);
                 }

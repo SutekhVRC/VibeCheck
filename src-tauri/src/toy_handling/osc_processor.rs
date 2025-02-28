@@ -4,7 +4,6 @@ use buttplug::client::ButtplugClientDevice;
 use rosc::{OscMessage, OscType};
 
 use crate::toy_handling::toyops::ToyParameter;
-
 use crate::toy_handling::toyops::VCToyFeatures;
 
 use log::info;

@@ -2,7 +2,11 @@ use log::{debug, info, trace};
 use rosc::OscMessage;
 use tauri::{AppHandle, Manager};
 
-use crate::{config::toy::VCToyAnatomy, frontend::frontend_types::FeCoreEvent, vcore};
+use crate::{
+    config::toy::VCToyAnatomy,
+    frontend::frontend_types::FeCoreEvent,
+    vcore::{self, ipc::call_plane::native_alter_toy},
+};
 
 pub mod osc_api;
 
@@ -42,7 +46,7 @@ impl APIProcessor {
 
             if let Some(state_bool) = endpoint.args.pop().unwrap().bool() {
                 let vc_pointer = app_handle
-                    .state::<crate::vcore::core::VCStateMutex>()
+                    .state::<crate::vcore::state::VCStateMutex>()
                     .0
                     .clone();
                 let mut vc_lock = vc_pointer.lock();
@@ -65,8 +69,8 @@ impl APIProcessor {
             }
 
             altered_toys.iter().for_each(|toy| {
-                let _ = vcore::core::native_alter_toy(
-                    app_handle.state::<crate::vcore::core::VCStateMutex>(),
+                let _ = native_alter_toy(
+                    app_handle.state::<crate::vcore::state::VCStateMutex>(),
                     app_handle.clone(),
                     toy.clone(),
                 );

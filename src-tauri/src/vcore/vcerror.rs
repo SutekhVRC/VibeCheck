@@ -2,8 +2,14 @@
  * Splitting errors into fronted native call errors and backend errors
  */
 
+pub enum VCError {
+    HandlingErr(crate::toy_handling::errors::HandlerErr),
+}
+
 pub mod frontend {
     use serde::Serialize;
+
+    use super::backend::ToyAlterError;
 
     #[derive(Serialize)]
     pub enum VCFeError {
@@ -23,17 +29,6 @@ pub mod frontend {
         WriteFailure,
         //InvalidIpv4Host,
         ToyManagerNotReady,
-    }
-
-    #[derive(Serialize)]
-    pub enum ToyAlterError {
-        NoFeatureIndex,
-        NoToyIndex,
-        TMESendFailure,
-        ToyConnected,
-        ToyDisconnected,
-        OfflineToyNotExist,
-        OfflineToyNoFeatureIndex,
     }
 }
 
@@ -64,9 +59,14 @@ pub mod backend {
         RemoveDirsFailure,
     }
 
+    #[derive(Serialize, Debug)]
     pub enum ToyAlterError {
-        //NoFeatureIndex,
-        //NoToyIndex,
+        NoFeatureIndex,
+        NoToyIndex,
         TMESendFailure,
+        ToyConnected,
+        ToyDisconnected,
+        OfflineToyNotExist,
+        OfflineToyNoFeatureIndex,
     }
 }

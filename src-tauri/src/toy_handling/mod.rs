@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::vcore::ipc::call_plane::ToyUpdate;
+
 pub mod errors;
 pub mod input_processor;
 pub mod mode_processor;
@@ -13,7 +15,7 @@ pub mod toyops;
 #[derive(Clone, Debug)]
 pub enum ToySig {
     //ToyCommand(ToyFeature),
-    UpdateToy(crate::vcore::core::ToyUpdate),
+    UpdateToy(ToyUpdate),
     OSCMsg(rosc::OscMessage),
 }
 
