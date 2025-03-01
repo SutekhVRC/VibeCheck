@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use log::{debug, info, trace};
 use rosc::OscMessage;
 use tauri::{AppHandle, Manager};
@@ -5,7 +7,7 @@ use tauri::{AppHandle, Manager};
 use crate::{
     config::toy::VCToyAnatomy,
     frontend::frontend_types::FeCoreEvent,
-    vcore::{self, ipc::call_plane::native_alter_toy},
+    vcore::ipc::{call_plane::native_alter_toy, emit_plane::emit_core_event},
 };
 
 pub mod osc_api;
@@ -31,8 +33,9 @@ impl APIProcessor {
                 return;
             };
             info!("State false: Sending Disable event");
-            let _ = app_handle.emit_all(
-                "fe_core_event",
+
+            emit_core_event(
+                &Rc::new(app_handle),
                 FeCoreEvent::State(crate::frontend::frontend_types::FeStateEvent::Disable),
             );
         } else if api_tokenize.len() == 7

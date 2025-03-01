@@ -17,6 +17,7 @@ use crate::{
     util::fs::{get_config_dir, get_user_home_dir},
     vcore::{
         config::app::VibeCheckConfig,
+        ipc::emit_plane::emit_toy_event,
         state::{RunningState, VCStateMutex},
         vcerror::{
             backend::{ToyAlterError, VibeCheckConfigError, VibeCheckFSError},
@@ -361,8 +362,8 @@ pub fn native_alter_toy(
             .send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)))
     };
 
-    let _ = app_handle.emit_all(
-        "fe_toy_event",
+    emit_toy_event(
+        &app_handle,
         FeToyEvent::Update({
             FeVCToy {
                 toy_id: Some(alter_clone.toy_id),

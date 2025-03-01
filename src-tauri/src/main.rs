@@ -159,17 +159,7 @@ fn main() {
             tauri::RunEvent::ExitRequested { .. } => {
                 // On exit
             }
-            tauri::RunEvent::MainEventsCleared => {
-
-                /*
-                let state = _app_handle.state::<vcore::VCStateMutex>();
-                let vc_lock = state.0.lock();
-
-                // Handle inter-thread data
-                // Problem: This does not continuously execute (When app is hidden does not execute)
-                handling::message_handling(vc_lock);*/
-                //info!("[+] State MainEventsCleared.");
-            }
+            tauri::RunEvent::MainEventsCleared => {}
             tauri::RunEvent::Ready => {
                 info!("App Ready");
 

@@ -3,6 +3,8 @@
  *
  */
 
+use std::rc::Rc;
+
 use crate::{
     config::toy::VCToyConfig,
     frontend::{
@@ -12,16 +14,15 @@ use crate::{
         FromFrontend, ToFrontend,
     },
     vcore::{
-        ipc::call_plane,
+        ipc::{call_plane, emit_plane::emit_toy_event},
         state,
         vcerror::{
             backend::{self, ToyAlterError},
-            frontend::{self, VCFeError},
+            frontend::VCFeError,
         },
     },
 };
 use log::{error as logerr, trace};
-use tauri::Manager;
 
 /*
  * vibecheck_version
@@ -228,7 +229,7 @@ pub fn alter_toy(
 
                 offline_toy_config.save_offline_toy_config();
 
-                let _ = app_handle.emit_all("fe_toy_event", FeToyEvent::Update(fe_toy));
+                emit_toy_event(&Rc::new(app_handle), FeToyEvent::Update(fe_toy));
             } else {
                 return Err(VCFeError::AlterToyFailure(ToyAlterError::ToyConnected));
             }

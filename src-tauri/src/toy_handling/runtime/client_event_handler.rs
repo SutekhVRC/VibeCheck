@@ -10,7 +10,10 @@ use crate::{
         ToyPower,
     },
     vcore::{
-        ipc::call_plane::{ToyManagementEvent, ToyUpdate},
+        ipc::{
+            call_plane::{ToyManagementEvent, ToyUpdate},
+            emit_plane::{emit_core_event, emit_toy_event},
+        },
         state::VibeCheckState,
         vcerror::VCError,
     },
@@ -21,7 +24,7 @@ use futures_timer::Delay;
 use log::{error as logerr, info, trace, warn};
 use parking_lot::Mutex;
 use std::sync::mpsc::Sender;
-use tauri::{api::notification::Notification, AppHandle, Manager};
+use tauri::{api::notification::Notification, AppHandle};
 use tokio::sync::mpsc::UnboundedSender;
 
 /*
@@ -129,8 +132,8 @@ pub async fn client_event_handler(
                         .send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone())))
                         .unwrap();
 
-                    let _ = app_handle.emit_all(
-                        "fe_toy_event",
+                    emit_toy_event(
+                        &app_handle,
                         FeToyEvent::Add({
                             FeVCToy {
                                 toy_id: Some(toy.toy_id),
@@ -183,8 +186,7 @@ pub async fn client_event_handler(
                             .send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(dev.index())))
                             .unwrap();
 
-                        let _ =
-                            app_handle.emit_all("fe_toy_event", FeToyEvent::Remove(dev.index()));
+                        emit_toy_event(&app_handle, FeToyEvent::Remove(dev.index()));
 
                         {
                             let vc_lock = vibecheck_state_pointer.lock();
@@ -204,8 +206,8 @@ pub async fn client_event_handler(
                                     .async_rt
                                     .spawn(vc_lock.bp_client.as_ref().unwrap().start_scanning());
                             }
-                            let _ = app_handle
-                                .emit_all("fe_core_event", FeCoreEvent::Scan(FeScanEvent::Start));
+
+                            emit_core_event(&app_handle, FeCoreEvent::Scan(FeScanEvent::Start));
                         }
                     }
                 }
