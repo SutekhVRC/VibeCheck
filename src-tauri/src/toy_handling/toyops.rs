@@ -20,7 +20,7 @@ use crate::{
         sps::SPSProcessor, tps::TPSProcessor, PenetrationSystemType,
     },
     util::fs::{file_exists, get_config_dir},
-    vcore::vcerror,
+    vcore::errors,
 };
 
 use crate::toy_handling::input_processor::penetration_systems::PenetrationSystem;
@@ -283,7 +283,7 @@ impl VCToy {
         }
     }
 
-    pub fn load_toy_config(&mut self) -> Result<(), vcerror::backend::VibeCheckToyConfigError> {
+    pub fn load_toy_config(&mut self) -> Result<(), errors::backend::VibeCheckToyConfigError> {
         // Generate config path
 
         let config_path = format!("{}\\ToyConfigs\\{}.json", get_config_dir(), self.toy_name);
@@ -298,7 +298,7 @@ impl VCToy {
                 Ok(vc_toy_config) => vc_toy_config,
                 Err(_) => {
                     self.config = None;
-                    return Err(vcerror::backend::VibeCheckToyConfigError::DeserializeError);
+                    return Err(errors::backend::VibeCheckToyConfigError::DeserializeError);
                 }
             };
             debug!("Loaded & parsed toy config successfully!");
@@ -309,11 +309,7 @@ impl VCToy {
 
     // Save Toy config by name
     pub fn save_toy_config(&self) {
-        let config_path = format!(
-            "{}\\ToyConfigs\\{}.json",
-            get_config_dir(),
-            self.toy_name,
-        );
+        let config_path = format!("{}\\ToyConfigs\\{}.json", get_config_dir(), self.toy_name,);
         info!("Saving toy config to: {}", config_path);
 
         if let Some(conf) = &self.config {

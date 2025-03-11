@@ -17,13 +17,13 @@ use crate::{
     util::fs::{get_config_dir, get_user_home_dir},
     vcore::{
         config::app::VibeCheckConfig,
-        ipc::emit_plane::emit_toy_event,
-        state::{RunningState, VCStateMutex},
-        vcerror::{
+        errors::{
             backend::{ToyAlterError, VibeCheckConfigError, VibeCheckFSError},
             frontend::VCFeError,
             VCError,
         },
+        ipc::emit_plane::emit_toy_event,
+        state::{RunningState, VCStateMutex},
     },
 };
 

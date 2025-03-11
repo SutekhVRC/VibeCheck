@@ -12,6 +12,7 @@ use tauri::{Manager, SystemTrayMenu};
 use crate::{frontend::frontend_native, vcore::config};
 //use env_logger;
 
+mod errors;
 mod frontend;
 mod osc;
 mod osc_api;
@@ -56,8 +57,8 @@ fn main() {
                 "Another {} process mutex created.. Showing already running app.",
                 app.package_info().name
             );
-            let window = app.get_window("main").unwrap();
-            window.show().unwrap();
+            let window = app.get_window("main").expect("Failed to get window main");
+            window.show().expect("Failed to show window");
         }))
         .setup(|_app| Ok(()))
         .system_tray(tauri::SystemTray::new().with_menu(tray_menu))
@@ -70,19 +71,19 @@ fn main() {
                     app.restart();
                 }
                 "hide" => {
-                    let window = app.get_window("main").unwrap();
-                    window.hide().unwrap();
+                    let window = app.get_window("main").expect("Failed to get window main");
+                    window.hide().expect("Failed to hide window");
                 }
                 "show" => {
-                    let window = app.get_window("main").unwrap();
-                    window.show().unwrap();
+                    let window = app.get_window("main").expect("Failed to get window main");
+                    window.show().expect("Failed to show window");
                 }
                 _ => {}
             },
             tauri::SystemTrayEvent::LeftClick { .. } => {
-                let window = app.get_window("main").unwrap();
+                let window = app.get_window("main").expect("Failed to get window main");
                 trace!("Opening window: {}", window.label());
-                window.show().unwrap();
+                window.show().expect("Failed to show window");
             }
             _ => {}
         })
@@ -119,15 +120,15 @@ fn main() {
         trace!("State pointer set");
         vc_state.set_app_handle(app.app_handle());
         trace!("App handle set");
-        vc_state.init_toy_manager();
+        vc_state.init_toy_manager().unwrap();
         trace!("ToyManager initialized");
         vc_state.identifier = identifier;
         trace!("App Identifier set");
-        vc_state.start_tmh();
+        vc_state.start_tmh().unwrap();
         trace!("Started TMH");
-        vc_state.init_ceh();
+        vc_state.init_ceh().unwrap();
         trace!("Started CEH");
-        vc_state.start_disabled_listener();
+        vc_state.start_disabled_listener().unwrap();
         trace!("Started DOL");
     }
 
@@ -148,9 +149,11 @@ fn main() {
                 };
 
                 if minimize_on_exit {
-                    let window = _app_handle.get_window(&label).unwrap();
+                    let window = _app_handle
+                        .get_window(&label)
+                        .expect("Failed to get window to minimize");
                     trace!("Closing window: {}", window.label());
-                    window.hide().unwrap();
+                    window.hide().expect("Failed to hide window for minimize");
                     api.prevent_close();
                 } else {
                     // Let exit
@@ -162,9 +165,6 @@ fn main() {
             tauri::RunEvent::MainEventsCleared => {}
             tauri::RunEvent::Ready => {
                 info!("App Ready");
-
-                // Sync offline toys to frontend
-                //_app_handle.state::<vcore::VCStateMutex>().0.lock().core_toy_manager.as_ref().unwrap().sync_frontend();
             }
             tauri::RunEvent::Updater(updater_event) => match updater_event {
                 tauri::UpdaterEvent::Error(err) => {

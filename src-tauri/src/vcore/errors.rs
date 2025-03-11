@@ -2,6 +2,29 @@
  * Splitting errors into fronted native call errors and backend errors
  */
 
+use std::{error::Error, fmt};
+
+#[derive(Debug)]
+pub enum VcoreError {
+    NoAppHandle,
+    NoToyManager,
+    NoStatePointer,
+    CehAlreadyInitialized,
+    DisabledOscListenerThreadRunning,
+}
+
+impl Error for VcoreError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
+}
+
+impl fmt::Display for VcoreError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "VcoreError")
+    }
+}
+
 pub enum VCError {
     HandlingErr(crate::toy_handling::errors::HandlerErr),
 }

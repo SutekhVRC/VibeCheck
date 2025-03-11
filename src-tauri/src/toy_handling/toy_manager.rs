@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::errors::{ErrorSource, VibeCheckError};
 use crate::frontend::ToFrontend;
 use crate::{
     config::toy::VCToyConfig,
@@ -10,6 +11,8 @@ use crate::{
 use log::{debug, info, trace};
 use tauri::{api::dir::read_dir, AppHandle};
 
+use super::errors::ToyHandlingError;
+
 #[derive(Clone)]
 pub struct ToyManager {
     pub configs: HashMap<String, VCToyConfig>,
@@ -18,7 +21,7 @@ pub struct ToyManager {
 }
 
 impl ToyManager {
-    pub fn new(app_handle: AppHandle) -> Self {
+    pub fn new(app_handle: AppHandle) -> Result<Self, VibeCheckError> {
         /*
          * Read all toy configs
          * Send update to frontend
@@ -36,21 +39,23 @@ impl ToyManager {
             _app_handle: app_handle,
         };
 
-        ot.populate_configs();
-        trace!("ToyManager config population complete!");
-
-        /*
-                ot.sync_frontend();
-                trace!("ToyManager initialization sent frontend sync");
-        */
-        ot
+        match ot.populate_configs() {
+            Ok(()) => {
+                trace!("ToyManager config population complete!");
+                Ok(ot)
+            }
+            Err(e) => Err(VibeCheckError::new(
+                ErrorSource::ToyHandling(e),
+                Some("Config population failure"),
+            )),
+        }
     }
 
-    pub fn populate_configs(&mut self) {
+    pub fn populate_configs(&mut self) -> Result<(), ToyHandlingError> {
         let toy_config_dir = match read_dir(format!("{}\\ToyConfigs", get_config_dir()), false) {
             Ok(config_paths) => config_paths,
             // Doesn't populate
-            Err(_e) => return,
+            Err(_e) => return Err(ToyHandlingError::PopulateConfigFailure),
         };
 
         for f in toy_config_dir {
@@ -79,6 +84,7 @@ impl ToyManager {
         }
 
         debug!("Loaded {} Offline toy configs!", self.configs.len());
+        Ok(())
     }
 
     pub fn sync_frontend(&mut self, refresh_toys: bool) -> Vec<FeVCToy> {

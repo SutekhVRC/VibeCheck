@@ -10,16 +10,18 @@ use tokio::sync::{mpsc::unbounded_channel, mpsc::UnboundedReceiver, mpsc::Unboun
 use tokio::task::JoinHandle;
 use vrcoscquery::OSCQuery;
 
+use crate::errors::{ErrorSource, VibeCheckError};
 use crate::osc::logic::{toy_refresh, vc_disabled_osc_command_listen};
 use crate::toy_handling::runtime::client_event_handler::client_event_handler;
 use crate::toy_handling::runtime::toy_management_handler::toy_management_handler;
 use crate::toy_handling::toy_manager::ToyManager;
 use crate::util::bluetooth;
 use crate::util::net::{find_available_tcp_port, find_available_udp_port};
+use crate::vcore::errors::VcoreError;
 
 use super::config::app::VibeCheckConfig;
+use super::errors::VCError;
 use super::ipc::call_plane::ToyManagementEvent;
-use super::vcerror::VCError;
 
 pub struct VCStateMutex(pub Arc<Mutex<VibeCheckState>>);
 
@@ -144,15 +146,21 @@ impl VibeCheckState {
         }
     }
 
-    pub fn start_tmh(&mut self) {
+    pub fn start_tmh(&mut self) -> Result<(), VibeCheckError> {
         if self.app_handle.is_none() {
             logerr!("start_tmh() called but no app_handle was set");
-            return;
+            return Err(VibeCheckError::new(
+                ErrorSource::Vcore(VcoreError::NoAppHandle),
+                None,
+            ));
         }
 
         if self.core_toy_manager.is_none() {
             logerr!("start_tmh() called but no core_toy_manager was set");
-            return;
+            return Err(VibeCheckError::new(
+                ErrorSource::Vcore(VcoreError::NoToyManager),
+                None,
+            ));
         }
 
         self.toy_management_h_thread = Some(self.async_rt.spawn(toy_management_handler(
@@ -163,11 +171,15 @@ impl VibeCheckState {
             self.app_handle.as_ref().unwrap().clone(),
         )));
         info!("TMH started");
+        Ok(())
     }
 
-    pub fn start_disabled_listener(&mut self) {
+    pub fn start_disabled_listener(&mut self) -> Result<(), VibeCheckError> {
         if self.disabled_osc_listener_h_thread.is_some() {
-            return;
+            return Err(VibeCheckError::new(
+                ErrorSource::Vcore(VcoreError::DisabledOscListenerThreadRunning),
+                None,
+            ));
         }
 
         self.disabled_osc_listener_h_thread =
@@ -175,6 +187,7 @@ impl VibeCheckState {
                 self.app_handle.as_ref().unwrap().clone(),
                 self.config.networking.clone(),
             )));
+        Ok(())
     }
 
     pub async fn stop_disabled_listener(&mut self) {
@@ -196,20 +209,37 @@ impl VibeCheckState {
     pub fn set_app_handle(&mut self, app_handle: AppHandle) {
         self.app_handle = Some(app_handle);
     }
-    pub fn init_toy_manager(&mut self) {
-        self.core_toy_manager = Some(ToyManager::new(self.app_handle.as_ref().unwrap().clone()));
+    pub fn init_toy_manager(&mut self) -> Result<(), VibeCheckError> {
+        let toy_manager = ToyManager::new(
+            self.app_handle
+                .as_ref()
+                .expect("Failed to get app handle")
+                .clone(),
+        );
+
+        match toy_manager {
+            Ok(tm) => self.core_toy_manager = Some(tm),
+            Err(e) => return Err(e),
+        }
+        Ok(())
     }
 
-    pub fn init_ceh(&mut self) {
+    pub fn init_ceh(&mut self) -> Result<(), VibeCheckError> {
         // Is there a supplied state pointer?
         if self.vibecheck_state_pointer.is_none() {
-            return;
+            return Err(VibeCheckError::new(
+                ErrorSource::Vcore(VcoreError::NoStatePointer),
+                None,
+            ));
         }
 
         // Is CEH already running?
 
         if self.client_eh_thread.is_some() {
-            return;
+            return Err(VibeCheckError::new(
+                ErrorSource::Vcore(VcoreError::CehAlreadyInitialized),
+                None,
+            ));
         }
 
         // Create connection mode defaults
@@ -234,6 +264,7 @@ impl VibeCheckState {
             self.tme_send_tx.clone(),
             self.error_tx.clone(),
         )));
+        Ok(())
     }
 
     /*

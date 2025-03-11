@@ -10,12 +10,12 @@ use crate::{
         ToyPower,
     },
     vcore::{
+        errors::VCError,
         ipc::{
             call_plane::{ToyManagementEvent, ToyUpdate},
             emit_plane::{emit_core_event, emit_toy_event},
         },
         state::VibeCheckState,
-        vcerror::VCError,
     },
 };
 use buttplug::client::ButtplugClientEvent;

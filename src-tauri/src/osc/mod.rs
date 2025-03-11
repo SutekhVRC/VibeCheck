@@ -6,6 +6,9 @@ use crate::frontend::frontend_types::FeOSCNetworking;
 
 pub mod logic;
 
+#[derive(Debug)]
+pub struct OscError {}
+
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct OSCNetworking {
     pub bind: SocketAddrV4,

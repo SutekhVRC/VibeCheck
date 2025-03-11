@@ -14,12 +14,12 @@ use crate::{
         FromFrontend, ToFrontend,
     },
     vcore::{
-        ipc::{call_plane, emit_plane::emit_toy_event},
-        state,
-        vcerror::{
+        errors::{
             backend::{self, ToyAlterError},
             frontend::VCFeError,
         },
+        ipc::{call_plane, emit_plane::emit_toy_event},
+        state,
     },
 };
 use log::{error as logerr, trace};

@@ -10,6 +10,9 @@ use crate::{
     vcore::ipc::{call_plane::native_alter_toy, emit_plane::emit_core_event},
 };
 
+#[derive(Debug)]
+pub struct OscApiError {}
+
 pub mod osc_api;
 
 struct APIProcessor;

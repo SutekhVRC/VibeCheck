@@ -2,7 +2,7 @@ use crate::{
     frontend::frontend_types::FeVCToyAnatomy,
     toy_handling::toyops::VCToyFeatures,
     util::fs::{file_exists, get_config_dir},
-    vcore::vcerror,
+    vcore::errors,
 };
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
@@ -141,20 +141,20 @@ pub struct VCToyConfig {
 impl VCToyConfig {
     pub fn load_offline_toy_config(
         toy_name: String,
-    ) -> Result<VCToyConfig, vcerror::backend::VibeCheckToyConfigError> {
+    ) -> Result<VCToyConfig, errors::backend::VibeCheckToyConfigError> {
         // Generate config path
 
         let config_path = format!("{}\\ToyConfigs\\{}.json", get_config_dir(), toy_name,);
 
         if !file_exists(&config_path) {
-            Err(vcerror::backend::VibeCheckToyConfigError::OfflineToyConfigNotFound)
+            Err(errors::backend::VibeCheckToyConfigError::OfflineToyConfigNotFound)
         } else {
             let con = std::fs::read_to_string(config_path).unwrap();
 
             let config: VCToyConfig = match serde_json::from_str(&con) {
                 Ok(vc_toy_config) => vc_toy_config,
                 Err(_) => {
-                    return Err(vcerror::backend::VibeCheckToyConfigError::DeserializeError);
+                    return Err(errors::backend::VibeCheckToyConfigError::DeserializeError);
                 }
             };
             debug!("Loaded & parsed toy config successfully!");
