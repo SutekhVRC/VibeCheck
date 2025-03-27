@@ -1,7 +1,6 @@
-use std::{fs, net::SocketAddrV4, str::FromStr};
+use std::{error::Error, fs, net::SocketAddrV4, str::FromStr};
 
 use log::{debug, error as logerr, info, trace, warn};
-use tauri::Manager;
 
 use crate::{
     frontend::{
@@ -20,7 +19,7 @@ use crate::{
         errors::{
             backend::{ToyAlterError, VibeCheckConfigError, VibeCheckFSError},
             frontend::VCFeError,
-            VCError,
+            VCError, VcoreError,
         },
         ipc::emit_plane::emit_toy_event,
         state::{RunningState, VCStateMutex},
@@ -86,7 +85,14 @@ pub async fn native_vibecheck_disable(
     vc_lock.running = RunningState::Stopped;
 
     info!("Starting disabled state OSC cmd listener");
-    vc_lock.start_disabled_listener();
+    match vc_lock.start_disabled_listener() {
+        Ok(()) => (),
+        Err(_e) => {
+            return Err(VCFeError::Vcore(
+                VcoreError::DisabledOscListenerThreadRunning,
+            ))
+        }
+    }
 
     Ok(())
 }

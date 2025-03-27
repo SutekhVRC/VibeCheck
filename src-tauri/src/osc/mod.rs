@@ -4,10 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::frontend::frontend_types::FeOSCNetworking;
 
+pub mod errors;
 pub mod logic;
-
-#[derive(Debug)]
-pub struct OscError {}
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct OSCNetworking {

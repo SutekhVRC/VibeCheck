@@ -1,6 +1,8 @@
 use std::{error::Error, fmt};
 
-#[derive(Debug)]
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
 pub enum ToyHandlingError {
     PopulateConfigFailure,
 }

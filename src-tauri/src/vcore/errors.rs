@@ -4,7 +4,9 @@
 
 use std::{error::Error, fmt};
 
-#[derive(Debug)]
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
 pub enum VcoreError {
     NoAppHandle,
     NoToyManager,
@@ -32,7 +34,9 @@ pub enum VCError {
 pub mod frontend {
     use serde::Serialize;
 
-    use super::backend::ToyAlterError;
+    use crate::toy_handling::errors::ToyHandlingError;
+
+    use super::{backend::ToyAlterError, VcoreError};
 
     #[derive(Serialize)]
     pub enum VCFeError {
@@ -52,6 +56,9 @@ pub mod frontend {
         WriteFailure,
         //InvalidIpv4Host,
         ToyManagerNotReady,
+        ToyManager(ToyHandlingError),
+
+        Vcore(VcoreError),
     }
 }
 

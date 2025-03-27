@@ -323,7 +323,13 @@ pub fn sync_offline_toys(
 ) -> Result<Vec<FeVCToy>, VCFeError> {
     trace!("sync_offline_toys");
     if let Some(toy_manager) = vc_state.0.lock().core_toy_manager.as_mut() {
-        Ok(toy_manager.sync_frontend(refresh_toys))
+        match toy_manager.sync_frontend(refresh_toys) {
+            Ok(toys) => Ok(toys),
+            Err(e) => {
+                logerr!("Toy Manager failed to sync frontend: {}", e);
+                Err(VCFeError::ToyManager(e))
+            }
+        }
     } else {
         Err(VCFeError::ToyManagerNotReady)
     }

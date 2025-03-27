@@ -25,6 +25,8 @@ use super::ipc::call_plane::ToyManagementEvent;
 
 pub struct VCStateMutex(pub Arc<Mutex<VibeCheckState>>);
 
+pub struct InterThreadComm {}
+
 pub enum RunningState {
     Running,
     Stopped,
@@ -206,9 +208,11 @@ impl VibeCheckState {
     pub fn set_state_pointer(&mut self, vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>) {
         self.vibecheck_state_pointer = Some(vibecheck_state_pointer);
     }
+
     pub fn set_app_handle(&mut self, app_handle: AppHandle) {
         self.app_handle = Some(app_handle);
     }
+
     pub fn init_toy_manager(&mut self) -> Result<(), VibeCheckError> {
         let toy_manager = ToyManager::new(
             self.app_handle

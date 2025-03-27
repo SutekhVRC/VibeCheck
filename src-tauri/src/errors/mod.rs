@@ -2,7 +2,7 @@ use core::fmt;
 use std::error::Error;
 
 use crate::{
-    frontend::error::FrontendError, osc::OscError, osc_api::OscApiError,
+    frontend::error::FrontendError, osc::errors::OscError, osc_api::OscApiError,
     toy_handling::errors::ToyHandlingError, util::UtilError, vcore::errors::VcoreError,
 };
 

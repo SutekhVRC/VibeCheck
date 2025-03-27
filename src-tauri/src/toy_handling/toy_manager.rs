@@ -87,15 +87,15 @@ impl ToyManager {
         Ok(())
     }
 
-    pub fn sync_frontend(&mut self, refresh_toys: bool) -> Vec<FeVCToy> {
+    pub fn sync_frontend(&mut self, refresh_toys: bool) -> Result<Vec<FeVCToy>, ToyHandlingError> {
         if refresh_toys {
             info!("Clearing toy manager configs map and repopulating from disk..");
             self.configs.clear();
-            self.populate_configs();
+            self.populate_configs()?;
         }
 
         trace!("Generating offline toy sync..");
-        self.fetoy_vec_from_offline_toys()
+        Ok(self.fetoy_vec_from_offline_toys())
     }
 
     fn check_toy_online(&self, config_toy_name: &String) -> bool {
