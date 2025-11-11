@@ -250,10 +250,19 @@ impl VibeCheckState {
         //let mut connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
 
         // Get ButtPlugClient with modified connection modes
-        self.bp_client = Some(
-            self.async_rt
-                .block_on(bluetooth::vc_toy_client_server_init("VibeCheck", false)),
-        );
+
+        let bp_client_future = bluetooth::vc_toy_client_server_init("VibeCheck", false);
+
+        self.bp_client = match self.async_rt.block_on(bp_client_future) {
+            Ok(bpc) => Some(bpc),
+            Err(e) => {
+                logerr!("Failed to initialize bpio..");
+                return Err(VibeCheckError::new(
+                    ErrorSource::Util(e),
+                    Some("Failed to initialize bpio.."),
+                ));
+            }
+        };
         info!("Buttplug Client Initialized.");
 
         // Get event stream

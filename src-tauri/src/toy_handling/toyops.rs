@@ -259,12 +259,12 @@ impl VCToy {
                 // Allocate / Instantiate new Penetration system structure based on configuration data
                 for feature in &mut self.parsed_toy_features.features {
                     match feature.penetration_system.pen_system_type {
-                        PenetrationSystemType::NONE => feature.penetration_system.pen_system = None,
-                        PenetrationSystemType::SPS => {
+                        PenetrationSystemType::None => feature.penetration_system.pen_system = None,
+                        PenetrationSystemType::Sps => {
                             feature.penetration_system.pen_system =
                                 Some(Box::<SPSProcessor>::default())
                         }
-                        PenetrationSystemType::TPS => {
+                        PenetrationSystemType::Tps => {
                             feature.penetration_system.pen_system =
                                 Some(Box::<TPSProcessor>::default())
                         }
@@ -816,11 +816,10 @@ impl VCToyFeatures {
                 .as_ref()
                 .unwrap()
                 .is_parameter(param)
+                && f.feature_enabled
             {
-                if f.feature_enabled {
-                    // Add to features vector for features with a penetration system related to the input parameter
-                    out.push(f);
-                }
+                // Add to features vector for features with a penetration system related to the input parameter
+                out.push(f);
             }
         }
 

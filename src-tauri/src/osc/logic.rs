@@ -20,7 +20,7 @@ use crate::frontend::frontend_types::FeCoreEvent;
 use crate::frontend::frontend_types::FeToyEvent;
 use crate::frontend::frontend_types::FeVCToy;
 use crate::frontend::ToFrontend;
-use crate::osc_api::osc_api::vibecheck_osc_api;
+use crate::osc_api::api::vibecheck_osc_api;
 use crate::toy_handling::ToyPower;
 use crate::toy_handling::ToySig;
 use crate::vcore::ipc::call_plane::TmSig;

@@ -25,12 +25,12 @@ where
 pub fn get_user_home_dir() -> Result<String, UtilError> {
     let bd = match BaseDirs::new() {
         Some(bd) => bd,
-        None => return Err(UtilError::HomeDirFSFailure),
+        None => return Err(UtilError::HomeDirFS),
     };
 
     let bd = match bd.home_dir().to_str() {
         Some(bd) => bd,
-        None => return Err(UtilError::HomeDirFSFailure),
+        None => return Err(UtilError::HomeDirFS),
     };
 
     Ok(bd.to_string())
@@ -46,10 +46,10 @@ pub fn get_config_dir() -> Result<String, UtilError> {
         Some(BaseDirectory::AppConfig),
     ) {
         Ok(path) => path,
-        Err(_) => return Err(UtilError::ConfigDirFSFailure),
+        Err(_) => return Err(UtilError::ConfigDirFS),
     };
     match pb.to_str() {
         Some(s) => Ok(s.to_string()),
-        None => Err(UtilError::ConfigDirFSFailure),
+        None => Err(UtilError::ConfigDirFS),
     }
 }

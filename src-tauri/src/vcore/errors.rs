@@ -55,6 +55,7 @@ pub mod frontend {
         SerializeFailure,
         WriteFailure,
         ConfigDirFailure,
+        SaveOfflineToyConfig,
         //InvalidIpv4Host,
         ToyManagerNotReady,
         ToyManager(ToyHandlingError),

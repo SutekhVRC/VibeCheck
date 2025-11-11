@@ -5,11 +5,14 @@
 
 use std::sync::Arc;
 
-use log::{info, trace, warn};
+use log::{error as logerr, info, trace, warn};
 use parking_lot::Mutex;
 use tauri::{Manager, SystemTrayMenu};
 
-use crate::{frontend::frontend_native, vcore::config};
+use crate::{
+    frontend::frontend_native,
+    vcore::config::{self, app::config_load},
+};
 //use env_logger;
 
 mod errors;
@@ -29,8 +32,16 @@ fn main() {
         log_builder.init();
     }
 
+    let vibecheck_config = match config_load() {
+        Ok(config_dir) => config_dir,
+        Err(e) => {
+            logerr!("Failed config_load(): {:?}", e);
+            return;
+        }
+    };
+
     let vibecheck_state_pointer = Arc::new(Mutex::new(vcore::state::VibeCheckState::new(
-        crate::config::app::config_load(),
+        vibecheck_config,
     )));
     trace!("VibeCheckState created");
 

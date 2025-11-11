@@ -40,12 +40,12 @@ pub async fn vc_toy_client_server_init(
 ) -> Result<ButtplugClient, UtilError> {
     let mut dcmb = match load_protocol_configs(&None, &None, false) {
         Ok(dcmb) => dcmb,
-        Err(_) => return Err(UtilError::BPIOInitFailure),
+        Err(_) => return Err(UtilError::BPIOInit),
     };
 
     let dcm = match dcmb.allow_raw_messages(allow_raw_messages).finish() {
         Ok(dcm) => dcm,
-        Err(_) => return Err(UtilError::BPIOInitFailure),
+        Err(_) => return Err(UtilError::BPIOInit),
     };
 
     let mut device_manager_builder = ServerDeviceManagerBuilder::new(dcm);
@@ -58,13 +58,13 @@ pub async fn vc_toy_client_server_init(
 
     let sdm = match device_manager_builder.finish() {
         Ok(sdm) => sdm,
-        Err(_) => return Err(UtilError::BPIOInitFailure),
+        Err(_) => return Err(UtilError::BPIOInit),
     };
 
     let server_builder = ButtplugServerBuilder::new(sdm);
     let server = match server_builder.finish() {
         Ok(server) => server,
-        Err(_) => return Err(UtilError::BPIOInitFailure),
+        Err(_) => return Err(UtilError::BPIOInit),
     };
 
     /*
@@ -78,8 +78,8 @@ pub async fn vc_toy_client_server_init(
         .finish();
 
     let client = ButtplugClient::new(client_name);
-    if let Err(_) = client.connect(connector).await {
-        return Err(UtilError::BPIOInitFailure);
+    if (client.connect(connector).await).is_err() {
+        return Err(UtilError::BPIOInit);
     }
     Ok(client)
 }

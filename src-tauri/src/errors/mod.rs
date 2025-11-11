@@ -3,7 +3,7 @@ use std::error::Error;
 
 use crate::{
     frontend::error::FrontendError, osc::errors::OscError, osc_api::OscApiError,
-    toy_handling::errors::ToyHandlingError, util::UtilError, vcore::errors::VcoreError,
+    toy_handling::errors::ToyHandlingError, util::errors::UtilError, vcore::errors::VcoreError,
 };
 
 pub mod state_comm;

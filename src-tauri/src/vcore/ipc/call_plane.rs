@@ -340,10 +340,12 @@ fn save_config(config: VibeCheckConfig) -> Result<(), VibeCheckConfigError> {
         }
     };
 
-    match fs::write(
-        format!("{}\\Config.json", get_config_dir()),
-        json_config_str,
-    ) {
+    let config_dir = match get_config_dir() {
+        Ok(d) => d,
+        Err(_) => return Err(VibeCheckConfigError::ConfigDirFail),
+    };
+
+    match fs::write(format!("{}\\Config.json", config_dir), json_config_str) {
         Ok(()) => {}
         Err(_e) => {
             logerr!("[!] Failure writing VibeCheck config.");
@@ -393,9 +395,14 @@ pub fn native_alter_toy(
 }
 
 pub fn native_clear_osc_config() -> Result<(), VibeCheckFSError> {
+    let home_dir = match get_user_home_dir() {
+        Ok(hd) => hd,
+        Err(_) => return Err(VibeCheckFSError::ReadDirFailure),
+    };
+
     let osc_dirs = match std::fs::read_dir(format!(
         "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\",
-        get_user_home_dir()
+        home_dir
     )) {
         Ok(dirs) => dirs,
         Err(_e) => return Err(VibeCheckFSError::ReadDirFailure),

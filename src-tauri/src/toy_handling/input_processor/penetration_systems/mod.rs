@@ -16,9 +16,9 @@ use super::InputProcessor;
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub enum PenetrationSystemType {
-    NONE, // No Input Processor
-    TPS,  // TPS Input Processor
-    SPS,  // SPS Input Processor
+    None, // No Input Processor
+    Tps,  // TPS Input Processor
+    Sps,  // SPS Input Processor
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
@@ -35,7 +35,7 @@ impl Default for PenetrationSystem {
     fn default() -> Self {
         Self {
             pen_system: None,
-            pen_system_type: PenetrationSystemType::NONE,
+            pen_system_type: PenetrationSystemType::None,
             pen_system_processing_mode: ProcessingMode::Raw,
             pen_system_processing_mode_values: ProcessingModeValues::Raw,
         }
@@ -58,9 +58,9 @@ impl FromFrontend<FePenetrationSystem> for PenetrationSystem {
     fn from_frontend(&mut self, frontend_type: FePenetrationSystem) -> Self::OutputType {
         // Allocate / Instantiate new Penetration system structure based on user's choice
         match frontend_type.pen_system_type {
-            PenetrationSystemType::NONE => self.pen_system = None,
-            PenetrationSystemType::SPS => self.pen_system = Some(Box::<SPSProcessor>::default()),
-            PenetrationSystemType::TPS => self.pen_system = Some(Box::<TPSProcessor>::default()),
+            PenetrationSystemType::None => self.pen_system = None,
+            PenetrationSystemType::Sps => self.pen_system = Some(Box::<SPSProcessor>::default()),
+            PenetrationSystemType::Tps => self.pen_system = Some(Box::<TPSProcessor>::default()),
         }
         self.pen_system_type = frontend_type.pen_system_type;
         let backend_pspm = frontend_type.pen_system_processing_mode.to_backend();

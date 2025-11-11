@@ -227,7 +227,9 @@ pub fn alter_toy(
                 fe_toy.osc_data = offline_toy_config.osc_data;
                 fe_toy.toy_anatomy = offline_toy_config.anatomy.to_fe();
 
-                offline_toy_config.save_offline_toy_config();
+                if offline_toy_config.save_offline_toy_config().is_err() {
+                    return Err(VCFeError::SaveOfflineToyConfig);
+                }
 
                 emit_toy_event(&Rc::new(app_handle), FeToyEvent::Update(fe_toy));
             } else {

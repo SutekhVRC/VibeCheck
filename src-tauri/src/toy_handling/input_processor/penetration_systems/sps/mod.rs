@@ -6,7 +6,9 @@ use log::{trace, warn};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::toy_handling::{input_processor::InputProcessor, mode_processor::core::ModeProcessorInputType};
+use crate::toy_handling::{
+    input_processor::InputProcessor, mode_processor::core::ModeProcessorInputType,
+};
 
 use self::mapping::SPSMapping;
 
@@ -25,7 +27,7 @@ pub struct SPSProcessor {
 }
 
 impl InputProcessor for SPSProcessor {
-    fn is_parameter(&self, param: &String) -> bool {
+    fn is_parameter(&self, param: &str) -> bool {
         param.starts_with("/avatar/parameters/OGB/")
     }
 
@@ -48,7 +50,6 @@ impl InputProcessor for SPSProcessor {
      * ~
      *
      */
-
     fn process(&mut self, addr: &str, input: ModeProcessorInputType) -> Option<f64> {
         // Don't support booleans
         //let ModeProcessorInputType::Float(float_input) = input else {
@@ -64,7 +65,7 @@ impl InputProcessor for SPSProcessor {
         //debug!("SPS Key: {} | SPS Leaf: {}", sps_key, sps_leaf);
 
         // Process parameter and create or get mutable ref to mapping
-        let (mapping, _sps_type, leaf) = self.populate_mapping(&sps_param, input)?;
+        let (mapping, _sps_type, leaf) = self.populate_mapping(sps_param, input)?;
 
         let others = mapping.parse_features_get_who(leaf.as_str(), input);
 
@@ -120,11 +121,8 @@ impl SPSProcessor {
         sps_param: &str,
         osc_input_value: ModeProcessorInputType,
     ) -> Option<(&mut SPSMapping, String, String)> {
-        let Some((sps_key, sps_type, _sps_obj_id, sps_leaf)) =
-            SPSProcessor::get_sps_param_parsed(&sps_param)
-        else {
-            return None;
-        };
+        let (sps_key, sps_type, _sps_obj_id, sps_leaf) =
+            SPSProcessor::get_sps_param_parsed(sps_param)?;
 
         if !self.mappings.contains_key(&sps_key) {
             let Some(new_sps_param_obj) =

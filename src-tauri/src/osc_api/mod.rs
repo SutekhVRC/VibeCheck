@@ -13,7 +13,7 @@ use crate::{
 #[derive(Debug)]
 pub struct OscApiError {}
 
-pub mod osc_api;
+pub mod api;
 
 struct APIProcessor;
 

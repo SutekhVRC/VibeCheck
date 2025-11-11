@@ -1,6 +1,6 @@
 #[derive(Debug)]
 pub enum UtilError {
-    BPIOInitFailure,
-    HomeDirFSFailure,
-    ConfigDirFSFailure,
+    BPIOInit,
+    HomeDirFS,
+    ConfigDirFS,
 }
