@@ -54,6 +54,7 @@ pub mod frontend {
         OSCQueryFailure(&'static str),
         SerializeFailure,
         WriteFailure,
+        ConfigDirFailure,
         //InvalidIpv4Host,
         ToyManagerNotReady,
         ToyManager(ToyHandlingError),
@@ -71,6 +72,7 @@ pub mod backend {
         //DeserializeError,
         SerializeError,
         WriteFailure,
+        ConfigDirFail,
     }
 
     #[derive(Serialize, Debug)]
@@ -78,8 +80,10 @@ pub mod backend {
         //ReadFailure,
         DeserializeError,
         OfflineToyConfigNotFound,
-        //SerializeError,
+        SerializeError,
         //WriteFailure,
+        ConfigDirFail,
+        FSFailure(VibeCheckFSError),
     }
 
     #[derive(Serialize, Debug)]
@@ -87,6 +91,7 @@ pub mod backend {
         ReadDirFailure,
         ReadDirPathFailure,
         RemoveDirsFailure,
+        FileWriteFailure,
     }
 
     #[derive(Serialize, Debug)]

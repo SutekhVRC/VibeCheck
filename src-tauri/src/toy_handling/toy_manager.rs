@@ -52,7 +52,12 @@ impl ToyManager {
     }
 
     pub fn populate_configs(&mut self) -> Result<(), ToyHandlingError> {
-        let toy_config_dir = match read_dir(format!("{}\\ToyConfigs", get_config_dir()), false) {
+        let config_dir = match get_config_dir() {
+            Ok(d) => d,
+            Err(_) => return Err(ToyHandlingError::PopulateConfigFailure),
+        };
+
+        let toy_config_dir = match read_dir(format!("{}\\ToyConfigs", config_dir), false) {
             Ok(config_paths) => config_paths,
             // Doesn't populate
             Err(_e) => return Err(ToyHandlingError::PopulateConfigFailure),

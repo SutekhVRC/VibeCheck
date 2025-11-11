@@ -20,7 +20,10 @@ use crate::{
         sps::SPSProcessor, tps::TPSProcessor, PenetrationSystemType,
     },
     util::fs::{file_exists, get_config_dir},
-    vcore::errors,
+    vcore::errors::{
+        self,
+        backend::{VibeCheckFSError, VibeCheckToyConfigError},
+    },
 };
 
 use crate::toy_handling::input_processor::penetration_systems::PenetrationSystem;
@@ -283,10 +286,15 @@ impl VCToy {
         }
     }
 
-    pub fn load_toy_config(&mut self) -> Result<(), errors::backend::VibeCheckToyConfigError> {
+    pub fn load_toy_config(&mut self) -> Result<(), VibeCheckToyConfigError> {
         // Generate config path
 
-        let config_path = format!("{}\\ToyConfigs\\{}.json", get_config_dir(), self.toy_name);
+        let config_dir = match get_config_dir() {
+            Ok(d) => d,
+            Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
+        };
+
+        let config_path = format!("{}\\ToyConfigs\\{}.json", config_dir, self.toy_name);
 
         if !file_exists(&config_path) {
             self.config = None;
@@ -308,8 +316,13 @@ impl VCToy {
     }
 
     // Save Toy config by name
-    pub fn save_toy_config(&self) {
-        let config_path = format!("{}\\ToyConfigs\\{}.json", get_config_dir(), self.toy_name,);
+    pub fn save_toy_config(&self) -> Result<(), VibeCheckToyConfigError> {
+        let config_dir = match get_config_dir() {
+            Ok(d) => d,
+            Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
+        };
+
+        let config_path = format!("{}\\ToyConfigs\\{}.json", config_dir, self.toy_name,);
         info!("Saving toy config to: {}", config_path);
 
         if let Some(conf) = &self.config {
@@ -320,6 +333,9 @@ impl VCToy {
                     }
                     Err(e) => {
                         logerr!("Failed to write to file: {}", e);
+                        return Err(VibeCheckToyConfigError::FSFailure(
+                            VibeCheckFSError::FileWriteFailure,
+                        ));
                     }
                 }
             } else {
@@ -328,6 +344,7 @@ impl VCToy {
         } else {
             warn!("save_toy_config() called while toy config is None");
         }
+        Ok(())
     }
 
     pub fn mutate_state_by_anatomy(&mut self, anatomy_type: &VCToyAnatomy, value: bool) -> bool {

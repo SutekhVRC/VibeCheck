@@ -46,7 +46,7 @@ pub fn get_config_dir() -> Result<String, UtilError> {
         Some(BaseDirectory::AppConfig),
     ) {
         Ok(path) => path,
-        Err(e) => return Err(UtilError::ConfigDirFSFailure),
+        Err(_) => return Err(UtilError::ConfigDirFSFailure),
     };
     match pb.to_str() {
         Some(s) => Ok(s.to_string()),

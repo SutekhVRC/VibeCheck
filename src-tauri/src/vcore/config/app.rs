@@ -5,6 +5,7 @@ use std::fs;
 use crate::{
     osc::OSCNetworking,
     util::fs::{file_exists, get_config_dir, path_exists},
+    vcore::errors::backend::{VibeCheckConfigError, VibeCheckFSError},
 };
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -18,8 +19,11 @@ pub struct VibeCheckConfig {
     pub show_feature_advanced: bool,
 }
 
-pub fn config_load() -> VibeCheckConfig {
-    let vc_root_dir = get_config_dir();
+pub fn config_load() -> Result<VibeCheckConfig, VibeCheckConfigError> {
+    let vc_root_dir = match get_config_dir() {
+        Ok(d) => d,
+        Err(_) => return Err(VibeCheckConfigError::ConfigDirFail),
+    };
 
     let vc_config_file = format!("{}\\Config.json", vc_root_dir);
     let vc_toy_config_dir = format!("{}\\ToyConfigs", vc_root_dir);
@@ -61,7 +65,7 @@ pub fn config_load() -> VibeCheckConfig {
         Ok(fc) => match serde_json::from_str::<VibeCheckConfig>(&fc) {
             Ok(o) => {
                 info!("Config Loaded Successfully!");
-                o
+                Ok(o)
             }
             Err(_e) => {
                 logerr!(
@@ -71,7 +75,7 @@ pub fn config_load() -> VibeCheckConfig {
                 );
                 warn!("Resetting to default config.");
 
-                let def_conf = VibeCheckConfig {
+                let default_conf = VibeCheckConfig {
                     networking: OSCNetworking::default(),
                     scan_on_disconnect: false,
                     minimize_on_exit: false,
@@ -80,10 +84,14 @@ pub fn config_load() -> VibeCheckConfig {
                     show_feature_advanced: false,
                 };
 
-                fs::write(&vc_config_file, serde_json::to_string(&def_conf).unwrap()).unwrap();
+                fs::write(
+                    &vc_config_file,
+                    serde_json::to_string(&default_conf).unwrap(),
+                )
+                .unwrap();
                 trace!("Wrote VibeCheck config file");
                 // If fail to parse config overwrite with new default
-                def_conf
+                Ok(default_conf)
             }
         },
         Err(_e) => {
@@ -93,7 +101,7 @@ pub fn config_load() -> VibeCheckConfig {
                 _e
             );
             warn!("[*] Resetting to default config.");
-            let def_conf = VibeCheckConfig {
+            let default_conf = VibeCheckConfig {
                 networking: OSCNetworking::default(),
                 scan_on_disconnect: false,
                 minimize_on_exit: false,
@@ -101,9 +109,13 @@ pub fn config_load() -> VibeCheckConfig {
                 show_toy_advanced: false,
                 show_feature_advanced: false,
             };
-            fs::write(&vc_config_file, serde_json::to_string(&def_conf).unwrap()).unwrap();
+            fs::write(
+                &vc_config_file,
+                serde_json::to_string(&default_conf).unwrap(),
+            )
+            .unwrap();
             trace!("Wrote VibeCheck config file");
-            def_conf
+            Ok(default_conf)
         }
     }
 }

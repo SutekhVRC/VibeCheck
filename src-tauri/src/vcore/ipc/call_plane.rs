@@ -326,6 +326,7 @@ pub fn native_set_vibecheck_config(
         Err(e) => match e {
             VibeCheckConfigError::SerializeError => Err(VCFeError::SerializeFailure),
             VibeCheckConfigError::WriteFailure => Err(VCFeError::WriteFailure),
+            VibeCheckConfigError::ConfigDirFail => Err(VCFeError::ConfigDirFailure),
         },
     }
 }

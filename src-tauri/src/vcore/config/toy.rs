@@ -2,7 +2,10 @@ use crate::{
     frontend::frontend_types::FeVCToyAnatomy,
     toy_handling::toyops::VCToyFeatures,
     util::fs::{file_exists, get_config_dir},
-    vcore::errors,
+    vcore::errors::{
+        self,
+        backend::{VibeCheckFSError, VibeCheckToyConfigError},
+    },
 };
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
@@ -141,10 +144,15 @@ pub struct VCToyConfig {
 impl VCToyConfig {
     pub fn load_offline_toy_config(
         toy_name: String,
-    ) -> Result<VCToyConfig, errors::backend::VibeCheckToyConfigError> {
+    ) -> Result<VCToyConfig, VibeCheckToyConfigError> {
         // Generate config path
 
-        let config_path = format!("{}\\ToyConfigs\\{}.json", get_config_dir(), toy_name,);
+        let config_dir = match get_config_dir() {
+            Ok(d) => d,
+            Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
+        };
+
+        let config_path = format!("{}\\ToyConfigs\\{}.json", config_dir, toy_name,);
 
         if !file_exists(&config_path) {
             Err(errors::backend::VibeCheckToyConfigError::OfflineToyConfigNotFound)
@@ -162,8 +170,13 @@ impl VCToyConfig {
         }
     }
 
-    pub fn save_offline_toy_config(&self) {
-        let config_path = format!("{}\\ToyConfigs\\{}.json", get_config_dir(), self.toy_name,);
+    pub fn save_offline_toy_config(&self) -> Result<(), VibeCheckToyConfigError> {
+        let config_dir = match get_config_dir() {
+            Ok(d) => d,
+            Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
+        };
+
+        let config_path = format!("{}\\ToyConfigs\\{}.json", config_dir, self.toy_name,);
 
         info!("Saving toy config to: {}", config_path);
 
@@ -174,10 +187,15 @@ impl VCToyConfig {
                 }
                 Err(e) => {
                     logerr!("Failed to write to file: {}", e);
+                    return Err(VibeCheckToyConfigError::FSFailure(
+                        VibeCheckFSError::FileWriteFailure,
+                    ));
                 }
             }
         } else {
             warn!("Failed to serialize config to json");
+            return Err(VibeCheckToyConfigError::SerializeError);
         }
+        Ok(())
     }
 }
