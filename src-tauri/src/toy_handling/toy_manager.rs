@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::errors::{ErrorSource, VibeCheckError};
 use crate::frontend::ToFrontend;
+use crate::error_signal_handler::{ErrorSource, VibeCheckError};
 use crate::{
     config::toy::VCToyConfig,
     frontend::frontend_types::FeVCToy,

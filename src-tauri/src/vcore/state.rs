@@ -2,7 +2,6 @@ use buttplug::client::ButtplugClient;
 use log::{error as logerr, info, warn};
 use parking_lot::Mutex;
 use std::net::SocketAddrV4;
-use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::Arc;
 use tauri::AppHandle;
 use tokio::runtime::Runtime;
@@ -10,7 +9,8 @@ use tokio::sync::{mpsc::unbounded_channel, mpsc::UnboundedReceiver, mpsc::Unboun
 use tokio::task::JoinHandle;
 use vrcoscquery::OSCQuery;
 
-use crate::errors::{ErrorSource, VibeCheckError};
+use crate::error_signal_handler::state_comm::error_message_handler;
+use crate::error_signal_handler::{ErrorSource, VibeCheckError};
 use crate::osc::logic::{toy_refresh, vc_disabled_osc_command_listen};
 use crate::toy_handling::runtime::client_event_handler::client_event_handler;
 use crate::toy_handling::runtime::toy_management_handler::toy_management_handler;
@@ -43,25 +43,20 @@ pub struct VibeCheckState {
 
     pub running: RunningState,
     pub core_toy_manager: Option<ToyManager>,
-    //pub offline_toys: OfflineToys,
-    //================================================
-    // Handlers error recvr
-    //inner_channels: Arc<RwLock<innerChannels>>,
-    pub error_rx: Receiver<VCError>,
-    pub error_tx: Sender<VCError>,
-    //================================================
-    // Disabled listener thread handle
-    pub disabled_osc_listener_h_thread: Option<JoinHandle<()>>,
-    //================================================
+
+    pub error_comm_tx: Option<UnboundedSender<VCError>>,
+
+    // Message handler (Handles Messages from other threads. For now just error aggregator)
+    pub global_message_handler_thread: Option<JoinHandle<()>>,
     // Client Event Handler
     pub client_eh_thread: Option<JoinHandle<()>>,
-    //pub client_eh_event_rx: Arc<Mutex<UnboundedReceiver<EventSig>>>,
-    //pub client_eh_event_tx: UnboundedSender<EventSig>,
-    //================================================
     //Toy update handler
     pub toy_update_h_thread: Option<JoinHandle<()>>,
     // Toy Management Handler
     pub toy_management_h_thread: Option<JoinHandle<()>>,
+    // Disabled listener thread handle
+    pub disabled_osc_listener_h_thread: Option<JoinHandle<()>>,
+
     // These stay in VibeCheckState
     pub tme_recv_rx: UnboundedReceiver<ToyManagementEvent>,
     pub tme_send_tx: UnboundedSender<ToyManagementEvent>,
@@ -69,8 +64,6 @@ pub struct VibeCheckState {
     pub tme_recv_tx: Option<UnboundedSender<ToyManagementEvent>>,
     pub tme_send_rx: Option<UnboundedReceiver<ToyManagementEvent>>,
     //================================================
-    // Message handler
-    pub message_handler_thread: Option<JoinHandle<()>>,
     pub vibecheck_state_pointer: Option<Arc<Mutex<VibeCheckState>>>,
     //================================================
     //pub toy_input_h_thread: Option<JoinHandle<()>>,
@@ -85,9 +78,6 @@ impl VibeCheckState {
         // Toys hashmap
         //let core_toy_manager = ToyHandler::new();
 
-        // Create error handling/passig channels
-        let (error_tx, error_rx): (Sender<VCError>, Receiver<VCError>) = mpsc::channel();
-
         // Create async runtime for toy handling routines
         let async_rt = Runtime::new().unwrap();
 
@@ -101,7 +91,7 @@ impl VibeCheckState {
             UnboundedReceiver<ToyManagementEvent>,
         ) = unbounded_channel();
 
-        Self {
+        let mut state = Self {
             app_handle: None,
             identifier: String::new(),
             config,
@@ -112,8 +102,7 @@ impl VibeCheckState {
             core_toy_manager: None,
             //======================================
             // Error channels
-            error_rx,
-            error_tx,
+            error_comm_tx: None,
 
             //======================================
             // Disabled listener thread
@@ -138,14 +127,33 @@ impl VibeCheckState {
             tme_send_rx: Some(tme_send_rx),
 
             //================================================
-            // Message handler
-            message_handler_thread: None,
+            // Message handler (Handles Messages from other threads. For now just error aggregator)
+            global_message_handler_thread: None,
             vibecheck_state_pointer: None,
 
             //======================================
             // Async runtime
             async_rt,
+        };
+
+        state
+    }
+
+    pub fn global_msg_handler_start(&mut self) -> Result<(), VibeCheckError> {
+
+        if self.app_handle.is_none() {
+            logerr!("global_msg_handler_start() called but no app_handle was set");
+            return Err(VibeCheckError::new(
+                ErrorSource::Vcore(VcoreError::NoAppHandle),
+                None,
+            ));
         }
+
+        // Create error handling/passig channels
+        let (error_comm_tx, error_comm_rx): (UnboundedSender<VCError>, UnboundedReceiver<VCError>) = unbounded_channel();
+        self.error_comm_tx = Some(error_comm_tx);
+        self.global_message_handler_thread = Some(self.async_rt.spawn(error_message_handler(self.app_handle.as_ref().unwrap().clone(),error_comm_rx)));
+        Ok(())
     }
 
     pub fn start_tmh(&mut self) -> Result<(), VibeCheckError> {
@@ -275,7 +283,7 @@ impl VibeCheckState {
             self.identifier.clone(),
             self.app_handle.as_ref().unwrap().clone(),
             self.tme_send_tx.clone(),
-            self.error_tx.clone(),
+            self.error_comm_tx.as_ref().unwrap().clone(),
         )));
         Ok(())
     }

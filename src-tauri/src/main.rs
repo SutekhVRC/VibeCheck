@@ -15,8 +15,8 @@ use crate::{
 };
 //use env_logger;
 
-mod errors;
 mod frontend;
+mod error_signal_handler;
 mod osc;
 mod osc_api;
 mod toy_handling;
@@ -131,6 +131,8 @@ fn main() {
         trace!("State pointer set");
         vc_state.set_app_handle(app.app_handle());
         trace!("App handle set");
+        vc_state.global_msg_handler_start().unwrap();
+        trace!("Global message handler started");
         vc_state.init_toy_manager().unwrap();
         trace!("ToyManager initialized");
         vc_state.identifier = identifier;

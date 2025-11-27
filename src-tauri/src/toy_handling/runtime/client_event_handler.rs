@@ -40,7 +40,7 @@ pub async fn client_event_handler(
     identifier: String,
     app_handle: AppHandle,
     tme_send: UnboundedSender<ToyManagementEvent>,
-    _error_tx: Sender<VCError>,
+    _error_tx: UnboundedSender<VCError>,
 ) {
     // Listen for toys and add them if it connects send add update
     // If a toy disconnects send remove update

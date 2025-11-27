@@ -4,8 +4,7 @@ use log::{debug, error as logerr, info, trace, warn};
 
 use crate::{
     frontend::{
-        frontend_types::{FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig},
-        ToFrontend,
+        ToFrontend, frontend_types::{FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig}
     },
     osc::OSCNetworking,
     toy_handling::{
@@ -17,9 +16,7 @@ use crate::{
     vcore::{
         config::app::VibeCheckConfig,
         errors::{
-            backend::{ToyAlterError, VibeCheckConfigError, VibeCheckFSError},
-            frontend::VCFeError,
-            VCError, VcoreError,
+            VCError, VcoreError, backend::{ToyAlterError, VibeCheckConfigError, VibeCheckFSError}, frontend::VCFeError
         },
         ipc::emit_plane::emit_toy_event,
         state::{RunningState, VCStateMutex},
@@ -241,10 +238,12 @@ pub async fn native_vibecheck_start_bt_scan(
 
     // Start scanning for toys
     if let Err(e) = vc_lock.bp_client.as_ref().unwrap().start_scanning().await {
-        let _ = vc_lock.error_tx.send(VCError::HandlingErr(HandlerErr {
-            id: -2,
-            msg: format!("Failed to scan for bluetooth devices. {}", e),
-        }));
+        let _ = vc_lock
+            .error_comm_tx
+            .as_ref().unwrap().send(VCError::HandlingErr(HandlerErr {
+                id: -2,
+                msg: format!("Failed to scan for bluetooth devices. {}", e),
+            }));
         logerr!("Failed to scan.");
         return Err(VCFeError::StartScanFailure(e.to_string()));
     }
@@ -266,10 +265,12 @@ pub async fn native_vibecheck_stop_bt_scan(
 
     // Stop scanning for toys
     if let Err(e) = vc_lock.bp_client.as_ref().unwrap().stop_scanning().await {
-        let _ = vc_lock.error_tx.send(VCError::HandlingErr(HandlerErr {
-            id: -2,
-            msg: format!("Failed to stop scan for bluetooth devices. {}", e),
-        }));
+        let _ = vc_lock
+            .error_comm_tx
+            .as_ref().unwrap().send(VCError::HandlingErr(HandlerErr {
+                id: -2,
+                msg: format!("Failed to stop scan for bluetooth devices. {}", e),
+            }));
         logerr!("Failed to stop scan.");
         return Err(VCFeError::StopScanFailure(e.to_string()));
     }
