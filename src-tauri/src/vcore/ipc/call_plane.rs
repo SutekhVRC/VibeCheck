@@ -384,6 +384,7 @@ pub fn native_alter_toy(
                 features: alter_clone.parsed_toy_features.features.to_frontend(),
                 listening: alter_clone.listening,
                 osc_data: alter_clone.osc_data,
+                bt_update_rate: alter_clone.bt_update_rate,
                 sub_id: alter_clone.sub_id,
             }
         }),

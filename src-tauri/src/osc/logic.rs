@@ -234,6 +234,7 @@ pub async fn toy_refresh(
                         features: toy.parsed_toy_features.features.to_frontend(),
                         listening: toy.listening,
                         osc_data: toy.osc_data,
+                        bt_update_rate: toy.bt_update_rate,
                         sub_id: toy.sub_id,
                     }
                 }),

@@ -6,21 +6,22 @@
 */
 // Uses TME send and recv channel
 
-use std::{collections::HashMap, sync::Arc, thread};
+use std::{collections::HashMap, sync::Arc, thread, time::Duration};
 
 use buttplug::client::ButtplugClientDevice;
+use futures_timer::Delay;
 use log::{error as logerr, info, warn};
 use tauri::AppHandle;
 use tokio::{
     runtime::Runtime,
     sync::mpsc::{UnboundedReceiver, UnboundedSender},
-    task::JoinHandle,
+    task::JoinHandle, time::Instant,
 };
 
 use crate::{
-    osc::{logic::toy_input_routine, OSCNetworking},
+    osc::{OSCNetworking, logic::toy_input_routine},
     toy_handling::{
-        osc_processor::parse_osc_message, toy_manager::ToyManager, toyops::VCToyFeatures, ToySig,
+        ToySig, osc_processor::parse_osc_message, toy_manager::ToyManager, toyops::{VCToy, VCToyFeatures}
     },
     vcore::ipc::call_plane::{TmSig, ToyManagementEvent, ToyUpdate},
 };
@@ -29,6 +30,19 @@ use tokio::sync::{
     self,
     broadcast::{Receiver as BReceiver, Sender as BSender},
 };
+
+/* https://github.com/snd/hertz/issues/2#issuecomment-850859904
+ * The hertz crate's sleep_for_constant_rate() function is broken,
+ * therefore isolating just the fixed function here.
+*/
+pub async fn sleep_for_constant_rate(rate: u64, start: Instant) {
+    let ns_per_frame = (Duration::from_secs(1).as_nanos() as f64 / rate as f64).round() as u64;
+    let duration = Duration::from_nanos(ns_per_frame);
+    let elapsed = start.elapsed();
+    if elapsed < duration {
+        Delay::new(duration - elapsed).await;
+    }
+}
 
 #[inline(always)]
 fn update_toy(toy: ToyUpdate, dev: Arc<ButtplugClientDevice>, vc_toy_features: &mut VCToyFeatures) {
@@ -51,7 +65,7 @@ pub async fn toy_management_handler(
 ) {
     let f = |dev: Arc<ButtplugClientDevice>,
              mut toy_bcst_rx: BReceiver<ToySig>,
-             mut vc_toy_features: VCToyFeatures| {
+             mut vc_toy: VCToy| {
         // Read toy config here?
         async move {
             // Put smooth_queue here
@@ -60,21 +74,27 @@ pub async fn toy_management_handler(
             // Async runtime wrapped in Option for rate updating here????
 
             // Lock this to a user-set HZ value
-            while dev.connected() {
-                let Ok(ts) = toy_bcst_rx.recv().await else {
-                    continue;
-                };
-                match ts {
-                    ToySig::OSCMsg(mut msg) => {
-                        parse_osc_message(&mut msg, dev.clone(), &mut vc_toy_features).await
+            loop { 
+                let start = Instant::now();
+                sleep_for_constant_rate(vc_toy.bt_update_rate, start).await;
+                if dev.connected() {
+                    let Ok(ts) = toy_bcst_rx.recv().await else {
+                        continue;
+                    };
+                    match ts {
+                        ToySig::OSCMsg(mut msg) => {
+                            parse_osc_message(&mut msg, dev.clone(), &mut vc_toy.parsed_toy_features).await
+                        }
+                        ToySig::UpdateToy(toy) => update_toy(toy, dev.clone(), &mut vc_toy.parsed_toy_features),
                     }
-                    ToySig::UpdateToy(toy) => update_toy(toy, dev.clone(), &mut vc_toy_features),
+                } else {
+                    info!(
+                        "Device {} disconnected! Leaving listening routine!",
+                        dev.index()
+                    );
+                    return;
                 }
             }
-            info!(
-                "Device {} disconnected! Leaving listening routine!",
-                dev.index()
-            );
         }
     }; // Toy listening routine
 
@@ -140,7 +160,7 @@ pub async fn toy_management_handler(
             let f_run = f(
                 toy.1.device_handle.clone(),
                 toy_bcst_tx.subscribe(),
-                toy.1.parsed_toy_features.clone(),
+                toy.1.clone(),
             );
             running_toy_ths.insert(
                 *toy.0,
@@ -177,9 +197,9 @@ pub async fn toy_management_handler(
                         ToyUpdate::AddToy(toy) => {
                             core_toy_manager.online_toys.insert(toy.toy_id, toy.clone());
                             let f_run = f(
-                                toy.device_handle,
+                                toy.device_handle.clone(),
                                 toy_bcst_tx.subscribe(),
-                                toy.parsed_toy_features.clone(),
+                                toy.clone(),
                             );
                             running_toy_ths.insert(
                                 toy.toy_id,

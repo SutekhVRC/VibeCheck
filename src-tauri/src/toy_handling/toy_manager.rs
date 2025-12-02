@@ -129,6 +129,7 @@ impl ToyManager {
                 features: config.features.features.to_frontend(),
                 listening: false,
                 osc_data: config.osc_data,
+                bt_update_rate: config.bt_update_rate,
                 sub_id: 255,
             });
         }

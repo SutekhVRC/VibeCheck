@@ -159,7 +159,10 @@ pub fn alter_toy(
                         .get_mut(&fe_toy.toy_id.unwrap())
                     {
                         toy.osc_data = fe_toy.osc_data;
+                        toy.bt_update_rate = fe_toy.bt_update_rate;
+
                         toy.config.as_mut().unwrap().osc_data = fe_toy.osc_data;
+                        toy.config.as_mut().unwrap().bt_update_rate = fe_toy.bt_update_rate;
                         toy.config
                             .as_mut()
                             .unwrap()
@@ -213,6 +216,7 @@ pub fn alter_toy(
                     };
 
                 offline_toy_config.osc_data = fe_toy.osc_data;
+                offline_toy_config.bt_update_rate = fe_toy.bt_update_rate;
                 offline_toy_config.anatomy.from_fe(fe_toy.toy_anatomy);
 
                 for f in fe_toy.features {
@@ -225,6 +229,7 @@ pub fn alter_toy(
 
                 fe_toy.features = offline_toy_config.features.features.to_frontend();
                 fe_toy.osc_data = offline_toy_config.osc_data;
+                fe_toy.bt_update_rate = offline_toy_config.bt_update_rate;
                 fe_toy.toy_anatomy = offline_toy_config.anatomy.to_fe();
 
                 if offline_toy_config.save_offline_toy_config().is_err() {

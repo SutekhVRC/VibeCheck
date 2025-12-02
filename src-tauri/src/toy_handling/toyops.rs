@@ -5,21 +5,20 @@ use buttplug::{
 use core::fmt;
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, sync::Arc, time::Instant};
+use std::{collections::HashMap, fs, path::{Path, PathBuf}, sync::Arc, time::Instant};
 use ts_rs::TS;
 
 use crate::{
     config::toy::{VCToyAnatomy, VCToyConfig},
     frontend::{
-        frontend_types::{
+        FromFrontend, ToBackend, ToFrontend, frontend_types::{
             FeLevelTweaks, FeProcessingMode, FeToyParameter, FeVCFeatureType, FeVCToyFeature,
-        },
-        FromFrontend, ToBackend, ToFrontend,
+        }
     },
     toy_handling::input_processor::penetration_systems::{
-        sps::SPSProcessor, tps::TPSProcessor, PenetrationSystemType,
+        PenetrationSystemType, sps::SPSProcessor, tps::TPSProcessor
     },
-    util::fs::{file_exists, get_config_dir},
+    util::fs::{create_path, file_exists, get_config_dir},
     vcore::errors::{
         self,
         backend::{VibeCheckFSError, VibeCheckToyConfigError},
@@ -40,6 +39,7 @@ pub struct VCToy {
     pub parsed_toy_features: VCToyFeatures,
     pub osc_data: bool,
     pub listening: bool,
+    pub bt_update_rate: u64,
     pub device_handle: Arc<ButtplugClientDevice>,
     pub config: Option<VCToyConfig>,
     pub sub_id: u8,
@@ -186,6 +186,7 @@ impl VCToy {
             toy_name: self.toy_name.clone(),
             features: self.parsed_toy_features.clone(),
             osc_data: false,
+            bt_update_rate: 20,
             anatomy: VCToyAnatomy::default(),
         });
         info!("Set toy config populate defaults");
@@ -277,6 +278,7 @@ impl VCToy {
                 }
 
                 self.osc_data = conf.osc_data;
+                self.bt_update_rate = conf.bt_update_rate;
                 info!("Populated toy with loaded config from file!");
             }
             // If config is not loaded populate the toy
@@ -294,7 +296,7 @@ impl VCToy {
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
 
-        let config_path = format!("{}\\ToyConfigs\\{}.json", config_dir, self.toy_name);
+        let config_path = create_path(&[&config_dir, &self.toy_name]);
 
         if !file_exists(&config_path) {
             self.config = None;

@@ -114,6 +114,7 @@ pub struct FeVCToy {
     pub features: Vec<FeVCToyFeature>,
     pub listening: bool,
     pub osc_data: bool,
+    pub bt_update_rate: u64,
     pub sub_id: u8,
 }
 

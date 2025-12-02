@@ -92,13 +92,14 @@ pub async fn client_event_handler(
                         toy_features: dev.message_attributes().clone(),
                         parsed_toy_features: VCToyFeatures::new(),
                         osc_data: false,
+                        bt_update_rate: 20,
                         listening: false,
                         device_handle: dev.clone(),
                         config: None,
                         sub_id,
                     };
 
-                    // Load config with toy name
+                    // Load config with existing toy name
                     match toy.load_toy_config() {
                         Ok(()) => info!("Toy config loaded successfully."),
                         Err(e) => warn!("Toy config failed to load: {:?}", e),
@@ -144,6 +145,7 @@ pub async fn client_event_handler(
                                 features: toy.parsed_toy_features.features.to_frontend(),
                                 listening: toy.listening,
                                 osc_data: toy.osc_data,
+                                bt_update_rate: toy.bt_update_rate,
                                 sub_id: toy.sub_id,
                             }
                         }),
