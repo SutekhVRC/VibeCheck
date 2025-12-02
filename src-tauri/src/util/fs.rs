@@ -53,3 +53,14 @@ pub fn get_config_dir() -> Result<String, UtilError> {
         None => Err(UtilError::ConfigDirFS),
     }
 }
+
+pub fn create_path(path: &[&str]) -> String {
+    #[cfg(target_os = "linux")]
+    {
+        format!("{}/ToyConfigs/{}.json", path[0], path[1])
+    }
+    #[cfg(target_os = "windows")]
+    {
+        format!("{}\\ToyConfigs\\{}.json", path[0], path[1]);
+    }
+}
