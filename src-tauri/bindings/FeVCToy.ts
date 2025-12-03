@@ -3,4 +3,4 @@ import type { FeVCToyAnatomy } from "./FeVCToyAnatomy";
 import type { FeVCToyFeature } from "./FeVCToyFeature";
 import type { ToyPower } from "./ToyPower";
 
-export interface FeVCToy { toy_id: number | null, toy_name: string, toy_anatomy: FeVCToyAnatomy, toy_power: ToyPower, toy_connected: boolean, features: Array<FeVCToyFeature>, listening: boolean, osc_data: boolean, bt_update_rate: bigint, sub_id: number, }
+export type FeVCToy = { toy_id: number | null, toy_name: string, toy_anatomy: FeVCToyAnatomy, toy_power: ToyPower, toy_connected: boolean, features: Array<FeVCToyFeature>, listening: boolean, osc_data: boolean, bt_update_rate: bigint, sub_id: number, };

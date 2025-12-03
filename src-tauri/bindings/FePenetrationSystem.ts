@@ -2,4 +2,4 @@
 import type { FeProcessingMode } from "./FeProcessingMode";
 import type { PenetrationSystemType } from "./PenetrationSystemType";
 
-export interface FePenetrationSystem { pen_system_type: PenetrationSystemType, pen_system_processing_mode: FeProcessingMode, }
+export type FePenetrationSystem = { pen_system_type: PenetrationSystemType, pen_system_processing_mode: FeProcessingMode, };
