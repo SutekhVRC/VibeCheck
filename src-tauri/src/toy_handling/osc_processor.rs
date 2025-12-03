@@ -1,9 +1,17 @@
 use std::sync::Arc;
+use std::time::Instant;
 
 use buttplug::client::ButtplugClientDevice;
+use log::debug;
 use rosc::{OscMessage, OscType};
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::mpsc::error::TryRecvError;
+use tokio::sync::watch;
 
+use crate::toy_handling::runtime::toy_management_handler::sleep_for_constant_rate;
+use crate::toy_handling::toyops::LevelTweaks;
 use crate::toy_handling::toyops::ToyParameter;
+use crate::toy_handling::toyops::VCFeatureType;
 use crate::toy_handling::toyops::VCToyFeatures;
 
 use log::info;
@@ -15,8 +23,96 @@ use super::toy_command_processor::command_toy;
 use super::toyops::ProcessingMode;
 use mode_processor::core::mode_processor;
 
+pub enum ToyEmitterThreadSignal {
+    StopExecution,
+    UpdateRate(u64),
+}
+
+#[derive(Debug, Clone)]
+pub struct OscParserData {
+    dev: Arc<ButtplugClientDevice>,
+    feature_type: VCFeatureType,
+    float_level: f64,
+    feature_index: u32,
+    flip_float: bool,
+    feature_levels: LevelTweaks,
+}
+
+impl OscParserData {
+    pub fn new(
+        dev: Arc<ButtplugClientDevice>,
+        feature_type: VCFeatureType,
+        float_level: f64,
+        feature_index: u32,
+        flip_float: bool,
+        feature_levels: LevelTweaks,
+    ) -> Self {
+        Self {
+            dev,
+            feature_type,
+            float_level,
+            feature_index,
+            flip_float,
+            feature_levels,
+        }
+    }
+}
+
+pub struct EmitterThreadData {
+    update_rate: u64,
+    in_signal: UnboundedReceiver<ToyEmitterThreadSignal>,
+    in_osc_data: watch::Receiver<Option<OscParserData>>,
+}
+
+impl EmitterThreadData {
+    pub fn new(
+        in_signal: UnboundedReceiver<ToyEmitterThreadSignal>,
+        in_osc_data: watch::Receiver<Option<OscParserData>>,
+        update_rate: u64,
+    ) -> Self {
+        Self {
+            update_rate,
+            in_signal,
+            in_osc_data,
+        }
+    }
+}
+
+pub async fn toy_emitter_thread(mut data: EmitterThreadData) {
+
+    loop {
+        let start = Instant::now();
+        // Logic
+        // Parse & send bluetooth command (watch)
+        if let Ok(changed) = data.in_osc_data.has_changed() {
+            if changed {
+                let osc_data = {data.in_osc_data.borrow_and_update().to_owned()};
+                if let Some(osc_data) = osc_data {
+                    command_toy(osc_data.dev, osc_data.feature_type, osc_data.float_level, osc_data.feature_index, osc_data.flip_float, osc_data.feature_levels).await;
+                }
+            }
+        }
+
+        // Check for incoming update messages
+        match data.in_signal.try_recv() {
+            Ok(signal) => {
+                match signal {
+                    ToyEmitterThreadSignal::StopExecution => return,
+                    ToyEmitterThreadSignal::UpdateRate(hz) => data.update_rate = hz,
+                }
+            },
+            Err(e) => match e {
+                TryRecvError::Disconnected => return,
+                TryRecvError::Empty => (),
+            }
+        }
+        sleep_for_constant_rate(data.update_rate, start);
+    }
+}
+
 #[inline(always)]
 pub async fn parse_osc_message(
+    emitter_thread_osc_tx: &watch::Sender<Option<OscParserData>>,
     msg: &mut OscMessage,
     dev: Arc<ButtplugClientDevice>,
     vc_toy_features: &mut VCToyFeatures,
@@ -32,7 +128,7 @@ pub async fn parse_osc_message(
     // msg args pop should go here
     //let newest_msg_addr = msg.addr.clone();
     let newest_msg_val = msg.args.pop().unwrap();
-
+    info!("Newest value: {:?}", newest_msg_val);
     /*
      * Input mode processing
      * Get all features with an enabled Input mode
@@ -51,7 +147,7 @@ pub async fn parse_osc_message(
                     let float_level = ((lvl * 100.0).round() / 100.0) as f64;
                     // pen_system is checked for None in get_features_with_penetration_systems method.
                     // Give access to internal mode values here (input, internal_values)
-                    if let Some(i_mode_processed_value) = feature
+                    if let Some(input_processor_processed_value) = feature
                         .penetration_system
                         .pen_system
                         .as_mut()
@@ -65,7 +161,7 @@ pub async fn parse_osc_message(
                         if let ProcessingMode::Raw =
                             feature.penetration_system.pen_system_processing_mode
                         {
-                            command_toy(
+                            /*command_toy(
                                 dev.clone(),
                                 feature.feature_type,
                                 i_mode_processed_value,
@@ -73,12 +169,20 @@ pub async fn parse_osc_message(
                                 feature.flip_input_float,
                                 feature.feature_levels,
                             )
-                            .await;
+                            .await;*/
+                            let osc_emit = OscParserData::new(
+                                dev.clone(),
+                                feature.feature_type,
+                                input_processor_processed_value,
+                                feature.feature_index,
+                                feature.flip_input_float,
+                                feature.feature_levels);
+                            emitter_thread_osc_tx.send(Some(osc_emit));
                         } else {
                             // If mode processor returns a value send to toy
                             if let Some(i) = mode_processor(
                                 ModeProcessorInput::InputProcessor((
-                                    ModeProcessorInputType::Float(i_mode_processed_value),
+                                    ModeProcessorInputType::Float(input_processor_processed_value),
                                     &mut feature
                                         .penetration_system
                                         .pen_system_processing_mode_values,
@@ -87,7 +191,7 @@ pub async fn parse_osc_message(
                                 feature.flip_input_float,
                             )
                             .await
-                            {
+                            {/*
                                 command_toy(
                                     dev.clone(),
                                     feature.feature_type,
@@ -96,7 +200,15 @@ pub async fn parse_osc_message(
                                     feature.flip_input_float,
                                     feature.feature_levels,
                                 )
-                                .await;
+                                .await;*/
+                            let osc_emit = OscParserData::new(
+                                dev.clone(),
+                                feature.feature_type,
+                                i,
+                                feature.feature_index,
+                                feature.flip_input_float,
+                                feature.feature_levels);
+                            emitter_thread_osc_tx.send(Some(osc_emit));
                             }
                         }
                     }
@@ -106,7 +218,7 @@ pub async fn parse_osc_message(
             OscType::Bool(b) => {
                 for feature in input_processor_system_features {
                     // Boolean to float transformation here
-                    if let Some(i_mode_processed_value) = feature
+                    if let Some(input_processor_processed_value) = feature
                         .penetration_system
                         .pen_system
                         .as_mut()
@@ -116,7 +228,7 @@ pub async fn parse_osc_message(
                         // Send to mode processor if specified (Raw = no mode processing)
                         if let ProcessingMode::Raw =
                             feature.penetration_system.pen_system_processing_mode
-                        {
+                        {/*
                             command_toy(
                                 dev.clone(),
                                 feature.feature_type,
@@ -125,17 +237,26 @@ pub async fn parse_osc_message(
                                 feature.flip_input_float,
                                 feature.feature_levels,
                             )
-                            .await;
+                            .await;*/
+                            let osc_emit = OscParserData::new(
+                                dev.clone(),
+                                feature.feature_type,
+                                input_processor_processed_value,
+                                feature.feature_index,
+                                feature.flip_input_float,
+                                feature.feature_levels);
+                            emitter_thread_osc_tx.send(Some(osc_emit));
+
                         } else if let Some(i) = mode_processor(
                             ModeProcessorInput::InputProcessor((
-                                ModeProcessorInputType::Float(i_mode_processed_value),
+                                ModeProcessorInputType::Float(input_processor_processed_value),
                                 &mut feature.penetration_system.pen_system_processing_mode_values,
                             )),
                             feature.feature_levels,
                             feature.flip_input_float,
                         )
                         .await
-                        {
+                        {/*
                             command_toy(
                                 dev.clone(),
                                 feature.feature_type,
@@ -144,7 +265,15 @@ pub async fn parse_osc_message(
                                 feature.flip_input_float,
                                 feature.feature_levels,
                             )
-                            .await;
+                            .await;*/
+                            let osc_emit = OscParserData::new(
+                                dev.clone(),
+                                feature.feature_type,
+                                i,
+                                feature.feature_index,
+                                feature.flip_input_float,
+                                feature.feature_levels);
+                            emitter_thread_osc_tx.send(Some(osc_emit));
                         }
                     }
                 }
@@ -158,7 +287,7 @@ pub async fn parse_osc_message(
             OscType::Float(lvl) => {
                 // Clamp float accuracy to hundredths and cast as 64 bit float
                 let float_level = ((lvl * 100.0).round() / 100.0) as f64;
-                //debug!("Received and cast float lvl: {:.5}", float_level);
+                debug!("Received and cast float lvl: {:.5}", float_level);
 
                 for feature in features {
                     // Get ToyParameter here
@@ -185,7 +314,7 @@ pub async fn parse_osc_message(
                             feature.flip_input_float,
                         )
                         .await
-                        {
+                        {/*
                             command_toy(
                                 dev.clone(),
                                 feature.feature_type,
@@ -194,7 +323,15 @@ pub async fn parse_osc_message(
                                 feature.flip_input_float,
                                 feature.feature_levels,
                             )
-                            .await;
+                            .await;*/
+                            let osc_emit = OscParserData::new(
+                                dev.clone(),
+                                feature.feature_type,
+                                mode_processed_value,
+                                feature.feature_index,
+                                feature.flip_input_float,
+                                feature.feature_levels);
+                            emitter_thread_osc_tx.send(Some(osc_emit));
                         }
                     } // If no matching toy parameter skip feature
                 }
@@ -225,7 +362,7 @@ pub async fn parse_osc_message(
                             feature.flip_input_float,
                         )
                         .await
-                        {
+                        {/*
                             command_toy(
                                 dev.clone(),
                                 feature.feature_type,
@@ -234,7 +371,15 @@ pub async fn parse_osc_message(
                                 feature.flip_input_float,
                                 feature.feature_levels,
                             )
-                            .await;
+                            .await;*/
+                            let osc_emit = OscParserData::new(
+                                dev.clone(),
+                                feature.feature_type,
+                                i,
+                                feature.feature_index,
+                                feature.flip_input_float,
+                                feature.feature_levels);
+                            emitter_thread_osc_tx.send(Some(osc_emit));
                         }
                     }
                 }

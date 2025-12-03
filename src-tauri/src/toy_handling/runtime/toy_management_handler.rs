@@ -6,22 +6,22 @@
 */
 // Uses TME send and recv channel
 
-use std::{collections::HashMap, sync::Arc, thread, time::Duration};
+use std::{collections::HashMap, sync::Arc, thread, time::{Duration, Instant}};
 
 use buttplug::client::ButtplugClientDevice;
-use futures_timer::Delay;
 use log::{error as logerr, info, warn};
+use parking_lot::{RawMutex, lock_api::Mutex};
 use tauri::AppHandle;
 use tokio::{
     runtime::Runtime,
-    sync::mpsc::{UnboundedReceiver, UnboundedSender},
-    task::JoinHandle, time::Instant,
+    sync::{mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel}, watch},
+    task::JoinHandle,
 };
 
 use crate::{
     osc::{OSCNetworking, logic::toy_input_routine},
     toy_handling::{
-        ToySig, osc_processor::parse_osc_message, toy_manager::ToyManager, toyops::{VCToy, VCToyFeatures}
+        ToySig, osc_processor::{EmitterThreadData, ToyEmitterThreadSignal, parse_osc_message, toy_emitter_thread}, toy_manager::ToyManager, toyops::VCToy
     },
     vcore::ipc::call_plane::{TmSig, ToyManagementEvent, ToyUpdate},
 };
@@ -35,24 +35,30 @@ use tokio::sync::{
  * The hertz crate's sleep_for_constant_rate() function is broken,
  * therefore isolating just the fixed function here.
 */
-pub async fn sleep_for_constant_rate(rate: u64, start: Instant) {
+pub fn sleep_for_constant_rate(rate: u64, start: Instant) {
     let ns_per_frame = (Duration::from_secs(1).as_nanos() as f64 / rate as f64).round() as u64;
     let duration = Duration::from_nanos(ns_per_frame);
     let elapsed = start.elapsed();
     if elapsed < duration {
-        Delay::new(duration - elapsed).await;
+        std::thread::sleep(duration - elapsed);
     }
 }
 
 #[inline(always)]
-fn update_toy(toy: ToyUpdate, dev: Arc<ButtplugClientDevice>, vc_toy_features: &mut VCToyFeatures) {
+fn update_toy(emitter_thread_tx: &UnboundedSender<ToyEmitterThreadSignal>, toy: ToyUpdate, dev: Arc<ButtplugClientDevice>, vc_toy: &mut VCToy) {
     let ToyUpdate::AlterToy(new_toy) = toy else {
         return;
     };
     if new_toy.toy_id != dev.index() {
         return;
     }
-    *vc_toy_features = new_toy.parsed_toy_features;
+
+    vc_toy.parsed_toy_features = new_toy.parsed_toy_features;
+    if vc_toy.bt_update_rate != new_toy.bt_update_rate {
+        vc_toy.bt_update_rate = new_toy.bt_update_rate;
+        emitter_thread_tx.send(ToyEmitterThreadSignal::UpdateRate(new_toy.bt_update_rate));
+    }
+
     info!("Altered toy: {}", new_toy.toy_id);
 }
 
@@ -63,38 +69,44 @@ pub async fn toy_management_handler(
     mut vc_config: OSCNetworking,
     app_handle: AppHandle,
 ) {
-    let f = |dev: Arc<ButtplugClientDevice>,
-             mut toy_bcst_rx: BReceiver<ToySig>,
-             mut vc_toy: VCToy| {
+    let toy_thread_function = |
+            async_rt: Arc<Mutex<RawMutex, Option<Runtime>>>,
+            dev: Arc<ButtplugClientDevice>,
+            mut toy_bcst_rx: BReceiver<ToySig>,
+            mut vc_toy: VCToy| {
         // Read toy config here?
         async move {
-            // Put smooth_queue here
-            // Put rate tracking here
-            // Time tracking here?
-            // Async runtime wrapped in Option for rate updating here????
 
-            // Lock this to a user-set HZ value
-            loop { 
-                let start = Instant::now();
-                sleep_for_constant_rate(vc_toy.bt_update_rate, start).await;
-                if dev.connected() {
-                    let Ok(ts) = toy_bcst_rx.recv().await else {
-                        continue;
-                    };
-                    match ts {
-                        ToySig::OSCMsg(mut msg) => {
-                            parse_osc_message(&mut msg, dev.clone(), &mut vc_toy.parsed_toy_features).await
-                        }
-                        ToySig::UpdateToy(toy) => update_toy(toy, dev.clone(), &mut vc_toy.parsed_toy_features),
+            // Create in_signal channel for emitter thread
+            let (emitter_thread_tx, emitter_thread_rx) = unbounded_channel::<ToyEmitterThreadSignal>();
+            let (emitter_thread_osc_tx, emitter_thread_osc_rx) = watch::channel(None);
+
+            let tet_data = EmitterThreadData::new(emitter_thread_rx, emitter_thread_osc_rx, vc_toy.bt_update_rate);
+
+            async_rt.lock().as_ref().unwrap().spawn(async move {
+                toy_emitter_thread(tet_data).await
+            });
+
+
+            while dev.connected() {
+                let Ok(ts) = toy_bcst_rx.recv().await else {
+                    continue;
+                };
+                match ts {
+                    ToySig::OSCMsg(mut msg) => {
+                        parse_osc_message(&emitter_thread_osc_tx, &mut msg, dev.clone(), &mut vc_toy.parsed_toy_features).await
                     }
-                } else {
-                    info!(
-                        "Device {} disconnected! Leaving listening routine!",
-                        dev.index()
-                    );
-                    return;
+                    ToySig::UpdateToy(toy) => {
+                        update_toy(&emitter_thread_tx, toy, dev.clone(), &mut vc_toy);
+                    },
                 }
             }
+            emitter_thread_tx.send(ToyEmitterThreadSignal::StopExecution);
+            info!(
+                "Device {} disconnected! Leaving listening routine!",
+                dev.index()
+            );
+
         }
     }; // Toy listening routine
 
@@ -141,38 +153,41 @@ pub async fn toy_management_handler(
             continue;
         }
 
-        // This is a nested runtime maybe remove
-        // Would need to pass toy thread handles to VibeCheckState
-        let toy_async_rt = Runtime::new().unwrap();
+        let toy_async_rt_root: Arc<Mutex<RawMutex, Option<Runtime>>> = Arc::new(Mutex::new(Some(Runtime::new().unwrap())));
         info!("Started listening!");
         // Recv events (listening)
-        // Create toy bcst channel
+
 
         // Toy threads
         let mut running_toy_ths: HashMap<u32, JoinHandle<()>> = HashMap::new();
 
         // Broadcast channels for toy commands
-        let (toy_bcst_tx, _toy_bcst_rx): (BSender<ToySig>, BReceiver<ToySig>) =
+        // These will only be used for UpdateToy commands now
+        let (toy_sig_bcst_tx, _toy_sig_bcst_rx): (BSender<ToySig>, BReceiver<ToySig>) =
             sync::broadcast::channel(1024);
 
         // Create toy threads
         for toy in &core_toy_manager.online_toys {
-            let f_run = f(
+            let toy_thread_function_run = toy_thread_function(
+                toy_async_rt_root.clone(),
                 toy.1.device_handle.clone(),
-                toy_bcst_tx.subscribe(),
+                toy_sig_bcst_tx.subscribe(),
                 toy.1.clone(),
             );
-            running_toy_ths.insert(
-                *toy.0,
-                toy_async_rt.spawn(async move {
-                    f_run.await;
-                }),
-            );
+            let new_thread = {
+                toy_async_rt_root.clone().lock().as_ref().unwrap().spawn(async move {
+                        toy_thread_function_run.await;
+                    })
+                };
+                running_toy_ths.insert(
+                    *toy.0,
+                    new_thread,
+                );
             info!("Toy: {} started listening..", *toy.0);
         }
 
         // Create OSC listener thread
-        let toy_bcst_tx_osc = toy_bcst_tx.clone();
+        let toy_bcst_tx_osc = toy_sig_bcst_tx.clone();
         info!("Spawning OSC listener..");
         let vc_conf_clone = vc_config.clone();
         let tme_send_clone = tme_send.clone();
@@ -196,16 +211,20 @@ pub async fn toy_management_handler(
                     match tu {
                         ToyUpdate::AddToy(toy) => {
                             core_toy_manager.online_toys.insert(toy.toy_id, toy.clone());
-                            let f_run = f(
+                            let toy_thread_function_run = toy_thread_function(
+                                toy_async_rt_root.clone(),
                                 toy.device_handle.clone(),
-                                toy_bcst_tx.subscribe(),
+                                toy_sig_bcst_tx.subscribe(),
                                 toy.clone(),
                             );
+                            let new_thread = {
+                                toy_async_rt_root.clone().lock().as_ref().unwrap().spawn(async move {
+                                        toy_thread_function_run.await;
+                                    })
+                            };
                             running_toy_ths.insert(
                                 toy.toy_id,
-                                toy_async_rt.spawn(async move {
-                                    f_run.await;
-                                }),
+                                new_thread,
                             );
                             info!("Toy: {} started listening..", toy.toy_id);
                         }
@@ -225,7 +244,7 @@ pub async fn toy_management_handler(
                             }
                         }
                         ToyUpdate::AlterToy(toy) => {
-                            match toy_bcst_tx
+                            match toy_sig_bcst_tx
                                 .send(ToySig::UpdateToy(ToyUpdate::AlterToy(toy.clone())))
                             {
                                 Ok(receivers) => {
@@ -263,8 +282,8 @@ pub async fn toy_management_handler(
                                 info!("[TOY ID: {}] Stopped listening. (TMSIG)", toy.0);
                             }
                             running_toy_ths.clear();
-                            drop(_toy_bcst_rx); // Causes OSC listener to die
-                            toy_async_rt.shutdown_background();
+                            drop(_toy_sig_bcst_rx); // Causes OSC listener to die
+                            toy_async_rt_root.clone().lock().take().unwrap().shutdown_background();
                             listening = false;
                             info!("Toys: {}", core_toy_manager.online_toys.len());
                             break; //Stop Listening
@@ -287,8 +306,8 @@ pub async fn toy_management_handler(
                                 info!("[TOY ID: {}] Stopped listening. (TMSIG)", toy.0);
                             }
                             running_toy_ths.clear();
-                            drop(_toy_bcst_rx); // Causes OSC listener to die
-                            toy_async_rt.shutdown_background();
+                            drop(_toy_sig_bcst_rx); // Causes OSC listener to die
+                            toy_async_rt_root.clone().lock().take().unwrap().shutdown_background();
                             listening = false;
                             info!("Toys: {}", core_toy_manager.online_toys.len());
                             break; //Stop Listening
