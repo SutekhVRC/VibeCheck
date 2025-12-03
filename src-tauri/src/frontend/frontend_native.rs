@@ -32,7 +32,14 @@ use log::{error as logerr, trace};
  */
 #[tauri::command]
 pub fn vibecheck_version(app_handle: tauri::AppHandle) -> String {
-    format!("{} windows", app_handle.package_info().version)
+    #[cfg(target_os = "windows")]
+    {
+        format!("{} windows", app_handle.package_info().version)
+    }
+    #[cfg(target_os = "linux")]
+    {
+        format!("{} linux", app_handle.package_info().version)
+    }
 }
 
 /*
