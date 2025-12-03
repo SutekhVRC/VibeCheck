@@ -1,7 +1,7 @@
 use crate::{
     frontend::frontend_types::FeVCToyAnatomy,
     toy_handling::toyops::VCToyFeatures,
-    util::fs::{create_path, file_exists, get_config_dir},
+    util::fs::{build_path_file, file_exists, get_config_dir},
     vcore::errors::{
         self,
         backend::{VibeCheckFSError, VibeCheckToyConfigError},
@@ -177,7 +177,7 @@ impl VCToyConfig {
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
 
-        let config_path = create_path(&[&config_dir, &self.toy_name]);
+        let config_path = build_path_file(&[&config_dir, &format!("{}.json", self.toy_name)]);
 
         info!("Saving toy config to: {}", config_path);
 

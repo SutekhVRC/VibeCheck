@@ -5,7 +5,7 @@ use buttplug::{
 use core::fmt;
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, path::{Path, PathBuf}, sync::Arc, time::Instant};
+use std::{collections::HashMap, fs, sync::Arc, time::Instant};
 use ts_rs::TS;
 
 use crate::{
@@ -18,7 +18,7 @@ use crate::{
     toy_handling::input_processor::penetration_systems::{
         PenetrationSystemType, sps::SPSProcessor, tps::TPSProcessor
     },
-    util::fs::{create_path, file_exists, get_config_dir},
+    util::fs::{build_path_file, file_exists, get_config_dir},
     vcore::errors::{
         self,
         backend::{VibeCheckFSError, VibeCheckToyConfigError},
@@ -296,7 +296,7 @@ impl VCToy {
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
 
-        let config_path = create_path(&[&config_dir, &self.toy_name]);
+        let config_path = build_path_file(&[&config_dir, &format!("{}.json",self.toy_name)]);
 
         if !file_exists(&config_path) {
             self.config = None;
@@ -324,7 +324,7 @@ impl VCToy {
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
 
-        let config_path = format!("{}\\ToyConfigs\\{}.json", config_dir, self.toy_name,);
+        let config_path = build_path_file(&[&config_dir, &format!("{}.json", self.toy_name)]);
         info!("Saving toy config to: {}", config_path);
 
         if let Some(conf) = &self.config {

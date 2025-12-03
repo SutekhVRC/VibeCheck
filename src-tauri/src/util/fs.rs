@@ -54,13 +54,24 @@ pub fn get_config_dir() -> Result<String, UtilError> {
     }
 }
 
-pub fn create_path(path: &[&str]) -> String {
+pub fn build_path_dir(path: &[&str]) -> String {
     #[cfg(target_os = "linux")]
     {
-        format!("{}/ToyConfigs/{}.json", path[0], path[1])
+        format!("{}/{}/", path[0], path[1])
     }
     #[cfg(target_os = "windows")]
     {
-        format!("{}\\ToyConfigs\\{}.json", path[0], path[1]);
+        format!("{}\\{}\\", path[0], path[1]);
+    }
+}
+
+pub fn build_path_file(path: &[&str]) -> String {
+    #[cfg(target_os = "linux")]
+    {
+        format!("{}/{}", path[0], path[1])
+    }
+    #[cfg(target_os = "windows")]
+    {
+        format!("{}\\{}", path[0], path[1]);
     }
 }

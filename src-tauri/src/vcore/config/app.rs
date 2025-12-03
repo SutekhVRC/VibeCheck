@@ -4,8 +4,8 @@ use std::fs;
 
 use crate::{
     osc::OSCNetworking,
-    util::fs::{file_exists, get_config_dir, path_exists},
-    vcore::errors::backend::{VibeCheckConfigError, VibeCheckFSError},
+    util::fs::{build_path_dir, build_path_file, file_exists, get_config_dir, path_exists},
+    vcore::errors::backend::VibeCheckConfigError,
 };
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -25,8 +25,11 @@ pub fn config_load() -> Result<VibeCheckConfig, VibeCheckConfigError> {
         Err(_) => return Err(VibeCheckConfigError::ConfigDirFail),
     };
 
-    let vc_config_file = format!("{}\\Config.json", vc_root_dir);
-    let vc_toy_config_dir = format!("{}\\ToyConfigs", vc_root_dir);
+    let vc_config_file = build_path_file(&[&vc_root_dir, "Config.json"]);
+    let vc_toy_config_dir = build_path_dir(&[&vc_root_dir, "ToyConfigs"]);
+
+    info!("vc_config_file: {}", vc_config_file);
+    info!("vc_toy_config_dir: {}", vc_toy_config_dir);
 
     if !path_exists(&vc_root_dir) {
         fs::create_dir_all(&vc_root_dir).expect("[-] Cannot create VibeCheck root directory.");
@@ -35,6 +38,7 @@ pub fn config_load() -> Result<VibeCheckConfig, VibeCheckConfigError> {
         info!("VibeCheck root directory exists.");
     }
 
+    info!("Attempting creation of : {}", vc_toy_config_dir);
     if !path_exists(&vc_toy_config_dir) {
         fs::create_dir(&vc_toy_config_dir).expect("[-] Cannot create VibeCheck toy directory.");
         info!("Created VibeCheck toy config directory.");
