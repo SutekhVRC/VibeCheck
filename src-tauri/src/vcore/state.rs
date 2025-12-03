@@ -25,8 +25,6 @@ use super::ipc::call_plane::ToyManagementEvent;
 
 pub struct VCStateMutex(pub Arc<Mutex<VibeCheckState>>);
 
-pub struct InterThreadComm {}
-
 pub enum RunningState {
     Running,
     Stopped,
@@ -91,7 +89,7 @@ impl VibeCheckState {
             UnboundedReceiver<ToyManagementEvent>,
         ) = unbounded_channel();
 
-        let mut state = Self {
+        let state = Self {
             app_handle: None,
             identifier: String::new(),
             config,
