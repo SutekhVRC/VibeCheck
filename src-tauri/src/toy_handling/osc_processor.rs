@@ -88,6 +88,7 @@ pub async fn toy_emitter_thread(mut data: EmitterThreadData) {
             if changed {
                 let osc_data = {data.in_osc_data.borrow_and_update().to_owned()};
                 if let Some(osc_data) = osc_data {
+                    debug!("Sending {} to toy {} and feature {}", osc_data.float_level, osc_data.dev.index(), osc_data.feature_index);
                     command_toy(osc_data.dev, osc_data.feature_type, osc_data.float_level, osc_data.feature_index, osc_data.flip_float, osc_data.feature_levels).await;
                 }
             }
@@ -128,7 +129,7 @@ pub async fn parse_osc_message(
     // msg args pop should go here
     //let newest_msg_addr = msg.addr.clone();
     let newest_msg_val = msg.args.pop().unwrap();
-    info!("Newest value: {:?}", newest_msg_val);
+    //info!("Newest value: {:?}", newest_msg_val);
     /*
      * Input mode processing
      * Get all features with an enabled Input mode
