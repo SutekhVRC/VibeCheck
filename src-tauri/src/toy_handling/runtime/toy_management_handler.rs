@@ -6,22 +6,23 @@
 */
 // Uses TME send and recv channel
 
-use std::{collections::HashMap, sync::Arc, thread, time::{Duration, Instant}};
+use std::{collections::HashMap, sync::Arc, thread, time::Duration};
 
 use buttplug::client::ButtplugClientDevice;
+use futures_timer::Delay;
 use log::{error as logerr, info, warn};
 use parking_lot::{RawMutex, lock_api::Mutex};
 use tauri::AppHandle;
 use tokio::{
     runtime::Runtime,
     sync::{mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel}, watch},
-    task::JoinHandle,
+    task::JoinHandle, time::Instant,
 };
 
 use crate::{
     osc::{OSCNetworking, logic::toy_input_routine},
     toy_handling::{
-        ToySig, osc_processor::{EmitterThreadData, ToyEmitterThreadSignal, parse_osc_message, toy_emitter_thread}, toy_manager::ToyManager, toyops::VCToy
+        ToySig, osc_processor::parse_osc_message, runtime::toy_emitter_thread::{EmitterThreadData, ToyEmitterThreadSignal, toy_emitter_thread}, toy_manager::ToyManager, toyops::VCToy
     },
     vcore::ipc::call_plane::{TmSig, ToyManagementEvent, ToyUpdate},
 };
@@ -35,12 +36,12 @@ use tokio::sync::{
  * The hertz crate's sleep_for_constant_rate() function is broken,
  * therefore isolating just the fixed function here.
 */
-pub fn sleep_for_constant_rate(rate: u64, start: Instant) {
+pub async fn sleep_for_constant_rate(rate: u64, start: Instant) {
     let ns_per_frame = (Duration::from_secs(1).as_nanos() as f64 / rate as f64).round() as u64;
     let duration = Duration::from_nanos(ns_per_frame);
     let elapsed = start.elapsed();
     if elapsed < duration {
-        std::thread::sleep(duration - elapsed);
+        Delay::new(duration - elapsed).await;
     }
 }
 
