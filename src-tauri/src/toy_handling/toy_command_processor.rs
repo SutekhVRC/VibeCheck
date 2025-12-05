@@ -1,4 +1,3 @@
-
 use crate::toy_handling::toyops::LevelTweaks;
 use crate::toy_handling::toyops::VCFeatureType;
 
@@ -9,11 +8,9 @@ use buttplug::core::message::ActuatorType;
 
 use log::{error as logerr, info};
 
-
 use std::collections::HashMap;
 
 use std::sync::Arc;
-
 
 #[inline]
 fn clamp_and_flip(value: f64, flip: bool, levels: LevelTweaks) -> f64 {

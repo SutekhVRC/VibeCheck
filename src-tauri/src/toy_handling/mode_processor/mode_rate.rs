@@ -74,4 +74,3 @@ pub fn parse_rate(
 
     RateParser::RateCalculated(float_level, false)
 }
-

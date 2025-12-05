@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::frontend::ToFrontend;
 use crate::error_signal_handler::{ErrorSource, VibeCheckError};
+use crate::frontend::ToFrontend;
 use crate::util::fs::build_path_dir;
 use crate::{
     config::toy::VCToyConfig,
@@ -58,7 +58,7 @@ impl ToyManager {
             Err(_) => return Err(ToyHandlingError::PopulateConfigFailure),
         };
 
-        let toy_config_dir = match read_dir(build_path_dir(&[&config_dir,"ToyConfigs"]), false) {
+        let toy_config_dir = match read_dir(build_path_dir(&[&config_dir, "ToyConfigs"]), false) {
             Ok(config_paths) => config_paths,
             // Doesn't populate
             Err(_e) => return Err(ToyHandlingError::PopulateConfigFailure),

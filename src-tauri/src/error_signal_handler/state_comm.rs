@@ -1,9 +1,16 @@
-use crate::{error_signal_handler::VibeCheckError, frontend::error::FrontendError, vcore::{errors::VCError, ipc::emit_plane::emit_error, state::VibeCheckState}};
+use crate::{
+    error_signal_handler::VibeCheckError,
+    frontend::error::FrontendError,
+    vcore::{errors::VCError, ipc::emit_plane::emit_error, state::VibeCheckState},
+};
 use log::error as logerr;
 use parking_lot::lock_api::Mutex;
+use std::sync::{
+    mpsc::{Receiver, Sender},
+    Arc,
+};
 use tauri::AppHandle;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use std::sync::{Arc,mpsc::{Receiver, Sender}};
 
 /*
 pub struct ErrorSignalAggregator {
@@ -31,8 +38,10 @@ impl ErrorSignalAggregator {
     }
 }*/
 
-pub async fn error_message_handler(app_handle: AppHandle, mut error_rx: UnboundedReceiver<VCError>) {
-
+pub async fn error_message_handler(
+    app_handle: AppHandle,
+    mut error_rx: UnboundedReceiver<VCError>,
+) {
     loop {
         if let Some(err_msg) = error_rx.recv().await {
             match err_msg {
@@ -40,7 +49,7 @@ pub async fn error_message_handler(app_handle: AppHandle, mut error_rx: Unbounde
                     let s = format!("{}: {}", e.msg, e.id);
                     logerr!("{}", s);
                     emit_error(&app_handle, FrontendError::Error(s));
-                },
+                }
             }
         }
     }

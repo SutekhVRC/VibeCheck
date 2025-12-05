@@ -11,18 +11,28 @@ use std::{collections::HashMap, sync::Arc, thread, time::Duration};
 use buttplug::client::ButtplugClientDevice;
 use futures_timer::Delay;
 use log::{error as logerr, info, warn};
-use parking_lot::{RawMutex, lock_api::Mutex};
+use parking_lot::{lock_api::Mutex, RawMutex};
 use tauri::AppHandle;
 use tokio::{
     runtime::Runtime,
-    sync::{mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel}, watch},
-    task::JoinHandle, time::Instant,
+    sync::{
+        mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+        watch,
+    },
+    task::JoinHandle,
+    time::Instant,
 };
 
 use crate::{
-    osc::{OSCNetworking, logic::toy_input_routine},
+    osc::{logic::toy_input_routine, OSCNetworking},
     toy_handling::{
-        ToySig, osc_processor::parse_osc_message, runtime::toy_emitter_thread::{EmitterThreadData, ToyEmitterThreadSignal, toy_emitter_thread}, toy_manager::ToyManager, toyops::VCToy
+        osc_processor::parse_osc_message,
+        runtime::toy_emitter_thread::{
+            toy_emitter_thread, EmitterThreadData, ToyEmitterThreadSignal,
+        },
+        toy_manager::ToyManager,
+        toyops::VCToy,
+        ToySig,
     },
     vcore::ipc::call_plane::{TmSig, ToyManagementEvent, ToyUpdate},
 };
@@ -46,7 +56,12 @@ pub async fn sleep_for_constant_rate(rate: u64, start: Instant) {
 }
 
 #[inline(always)]
-fn update_toy(emitter_thread_tx: &UnboundedSender<ToyEmitterThreadSignal>, toy: ToyUpdate, dev: Arc<ButtplugClientDevice>, vc_toy: &mut VCToy) {
+fn update_toy(
+    emitter_thread_tx: &UnboundedSender<ToyEmitterThreadSignal>,
+    toy: ToyUpdate,
+    dev: Arc<ButtplugClientDevice>,
+    vc_toy: &mut VCToy,
+) {
     let ToyUpdate::AlterToy(new_toy) = toy else {
         return;
     };
@@ -70,24 +85,28 @@ pub async fn toy_management_handler(
     mut vc_config: OSCNetworking,
     app_handle: AppHandle,
 ) {
-    let toy_thread_function = |
-            async_rt: Arc<Mutex<RawMutex, Option<Runtime>>>,
-            dev: Arc<ButtplugClientDevice>,
-            mut toy_bcst_rx: BReceiver<ToySig>,
-            mut vc_toy: VCToy| {
+    let toy_thread_function = |async_rt: Arc<Mutex<RawMutex, Option<Runtime>>>,
+                               dev: Arc<ButtplugClientDevice>,
+                               mut toy_bcst_rx: BReceiver<ToySig>,
+                               mut vc_toy: VCToy| {
         // Read toy config here?
         async move {
-
             // Create in_signal channel for emitter thread
-            let (emitter_thread_tx, emitter_thread_rx) = unbounded_channel::<ToyEmitterThreadSignal>();
+            let (emitter_thread_tx, emitter_thread_rx) =
+                unbounded_channel::<ToyEmitterThreadSignal>();
             let (emitter_thread_osc_tx, emitter_thread_osc_rx) = watch::channel(None);
 
-            let tet_data = EmitterThreadData::new(emitter_thread_rx, emitter_thread_osc_rx, vc_toy.bt_update_rate);
+            let tet_data = EmitterThreadData::new(
+                emitter_thread_rx,
+                emitter_thread_osc_rx,
+                vc_toy.bt_update_rate,
+            );
 
-            async_rt.lock().as_ref().unwrap().spawn(async move {
-                toy_emitter_thread(tet_data).await
-            });
-
+            async_rt
+                .lock()
+                .as_ref()
+                .unwrap()
+                .spawn(async move { toy_emitter_thread(tet_data).await });
 
             while dev.connected() {
                 let Ok(ts) = toy_bcst_rx.recv().await else {
@@ -95,11 +114,17 @@ pub async fn toy_management_handler(
                 };
                 match ts {
                     ToySig::OSCMsg(mut msg) => {
-                        parse_osc_message(&emitter_thread_osc_tx, &mut msg, dev.clone(), &mut vc_toy.parsed_toy_features).await
+                        parse_osc_message(
+                            &emitter_thread_osc_tx,
+                            &mut msg,
+                            dev.clone(),
+                            &mut vc_toy.parsed_toy_features,
+                        )
+                        .await
                     }
                     ToySig::UpdateToy(toy) => {
                         update_toy(&emitter_thread_tx, toy, dev.clone(), &mut vc_toy);
-                    },
+                    }
                 }
             }
             emitter_thread_tx.send(ToyEmitterThreadSignal::StopExecution);
@@ -107,7 +132,6 @@ pub async fn toy_management_handler(
                 "Device {} disconnected! Leaving listening routine!",
                 dev.index()
             );
-
         }
     }; // Toy listening routine
 
@@ -154,10 +178,10 @@ pub async fn toy_management_handler(
             continue;
         }
 
-        let toy_async_rt_root: Arc<Mutex<RawMutex, Option<Runtime>>> = Arc::new(Mutex::new(Some(Runtime::new().unwrap())));
+        let toy_async_rt_root: Arc<Mutex<RawMutex, Option<Runtime>>> =
+            Arc::new(Mutex::new(Some(Runtime::new().unwrap())));
         info!("Started listening!");
         // Recv events (listening)
-
 
         // Toy threads
         let mut running_toy_ths: HashMap<u32, JoinHandle<()>> = HashMap::new();
@@ -176,14 +200,16 @@ pub async fn toy_management_handler(
                 toy.1.clone(),
             );
             let new_thread = {
-                toy_async_rt_root.clone().lock().as_ref().unwrap().spawn(async move {
+                toy_async_rt_root
+                    .clone()
+                    .lock()
+                    .as_ref()
+                    .unwrap()
+                    .spawn(async move {
                         toy_thread_function_run.await;
                     })
-                };
-                running_toy_ths.insert(
-                    *toy.0,
-                    new_thread,
-                );
+            };
+            running_toy_ths.insert(*toy.0, new_thread);
             info!("Toy: {} started listening..", *toy.0);
         }
 
@@ -219,14 +245,13 @@ pub async fn toy_management_handler(
                                 toy.clone(),
                             );
                             let new_thread = {
-                                toy_async_rt_root.clone().lock().as_ref().unwrap().spawn(async move {
+                                toy_async_rt_root.clone().lock().as_ref().unwrap().spawn(
+                                    async move {
                                         toy_thread_function_run.await;
-                                    })
+                                    },
+                                )
                             };
-                            running_toy_ths.insert(
-                                toy.toy_id,
-                                new_thread,
-                            );
+                            running_toy_ths.insert(toy.toy_id, new_thread);
                             info!("Toy: {} started listening..", toy.toy_id);
                         }
                         ToyUpdate::RemoveToy(id) => {
@@ -284,7 +309,12 @@ pub async fn toy_management_handler(
                             }
                             running_toy_ths.clear();
                             drop(_toy_sig_bcst_rx); // Causes OSC listener to die
-                            toy_async_rt_root.clone().lock().take().unwrap().shutdown_background();
+                            toy_async_rt_root
+                                .clone()
+                                .lock()
+                                .take()
+                                .unwrap()
+                                .shutdown_background();
                             listening = false;
                             info!("Toys: {}", core_toy_manager.online_toys.len());
                             break; //Stop Listening
@@ -308,7 +338,12 @@ pub async fn toy_management_handler(
                             }
                             running_toy_ths.clear();
                             drop(_toy_sig_bcst_rx); // Causes OSC listener to die
-                            toy_async_rt_root.clone().lock().take().unwrap().shutdown_background();
+                            toy_async_rt_root
+                                .clone()
+                                .lock()
+                                .take()
+                                .unwrap()
+                                .shutdown_background();
                             listening = false;
                             info!("Toys: {}", core_toy_manager.online_toys.len());
                             break; //Stop Listening

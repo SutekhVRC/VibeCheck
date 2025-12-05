@@ -2,9 +2,16 @@ use std::sync::Arc;
 
 use buttplug::client::ButtplugClientDevice;
 use log::debug;
-use tokio::{sync::{mpsc::error::TryRecvError, mpsc::UnboundedReceiver, watch}, time::Instant};
+use tokio::{
+    sync::{mpsc::error::TryRecvError, mpsc::UnboundedReceiver, watch},
+    time::Instant,
+};
 
-use crate::toy_handling::{runtime::toy_management_handler::sleep_for_constant_rate, toy_command_processor::command_toy, toyops::{LevelTweaks, VCFeatureType}};
+use crate::toy_handling::{
+    runtime::toy_management_handler::sleep_for_constant_rate,
+    toy_command_processor::command_toy,
+    toyops::{LevelTweaks, VCFeatureType},
+};
 
 pub enum ToyEmitterThreadSignal {
     StopExecution,
@@ -62,33 +69,43 @@ impl EmitterThreadData {
 }
 
 pub async fn toy_emitter_thread(mut data: EmitterThreadData) {
-
     loop {
         let start = Instant::now();
         // Logic
         // Parse & send bluetooth command (watch)
         if let Ok(changed) = data.in_osc_data.has_changed() {
             if changed {
-                let osc_data = {data.in_osc_data.borrow_and_update().to_owned()};
+                let osc_data = { data.in_osc_data.borrow_and_update().to_owned() };
                 if let Some(osc_data) = osc_data {
-                    debug!("Sending {} to toy {} and feature {}", osc_data.float_level, osc_data.dev.index(), osc_data.feature_index);
-                    command_toy(osc_data.dev, osc_data.feature_type, osc_data.float_level, osc_data.feature_index, osc_data.flip_float, osc_data.feature_levels).await;
+                    debug!(
+                        "Sending {} to toy {} and feature {}",
+                        osc_data.float_level,
+                        osc_data.dev.index(),
+                        osc_data.feature_index
+                    );
+                    command_toy(
+                        osc_data.dev,
+                        osc_data.feature_type,
+                        osc_data.float_level,
+                        osc_data.feature_index,
+                        osc_data.flip_float,
+                        osc_data.feature_levels,
+                    )
+                    .await;
                 }
             }
         }
 
         // Check for incoming update messages
         match data.in_signal.try_recv() {
-            Ok(signal) => {
-                match signal {
-                    ToyEmitterThreadSignal::StopExecution => return,
-                    ToyEmitterThreadSignal::UpdateRate(hz) => data.update_rate = hz,
-                }
+            Ok(signal) => match signal {
+                ToyEmitterThreadSignal::StopExecution => return,
+                ToyEmitterThreadSignal::UpdateRate(hz) => data.update_rate = hz,
             },
             Err(e) => match e {
                 TryRecvError::Disconnected => return,
                 TryRecvError::Empty => (),
-            }
+            },
         }
         sleep_for_constant_rate(data.update_rate, start).await;
     }

@@ -15,8 +15,8 @@ use crate::{
 };
 //use env_logger;
 
-mod frontend;
 mod error_signal_handler;
+mod frontend;
 mod osc;
 mod osc_api;
 mod toy_handling;

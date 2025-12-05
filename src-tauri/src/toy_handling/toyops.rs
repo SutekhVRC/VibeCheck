@@ -11,12 +11,13 @@ use ts_rs::TS;
 use crate::{
     config::toy::{VCToyAnatomy, VCToyConfig},
     frontend::{
-        FromFrontend, ToBackend, ToFrontend, frontend_types::{
+        frontend_types::{
             FeLevelTweaks, FeProcessingMode, FeToyParameter, FeVCFeatureType, FeVCToyFeature,
-        }
+        },
+        FromFrontend, ToBackend, ToFrontend,
     },
     toy_handling::input_processor::penetration_systems::{
-        PenetrationSystemType, sps::SPSProcessor, tps::TPSProcessor
+        sps::SPSProcessor, tps::TPSProcessor, PenetrationSystemType,
     },
     util::fs::{build_path_file, file_exists, get_config_dir},
     vcore::errors::{
@@ -296,7 +297,7 @@ impl VCToy {
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
 
-        let config_path = build_path_file(&[&config_dir, &format!("{}.json",self.toy_name)]);
+        let config_path = build_path_file(&[&config_dir, &format!("{}.json", self.toy_name)]);
 
         if !file_exists(&config_path) {
             self.config = None;

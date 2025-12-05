@@ -1,5 +1,5 @@
-use strum::Display;
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use ts_rs::TS;
 
 #[derive(Serialize, Clone, TS, Display, Debug)]

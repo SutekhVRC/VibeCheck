@@ -2,7 +2,10 @@ use log::error as logerr;
 
 use tauri::{AppHandle, Manager};
 
-use crate::{frontend::{error::FrontendError, frontend_types::{FeCoreEvent, FeToyEvent}}};
+use crate::frontend::{
+    error::FrontendError,
+    frontend_types::{FeCoreEvent, FeToyEvent},
+};
 
 pub fn emit_toy_event(app_handle: &AppHandle, event: FeToyEvent) {
     match app_handle.emit_all("fe_toy_event", &event) {

@@ -83,7 +83,8 @@ pub async fn parse_osc_message(
                                 input_processor_processed_value,
                                 feature.feature_index,
                                 feature.flip_input_float,
-                                feature.feature_levels);
+                                feature.feature_levels,
+                            );
                             emitter_thread_osc_tx.send(Some(osc_emit));
                         } else {
                             // If mode processor returns a value send to toy
@@ -98,7 +99,8 @@ pub async fn parse_osc_message(
                                 feature.flip_input_float,
                             )
                             .await
-                            {/*
+                            {
+                                /*
                                 command_toy(
                                     dev.clone(),
                                     feature.feature_type,
@@ -108,14 +110,15 @@ pub async fn parse_osc_message(
                                     feature.feature_levels,
                                 )
                                 .await;*/
-                            let osc_emit = OscParserData::new(
-                                dev.clone(),
-                                feature.feature_type,
-                                i,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels);
-                            emitter_thread_osc_tx.send(Some(osc_emit));
+                                let osc_emit = OscParserData::new(
+                                    dev.clone(),
+                                    feature.feature_type,
+                                    i,
+                                    feature.feature_index,
+                                    feature.flip_input_float,
+                                    feature.feature_levels,
+                                );
+                                emitter_thread_osc_tx.send(Some(osc_emit));
                             }
                         }
                     }
@@ -135,7 +138,8 @@ pub async fn parse_osc_message(
                         // Send to mode processor if specified (Raw = no mode processing)
                         if let ProcessingMode::Raw =
                             feature.penetration_system.pen_system_processing_mode
-                        {/*
+                        {
+                            /*
                             command_toy(
                                 dev.clone(),
                                 feature.feature_type,
@@ -151,9 +155,9 @@ pub async fn parse_osc_message(
                                 input_processor_processed_value,
                                 feature.feature_index,
                                 feature.flip_input_float,
-                                feature.feature_levels);
+                                feature.feature_levels,
+                            );
                             emitter_thread_osc_tx.send(Some(osc_emit));
-
                         } else if let Some(i) = mode_processor(
                             ModeProcessorInput::InputProcessor((
                                 ModeProcessorInputType::Float(input_processor_processed_value),
@@ -163,7 +167,8 @@ pub async fn parse_osc_message(
                             feature.flip_input_float,
                         )
                         .await
-                        {/*
+                        {
+                            /*
                             command_toy(
                                 dev.clone(),
                                 feature.feature_type,
@@ -179,7 +184,8 @@ pub async fn parse_osc_message(
                                 i,
                                 feature.feature_index,
                                 feature.flip_input_float,
-                                feature.feature_levels);
+                                feature.feature_levels,
+                            );
                             emitter_thread_osc_tx.send(Some(osc_emit));
                         }
                     }
@@ -221,7 +227,8 @@ pub async fn parse_osc_message(
                             feature.flip_input_float,
                         )
                         .await
-                        {/*
+                        {
+                            /*
                             command_toy(
                                 dev.clone(),
                                 feature.feature_type,
@@ -237,7 +244,8 @@ pub async fn parse_osc_message(
                                 mode_processed_value,
                                 feature.feature_index,
                                 feature.flip_input_float,
-                                feature.feature_levels);
+                                feature.feature_levels,
+                            );
                             emitter_thread_osc_tx.send(Some(osc_emit));
                         }
                     } // If no matching toy parameter skip feature
@@ -269,7 +277,8 @@ pub async fn parse_osc_message(
                             feature.flip_input_float,
                         )
                         .await
-                        {/*
+                        {
+                            /*
                             command_toy(
                                 dev.clone(),
                                 feature.feature_type,
@@ -285,7 +294,8 @@ pub async fn parse_osc_message(
                                 i,
                                 feature.feature_index,
                                 feature.flip_input_float,
-                                feature.feature_levels);
+                                feature.feature_levels,
+                            );
                             emitter_thread_osc_tx.send(Some(osc_emit));
                         }
                     }

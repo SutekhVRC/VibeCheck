@@ -138,7 +138,6 @@ impl VibeCheckState {
     }
 
     pub fn global_msg_handler_start(&mut self) -> Result<(), VibeCheckError> {
-
         if self.app_handle.is_none() {
             logerr!("global_msg_handler_start() called but no app_handle was set");
             return Err(VibeCheckError::new(
@@ -148,9 +147,13 @@ impl VibeCheckState {
         }
 
         // Create error handling/passig channels
-        let (error_comm_tx, error_comm_rx): (UnboundedSender<VCError>, UnboundedReceiver<VCError>) = unbounded_channel();
+        let (error_comm_tx, error_comm_rx): (UnboundedSender<VCError>, UnboundedReceiver<VCError>) =
+            unbounded_channel();
         self.error_comm_tx = Some(error_comm_tx);
-        self.global_message_handler_thread = Some(self.async_rt.spawn(error_message_handler(self.app_handle.as_ref().unwrap().clone(),error_comm_rx)));
+        self.global_message_handler_thread = Some(self.async_rt.spawn(error_message_handler(
+            self.app_handle.as_ref().unwrap().clone(),
+            error_comm_rx,
+        )));
         Ok(())
     }
 

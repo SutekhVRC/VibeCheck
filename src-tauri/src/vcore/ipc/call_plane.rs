@@ -4,7 +4,8 @@ use log::{debug, error as logerr, info, trace, warn};
 
 use crate::{
     frontend::{
-        ToFrontend, frontend_types::{FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig}
+        frontend_types::{FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig},
+        ToFrontend,
     },
     osc::OSCNetworking,
     toy_handling::{
@@ -16,7 +17,9 @@ use crate::{
     vcore::{
         config::app::VibeCheckConfig,
         errors::{
-            VCError, VcoreError, backend::{ToyAlterError, VibeCheckConfigError, VibeCheckFSError}, frontend::VCFeError
+            backend::{ToyAlterError, VibeCheckConfigError, VibeCheckFSError},
+            frontend::VCFeError,
+            VCError, VcoreError,
         },
         ipc::emit_plane::emit_toy_event,
         state::{RunningState, VCStateMutex},
@@ -240,7 +243,9 @@ pub async fn native_vibecheck_start_bt_scan(
     if let Err(e) = vc_lock.bp_client.as_ref().unwrap().start_scanning().await {
         let _ = vc_lock
             .error_comm_tx
-            .as_ref().unwrap().send(VCError::HandlingErr(HandlerErr {
+            .as_ref()
+            .unwrap()
+            .send(VCError::HandlingErr(HandlerErr {
                 id: -2,
                 msg: format!("Failed to scan for bluetooth devices. {}", e),
             }));
@@ -267,7 +272,9 @@ pub async fn native_vibecheck_stop_bt_scan(
     if let Err(e) = vc_lock.bp_client.as_ref().unwrap().stop_scanning().await {
         let _ = vc_lock
             .error_comm_tx
-            .as_ref().unwrap().send(VCError::HandlingErr(HandlerErr {
+            .as_ref()
+            .unwrap()
+            .send(VCError::HandlingErr(HandlerErr {
                 id: -2,
                 msg: format!("Failed to stop scan for bluetooth devices. {}", e),
             }));
