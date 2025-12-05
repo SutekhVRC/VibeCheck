@@ -178,7 +178,7 @@ pub async fn toy_management_handler(
             continue;
         }
 
-        let toy_async_rt_root: Arc<Mutex<RawMutex, Option<Runtime>>> =
+        let toy_async_rt: Arc<Mutex<RawMutex, Option<Runtime>>> =
             Arc::new(Mutex::new(Some(Runtime::new().unwrap())));
         info!("Started listening!");
         // Recv events (listening)
@@ -194,13 +194,13 @@ pub async fn toy_management_handler(
         // Create toy threads
         for toy in &core_toy_manager.online_toys {
             let toy_thread_function_run = toy_thread_function(
-                toy_async_rt_root.clone(),
+                toy_async_rt.clone(),
                 toy.1.device_handle.clone(),
                 toy_sig_bcst_tx.subscribe(),
                 toy.1.clone(),
             );
             let new_thread = {
-                toy_async_rt_root
+                toy_async_rt
                     .clone()
                     .lock()
                     .as_ref()
@@ -239,13 +239,13 @@ pub async fn toy_management_handler(
                         ToyUpdate::AddToy(toy) => {
                             core_toy_manager.online_toys.insert(toy.toy_id, toy.clone());
                             let toy_thread_function_run = toy_thread_function(
-                                toy_async_rt_root.clone(),
+                                toy_async_rt.clone(),
                                 toy.device_handle.clone(),
                                 toy_sig_bcst_tx.subscribe(),
                                 toy.clone(),
                             );
                             let new_thread = {
-                                toy_async_rt_root.clone().lock().as_ref().unwrap().spawn(
+                                toy_async_rt.clone().lock().as_ref().unwrap().spawn(
                                     async move {
                                         toy_thread_function_run.await;
                                     },
@@ -309,7 +309,7 @@ pub async fn toy_management_handler(
                             }
                             running_toy_ths.clear();
                             drop(_toy_sig_bcst_rx); // Causes OSC listener to die
-                            toy_async_rt_root
+                            toy_async_rt
                                 .clone()
                                 .lock()
                                 .take()
@@ -338,7 +338,7 @@ pub async fn toy_management_handler(
                             }
                             running_toy_ths.clear();
                             drop(_toy_sig_bcst_rx); // Causes OSC listener to die
-                            toy_async_rt_root
+                            toy_async_rt
                                 .clone()
                                 .lock()
                                 .take()
