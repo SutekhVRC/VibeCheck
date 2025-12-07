@@ -1,0 +1,45 @@
+name: create-test-binaries
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-test-binaries:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            bundle: deb
+            artifact-path: src-tauri/target/release/bundle/deb/*.deb
+          - os: windows-latest
+            bundle: msi
+            artifact-path: src-tauri/target/release/bundle/msi/*.msi
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v4
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+      - name: install app dependencies
+        run: yarn
+      - name: build ${{ matrix.bundle }} test binary
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: "-b ${{ matrix.bundle }}"
+      - name: upload ${{ matrix.bundle }} artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-${{ matrix.bundle }}-test-binary
+          path: ${{ matrix.artifact-path }}
