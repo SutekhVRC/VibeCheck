@@ -17,6 +17,7 @@ use crate::{
 
 mod error_signal_handler;
 mod frontend;
+mod mock;
 mod osc;
 mod osc_api;
 mod toy_handling;
@@ -24,6 +25,13 @@ mod util;
 mod vcore;
 
 fn main() {
+    #[cfg(debug_assertions)]
+    let mock_toys_enabled = std::env::var("VC_MOCK_TOYS")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+    #[cfg(not(debug_assertions))]
+    let mock_toys_enabled = false;
+
     #[cfg(debug_assertions)]
     {
         //tracing_subscriber::fmt::init();
@@ -42,6 +50,7 @@ fn main() {
 
     let vibecheck_state_pointer = Arc::new(Mutex::new(vcore::state::VibeCheckState::new(
         vibecheck_config,
+        mock_toys_enabled,
     )));
     trace!("VibeCheckState created");
 
@@ -137,12 +146,16 @@ fn main() {
         trace!("ToyManager initialized");
         vc_state.identifier = identifier;
         trace!("App Identifier set");
-        vc_state.start_tmh().unwrap();
-        trace!("Started TMH");
-        vc_state.init_ceh().unwrap();
-        trace!("Started CEH");
-        vc_state.start_disabled_listener().unwrap();
-        trace!("Started DOL");
+        if mock_toys_enabled {
+            info!("Mock toy mode enabled; skipping hardware initialization");
+        } else {
+            vc_state.start_tmh().unwrap();
+            trace!("Started TMH");
+            vc_state.init_ceh().unwrap();
+            trace!("Started CEH");
+            vc_state.start_disabled_listener().unwrap();
+            trace!("Started DOL");
+        }
     }
 
     app.run(|_app_handle, event| {

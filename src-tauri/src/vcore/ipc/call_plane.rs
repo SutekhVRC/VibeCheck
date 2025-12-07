@@ -57,6 +57,10 @@ pub async fn native_vibecheck_disable(
 ) -> Result<(), VCFeError> {
     let mut vc_lock = vc_state.0.lock();
     trace!("Got vc_lock");
+    if vc_lock.mock_toys {
+        vc_lock.running = RunningState::Stopped;
+        return Ok(());
+    }
     if let RunningState::Stopped = vc_lock.running {
         return Err(VCFeError::DisableFailure);
     }
@@ -103,6 +107,10 @@ pub async fn native_vibecheck_enable(
     // Send Start listening signal
 
     let mut vc_lock = vc_state.0.lock();
+    if vc_lock.mock_toys {
+        vc_lock.running = RunningState::Running;
+        return Ok(());
+    }
     if let RunningState::Running = vc_lock.running {
         //return Err(VCFeError::EnableFailure);
         // Don't fail if already enabled
@@ -232,6 +240,10 @@ pub async fn native_vibecheck_start_bt_scan(
 ) -> Result<(), VCFeError> {
     let vc_lock = vc_state.0.lock();
 
+    if vc_lock.mock_toys {
+        return Ok(());
+    }
+
     if vc_lock.bp_client.is_none() {
         // ButtPlugClient not created (CEH is probably not running)
         return Err(VCFeError::StartScanFailure(
@@ -260,6 +272,10 @@ pub async fn native_vibecheck_stop_bt_scan(
     vc_state: tauri::State<'_, VCStateMutex>,
 ) -> Result<(), VCFeError> {
     let vc_lock = vc_state.0.lock();
+
+    if vc_lock.mock_toys {
+        return Ok(());
+    }
 
     if vc_lock.bp_client.is_none() {
         // ButtPlugClient not created (CEH is probably not running)
