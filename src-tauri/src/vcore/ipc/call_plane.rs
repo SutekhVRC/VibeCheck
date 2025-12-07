@@ -26,6 +26,9 @@ use crate::{
     },
 };
 
+use std::future::Future;
+use std::pin::Pin;
+
 #[derive(Clone, Debug)]
 pub enum ToyUpdate {
     AlterToy(VCToy),
@@ -52,103 +55,122 @@ pub enum ToyManagementEvent {
     Sig(TmSig),
 }
 
-pub async fn native_vibecheck_disable(
-    vc_state: tauri::State<'_, VCStateMutex>,
-) -> Result<(), VCFeError> {
-    let mut vc_lock = vc_state.0.lock();
-    trace!("Got vc_lock");
-    if vc_lock.mock_toys {
-        vc_lock.running = RunningState::Stopped;
-        return Ok(());
-    }
-    if let RunningState::Stopped = vc_lock.running {
-        return Err(VCFeError::DisableFailure);
-    }
+type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
 
-    if vc_lock.bp_client.is_none() {
-        info!("ButtPlugClient is None");
-        return Err(VCFeError::DisableFailure);
-    }
-
-    trace!("Calling destroy_toy_update_handler()");
-    vc_lock.destroy_toy_update_handler().await;
-    trace!("TUH destroyed");
-
-    let bpc = vc_lock.bp_client.as_ref().unwrap();
-    let _ = bpc.stop_scanning().await;
-    let _ = bpc.stop_all_devices().await;
-
-    info!("ButtplugClient stopped operations");
-
-    vc_lock
-        .tme_send_tx
-        .send(ToyManagementEvent::Sig(TmSig::TMHReset))
-        .unwrap();
-    info!("Sent TMHReset signal");
-
-    vc_lock.running = RunningState::Stopped;
-
-    info!("Starting disabled state OSC cmd listener");
-    match vc_lock.start_disabled_listener() {
-        Ok(()) => (),
-        Err(_e) => {
-            return Err(VCFeError::Vcore(
-                VcoreError::DisabledOscListenerThreadRunning,
-            ))
-        }
-    }
-
-    Ok(())
+trait ToyRuntime {
+    fn enable<'a>(
+        &'a self,
+        vc_state: tauri::State<'a, VCStateMutex>,
+    ) -> BoxFuture<'a, Result<(), VCFeError>>;
+    fn disable<'a>(
+        &'a self,
+        vc_state: tauri::State<'a, VCStateMutex>,
+    ) -> BoxFuture<'a, Result<(), VCFeError>>;
+    fn start_scan<'a>(
+        &'a self,
+        vc_state: tauri::State<'a, VCStateMutex>,
+    ) -> BoxFuture<'a, Result<(), VCFeError>>;
+    fn stop_scan<'a>(
+        &'a self,
+        vc_state: tauri::State<'a, VCStateMutex>,
+    ) -> BoxFuture<'a, Result<(), VCFeError>>;
+    fn alter_toy<'a>(
+        &'a self,
+        vc_state: tauri::State<'a, VCStateMutex>,
+        app_handle: tauri::AppHandle,
+        altered: VCToy,
+    ) -> BoxFuture<'a, Result<(), ToyAlterError>>;
 }
 
-pub async fn native_vibecheck_enable(
-    vc_state: tauri::State<'_, VCStateMutex>,
-) -> Result<(), VCFeError> {
-    // Send Start listening signal
+struct RealToyRuntime;
+struct MockToyRuntime;
 
-    let mut vc_lock = vc_state.0.lock();
-    if vc_lock.mock_toys {
-        vc_lock.running = RunningState::Running;
-        return Ok(());
+fn runtime_for(vc_state: &tauri::State<'_, VCStateMutex>) -> &'static dyn ToyRuntime {
+    if vc_state.0.lock().mock_toys {
+        &MockToyRuntime
+    } else {
+        &RealToyRuntime
     }
-    if let RunningState::Running = vc_lock.running {
-        //return Err(VCFeError::EnableFailure);
-        // Don't fail if already enabled
-        return Ok(());
+}
+
+impl ToyRuntime for MockToyRuntime {
+    fn enable<'a>(
+        &'a self,
+        vc_state: tauri::State<'a, VCStateMutex>,
+    ) -> BoxFuture<'a, Result<(), VCFeError>> {
+        Box::pin(async move {
+            let mut vc_lock = vc_state.0.lock();
+            vc_lock.running = RunningState::Running;
+            Ok(())
+        })
     }
 
-    if vc_lock.bp_client.is_none() {
-        return Err(VCFeError::EnableFailure);
+    fn disable<'a>(
+        &'a self,
+        vc_state: tauri::State<'a, VCStateMutex>,
+    ) -> BoxFuture<'a, Result<(), VCFeError>> {
+        Box::pin(async move {
+            let mut vc_lock = vc_state.0.lock();
+            vc_lock.running = RunningState::Stopped;
+            Ok(())
+        })
     }
 
-    info!("Stopping DOL");
-    vc_lock.stop_disabled_listener().await;
+    fn start_scan<'a>(
+        &'a self,
+        _vc_state: tauri::State<'a, VCStateMutex>,
+    ) -> BoxFuture<'a, Result<(), VCFeError>> {
+        Box::pin(async { Ok(()) })
+    }
 
-    /* No longer disabling CEH
-    vc_lock.init_ceh().await;
-    info!("CEH initialized");
-    */
+    fn stop_scan<'a>(
+        &'a self,
+        _vc_state: tauri::State<'a, VCStateMutex>,
+    ) -> BoxFuture<'a, Result<(), VCFeError>> {
+        Box::pin(async { Ok(()) })
+    }
 
-    vc_lock
-        .tme_send_tx
-        .send(ToyManagementEvent::Sig(TmSig::StartListening(
-            vc_lock.config.networking.clone(),
-        )))
-        .unwrap();
+    fn alter_toy<'a>(
+        &'a self,
+        _vc_state: tauri::State<'a, VCStateMutex>,
+        _app_handle: tauri::AppHandle,
+        _altered: VCToy,
+    ) -> BoxFuture<'a, Result<(), ToyAlterError>> {
+        Box::pin(async { Ok(()) })
+    }
+}
 
-    // Check if listening succeded or not
-    match vc_lock.tme_recv_rx.recv().await {
-        Some(tme) => {
-            match tme {
-                ToyManagementEvent::Sig(sig) => {
-                    match sig {
+impl ToyRuntime for RealToyRuntime {
+    fn enable<'a>(
+        &'a self,
+        vc_state: tauri::State<'a, VCStateMutex>,
+    ) -> BoxFuture<'a, Result<(), VCFeError>> {
+        Box::pin(async move {
+            let mut vc_lock = vc_state.0.lock();
+            if let RunningState::Running = vc_lock.running {
+                return Ok(());
+            }
+
+            if vc_lock.bp_client.is_none() {
+                return Err(VCFeError::EnableFailure);
+            }
+
+            info!("Stopping DOL");
+            vc_lock.stop_disabled_listener().await;
+
+            vc_lock
+                .tme_send_tx
+                .send(ToyManagementEvent::Sig(TmSig::StartListening(
+                    vc_lock.config.networking.clone(),
+                )))
+                .unwrap();
+
+            match vc_lock.tme_recv_rx.recv().await {
+                Some(tme) => match tme {
+                    ToyManagementEvent::Sig(sig) => match sig {
                         TmSig::Listening => {
                             vc_lock.running = RunningState::Running;
-
-                            // Enable successful
-                            // Start TUH thread
                             vc_lock.init_toy_update_handler().await;
-
                             Ok(())
                         }
                         TmSig::BindError => {
@@ -162,23 +184,198 @@ pub async fn native_vibecheck_enable(
                             Err(VCFeError::EnableBindFailure)
                         }
                         _ => {
-                            //Did not get the correct signal oops
                             warn!("Got incorrect TME signal.");
                             Err(VCFeError::EnableFailure)
                         }
+                    },
+                    _ => {
+                        warn!("Got ToyUpdate in vc_enable().");
+                        Err(VCFeError::EnableFailure)
                     }
-                }
-                _ => {
-                    warn!("Got ToyUpdate in vc_enable().");
+                },
+                None => {
+                    warn!("Failed to recv from TME receiver.");
                     Err(VCFeError::EnableFailure)
-                } // Got unexpected Sig
+                }
             }
-        }
-        None => {
-            warn!("Failed to recv from TME receiver.");
-            Err(VCFeError::EnableFailure)
-        } // Recv failed
-    } // tme recv
+        })
+    }
+
+    fn disable<'a>(
+        &'a self,
+        vc_state: tauri::State<'a, VCStateMutex>,
+    ) -> BoxFuture<'a, Result<(), VCFeError>> {
+        Box::pin(async move {
+            let mut vc_lock = vc_state.0.lock();
+            trace!("Got vc_lock");
+            if let RunningState::Stopped = vc_lock.running {
+                return Err(VCFeError::DisableFailure);
+            }
+
+            if vc_lock.bp_client.is_none() {
+                info!("ButtPlugClient is None");
+                return Err(VCFeError::DisableFailure);
+            }
+
+            trace!("Calling destroy_toy_update_handler()");
+            vc_lock.destroy_toy_update_handler().await;
+            trace!("TUH destroyed");
+
+            let bpc = vc_lock.bp_client.as_ref().unwrap();
+            let _ = bpc.stop_scanning().await;
+            let _ = bpc.stop_all_devices().await;
+
+            info!("ButtplugClient stopped operations");
+
+            vc_lock
+                .tme_send_tx
+                .send(ToyManagementEvent::Sig(TmSig::TMHReset))
+                .unwrap();
+            info!("Sent TMHReset signal");
+
+            vc_lock.running = RunningState::Stopped;
+
+            info!("Starting disabled state OSC cmd listener");
+            match vc_lock.start_disabled_listener() {
+                Ok(()) => (),
+                Err(_e) => {
+                    return Err(VCFeError::Vcore(
+                        VcoreError::DisabledOscListenerThreadRunning,
+                    ))
+                }
+            }
+
+            Ok(())
+        })
+    }
+
+    fn start_scan<'a>(
+        &'a self,
+        vc_state: tauri::State<'a, VCStateMutex>,
+    ) -> BoxFuture<'a, Result<(), VCFeError>> {
+        Box::pin(async move {
+            let vc_lock = vc_state.0.lock();
+
+            if vc_lock.bp_client.is_none() {
+                return Err(VCFeError::StartScanFailure(
+                    "ButtplugClient is None".to_string(),
+                ));
+            }
+
+            if let Err(e) =
+                vc_lock
+                    .tme_send_tx
+                    .send(ToyManagementEvent::Sig(TmSig::StartListening(
+                        vc_lock.config.networking.clone(),
+                    )))
+            {
+                logerr!("Failed to send StartListening sig to tmh.");
+                return Err(VCFeError::StartScanFailure(e.to_string()));
+            }
+
+            info!("StartListening sent to TMH. Trying to start scanning..");
+
+            if let Err(e) = vc_lock.bp_client.as_ref().unwrap().start_scanning().await {
+                let _ = vc_lock
+                    .error_comm_tx
+                    .as_ref()
+                    .unwrap()
+                    .send(VCError::HandlingErr(HandlerErr {
+                        id: -2,
+                        msg: format!("Failed to scan for bluetooth devices. {}", e),
+                    }));
+                logerr!("Failed to scan.");
+                return Err(VCFeError::StartScanFailure(e.to_string()));
+            }
+            info!("Started Scanning..");
+            Ok(())
+        })
+    }
+
+    fn stop_scan<'a>(
+        &'a self,
+        vc_state: tauri::State<'a, VCStateMutex>,
+    ) -> BoxFuture<'a, Result<(), VCFeError>> {
+        Box::pin(async move {
+            let vc_lock = vc_state.0.lock();
+
+            if vc_lock.bp_client.is_none() {
+                return Err(VCFeError::StopScanFailure(
+                    "ButtPlugClient is None".to_string(),
+                ));
+            }
+
+            if let Err(e) = vc_lock.bp_client.as_ref().unwrap().stop_scanning().await {
+                let _ = vc_lock
+                    .error_comm_tx
+                    .as_ref()
+                    .unwrap()
+                    .send(VCError::HandlingErr(HandlerErr {
+                        id: -2,
+                        msg: format!("Failed to stop scan for bluetooth devices. {}", e),
+                    }));
+                logerr!("Failed to stop scan.");
+                return Err(VCFeError::StopScanFailure(e.to_string()));
+            }
+            info!("Stopped Scanning..");
+            Ok(())
+        })
+    }
+
+    fn alter_toy<'a>(
+        &'a self,
+        vc_state: tauri::State<'a, VCStateMutex>,
+        app_handle: tauri::AppHandle,
+        altered: VCToy,
+    ) -> BoxFuture<'a, Result<(), ToyAlterError>> {
+        Box::pin(async move {
+            let alter_clone = altered.clone();
+            altered.save_toy_config();
+            info!("Altered toy config: {:?}", altered);
+
+            let send_res = {
+                let vc_lock = vc_state.0.lock();
+                vc_lock
+                    .tme_send_tx
+                    .send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)))
+            };
+
+            emit_toy_event(
+                &app_handle,
+                FeToyEvent::Update({
+                    FeVCToy {
+                        toy_id: Some(alter_clone.toy_id),
+                        toy_name: alter_clone.toy_name,
+                        toy_anatomy: alter_clone.config.as_ref().unwrap().anatomy.to_fe(),
+                        toy_power: alter_clone.toy_power,
+                        toy_connected: alter_clone.toy_connected,
+                        features: alter_clone.parsed_toy_features.features.to_frontend(),
+                        listening: alter_clone.listening,
+                        osc_data: alter_clone.osc_data,
+                        bt_update_rate: alter_clone.bt_update_rate,
+                        sub_id: alter_clone.sub_id,
+                    }
+                }),
+            );
+
+            match send_res {
+                Ok(()) => Ok(()),
+                Err(_e) => Err(ToyAlterError::TMESendFailure),
+            }
+        })
+    }
+}
+
+pub async fn native_vibecheck_disable(
+    vc_state: tauri::State<'_, VCStateMutex>,
+) -> Result<(), VCFeError> {
+    runtime_for(&vc_state).disable(vc_state).await
+}
+
+pub async fn native_vibecheck_enable(
+    vc_state: tauri::State<'_, VCStateMutex>,
+) -> Result<(), VCFeError> {
+    runtime_for(&vc_state).enable(vc_state).await
 }
 
 pub fn native_osc_query_start(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), VCFeError> {
@@ -238,67 +435,13 @@ pub fn osc_query_force_populate(vc_state: tauri::State<'_, VCStateMutex>) -> Res
 pub async fn native_vibecheck_start_bt_scan(
     vc_state: tauri::State<'_, VCStateMutex>,
 ) -> Result<(), VCFeError> {
-    let vc_lock = vc_state.0.lock();
-
-    if vc_lock.mock_toys {
-        return Ok(());
-    }
-
-    if vc_lock.bp_client.is_none() {
-        // ButtPlugClient not created (CEH is probably not running)
-        return Err(VCFeError::StartScanFailure(
-            "ButtplugClient is None".to_string(),
-        ));
-    }
-
-    // Start scanning for toys
-    if let Err(e) = vc_lock.bp_client.as_ref().unwrap().start_scanning().await {
-        let _ = vc_lock
-            .error_comm_tx
-            .as_ref()
-            .unwrap()
-            .send(VCError::HandlingErr(HandlerErr {
-                id: -2,
-                msg: format!("Failed to scan for bluetooth devices. {}", e),
-            }));
-        logerr!("Failed to scan.");
-        return Err(VCFeError::StartScanFailure(e.to_string()));
-    }
-    info!("Started Scanning..");
-    Ok(())
+    runtime_for(&vc_state).start_scan(vc_state).await
 }
 
 pub async fn native_vibecheck_stop_bt_scan(
     vc_state: tauri::State<'_, VCStateMutex>,
 ) -> Result<(), VCFeError> {
-    let vc_lock = vc_state.0.lock();
-
-    if vc_lock.mock_toys {
-        return Ok(());
-    }
-
-    if vc_lock.bp_client.is_none() {
-        // ButtPlugClient not created (CEH is probably not running)
-        return Err(VCFeError::StopScanFailure(
-            "ButtPlugClient is None".to_string(),
-        ));
-    }
-
-    // Stop scanning for toys
-    if let Err(e) = vc_lock.bp_client.as_ref().unwrap().stop_scanning().await {
-        let _ = vc_lock
-            .error_comm_tx
-            .as_ref()
-            .unwrap()
-            .send(VCError::HandlingErr(HandlerErr {
-                id: -2,
-                msg: format!("Failed to stop scan for bluetooth devices. {}", e),
-            }));
-        logerr!("Failed to stop scan.");
-        return Err(VCFeError::StopScanFailure(e.to_string()));
-    }
-    info!("Stopped Scanning..");
-    Ok(())
+    runtime_for(&vc_state).stop_scan(vc_state).await
 }
 
 pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> FeVibeCheckConfig {
@@ -384,39 +527,7 @@ pub fn native_alter_toy(
     app_handle: tauri::AppHandle,
     altered: VCToy,
 ) -> Result<(), ToyAlterError> {
-    let alter_clone = altered.clone();
-    altered.save_toy_config();
-    info!("Altered toy config: {:?}", altered);
-
-    let send_res = {
-        let vc_lock = vc_state.0.lock();
-        vc_lock
-            .tme_send_tx
-            .send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)))
-    };
-
-    emit_toy_event(
-        &app_handle,
-        FeToyEvent::Update({
-            FeVCToy {
-                toy_id: Some(alter_clone.toy_id),
-                toy_name: alter_clone.toy_name,
-                toy_anatomy: alter_clone.config.as_ref().unwrap().anatomy.to_fe(),
-                toy_power: alter_clone.toy_power,
-                toy_connected: alter_clone.toy_connected,
-                features: alter_clone.parsed_toy_features.features.to_frontend(),
-                listening: alter_clone.listening,
-                osc_data: alter_clone.osc_data,
-                bt_update_rate: alter_clone.bt_update_rate,
-                sub_id: alter_clone.sub_id,
-            }
-        }),
-    );
-
-    match send_res {
-        Ok(()) => Ok(()),
-        Err(_e) => Err(ToyAlterError::TMESendFailure),
-    }
+    tauri::async_runtime::block_on(runtime_for(&vc_state).alter_toy(vc_state, app_handle, altered))
 }
 
 pub fn native_clear_osc_config() -> Result<(), VibeCheckFSError> {
