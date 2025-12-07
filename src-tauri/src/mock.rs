@@ -53,7 +53,7 @@ pub fn mock_toys() -> Vec<FeVCToy> {
             ],
             listening: true,
             osc_data: true,
-            bt_update_rate: 1000,
+            bt_update_rate: 20,
             sub_id: 0,
         },
         FeVCToy {
@@ -65,7 +65,7 @@ pub fn mock_toys() -> Vec<FeVCToy> {
             features: vec![vibrator_feature(0, "/avatar/parameters/MockRotation")],
             listening: true,
             osc_data: false,
-            bt_update_rate: 800,
+            bt_update_rate: 20,
             sub_id: 1,
         },
     ]

@@ -116,4 +116,8 @@ export const TOOLTIP = {
     text: "Show advanced options for features [vibrator, constrict, oscillate, etc], will show options like idle speed, flip input, simulate",
     link: "",
   },
+  ToyUpdateRate: {
+    text: "Set how frequently to send Bluetooth updates to this toy (in Hz). Higher values feel more responsive but use more bandwidth and battery.",
+    link: "ToyOptions",
+  },
 } as const;

@@ -13,14 +13,16 @@ type ToyMap = {
 };
 
 export async function handleToyAlter(newToy: FeVCToy) {
+  // BigInt cannot be serialized for the Tauri invoke call, so force a number.
+  const safeToy = { ...newToy, bt_update_rate: Number(newToy.bt_update_rate) };
   try {
     if (newToy.toy_connected) {
       await invoke(INVOKE.ALTER_TOY, {
-        mutate: { Connected: newToy },
+        mutate: { Connected: safeToy },
       });
     } else {
       await invoke(INVOKE.ALTER_TOY, {
-        mutate: { Disconnected: newToy },
+        mutate: { Disconnected: safeToy },
       });
     }
   } catch (e) {
