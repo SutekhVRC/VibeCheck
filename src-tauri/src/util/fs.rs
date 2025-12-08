@@ -61,7 +61,7 @@ pub fn build_path_dir(path: &[&str]) -> String {
     }
     #[cfg(target_os = "windows")]
     {
-        format!("{}\\{}\\", path[0], path[1]);
+        format!("{}\\{}\\", path[0], path[1])
     }
 }
 
@@ -72,6 +72,6 @@ pub fn build_path_file(path: &[&str]) -> String {
     }
     #[cfg(target_os = "windows")]
     {
-        format!("{}\\{}", path[0], path[1]);
+        format!("{}\\{}", path[0], path[1])
     }
 }
