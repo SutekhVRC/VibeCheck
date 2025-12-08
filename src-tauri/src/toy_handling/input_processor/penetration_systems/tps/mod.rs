@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::toy_handling::{input_processor::InputProcessor, mode_processor::core::ModeProcessorInputType};
+use crate::toy_handling::{
+    input_processor::InputProcessor, mode_processor::core::ModeProcessorInputType,
+};
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize, TS)]
 pub struct TPSProcessor {
@@ -9,7 +11,7 @@ pub struct TPSProcessor {
 }
 
 impl InputProcessor for TPSProcessor {
-    fn is_parameter(&self, param: &String) -> bool {
+    fn is_parameter(&self, param: &str) -> bool {
         param.starts_with("/avatar/parameters/TPS_Internal/")
     }
 

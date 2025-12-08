@@ -4,4 +4,4 @@ import type { FePenetrationSystem } from "./FePenetrationSystem";
 import type { FeToyParameter } from "./FeToyParameter";
 import type { FeVCFeatureType } from "./FeVCFeatureType";
 
-export interface FeVCToyFeature { feature_enabled: boolean, feature_type: FeVCFeatureType, osc_parameters: Array<FeToyParameter>, penetration_system: FePenetrationSystem, feature_index: number, flip_input_float: boolean, feature_levels: FeLevelTweaks, smooth_enabled: boolean, rate_enabled: boolean, }
+export type FeVCToyFeature = { feature_enabled: boolean, feature_type: FeVCFeatureType, osc_parameters: Array<FeToyParameter>, penetration_system: FePenetrationSystem, feature_index: number, flip_input_float: boolean, feature_levels: FeLevelTweaks, smooth_enabled: boolean, rate_enabled: boolean, };

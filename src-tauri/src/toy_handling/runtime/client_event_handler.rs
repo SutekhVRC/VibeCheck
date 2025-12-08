@@ -1,14 +1,31 @@
 use std::{sync::Arc, time::Duration};
 
+use crate::{
+    frontend::{
+        frontend_types::{FeCoreEvent, FeScanEvent, FeToyEvent, FeVCToy},
+        ToFrontend,
+    },
+    toy_handling::{
+        toyops::{VCToy, VCToyFeatures},
+        ToyPower,
+    },
+    vcore::{
+        errors::VCError,
+        ipc::{
+            call_plane::{ToyManagementEvent, ToyUpdate},
+            emit_plane::{emit_core_event, emit_toy_event},
+        },
+        state::VibeCheckState,
+    },
+};
 use buttplug::client::ButtplugClientEvent;
+use futures::StreamExt;
 use futures_timer::Delay;
 use log::{error as logerr, info, trace, warn};
 use parking_lot::Mutex;
-use tauri::{api::notification::Notification, AppHandle, Manager};
-use tokio::sync::mpsc::UnboundedSender;
 use std::sync::mpsc::Sender;
-use futures::StreamExt;
-use crate::{frontend::{frontend_types::{FeCoreEvent, FeScanEvent, FeToyEvent, FeVCToy}, ToFrontend}, toy_handling::{toyops::{VCToy, VCToyFeatures}, ToyPower}, vcore::core::{ToyManagementEvent, ToyUpdate, VCError, VibeCheckState}};
+use tauri::{api::notification::Notification, AppHandle};
+use tokio::sync::mpsc::UnboundedSender;
 
 /*
     This handler will handle the adding and removal of toys
@@ -23,7 +40,7 @@ pub async fn client_event_handler(
     identifier: String,
     app_handle: AppHandle,
     tme_send: UnboundedSender<ToyManagementEvent>,
-    _error_tx: Sender<VCError>,
+    _error_tx: UnboundedSender<VCError>,
 ) {
     // Listen for toys and add them if it connects send add update
     // If a toy disconnects send remove update
@@ -75,13 +92,14 @@ pub async fn client_event_handler(
                         toy_features: dev.message_attributes().clone(),
                         parsed_toy_features: VCToyFeatures::new(),
                         osc_data: false,
+                        bt_update_rate: 20,
                         listening: false,
                         device_handle: dev.clone(),
                         config: None,
                         sub_id,
                     };
 
-                    // Load config with toy name
+                    // Load config with existing toy name
                     match toy.load_toy_config() {
                         Ok(()) => info!("Toy config loaded successfully."),
                         Err(e) => warn!("Toy config failed to load: {:?}", e),
@@ -115,8 +133,8 @@ pub async fn client_event_handler(
                         .send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone())))
                         .unwrap();
 
-                    let _ = app_handle.emit_all(
-                        "fe_toy_event",
+                    emit_toy_event(
+                        &app_handle,
                         FeToyEvent::Add({
                             FeVCToy {
                                 toy_id: Some(toy.toy_id),
@@ -127,6 +145,7 @@ pub async fn client_event_handler(
                                 features: toy.parsed_toy_features.features.to_frontend(),
                                 listening: toy.listening,
                                 osc_data: toy.osc_data,
+                                bt_update_rate: toy.bt_update_rate,
                                 sub_id: toy.sub_id,
                             }
                         }),
@@ -169,8 +188,7 @@ pub async fn client_event_handler(
                             .send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(dev.index())))
                             .unwrap();
 
-                        let _ =
-                            app_handle.emit_all("fe_toy_event", FeToyEvent::Remove(dev.index()));
+                        emit_toy_event(&app_handle, FeToyEvent::Remove(dev.index()));
 
                         {
                             let vc_lock = vibecheck_state_pointer.lock();
@@ -190,14 +208,20 @@ pub async fn client_event_handler(
                                     .async_rt
                                     .spawn(vc_lock.bp_client.as_ref().unwrap().start_scanning());
                             }
-                            let _ = app_handle
-                                .emit_all("fe_core_event", FeCoreEvent::Scan(FeScanEvent::Start));
+
+                            emit_core_event(&app_handle, FeCoreEvent::Scan(FeScanEvent::Start));
                         }
                     }
                 }
                 ButtplugClientEvent::ScanningFinished => info!("Scanning finished!"),
-                ButtplugClientEvent::ServerDisconnect => {warn!("ServerDisconnect");break},
-                ButtplugClientEvent::PingTimeout => {warn!("PingTimeout");break},
+                ButtplugClientEvent::ServerDisconnect => {
+                    warn!("ServerDisconnect");
+                    break;
+                }
+                ButtplugClientEvent::PingTimeout => {
+                    warn!("PingTimeout");
+                    break;
+                }
                 ButtplugClientEvent::Error(e) => {
                     logerr!("Client Event Error: {:?}", e);
                 }

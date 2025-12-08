@@ -58,4 +58,3 @@ pub fn parse_smoothing(
     // Continue receiving smooth floats
     SmoothParser::Smoothing
 }
-

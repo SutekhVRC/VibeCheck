@@ -2,6 +2,7 @@
  * Frontend type binding generation
  */
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use ts_rs::TS;
 
 use crate::toy_handling::{
@@ -31,7 +32,7 @@ pub struct FeOSCNetworking {
     pub osc_query_enabled: bool,
 }
 
-#[derive(Serialize, Clone, TS)]
+#[derive(Serialize, Clone, TS, Display)]
 #[ts(export)]
 #[serde(tag = "kind", content = "data")]
 pub enum FeToyEvent {
@@ -55,7 +56,7 @@ pub enum FeStateEvent {
     Disable,
 }
 
-#[derive(Serialize, Clone, TS)]
+#[derive(Serialize, Clone, TS, Display)]
 #[ts(export)]
 #[serde(tag = "kind", content = "data")]
 pub enum FeCoreEvent {
@@ -113,6 +114,7 @@ pub struct FeVCToy {
     pub features: Vec<FeVCToyFeature>,
     pub listening: bool,
     pub osc_data: bool,
+    pub bt_update_rate: u64,
     pub sub_id: u8,
 }
 

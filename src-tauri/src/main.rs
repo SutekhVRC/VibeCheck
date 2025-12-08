@@ -5,14 +5,19 @@
 
 use std::sync::Arc;
 
-use log::{info, trace, warn};
+use log::{error as logerr, info, trace, warn};
 use parking_lot::Mutex;
 use tauri::{Manager, SystemTrayMenu};
 
-use crate::{frontend::frontend_native, vcore::config};
+use crate::{
+    frontend::frontend_native,
+    vcore::config::{self, app::config_load},
+};
 //use env_logger;
 
+mod error_signal_handler;
 mod frontend;
+mod mock;
 mod osc;
 mod osc_api;
 mod toy_handling;
@@ -20,6 +25,12 @@ mod util;
 mod vcore;
 
 fn main() {
+    #[cfg(debug_assertions)]
+    let mock_toys_enabled = std::env::var("VC_MOCK_TOYS")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+    #[cfg(not(debug_assertions))]
+    let mock_toys_enabled = false;
 
     #[cfg(debug_assertions)]
     {
@@ -29,8 +40,17 @@ fn main() {
         log_builder.init();
     }
 
-    let vibecheck_state_pointer = Arc::new(Mutex::new(vcore::core::VibeCheckState::new(
-        config::config_load(),
+    let vibecheck_config = match config_load() {
+        Ok(config_dir) => config_dir,
+        Err(e) => {
+            logerr!("Failed config_load(): {:?}", e);
+            return;
+        }
+    };
+
+    let vibecheck_state_pointer = Arc::new(Mutex::new(vcore::state::VibeCheckState::new(
+        vibecheck_config,
+        mock_toys_enabled,
     )));
     trace!("VibeCheckState created");
 
@@ -57,8 +77,8 @@ fn main() {
                 "Another {} process mutex created.. Showing already running app.",
                 app.package_info().name
             );
-            let window = app.get_window("main").unwrap();
-            window.show().unwrap();
+            let window = app.get_window("main").expect("Failed to get window main");
+            window.show().expect("Failed to show window");
         }))
         .setup(|_app| Ok(()))
         .system_tray(tauri::SystemTray::new().with_menu(tray_menu))
@@ -71,23 +91,23 @@ fn main() {
                     app.restart();
                 }
                 "hide" => {
-                    let window = app.get_window("main").unwrap();
-                    window.hide().unwrap();
+                    let window = app.get_window("main").expect("Failed to get window main");
+                    window.hide().expect("Failed to hide window");
                 }
                 "show" => {
-                    let window = app.get_window("main").unwrap();
-                    window.show().unwrap();
+                    let window = app.get_window("main").expect("Failed to get window main");
+                    window.show().expect("Failed to show window");
                 }
                 _ => {}
             },
             tauri::SystemTrayEvent::LeftClick { .. } => {
-                let window = app.get_window("main").unwrap();
+                let window = app.get_window("main").expect("Failed to get window main");
                 trace!("Opening window: {}", window.label());
-                window.show().unwrap();
+                window.show().expect("Failed to show window");
             }
             _ => {}
         })
-        .manage(vcore::core::VCStateMutex(vibecheck_state_pointer.clone()))
+        .manage(vcore::state::VCStateMutex(vibecheck_state_pointer.clone()))
         .invoke_handler(tauri::generate_handler![
             frontend_native::vibecheck_version,
             frontend_native::vibecheck_enable,
@@ -120,16 +140,22 @@ fn main() {
         trace!("State pointer set");
         vc_state.set_app_handle(app.app_handle());
         trace!("App handle set");
-        vc_state.init_toy_manager();
+        vc_state.global_msg_handler_start().unwrap();
+        trace!("Global message handler started");
+        vc_state.init_toy_manager().unwrap();
         trace!("ToyManager initialized");
         vc_state.identifier = identifier;
         trace!("App Identifier set");
-        vc_state.start_tmh();
-        trace!("Started TMH");
-        vc_state.init_ceh();
-        trace!("Started CEH");
-        vc_state.start_disabled_listener();
-        trace!("Started DOL");
+        if mock_toys_enabled {
+            info!("Mock toy mode enabled; skipping hardware initialization");
+        } else {
+            vc_state.start_tmh().unwrap();
+            trace!("Started TMH");
+            vc_state.init_ceh().unwrap();
+            trace!("Started CEH");
+            vc_state.start_disabled_listener().unwrap();
+            trace!("Started DOL");
+        }
     }
 
     app.run(|_app_handle, event| {
@@ -141,7 +167,7 @@ fn main() {
             } => {
                 let minimize_on_exit = {
                     _app_handle
-                        .state::<vcore::core::VCStateMutex>()
+                        .state::<vcore::state::VCStateMutex>()
                         .0
                         .lock()
                         .config
@@ -149,9 +175,11 @@ fn main() {
                 };
 
                 if minimize_on_exit {
-                    let window = _app_handle.get_window(&label).unwrap();
+                    let window = _app_handle
+                        .get_window(&label)
+                        .expect("Failed to get window to minimize");
                     trace!("Closing window: {}", window.label());
-                    window.hide().unwrap();
+                    window.hide().expect("Failed to hide window for minimize");
                     api.prevent_close();
                 } else {
                     // Let exit
@@ -160,22 +188,9 @@ fn main() {
             tauri::RunEvent::ExitRequested { .. } => {
                 // On exit
             }
-            tauri::RunEvent::MainEventsCleared => {
-
-                /*
-                let state = _app_handle.state::<vcore::VCStateMutex>();
-                let vc_lock = state.0.lock();
-
-                // Handle inter-thread data
-                // Problem: This does not continuously execute (When app is hidden does not execute)
-                handling::message_handling(vc_lock);*/
-                //info!("[+] State MainEventsCleared.");
-            }
+            tauri::RunEvent::MainEventsCleared => {}
             tauri::RunEvent::Ready => {
                 info!("App Ready");
-
-                // Sync offline toys to frontend
-                //_app_handle.state::<vcore::VCStateMutex>().0.lock().core_toy_manager.as_ref().unwrap().sync_frontend();
             }
             tauri::RunEvent::Updater(updater_event) => match updater_event {
                 tauri::UpdaterEvent::Error(err) => {

@@ -19,8 +19,11 @@ use crate::{
     toy_handling::input_processor::penetration_systems::{
         sps::SPSProcessor, tps::TPSProcessor, PenetrationSystemType,
     },
-    util::fs::{file_exists, get_config_dir},
-    vcore::vcerror,
+    util::fs::{build_path_file, file_exists, get_config_dir},
+    vcore::errors::{
+        self,
+        backend::{VibeCheckFSError, VibeCheckToyConfigError},
+    },
 };
 
 use crate::toy_handling::input_processor::penetration_systems::PenetrationSystem;
@@ -37,6 +40,7 @@ pub struct VCToy {
     pub parsed_toy_features: VCToyFeatures,
     pub osc_data: bool,
     pub listening: bool,
+    pub bt_update_rate: u64,
     pub device_handle: Arc<ButtplugClientDevice>,
     pub config: Option<VCToyConfig>,
     pub sub_id: u8,
@@ -183,6 +187,7 @@ impl VCToy {
             toy_name: self.toy_name.clone(),
             features: self.parsed_toy_features.clone(),
             osc_data: false,
+            bt_update_rate: 20,
             anatomy: VCToyAnatomy::default(),
         });
         info!("Set toy config populate defaults");
@@ -256,12 +261,12 @@ impl VCToy {
                 // Allocate / Instantiate new Penetration system structure based on configuration data
                 for feature in &mut self.parsed_toy_features.features {
                     match feature.penetration_system.pen_system_type {
-                        PenetrationSystemType::NONE => feature.penetration_system.pen_system = None,
-                        PenetrationSystemType::SPS => {
+                        PenetrationSystemType::None => feature.penetration_system.pen_system = None,
+                        PenetrationSystemType::Sps => {
                             feature.penetration_system.pen_system =
                                 Some(Box::<SPSProcessor>::default())
                         }
-                        PenetrationSystemType::TPS => {
+                        PenetrationSystemType::Tps => {
                             feature.penetration_system.pen_system =
                                 Some(Box::<TPSProcessor>::default())
                         }
@@ -274,6 +279,7 @@ impl VCToy {
                 }
 
                 self.osc_data = conf.osc_data;
+                self.bt_update_rate = conf.bt_update_rate;
                 info!("Populated toy with loaded config from file!");
             }
             // If config is not loaded populate the toy
@@ -283,10 +289,15 @@ impl VCToy {
         }
     }
 
-    pub fn load_toy_config(&mut self) -> Result<(), vcerror::backend::VibeCheckToyConfigError> {
+    pub fn load_toy_config(&mut self) -> Result<(), VibeCheckToyConfigError> {
         // Generate config path
 
-        let config_path = format!("{}\\ToyConfigs\\{}.json", get_config_dir(), self.toy_name);
+        let config_dir = match get_config_dir() {
+            Ok(d) => d,
+            Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
+        };
+
+        let config_path = build_path_file(&[&config_dir, &format!("{}.json", self.toy_name)]);
 
         if !file_exists(&config_path) {
             self.config = None;
@@ -298,7 +309,7 @@ impl VCToy {
                 Ok(vc_toy_config) => vc_toy_config,
                 Err(_) => {
                     self.config = None;
-                    return Err(vcerror::backend::VibeCheckToyConfigError::DeserializeError);
+                    return Err(errors::backend::VibeCheckToyConfigError::DeserializeError);
                 }
             };
             debug!("Loaded & parsed toy config successfully!");
@@ -308,12 +319,13 @@ impl VCToy {
     }
 
     // Save Toy config by name
-    pub fn save_toy_config(&self) {
-        let config_path = format!(
-            "{}\\ToyConfigs\\{}.json",
-            get_config_dir(),
-            self.toy_name,
-        );
+    pub fn save_toy_config(&self) -> Result<(), VibeCheckToyConfigError> {
+        let config_dir = match get_config_dir() {
+            Ok(d) => d,
+            Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
+        };
+
+        let config_path = build_path_file(&[&config_dir, &format!("{}.json", self.toy_name)]);
         info!("Saving toy config to: {}", config_path);
 
         if let Some(conf) = &self.config {
@@ -324,6 +336,9 @@ impl VCToy {
                     }
                     Err(e) => {
                         logerr!("Failed to write to file: {}", e);
+                        return Err(VibeCheckToyConfigError::FSFailure(
+                            VibeCheckFSError::FileWriteFailure,
+                        ));
                     }
                 }
             } else {
@@ -332,6 +347,7 @@ impl VCToy {
         } else {
             warn!("save_toy_config() called while toy config is None");
         }
+        Ok(())
     }
 
     pub fn mutate_state_by_anatomy(&mut self, anatomy_type: &VCToyAnatomy, value: bool) -> bool {
@@ -803,11 +819,10 @@ impl VCToyFeatures {
                 .as_ref()
                 .unwrap()
                 .is_parameter(param)
+                && f.feature_enabled
             {
-                if f.feature_enabled {
-                    // Add to features vector for features with a penetration system related to the input parameter
-                    out.push(f);
-                }
+                // Add to features vector for features with a penetration system related to the input parameter
+                out.push(f);
             }
         }
 

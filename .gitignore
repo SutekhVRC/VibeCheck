@@ -25,3 +25,6 @@ dist-ssr
 
 # Update Json
 tauri-patch.json
+
+target
+notes.md

@@ -47,7 +47,7 @@ type AnatomyIsSame = StaticAssert<
   TypesAreEqual<FeVCToyAnatomy, (typeof ToyAnatomyArray)[number]>
 >;
 
-export const PenetrationSystems = ["NONE", "TPS", "SPS"] as const;
+export const PenetrationSystems = ["None", "Tps", "Sps"] as const;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type PenTypeIsSame = StaticAssert<
   TypesAreEqual<PenetrationSystemType, (typeof PenetrationSystems)[number]>

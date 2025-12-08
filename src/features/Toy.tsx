@@ -15,11 +15,15 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
   const nameInfo = NameInfo(toy);
 
   const { config } = useCoreEventContext();
+  const clampedIndex =
+    toy.features.length === 0
+      ? 0
+      : Math.min(selectedFeatureIndex, toy.features.length - 1);
 
   useEffect(() => {
     // update from external - because toy could go online/offline and be 'different'
     if (selectedFeatureIndex >= toy.features.length) setSelectedFeatureIndex(0);
-  }, [toy]);
+  }, [toy, selectedFeatureIndex]);
 
   function toyFeatureKey(t: FeVCToy, f: FeVCToyFeature) {
     return `${t.toy_name} ${t.sub_id} ${f.feature_type} ${f.feature_index}`;
@@ -49,11 +53,17 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
             </button>
           ))}
         </div>
-        <FeatureForm
-          toy={toy}
-          selectedIndex={selectedFeatureIndex}
-          key={toyFeatureKey(toy, toy.features[selectedFeatureIndex])}
-        />
+        {toy.features.length > 0 ? (
+          <FeatureForm
+            toy={toy}
+            selectedIndex={clampedIndex}
+            key={toyFeatureKey(toy, toy.features[clampedIndex])}
+          />
+        ) : (
+          <div className="mt-4 text-sm text-zinc-400">
+            No features available for this toy.
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
+use crate::error_signal_handler::{ErrorSource, VibeCheckError};
 use crate::frontend::ToFrontend;
+use crate::util::fs::build_path_dir;
 use crate::{
     config::toy::VCToyConfig,
     frontend::frontend_types::FeVCToy,
@@ -10,6 +12,8 @@ use crate::{
 use log::{debug, info, trace};
 use tauri::{api::dir::read_dir, AppHandle};
 
+use super::errors::ToyHandlingError;
+
 #[derive(Clone)]
 pub struct ToyManager {
     pub configs: HashMap<String, VCToyConfig>,
@@ -18,7 +22,7 @@ pub struct ToyManager {
 }
 
 impl ToyManager {
-    pub fn new(app_handle: AppHandle) -> Self {
+    pub fn new(app_handle: AppHandle) -> Result<Self, VibeCheckError> {
         /*
          * Read all toy configs
          * Send update to frontend
@@ -36,21 +40,28 @@ impl ToyManager {
             _app_handle: app_handle,
         };
 
-        ot.populate_configs();
-        trace!("ToyManager config population complete!");
-
-        /*
-                ot.sync_frontend();
-                trace!("ToyManager initialization sent frontend sync");
-        */
-        ot
+        match ot.populate_configs() {
+            Ok(()) => {
+                trace!("ToyManager config population complete!");
+                Ok(ot)
+            }
+            Err(e) => Err(VibeCheckError::new(
+                ErrorSource::ToyHandling(e),
+                Some("Config population failure"),
+            )),
+        }
     }
 
-    pub fn populate_configs(&mut self) {
-        let toy_config_dir = match read_dir(format!("{}\\ToyConfigs", get_config_dir()), false) {
+    pub fn populate_configs(&mut self) -> Result<(), ToyHandlingError> {
+        let config_dir = match get_config_dir() {
+            Ok(d) => d,
+            Err(_) => return Err(ToyHandlingError::PopulateConfigFailure),
+        };
+
+        let toy_config_dir = match read_dir(build_path_dir(&[&config_dir, "ToyConfigs"]), false) {
             Ok(config_paths) => config_paths,
             // Doesn't populate
-            Err(_e) => return,
+            Err(_e) => return Err(ToyHandlingError::PopulateConfigFailure),
         };
 
         for f in toy_config_dir {
@@ -79,17 +90,18 @@ impl ToyManager {
         }
 
         debug!("Loaded {} Offline toy configs!", self.configs.len());
+        Ok(())
     }
 
-    pub fn sync_frontend(&mut self, refresh_toys: bool) -> Vec<FeVCToy> {
+    pub fn sync_frontend(&mut self, refresh_toys: bool) -> Result<Vec<FeVCToy>, ToyHandlingError> {
         if refresh_toys {
             info!("Clearing toy manager configs map and repopulating from disk..");
             self.configs.clear();
-            self.populate_configs();
+            self.populate_configs()?;
         }
 
         trace!("Generating offline toy sync..");
-        self.fetoy_vec_from_offline_toys()
+        Ok(self.fetoy_vec_from_offline_toys())
     }
 
     fn check_toy_online(&self, config_toy_name: &String) -> bool {
@@ -118,6 +130,7 @@ impl ToyManager {
                 features: config.features.features.to_frontend(),
                 listening: false,
                 osc_data: config.osc_data,
+                bt_update_rate: config.bt_update_rate,
                 sub_id: 255,
             });
         }

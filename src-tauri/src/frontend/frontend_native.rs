@@ -3,6 +3,8 @@
  *
  */
 
+use std::rc::Rc;
+
 use crate::{
     config::toy::VCToyConfig,
     frontend::{
@@ -11,13 +13,16 @@ use crate::{
         },
         FromFrontend, ToFrontend,
     },
-    vcore::core::{
-        self, native_osc_query_attempt_force, native_osc_query_start, native_osc_query_stop,
+    vcore::{
+        errors::{
+            backend::{self, ToyAlterError},
+            frontend::VCFeError,
+        },
+        ipc::{call_plane, emit_plane::emit_toy_event},
+        state,
     },
-    vcore::vcerror::{backend, frontend},
 };
 use log::{error as logerr, trace};
-use tauri::Manager;
 
 /*
  * vibecheck_version
@@ -27,7 +32,14 @@ use tauri::Manager;
  */
 #[tauri::command]
 pub fn vibecheck_version(app_handle: tauri::AppHandle) -> String {
-    format!("{} windows", app_handle.package_info().version)
+    #[cfg(target_os = "windows")]
+    {
+        format!("{} windows", app_handle.package_info().version)
+    }
+    #[cfg(target_os = "linux")]
+    {
+        format!("{} linux", app_handle.package_info().version)
+    }
 }
 
 /*
@@ -37,11 +49,11 @@ pub fn vibecheck_version(app_handle: tauri::AppHandle) -> String {
  * Return: Result<Ok, Err(VCFeError)>
  */
 #[tauri::command]
-pub fn vibecheck_enable(
-    vc_state: tauri::State<'_, core::VCStateMutex>,
-) -> Result<(), frontend::VCFeError> {
+pub fn vibecheck_enable(vc_state: tauri::State<'_, state::VCStateMutex>) -> Result<(), VCFeError> {
     trace!("vibecheck_enable");
-    tauri::async_runtime::block_on(async move { core::native_vibecheck_enable(vc_state).await })
+    tauri::async_runtime::block_on(
+        async move { call_plane::native_vibecheck_enable(vc_state).await },
+    )
 }
 
 /*
@@ -51,11 +63,11 @@ pub fn vibecheck_enable(
  * Return: Result<Ok, Err(VCFeError)>
  */
 #[tauri::command]
-pub fn vibecheck_disable(
-    vc_state: tauri::State<'_, core::VCStateMutex>,
-) -> Result<(), frontend::VCFeError> {
+pub fn vibecheck_disable(vc_state: tauri::State<'_, state::VCStateMutex>) -> Result<(), VCFeError> {
     trace!("vibecheck_disable");
-    tauri::async_runtime::block_on(async move { core::native_vibecheck_disable(vc_state).await })
+    tauri::async_runtime::block_on(
+        async move { call_plane::native_vibecheck_disable(vc_state).await },
+    )
 }
 
 /*
@@ -66,12 +78,12 @@ pub fn vibecheck_disable(
  */
 #[tauri::command]
 pub fn vibecheck_start_bt_scan(
-    vc_state: tauri::State<'_, core::VCStateMutex>,
-) -> Result<(), frontend::VCFeError> {
+    vc_state: tauri::State<'_, state::VCStateMutex>,
+) -> Result<(), VCFeError> {
     trace!("vibecheck_start_bt_scan");
-    tauri::async_runtime::block_on(
-        async move { core::native_vibecheck_start_bt_scan(vc_state).await },
-    )
+    tauri::async_runtime::block_on(async move {
+        call_plane::native_vibecheck_start_bt_scan(vc_state).await
+    })
 }
 
 /*
@@ -82,12 +94,12 @@ pub fn vibecheck_start_bt_scan(
  */
 #[tauri::command]
 pub fn vibecheck_stop_bt_scan(
-    vc_state: tauri::State<'_, core::VCStateMutex>,
-) -> Result<(), frontend::VCFeError> {
+    vc_state: tauri::State<'_, state::VCStateMutex>,
+) -> Result<(), VCFeError> {
     trace!("vibecheck_stop_bt_scan");
-    tauri::async_runtime::block_on(
-        async move { core::native_vibecheck_stop_bt_scan(vc_state).await },
-    )
+    tauri::async_runtime::block_on(async move {
+        call_plane::native_vibecheck_stop_bt_scan(vc_state).await
+    })
 }
 
 /*
@@ -100,9 +112,9 @@ pub fn vibecheck_stop_bt_scan(
  * port: string
  */
 #[tauri::command(async)]
-pub fn get_vibecheck_config(vc_state: tauri::State<'_, core::VCStateMutex>) -> FeVibeCheckConfig {
+pub fn get_vibecheck_config(vc_state: tauri::State<'_, state::VCStateMutex>) -> FeVibeCheckConfig {
     trace!("get_vibecheck_config");
-    core::native_get_vibecheck_config(vc_state)
+    call_plane::native_get_vibecheck_config(vc_state)
 }
 
 /*
@@ -115,11 +127,11 @@ pub fn get_vibecheck_config(vc_state: tauri::State<'_, core::VCStateMutex>) -> F
  */
 #[tauri::command(async)]
 pub fn set_vibecheck_config(
-    vc_state: tauri::State<'_, core::VCStateMutex>,
+    vc_state: tauri::State<'_, state::VCStateMutex>,
     fe_vc_config: FeVibeCheckConfig,
-) -> Result<(), frontend::VCFeError> {
+) -> Result<(), VCFeError> {
     trace!("set_vibecheck_config({:?})", fe_vc_config);
-    core::native_set_vibecheck_config(vc_state, fe_vc_config)
+    call_plane::native_set_vibecheck_config(vc_state, fe_vc_config)
 }
 
 /*
@@ -130,10 +142,10 @@ pub fn set_vibecheck_config(
  */
 #[tauri::command(async)]
 pub fn alter_toy(
-    vc_state: tauri::State<'_, core::VCStateMutex>,
+    vc_state: tauri::State<'_, state::VCStateMutex>,
     app_handle: tauri::AppHandle,
     mutate: FeToyAlter,
-) -> Result<(), frontend::VCFeError> {
+) -> Result<(), VCFeError> {
     trace!("alter_toy({:#?})", mutate);
 
     match mutate {
@@ -144,6 +156,26 @@ pub fn alter_toy(
                     "FeToyAlter::Connected: Altering online toy: {}",
                     fe_toy.toy_name
                 );
+
+                // Mock mode: update in-memory toys and emit update
+                {
+                    let mut vc_lock = vc_state.0.lock();
+                    if vc_lock.mock_toys {
+                        let pos = vc_lock.mock_toys_data.iter().position(|t| {
+                            t.toy_id == fe_toy.toy_id || t.toy_name == fe_toy.toy_name
+                        });
+                        if let Some(idx) = pos {
+                            vc_lock.mock_toys_data[idx] = fe_toy.clone();
+                            let updated = vc_lock.mock_toys_data[idx].clone();
+                            drop(vc_lock);
+                            emit_toy_event(&app_handle, FeToyEvent::Update(updated));
+                            return Ok(());
+                        } else {
+                            return Err(VCFeError::AlterToyFailure(ToyAlterError::NoToyIndex));
+                        }
+                    }
+                }
+
                 let altered = {
                     let mut vc_lock = vc_state.0.lock();
                     if let Some(toy) = vc_lock
@@ -154,7 +186,10 @@ pub fn alter_toy(
                         .get_mut(&fe_toy.toy_id.unwrap())
                     {
                         toy.osc_data = fe_toy.osc_data;
+                        toy.bt_update_rate = fe_toy.bt_update_rate;
+
                         toy.config.as_mut().unwrap().osc_data = fe_toy.osc_data;
+                        toy.config.as_mut().unwrap().bt_update_rate = fe_toy.bt_update_rate;
                         toy.config
                             .as_mut()
                             .unwrap()
@@ -165,8 +200,8 @@ pub fn alter_toy(
                         for fe_feature in fe_toy.features {
                             if !toy.parsed_toy_features.from_frontend(fe_feature.clone()) {
                                 logerr!("Failed to convert FeVCToyFeature to VCToyFeature");
-                                return Err(frontend::VCFeError::AlterToyFailure(
-                                    frontend::ToyAlterError::NoFeatureIndex,
+                                return Err(VCFeError::AlterToyFailure(
+                                    ToyAlterError::NoFeatureIndex,
                                 ));
                             } else {
                                 // If altering feature map succeeds write the data to the config
@@ -177,21 +212,15 @@ pub fn alter_toy(
 
                         toy.clone()
                     } else {
-                        return Err(frontend::VCFeError::AlterToyFailure(
-                            frontend::ToyAlterError::NoToyIndex,
-                        ));
+                        return Err(VCFeError::AlterToyFailure(ToyAlterError::NoToyIndex));
                     }
                 };
 
-                if core::native_alter_toy(vc_state, app_handle, altered).is_err() {
-                    return Err(frontend::VCFeError::AlterToyFailure(
-                        frontend::ToyAlterError::TMESendFailure,
-                    ));
+                if call_plane::native_alter_toy(vc_state, app_handle, altered).is_err() {
+                    return Err(VCFeError::AlterToyFailure(ToyAlterError::TMESendFailure));
                 }
             } else {
-                return Err(frontend::VCFeError::AlterToyFailure(
-                    frontend::ToyAlterError::ToyDisconnected,
-                ));
+                return Err(VCFeError::AlterToyFailure(ToyAlterError::ToyDisconnected));
             }
 
             Ok(())
@@ -207,34 +236,36 @@ pub fn alter_toy(
                     match VCToyConfig::load_offline_toy_config(fe_toy.toy_name.clone()) {
                         Ok(toy_config) => toy_config,
                         Err(_e) => {
-                            return Err(frontend::VCFeError::AlterToyFailure(
-                                frontend::ToyAlterError::OfflineToyNotExist,
+                            return Err(VCFeError::AlterToyFailure(
+                                ToyAlterError::OfflineToyNotExist,
                             ))
                         }
                     };
 
                 offline_toy_config.osc_data = fe_toy.osc_data;
+                offline_toy_config.bt_update_rate = fe_toy.bt_update_rate;
                 offline_toy_config.anatomy.from_fe(fe_toy.toy_anatomy);
 
                 for f in fe_toy.features {
                     if !offline_toy_config.features.from_frontend(f) {
-                        return Err(frontend::VCFeError::AlterToyFailure(
-                            frontend::ToyAlterError::OfflineToyNoFeatureIndex,
+                        return Err(VCFeError::AlterToyFailure(
+                            ToyAlterError::OfflineToyNoFeatureIndex,
                         ));
                     }
                 }
 
                 fe_toy.features = offline_toy_config.features.features.to_frontend();
                 fe_toy.osc_data = offline_toy_config.osc_data;
+                fe_toy.bt_update_rate = offline_toy_config.bt_update_rate;
                 fe_toy.toy_anatomy = offline_toy_config.anatomy.to_fe();
 
-                offline_toy_config.save_offline_toy_config();
+                if offline_toy_config.save_offline_toy_config().is_err() {
+                    return Err(VCFeError::SaveOfflineToyConfig);
+                }
 
-                let _ = app_handle.emit_all("fe_toy_event", FeToyEvent::Update(fe_toy));
+                emit_toy_event(&Rc::new(app_handle), FeToyEvent::Update(fe_toy));
             } else {
-                return Err(frontend::VCFeError::AlterToyFailure(
-                    frontend::ToyAlterError::ToyConnected,
-                ));
+                return Err(VCFeError::AlterToyFailure(ToyAlterError::ToyConnected));
             }
 
             Ok(())
@@ -277,7 +308,7 @@ pub fn open_default_browser(link: FeBrowserLink) {
 #[tauri::command(async)]
 pub fn clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
     trace!("clear_osc_config");
-    core::native_clear_osc_config()
+    call_plane::native_clear_osc_config()
 }
 
 /*
@@ -286,7 +317,7 @@ pub fn clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
  */
 #[tauri::command(async)]
 pub fn simulate_device_feature(
-    vc_state: tauri::State<'_, core::VCStateMutex>,
+    vc_state: tauri::State<'_, state::VCStateMutex>,
     toy_id: u32,
     feature_index: u32,
     feature_type: FeVCFeatureType,
@@ -294,7 +325,7 @@ pub fn simulate_device_feature(
     stop: bool,
 ) {
     trace!("simulate_device_feature");
-    core::native_simulate_device_feature(
+    call_plane::native_simulate_device_feature(
         vc_state,
         toy_id,
         feature_index,
@@ -321,37 +352,65 @@ pub fn simulate_feature_osc_input(vc_state: tauri::State<'_, vcore::VCStateMutex
  */
 #[tauri::command(async)]
 pub fn sync_offline_toys(
-    vc_state: tauri::State<'_, core::VCStateMutex>,
+    vc_state: tauri::State<'_, state::VCStateMutex>,
     refresh_toys: bool,
-) -> Result<Vec<FeVCToy>, frontend::VCFeError> {
+) -> Result<Vec<FeVCToy>, VCFeError> {
     trace!("sync_offline_toys");
+    {
+        let mut vc_lock = vc_state.0.lock();
+        if vc_lock.mock_toys {
+            if vc_lock.mock_toys_data.is_empty() || refresh_toys {
+                vc_lock.mock_toys_data = crate::mock::mock_toys();
+                vc_lock.mock_toy_events_emitted = false;
+            }
+            let toys = vc_lock.mock_toys_data.clone();
+            let should_emit = !vc_lock.mock_toy_events_emitted;
+            let app_handle = vc_lock.app_handle.as_ref().cloned();
+            if should_emit {
+                vc_lock.mock_toy_events_emitted = true;
+            }
+            drop(vc_lock);
+
+            if should_emit {
+                if let Some(app_handle) = app_handle {
+                    for toy in toys.iter() {
+                        emit_toy_event(&app_handle, FeToyEvent::Add(toy.clone()));
+                    }
+                }
+            }
+
+            return Ok(toys);
+        }
+    }
     if let Some(toy_manager) = vc_state.0.lock().core_toy_manager.as_mut() {
-        Ok(toy_manager.sync_frontend(refresh_toys))
+        match toy_manager.sync_frontend(refresh_toys) {
+            Ok(toys) => Ok(toys),
+            Err(e) => {
+                logerr!("Toy Manager failed to sync frontend: {}", e);
+                Err(VCFeError::ToyManager(e))
+            }
+        }
     } else {
-        Err(frontend::VCFeError::ToyManagerNotReady)
+        Err(VCFeError::ToyManagerNotReady)
     }
 }
 
 #[tauri::command(async)]
-pub fn osc_query_start(
-    vc_state: tauri::State<'_, core::VCStateMutex>,
-) -> Result<(), frontend::VCFeError> {
+pub fn osc_query_start(vc_state: tauri::State<'_, state::VCStateMutex>) -> Result<(), VCFeError> {
     trace!("osc_query_start");
-    native_osc_query_start(vc_state)
+    call_plane::native_osc_query_start(vc_state)
 }
 
 #[tauri::command(async)]
-pub fn osc_query_stop(
-    vc_state: tauri::State<'_, core::VCStateMutex>,
-) -> Result<(), frontend::VCFeError> {
+pub fn osc_query_stop(vc_state: tauri::State<'_, state::VCStateMutex>) -> Result<(), VCFeError> {
     trace!("osc_query_stop");
-    native_osc_query_stop(vc_state)
+    call_plane::native_osc_query_stop(vc_state)
 }
 
 #[tauri::command(async)]
 pub fn osc_query_attempt_force_connect(
-    vc_state: tauri::State<'_, core::VCStateMutex>,
-) -> Result<(), frontend::VCFeError> {
+    vc_state: tauri::State<'_, state::VCStateMutex>,
+) -> Result<(), VCFeError> {
     trace!("osc_query_attempt_force_connect");
-    native_osc_query_attempt_force(vc_state)
+    call_plane::native_osc_query_attempt_force(vc_state)
 }

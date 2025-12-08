@@ -26,8 +26,16 @@ jobs:
     needs: check-frontend
     if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            bundle: msi
+            artifact-path: src-tauri/target/release/bundle/msi/*.msi
+          - os: ubuntu-latest
+            bundle: deb
+            artifact-path: src-tauri/target/release/bundle/deb/*.deb
       fail-fast: false
-    runs-on: [windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: checkout repo
         uses: actions/checkout@v4
@@ -44,9 +52,14 @@ jobs:
           cache: "yarn"
       - name: install app dependencies
         run: yarn
-      - name: test build
+      - name: test build ${{ matrix.bundle }}
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: "-b msi"
+          args: "-b ${{ matrix.bundle }}"
+      - name: upload ${{ matrix.bundle }} artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-${{ matrix.bundle }}-test-binary
+          path: ${{ matrix.artifact-path }}

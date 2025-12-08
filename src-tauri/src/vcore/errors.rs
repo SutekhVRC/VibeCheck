@@ -2,8 +2,41 @@
  * Splitting errors into fronted native call errors and backend errors
  */
 
+use std::{error::Error, fmt};
+
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
+pub enum VcoreError {
+    NoAppHandle,
+    NoToyManager,
+    NoStatePointer,
+    CehAlreadyInitialized,
+    DisabledOscListenerThreadRunning,
+}
+
+impl Error for VcoreError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
+}
+
+impl fmt::Display for VcoreError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "VcoreError")
+    }
+}
+
+pub enum VCError {
+    HandlingErr(crate::toy_handling::errors::HandlerErr),
+}
+
 pub mod frontend {
     use serde::Serialize;
+
+    use crate::toy_handling::errors::ToyHandlingError;
+
+    use super::{backend::ToyAlterError, VcoreError};
 
     #[derive(Serialize)]
     pub enum VCFeError {
@@ -21,23 +54,13 @@ pub mod frontend {
         OSCQueryFailure(&'static str),
         SerializeFailure,
         WriteFailure,
+        ConfigDirFailure,
+        SaveOfflineToyConfig,
         //InvalidIpv4Host,
-        UnsetLCOverrideFailure,
-        SetLCOverrideFailure,
-        InvalidLCHost,
-
         ToyManagerNotReady,
-    }
+        ToyManager(ToyHandlingError),
 
-    #[derive(Serialize)]
-    pub enum ToyAlterError {
-        NoFeatureIndex,
-        NoToyIndex,
-        TMESendFailure,
-        ToyConnected,
-        ToyDisconnected,
-        OfflineToyNotExist,
-        OfflineToyNoFeatureIndex,
+        Vcore(VcoreError),
     }
 }
 
@@ -50,6 +73,7 @@ pub mod backend {
         //DeserializeError,
         SerializeError,
         WriteFailure,
+        ConfigDirFail,
     }
 
     #[derive(Serialize, Debug)]
@@ -57,8 +81,10 @@ pub mod backend {
         //ReadFailure,
         DeserializeError,
         OfflineToyConfigNotFound,
-        //SerializeError,
+        SerializeError,
         //WriteFailure,
+        ConfigDirFail,
+        FSFailure(VibeCheckFSError),
     }
 
     #[derive(Serialize, Debug)]
@@ -66,11 +92,17 @@ pub mod backend {
         ReadDirFailure,
         ReadDirPathFailure,
         RemoveDirsFailure,
+        FileWriteFailure,
     }
 
+    #[derive(Serialize, Debug)]
     pub enum ToyAlterError {
-        //NoFeatureIndex,
-        //NoToyIndex,
+        NoFeatureIndex,
+        NoToyIndex,
         TMESendFailure,
+        ToyConnected,
+        ToyDisconnected,
+        OfflineToyNotExist,
+        OfflineToyNoFeatureIndex,
     }
 }

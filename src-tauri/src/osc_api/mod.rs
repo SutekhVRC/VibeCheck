@@ -1,10 +1,19 @@
+use std::rc::Rc;
+
 use log::{debug, info, trace};
 use rosc::OscMessage;
 use tauri::{AppHandle, Manager};
 
-use crate::{config::toy::VCToyAnatomy, frontend::frontend_types::FeCoreEvent, vcore};
+use crate::{
+    config::toy::VCToyAnatomy,
+    frontend::frontend_types::FeCoreEvent,
+    vcore::ipc::{call_plane::native_alter_toy, emit_plane::emit_core_event},
+};
 
-pub mod osc_api;
+#[derive(Debug)]
+pub struct OscApiError {}
+
+pub mod api;
 
 struct APIProcessor;
 
@@ -27,8 +36,9 @@ impl APIProcessor {
                 return;
             };
             info!("State false: Sending Disable event");
-            let _ = app_handle.emit_all(
-                "fe_core_event",
+
+            emit_core_event(
+                &Rc::new(app_handle),
                 FeCoreEvent::State(crate::frontend::frontend_types::FeStateEvent::Disable),
             );
         } else if api_tokenize.len() == 7
@@ -42,7 +52,7 @@ impl APIProcessor {
 
             if let Some(state_bool) = endpoint.args.pop().unwrap().bool() {
                 let vc_pointer = app_handle
-                    .state::<crate::vcore::core::VCStateMutex>()
+                    .state::<crate::vcore::state::VCStateMutex>()
                     .0
                     .clone();
                 let mut vc_lock = vc_pointer.lock();
@@ -65,8 +75,8 @@ impl APIProcessor {
             }
 
             altered_toys.iter().for_each(|toy| {
-                let _ = vcore::core::native_alter_toy(
-                    app_handle.state::<crate::vcore::core::VCStateMutex>(),
+                let _ = native_alter_toy(
+                    app_handle.state::<crate::vcore::state::VCStateMutex>(),
                     app_handle.clone(),
                     toy.clone(),
                 );

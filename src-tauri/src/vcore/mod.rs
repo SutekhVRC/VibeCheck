@@ -1,3 +1,4 @@
 pub mod config;
-pub mod core;
-pub mod vcerror;
+pub mod errors;
+pub mod ipc;
+pub mod state;

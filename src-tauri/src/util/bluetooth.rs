@@ -4,11 +4,15 @@ use buttplug::client::ButtplugClient;
 use buttplug::core::connector::ButtplugInProcessClientConnectorBuilder;
 //new_json_ws_client_connector};
 use buttplug::server::device::hardware::communication::btleplug::BtlePlugCommunicationManagerBuilder;
-use buttplug::server::device::hardware::communication::lovense_dongle::{LovenseHIDDongleCommunicationManagerBuilder, LovenseSerialDongleCommunicationManagerBuilder};
+use buttplug::server::device::hardware::communication::lovense_dongle::{
+    LovenseHIDDongleCommunicationManagerBuilder, LovenseSerialDongleCommunicationManagerBuilder,
+};
 use buttplug::server::device::ServerDeviceManagerBuilder;
 use buttplug::server::ButtplugServerBuilder;
 use buttplug::util::device_configuration::load_protocol_configs;
 use log::{error as logerr, info, trace, warn};
+
+use crate::util::errors::UtilError;
 
 #[allow(unused)]
 pub async fn detect_btle_adapter() -> bool {
@@ -33,12 +37,16 @@ pub async fn detect_btle_adapter() -> bool {
 pub async fn vc_toy_client_server_init(
     client_name: &str,
     allow_raw_messages: bool,
-) -> ButtplugClient {
+) -> Result<ButtplugClient, UtilError> {
+    let mut dcmb = match load_protocol_configs(&None, &None, false) {
+        Ok(dcmb) => dcmb,
+        Err(_) => return Err(UtilError::BPIOInit),
+    };
 
-    let dcm = load_protocol_configs(&None, &None, false).unwrap()
-    .allow_raw_messages(allow_raw_messages)
-    .finish()
-    .unwrap();
+    let dcm = match dcmb.allow_raw_messages(allow_raw_messages).finish() {
+        Ok(dcm) => dcm,
+        Err(_) => return Err(UtilError::BPIOInit),
+    };
 
     let mut device_manager_builder = ServerDeviceManagerBuilder::new(dcm);
     device_manager_builder.comm_manager(BtlePlugCommunicationManagerBuilder::default());
@@ -48,8 +56,16 @@ pub async fn vc_toy_client_server_init(
     device_manager_builder.comm_manager(LovenseSerialDongleCommunicationManagerBuilder::default());
     trace!("Added Lovense Dongle HID/Serial managers");
 
-    let server_builder = ButtplugServerBuilder::new(device_manager_builder.finish().unwrap());
-    let server = server_builder.finish().unwrap();
+    let sdm = match device_manager_builder.finish() {
+        Ok(sdm) => sdm,
+        Err(_) => return Err(UtilError::BPIOInit),
+    };
+
+    let server_builder = ButtplugServerBuilder::new(sdm);
+    let server = match server_builder.finish() {
+        Ok(server) => server,
+        Err(_) => return Err(UtilError::BPIOInit),
+    };
 
     /*
      * Possibly add support to mutate the VibeCheck internal state to use websocket connector for Intiface Central / other websocket server implementations.
@@ -62,6 +78,8 @@ pub async fn vc_toy_client_server_init(
         .finish();
 
     let client = ButtplugClient::new(client_name);
-    client.connect(connector).await.unwrap();
-    client
+    if (client.connect(connector).await).is_err() {
+        return Err(UtilError::BPIOInit);
+    }
+    Ok(client)
 }

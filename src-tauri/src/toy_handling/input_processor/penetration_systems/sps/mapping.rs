@@ -5,7 +5,6 @@ use std::{cmp::Ordering, collections::HashMap};
 use strum::{Display, EnumString};
 use ts_rs::TS;
 
-
 use crate::toy_handling::mode_processor::core::ModeProcessorInputType;
 
 use super::SPSWho;
@@ -49,17 +48,12 @@ pub enum SPSParameterType {
 }
 
 impl SPSParameterType {
+    #[allow(unused)]
     pub fn is_orf(&self) -> bool {
-        match self {
-            Self::Orf => true,
-            _ => false,
-        }
+        matches!(self, Self::Orf)
     }
     pub fn is_pen(&self) -> bool {
-        match self {
-            Self::Pen => true,
-            _ => false,
-        }
+        matches!(self, Self::Pen)
     }
 }
 
@@ -315,15 +309,13 @@ impl SPSMapping {
             // Use last value
             // Should we have a bad length ?
             // No need for bad length just reuse last ??
+        } else if let SPSWho::Others = others {
+            self.length_values_others.insert(0, temp_length);
+            self.length_values_others.truncate(SAVED_LENGTH_VALUES_MAX);
+            debug!("Added length value");
         } else {
-            if let SPSWho::Others = others {
-                self.length_values_others.insert(0, temp_length);
-                self.length_values_others.truncate(SAVED_LENGTH_VALUES_MAX);
-                debug!("Added length value");
-            } else {
-                self.length_values_self.insert(0, temp_length);
-                self.length_values_self.truncate(SAVED_LENGTH_VALUES_MAX);
-            }
+            self.length_values_self.insert(0, temp_length);
+            self.length_values_self.truncate(SAVED_LENGTH_VALUES_MAX);
         }
     }
 

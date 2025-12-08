@@ -6,7 +6,6 @@ use rosc::OscType;
 use rosc::{self, OscMessage, OscPacket};
 
 use tauri::AppHandle;
-use tauri::Manager;
 use tokio::net::UdpSocket as tUdpSocket;
 
 use tokio::sync::broadcast::Sender as BSender;
@@ -21,13 +20,16 @@ use crate::frontend::frontend_types::FeCoreEvent;
 use crate::frontend::frontend_types::FeToyEvent;
 use crate::frontend::frontend_types::FeVCToy;
 use crate::frontend::ToFrontend;
-use crate::osc_api::osc_api::vibecheck_osc_api;
+use crate::osc_api::api::vibecheck_osc_api;
 use crate::toy_handling::ToyPower;
 use crate::toy_handling::ToySig;
-use crate::vcore::config::OSCNetworking;
-use crate::vcore::core::TmSig;
-use crate::vcore::core::ToyManagementEvent;
-use crate::vcore::core::VibeCheckState;
+use crate::vcore::ipc::call_plane::TmSig;
+use crate::vcore::ipc::call_plane::ToyManagementEvent;
+use crate::vcore::ipc::emit_plane::emit_core_event;
+use crate::vcore::ipc::emit_plane::emit_toy_event;
+use crate::vcore::state::VibeCheckState;
+
+use super::OSCNetworking;
 
 /*
     This subroutine
@@ -126,7 +128,7 @@ pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OS
                         if let Some(state_bool) = msg.args.pop().unwrap().bool() {
                             if state_bool {
                                 info!("Sending EnableAndScan event");
-                                let _ = app_handle.emit_all("fe_core_event", FeCoreEvent::State(crate::frontend::frontend_types::FeStateEvent::EnableAndScan));
+                                emit_core_event(&app_handle, FeCoreEvent::State(crate::frontend::frontend_types::FeStateEvent::EnableAndScan));
                             }
                         }
                     }
@@ -220,8 +222,8 @@ pub async fn toy_refresh(
 
             toy.toy_power = toy_power.clone();
 
-            let _ = app_handle.emit_all(
-                "fe_toy_event",
+            emit_toy_event(
+                &app_handle,
                 FeToyEvent::Update({
                     FeVCToy {
                         toy_id: Some(toy.toy_id),
@@ -232,6 +234,7 @@ pub async fn toy_refresh(
                         features: toy.parsed_toy_features.features.to_frontend(),
                         listening: toy.listening,
                         osc_data: toy.osc_data,
+                        bt_update_rate: toy.bt_update_rate,
                         sub_id: toy.sub_id,
                     }
                 }),

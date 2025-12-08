@@ -6,7 +6,6 @@ use serde::Deserialize;
 use serde::Serialize;
 use ts_rs::TS;
 
-
 use std::time::Instant;
 
 use super::mode_rate::parse_rate;
@@ -41,7 +40,7 @@ impl ModeProcessorInputType {
     }
 }
 
-pub async fn mode_processor<'toy_parameter>(
+pub async fn mode_processor(
     input: ModeProcessorInput<'_>,
     feature_levels: LevelTweaks,
     flip_input: bool,
