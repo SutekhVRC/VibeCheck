@@ -137,6 +137,9 @@ impl VibeCheckState {
             //======================================
             // Async runtime
             async_rt,
+
+            //======================================
+            // Mock Toys Data
             mock_toys_data: Vec::new(),
         };
 
