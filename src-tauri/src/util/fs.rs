@@ -1,9 +1,6 @@
 use directories::BaseDirs;
 use std::{ffi::OsStr, path::Path};
-use tauri::{
-    api::path::{resolve_path, BaseDirectory},
-    Env,
-};
+use tauri::{AppHandle, Manager};
 
 use crate::util::errors::UtilError;
 
@@ -36,15 +33,8 @@ pub fn get_user_home_dir() -> Result<String, UtilError> {
     Ok(bd.to_string())
 }
 
-pub fn get_config_dir() -> Result<String, UtilError> {
-    let context_gen = tauri::generate_context!();
-    let pb = match resolve_path(
-        context_gen.config(),
-        context_gen.package_info(),
-        &Env::default(),
-        "VibeCheck",
-        Some(BaseDirectory::AppConfig),
-    ) {
+pub fn get_config_dir(app_handle: &AppHandle) -> Result<String, UtilError> {
+    let pb = match app_handle.path().app_data_dir() {
         Ok(path) => path,
         Err(_) => return Err(UtilError::ConfigDirFS),
     };

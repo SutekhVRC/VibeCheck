@@ -3,7 +3,7 @@ use log::{error as logerr, info, warn};
 use parking_lot::Mutex;
 use std::net::SocketAddrV4;
 use std::sync::Arc;
-use tauri::AppHandle;
+use tauri::{AppHandle};
 use tokio::runtime::Runtime;
 use tokio::sync::{mpsc::unbounded_channel, mpsc::UnboundedReceiver, mpsc::UnboundedSender};
 use tokio::task::JoinHandle;
@@ -227,8 +227,8 @@ impl VibeCheckState {
         self.vibecheck_state_pointer = Some(vibecheck_state_pointer);
     }
 
-    pub fn set_app_handle(&mut self, app_handle: AppHandle) {
-        self.app_handle = Some(app_handle);
+    pub fn set_app_handle(&mut self, app_handle: &AppHandle) {
+        self.app_handle = Some(app_handle.clone());
     }
 
     pub fn init_toy_manager(&mut self) -> Result<(), VibeCheckError> {

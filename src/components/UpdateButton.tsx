@@ -1,5 +1,5 @@
-import { relaunch } from "@tauri-apps/api/process";
-import { installUpdate } from "@tauri-apps/api/updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { installUpdate } from "@tauri-apps/plugin-updater";
 import { toast } from "sonner";
 import Button from "../layout/Button";
 import UpdatePing from "./UpdatePing";

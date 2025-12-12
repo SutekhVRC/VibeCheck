@@ -428,6 +428,7 @@ pub fn native_osc_query_attempt_force(
     Ok(())
 }
 
+
 pub fn osc_query_force_populate(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), VCFeError> {
     Ok(())
 }
@@ -488,7 +489,12 @@ pub fn native_set_vibecheck_config(
         vc_lock.config.clone()
     };
 
-    match save_config(config) {
+    let app_handle = {
+        let vc_lock = vc_state.0.lock();
+        vc_lock.app_handle.clone().unwrap()
+    };
+
+    match save_config(config, &app_handle) {
         Ok(()) => Ok(()),
         Err(e) => match e {
             VibeCheckConfigError::SerializeError => Err(VCFeError::SerializeFailure),
@@ -498,7 +504,7 @@ pub fn native_set_vibecheck_config(
     }
 }
 
-fn save_config(config: VibeCheckConfig) -> Result<(), VibeCheckConfigError> {
+fn save_config(config: VibeCheckConfig, app_handle: &tauri::AppHandle) -> Result<(), VibeCheckConfigError> {
     let json_config_str = match serde_json::to_string(&config) {
         Ok(s) => s,
         Err(_e) => {
@@ -507,7 +513,7 @@ fn save_config(config: VibeCheckConfig) -> Result<(), VibeCheckConfigError> {
         }
     };
 
-    let config_dir = match get_config_dir() {
+    let config_dir = match get_config_dir(app_handle) {
         Ok(d) => d,
         Err(_) => return Err(VibeCheckConfigError::ConfigDirFail),
     };

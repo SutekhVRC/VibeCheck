@@ -2,6 +2,7 @@ use buttplug::{
     client::ButtplugClientDevice,
     core::message::{ActuatorType, ClientDeviceMessageAttributesV3},
 };
+use tauri::AppHandle;
 use core::fmt;
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
@@ -44,6 +45,7 @@ pub struct VCToy {
     pub device_handle: Arc<ButtplugClientDevice>,
     pub config: Option<VCToyConfig>,
     pub sub_id: u8,
+    pub app_handle: AppHandle,
 }
 
 impl VCToy {
@@ -292,7 +294,7 @@ impl VCToy {
     pub fn load_toy_config(&mut self) -> Result<(), VibeCheckToyConfigError> {
         // Generate config path
 
-        let config_dir = match get_config_dir() {
+        let config_dir = match get_config_dir(&self.app_handle) {
             Ok(d) => d,
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
@@ -320,7 +322,7 @@ impl VCToy {
 
     // Save Toy config by name
     pub fn save_toy_config(&self) -> Result<(), VibeCheckToyConfigError> {
-        let config_dir = match get_config_dir() {
+        let config_dir = match get_config_dir(&self.app_handle) {
             Ok(d) => d,
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };

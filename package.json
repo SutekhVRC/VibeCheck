@@ -20,7 +20,9 @@
     "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-switch": "^1.0.3",
     "@radix-ui/react-tooltip": "^1.0.7",
-    "@tauri-apps/api": "^1.5.1",
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-updater": "2.9.0",
+    "@tauri-apps/plugin-process": "2.3.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^10.16.16",
@@ -35,7 +37,7 @@
     "yarn": "^1.22.21"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1.5.7",
+    "@tauri-apps/cli": "^2.0.0",
     "@types/lodash": "^4.14.202",
     "@types/node": "^20.10.4",
     "@types/react": "^18.2.43",

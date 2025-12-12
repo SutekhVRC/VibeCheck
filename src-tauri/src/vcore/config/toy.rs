@@ -9,6 +9,7 @@ use crate::{
 };
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub enum VCToyAnatomy {
@@ -145,10 +146,11 @@ pub struct VCToyConfig {
 impl VCToyConfig {
     pub fn load_offline_toy_config(
         toy_name: String,
+        app_handle: &AppHandle,
     ) -> Result<VCToyConfig, VibeCheckToyConfigError> {
         // Generate config path
 
-        let config_dir = match get_config_dir() {
+        let config_dir = match get_config_dir(app_handle) {
             Ok(d) => d,
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
@@ -171,8 +173,8 @@ impl VCToyConfig {
         }
     }
 
-    pub fn save_offline_toy_config(&self) -> Result<(), VibeCheckToyConfigError> {
-        let config_dir = match get_config_dir() {
+    pub fn save_offline_toy_config(&self, app_handle: &AppHandle) -> Result<(), VibeCheckToyConfigError> {
+        let config_dir = match get_config_dir(app_handle) {
             Ok(d) => d,
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };

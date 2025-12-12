@@ -244,13 +244,14 @@ pub async fn toy_management_handler(
                                 toy_sig_bcst_tx.subscribe(),
                                 toy.clone(),
                             );
-                            let new_thread = {
-                                toy_async_rt.clone().lock().as_ref().unwrap().spawn(
-                                    async move {
-                                        toy_thread_function_run.await;
-                                    },
-                                )
-                            };
+                            let new_thread =
+                                {
+                                    toy_async_rt.clone().lock().as_ref().unwrap().spawn(
+                                        async move {
+                                            toy_thread_function_run.await;
+                                        },
+                                    )
+                                };
                             running_toy_ths.insert(toy.toy_id, new_thread);
                             info!("Toy: {} started listening..", toy.toy_id);
                         }

@@ -7,11 +7,11 @@ use std::sync::Arc;
 
 use log::{error as logerr, info, trace, warn};
 use parking_lot::Mutex;
-use tauri::{Manager, SystemTrayMenu};
+use tauri::{Manager, menu::{Menu, MenuItem}, tray::TrayIconBuilder};
 
 use crate::{
     frontend::frontend_native,
-    vcore::config::{self, app::config_load},
+    vcore::config::{self, app::{VibeCheckConfig, config_load}},
 };
 //use env_logger;
 
@@ -23,6 +23,7 @@ mod osc_api;
 mod toy_handling;
 mod util;
 mod vcore;
+
 
 fn main() {
     #[cfg(debug_assertions)]
@@ -40,73 +41,32 @@ fn main() {
         log_builder.init();
     }
 
-    let vibecheck_config = match config_load() {
-        Ok(config_dir) => config_dir,
-        Err(e) => {
-            logerr!("Failed config_load(): {:?}", e);
-            return;
-        }
-    };
-
     let vibecheck_state_pointer = Arc::new(Mutex::new(vcore::state::VibeCheckState::new(
-        vibecheck_config,
+        VibeCheckConfig::default(),
         mock_toys_enabled,
     )));
     trace!("VibeCheckState created");
 
-    let quit = tauri::CustomMenuItem::new("quit".to_string(), "Quit");
-    let restart = tauri::CustomMenuItem::new("restart".to_string(), "Restart");
-    let hide_app = tauri::CustomMenuItem::new("hide".to_string(), "Hide");
-    let show_app = tauri::CustomMenuItem::new("show".to_string(), "Show");
-    //let enable_osc = tauri::CustomMenuItem::new("enable_osc".to_string(), "Enable");
-    //let disable_osc = tauri::CustomMenuItem::new("disable_osc".to_string(), "Disable");
-
-    let tray_menu = SystemTrayMenu::new()
-        //.add_item(enable_osc)
-        //.add_item(disable_osc)
-        .add_native_item(tauri::SystemTrayMenuItem::Separator)
-        .add_item(hide_app)
-        .add_item(show_app)
-        .add_native_item(tauri::SystemTrayMenuItem::Separator)
-        .add_item(restart)
-        .add_item(quit);
-
     let app = tauri::Builder::default()
+        //.plugin(tauri_plugin_os::init())
+        //.plugin(tauri_plugin_process::init())
+        //.plugin(tauri_plugin_fs::init())
+        //.plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        //.plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             warn!(
                 "Another {} process mutex created.. Showing already running app.",
                 app.package_info().name
             );
-            let window = app.get_window("main").expect("Failed to get window main");
+            let window = app.get_webview_window("main").expect("Failed to get window main");
             window.show().expect("Failed to show window");
         }))
         .setup(|_app| Ok(()))
-        .system_tray(tauri::SystemTray::new().with_menu(tray_menu))
-        .on_system_tray_event(|app, event| match event {
-            tauri::SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
-                "quit" => {
-                    app.exit(0);
-                }
-                "restart" => {
-                    app.restart();
-                }
-                "hide" => {
-                    let window = app.get_window("main").expect("Failed to get window main");
-                    window.hide().expect("Failed to hide window");
-                }
-                "show" => {
-                    let window = app.get_window("main").expect("Failed to get window main");
-                    window.show().expect("Failed to show window");
-                }
-                _ => {}
-            },
-            tauri::SystemTrayEvent::LeftClick { .. } => {
-                let window = app.get_window("main").expect("Failed to get window main");
-                trace!("Opening window: {}", window.label());
-                window.show().expect("Failed to show window");
-            }
-            _ => {}
-        })
         .manage(vcore::state::VCStateMutex(vibecheck_state_pointer.clone()))
         .invoke_handler(tauri::generate_handler![
             frontend_native::vibecheck_version,
@@ -128,14 +88,24 @@ fn main() {
         ])
         .build(tauri::generate_context!())
         .expect("Failed to generate Tauri context");
+    
     trace!("Tauri app built");
 
-    let identifier = app.config().tauri.bundle.identifier.clone();
+    let identifier = app.config().identifier.clone();
     info!("Got bundle id: {}", identifier);
 
     let vc_state_pointer = vibecheck_state_pointer.clone();
     {
         let mut vc_state = vibecheck_state_pointer.lock();
+
+        vc_state.config = match config_load(app.app_handle()) {
+            Ok(config_dir) => config_dir,
+            Err(e) => {
+                logerr!("Failed config_load(): {:?}", e);
+                std::process::exit(-1);
+            }
+        };
+
         vc_state.set_state_pointer(vc_state_pointer);
         trace!("State pointer set");
         vc_state.set_app_handle(app.app_handle());
@@ -158,6 +128,36 @@ fn main() {
         }
     }
 
+
+    // System Tray Initialization
+    //let app_handle = app.handle();
+    let quit = MenuItem::with_id(&app,"quit", "Quit", true, None::<&str>).unwrap();
+    let restart = MenuItem::with_id(&app, "restart", "Restart", true, None::<&str>).unwrap();
+    let hide_app = MenuItem::with_id(&app, "hide", "Hide", true, None::<&str>).unwrap();
+    let show_app = MenuItem::with_id(&app, "show", "Show", true, None::<&str>).unwrap();
+    let menu = Menu::with_items(&app, &[&quit, &restart, &hide_app, &show_app]).unwrap();
+
+    TrayIconBuilder::new()
+        .menu(&menu)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "quit" => {
+                app.exit(0);
+            }
+            "restart" => {
+                app.restart();
+            }
+            "hide" => {
+                let window = app.get_webview_window("main").expect("Failed to get window main");
+                window.hide().expect("Failed to hide window");
+            }
+            "show" => {
+                let window = app.get_webview_window("main").expect("Failed to get window main");
+                window.show().expect("Failed to show window");
+            }
+            _ => {}
+        })
+        .build(&app).unwrap();
+
     app.run(|_app_handle, event| {
         match event {
             tauri::RunEvent::WindowEvent {
@@ -176,7 +176,7 @@ fn main() {
 
                 if minimize_on_exit {
                     let window = _app_handle
-                        .get_window(&label)
+                        .get_webview_window(&label)
                         .expect("Failed to get window to minimize");
                     trace!("Closing window: {}", window.label());
                     window.hide().expect("Failed to hide window for minimize");
@@ -191,19 +191,6 @@ fn main() {
             tauri::RunEvent::MainEventsCleared => {}
             tauri::RunEvent::Ready => {
                 info!("App Ready");
-            }
-            tauri::RunEvent::Updater(updater_event) => match updater_event {
-                tauri::UpdaterEvent::Error(err) => {
-                    log::error!("Update error: {}", err);
-                }
-                tauri::UpdaterEvent::UpdateAvailable {
-                    body: _,
-                    date: _,
-                    version,
-                } => {
-                    info!("Update available: {}", version);
-                }
-                _ => {}
             },
             _ => {}
         }
