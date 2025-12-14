@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs;
 
 use crate::error_signal_handler::{ErrorSource, VibeCheckError};
 use crate::frontend::ToFrontend;
@@ -10,7 +11,7 @@ use crate::{
     util::fs::{file_exists, get_config_dir},
 };
 use log::{debug, info, trace};
-use tauri::{api::dir::read_dir, AppHandle};
+use tauri::AppHandle;
 
 use super::errors::ToyHandlingError;
 
@@ -53,23 +54,25 @@ impl ToyManager {
     }
 
     pub fn populate_configs(&mut self) -> Result<(), ToyHandlingError> {
-        let config_dir = match get_config_dir() {
+        let config_dir = match get_config_dir(&self._app_handle) {
             Ok(d) => d,
             Err(_) => return Err(ToyHandlingError::PopulateConfigFailure),
         };
 
-        let toy_config_dir = match read_dir(build_path_dir(&[&config_dir, "ToyConfigs"]), false) {
+        let toy_config_dir = match fs::read_dir(build_path_dir(&[&config_dir, "ToyConfigs"])) {
             Ok(config_paths) => config_paths,
             // Doesn't populate
             Err(_e) => return Err(ToyHandlingError::PopulateConfigFailure),
         };
 
-        for f in toy_config_dir {
-            if !file_exists(&f.path) {
+        let config_files = toy_config_dir.filter_map(|dir| dir.ok());
+
+        for f in config_files {
+            if !file_exists(&f.path()) {
                 continue;
             }
 
-            let con = match std::fs::read_to_string(f.path) {
+            let con = match std::fs::read_to_string(f.path()) {
                 Ok(contents) => contents,
                 Err(_e) => continue,
             };

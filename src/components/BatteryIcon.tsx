@@ -1,3 +1,4 @@
+import { ToyPower } from "@bindings/ToyPower";
 import {
   BatteryFull,
   BatteryLow,
@@ -8,7 +9,6 @@ import {
   WifiOff,
 } from "lucide-react";
 import { CSSProperties } from "react";
-import { ToyPower } from "src-tauri/bindings/ToyPower";
 import Tooltip from "../layout/Tooltip";
 import { percent } from "../utils";
 

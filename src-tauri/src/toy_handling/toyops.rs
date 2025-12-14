@@ -6,6 +6,7 @@ use core::fmt;
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, sync::Arc, time::Instant};
+use tauri::AppHandle;
 use ts_rs::TS;
 
 use crate::{
@@ -19,7 +20,7 @@ use crate::{
     toy_handling::input_processor::penetration_systems::{
         sps::SPSProcessor, tps::TPSProcessor, PenetrationSystemType,
     },
-    util::fs::{build_path_file, file_exists, get_config_dir},
+    util::fs::{build_path_dir, build_path_file, file_exists, get_config_dir, ConfigFileType},
     vcore::errors::{
         self,
         backend::{VibeCheckFSError, VibeCheckToyConfigError},
@@ -44,6 +45,7 @@ pub struct VCToy {
     pub device_handle: Arc<ButtplugClientDevice>,
     pub config: Option<VCToyConfig>,
     pub sub_id: u8,
+    pub app_handle: AppHandle,
 }
 
 impl VCToy {
@@ -292,15 +294,17 @@ impl VCToy {
     pub fn load_toy_config(&mut self) -> Result<(), VibeCheckToyConfigError> {
         // Generate config path
 
-        let config_dir = match get_config_dir() {
+        let config_dir = match get_config_dir(&self.app_handle) {
             Ok(d) => d,
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
 
-        let config_path = build_path_file(&[&config_dir, &format!("{}.json", self.toy_name)]);
+        let toy_config_dir = build_path_dir(&[&config_dir, "ToyConfigs"]);
+        let config_path = build_path_file(&[&toy_config_dir, &format!("{}.json", self.toy_name)]);
 
         if !file_exists(&config_path) {
             self.config = None;
+            debug!("Attempted to load toy config file: {}", config_path);
             Ok(())
         } else {
             let con = fs::read_to_string(config_path).unwrap();
@@ -320,19 +324,19 @@ impl VCToy {
 
     // Save Toy config by name
     pub fn save_toy_config(&self) -> Result<(), VibeCheckToyConfigError> {
-        let config_dir = match get_config_dir() {
+        let config_dir = match get_config_dir(&self.app_handle) {
             Ok(d) => d,
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
-
-        let config_path = build_path_file(&[&config_dir, &format!("{}.json", self.toy_name)]);
+        let toy_config_dir = build_path_dir(&[&config_dir, "ToyConfigs"]);
+        let config_path = build_path_file(&[&toy_config_dir, &format!("{}.json", self.toy_name)]);
         info!("Saving toy config to: {}", config_path);
 
         if let Some(conf) = &self.config {
             if let Ok(json_string) = serde_json::to_string(conf) {
                 match fs::write(&config_path, json_string) {
                     Ok(()) => {
-                        info!("Saved toy config: {}", self.toy_name);
+                        info!("Saved toy config: {}", config_path);
                     }
                     Err(e) => {
                         logerr!("Failed to write to file: {}", e);

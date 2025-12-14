@@ -33,9 +33,6 @@ pub enum RunningState {
 pub struct VibeCheckState {
     pub app_handle: Option<AppHandle>,
     pub identifier: String,
-    pub mock_toys: bool,
-    pub mock_toy_events_emitted: bool,
-    pub mock_toys_data: Vec<crate::frontend::frontend_types::FeVCToy>,
 
     pub config: VibeCheckConfig,
     pub osc_query_handler: Option<OSCQuery>,
@@ -75,7 +72,7 @@ pub struct VibeCheckState {
 }
 
 impl VibeCheckState {
-    pub fn new(config: VibeCheckConfig, mock_toys: bool) -> Self {
+    pub fn new(config: VibeCheckConfig) -> Self {
         // Toys hashmap
         //let core_toy_manager = ToyHandler::new();
 
@@ -95,8 +92,6 @@ impl VibeCheckState {
         let state = Self {
             app_handle: None,
             identifier: String::new(),
-            mock_toys,
-            mock_toy_events_emitted: false,
             config,
             osc_query_handler: None,
             //connection_modes,
@@ -137,10 +132,6 @@ impl VibeCheckState {
             //======================================
             // Async runtime
             async_rt,
-
-            //======================================
-            // Mock Toys Data
-            mock_toys_data: Vec::new(),
         };
 
         state
@@ -227,8 +218,8 @@ impl VibeCheckState {
         self.vibecheck_state_pointer = Some(vibecheck_state_pointer);
     }
 
-    pub fn set_app_handle(&mut self, app_handle: AppHandle) {
-        self.app_handle = Some(app_handle);
+    pub fn set_app_handle(&mut self, app_handle: &AppHandle) {
+        self.app_handle = Some(app_handle.clone());
     }
 
     pub fn init_toy_manager(&mut self) -> Result<(), VibeCheckError> {

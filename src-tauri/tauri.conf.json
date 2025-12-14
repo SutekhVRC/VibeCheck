@@ -2,71 +2,64 @@
   "build": {
     "beforeDevCommand": "yarn dev",
     "beforeBuildCommand": "yarn build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist",
-    "withGlobalTauri": false
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420"
   },
-  "package": {
-    "productName": "VibeCheck",
-    "version": "0.4.5"
-  },
-  "tauri": {
-    "systemTray": {
-      "iconPath": "icons/vibecheck.ico",
-      "iconAsTemplate": true
-    },
-    "allowlist": {
-      "all": true
-    },
-    "bundle": {
-      "active": true,
-      "publisher": "SutekhVRC",
-      "category": "Lifestyle",
-      "copyright": "",
-      "deb": {
-        "depends": []
+  "bundle": {
+    "active": true,
+    "publisher": "SutekhVRC",
+    "category": "Lifestyle",
+    "copyright": "",
+    "targets": "all",
+    "externalBin": [],
+    "icon": [
+      "icons/vibecheck.ico"
+    ],
+    "windows": {
+      "wix": {
+        "bannerPath": "wix/VibeCheck_BANNER.bmp",
+        "dialogImagePath": "wix/VibeCheck_Dialog.bmp"
       },
-      "externalBin": [],
-      "icon": ["icons/vibecheck.ico"],
-      "identifier": "com.vibecheck",
-      "longDescription": "",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
-      },
-      "resources": [],
-      "shortDescription": "",
-      "targets": "all",
-      "windows": {
-        "wix": {
-          "bannerPath": "wix/VibeCheck_BANNER.bmp",
-          "dialogImagePath": "wix/VibeCheck_Dialog.bmp"
-        },
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": "",
-        "webviewInstallMode": {
-          "type": "downloadBootstrapper"
-        }
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
       }
     },
-    "security": {
-      "csp": null
+    "longDescription": "",
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": null
     },
+    "resources": [],
+    "shortDescription": "",
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    },
+    "createUpdaterArtifacts": "v1Compatible"
+  },
+  "productName": "VibeCheck",
+  "mainBinaryName": "VibeCheck",
+  "version": "0.4.5",
+  "identifier": "com.vibecheck",
+  "plugins": {
     "updater": {
-      "active": true,
-      "dialog": false,
-      "windows": {
-        "installMode": "passive"
-      },
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZFNUE0MUZBQjdCNDQ3OTcKUldTWFI3UzMra0ZhL3FkNk9QcFdNS3kwaVRhU0xEcnd1eDV4RnFzb2dHcE96UERIaGFDQmZaSjgK",
       "endpoints": [
         "https://github.com/SutekhVRC/VibeCheck/releases/latest/download/latest.json"
-      ]
-    },
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
+  "app": {
     "windows": [
       {
         "fullscreen": false,
@@ -75,8 +68,17 @@
         "width": 900,
         "height": 600,
         "minWidth": 620,
-        "minHeight": 400
+        "minHeight": 400,
+        "useHttpsScheme": true
       }
-    ]
+    ],
+    "withGlobalTauri": false,
+    "trayIcon": {
+      "iconPath": "icons/vibecheck.ico",
+      "iconAsTemplate": true
+    },
+    "security": {
+      "csp": null
+    }
   }
 }

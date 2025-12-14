@@ -1,7 +1,7 @@
-import { invoke } from "@tauri-apps/api";
+import { FeVCToyFeature } from "@bindings/FeVCToyFeature";
+import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { FeVCToyFeature } from "../../src-tauri/bindings/FeVCToyFeature";
 import { INVOKE } from "../data/constants";
 import { useUpdateEffect } from "./useUpdateEffect";
 

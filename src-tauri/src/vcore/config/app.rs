@@ -1,6 +1,7 @@
 use log::{error as logerr, info, trace, warn};
 use serde::{Deserialize, Serialize};
 use std::fs;
+use tauri::AppHandle;
 
 use crate::{
     osc::OSCNetworking,
@@ -19,8 +20,21 @@ pub struct VibeCheckConfig {
     pub show_feature_advanced: bool,
 }
 
-pub fn config_load() -> Result<VibeCheckConfig, VibeCheckConfigError> {
-    let vc_root_dir = match get_config_dir() {
+impl Default for VibeCheckConfig {
+    fn default() -> Self {
+        Self {
+            networking: OSCNetworking::default(),
+            scan_on_disconnect: false,
+            minimize_on_exit: false,
+            desktop_notifications: false,
+            show_toy_advanced: false,
+            show_feature_advanced: false,
+        }
+    }
+}
+
+pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckConfigError> {
+    let vc_root_dir = match get_config_dir(app_handle) {
         Ok(d) => d,
         Err(_) => return Err(VibeCheckConfigError::ConfigDirFail),
     };
@@ -79,14 +93,7 @@ pub fn config_load() -> Result<VibeCheckConfig, VibeCheckConfigError> {
                 );
                 warn!("Resetting to default config.");
 
-                let default_conf = VibeCheckConfig {
-                    networking: OSCNetworking::default(),
-                    scan_on_disconnect: false,
-                    minimize_on_exit: false,
-                    desktop_notifications: false,
-                    show_toy_advanced: false,
-                    show_feature_advanced: false,
-                };
+                let default_conf = VibeCheckConfig::default();
 
                 fs::write(
                     &vc_config_file,

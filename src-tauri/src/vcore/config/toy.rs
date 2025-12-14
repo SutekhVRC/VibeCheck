@@ -1,7 +1,7 @@
 use crate::{
     frontend::frontend_types::FeVCToyAnatomy,
     toy_handling::toyops::VCToyFeatures,
-    util::fs::{build_path_file, file_exists, get_config_dir},
+    util::fs::{build_path_dir, build_path_file, file_exists, get_config_dir},
     vcore::errors::{
         self,
         backend::{VibeCheckFSError, VibeCheckToyConfigError},
@@ -9,6 +9,7 @@ use crate::{
 };
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub enum VCToyAnatomy {
@@ -145,15 +146,17 @@ pub struct VCToyConfig {
 impl VCToyConfig {
     pub fn load_offline_toy_config(
         toy_name: String,
+        app_handle: &AppHandle,
     ) -> Result<VCToyConfig, VibeCheckToyConfigError> {
         // Generate config path
 
-        let config_dir = match get_config_dir() {
+        let config_dir = match get_config_dir(app_handle) {
             Ok(d) => d,
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
 
-        let config_path = format!("{}\\ToyConfigs\\{}.json", config_dir, toy_name,);
+        let toy_config_dir = build_path_dir(&[&config_dir, "ToyConfigs"]);
+        let config_path = build_path_file(&[&toy_config_dir, &format!("{}.json", toy_name)]);
 
         if !file_exists(&config_path) {
             Err(errors::backend::VibeCheckToyConfigError::OfflineToyConfigNotFound)
@@ -171,13 +174,17 @@ impl VCToyConfig {
         }
     }
 
-    pub fn save_offline_toy_config(&self) -> Result<(), VibeCheckToyConfigError> {
-        let config_dir = match get_config_dir() {
+    pub fn save_offline_toy_config(
+        &self,
+        app_handle: &AppHandle,
+    ) -> Result<(), VibeCheckToyConfigError> {
+        let config_dir = match get_config_dir(app_handle) {
             Ok(d) => d,
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
 
-        let config_path = build_path_file(&[&config_dir, &format!("{}.json", self.toy_name)]);
+        let toy_config_dir = build_path_dir(&[&config_dir, "ToyConfigs"]);
+        let config_path = build_path_file(&[&toy_config_dir, &format!("{}.json", self.toy_name)]);
 
         info!("Saving toy config to: {}", config_path);
 
