@@ -1,7 +1,7 @@
 use crate::{
     frontend::frontend_types::FeVCToyAnatomy,
     toy_handling::toyops::VCToyFeatures,
-    util::fs::{build_path_file, file_exists, get_config_dir},
+    util::fs::{build_path_dir, build_path_file, file_exists, get_config_dir},
     vcore::errors::{
         self,
         backend::{VibeCheckFSError, VibeCheckToyConfigError},
@@ -155,7 +155,8 @@ impl VCToyConfig {
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
 
-        let config_path = format!("{}\\ToyConfigs\\{}.json", config_dir, toy_name,);
+        let toy_config_dir = build_path_dir(&[&config_dir, "ToyConfigs"]);
+        let config_path = build_path_file(&[&toy_config_dir, &format!("{}.json", toy_name)]);
 
         if !file_exists(&config_path) {
             Err(errors::backend::VibeCheckToyConfigError::OfflineToyConfigNotFound)
@@ -179,7 +180,8 @@ impl VCToyConfig {
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
 
-        let config_path = build_path_file(&[&config_dir, &format!("{}.json", self.toy_name)]);
+        let toy_config_dir = build_path_dir(&[&config_dir, "ToyConfigs"]);
+        let config_path = build_path_file(&[&toy_config_dir, &format!("{}.json", self.toy_name)]);
 
         info!("Saving toy config to: {}", config_path);
 

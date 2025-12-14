@@ -335,7 +335,7 @@ impl VCToy {
             if let Ok(json_string) = serde_json::to_string(conf) {
                 match fs::write(&config_path, json_string) {
                     Ok(()) => {
-                        info!("Saved toy config: {}", self.toy_name);
+                        info!("Saved toy config: {}", config_path);
                     }
                     Err(e) => {
                         logerr!("Failed to write to file: {}", e);
