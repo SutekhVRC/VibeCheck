@@ -1,7 +1,7 @@
 import { INVOKE, TOOLTIP } from "@/data/constants";
 import { ObjectValues } from "@/utils";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import type { ReactNode } from "react";
 
 export default function Tooltip({
