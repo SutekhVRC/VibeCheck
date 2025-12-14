@@ -157,25 +157,6 @@ pub fn alter_toy(
                     fe_toy.toy_name
                 );
 
-                // Mock mode: update in-memory toys and emit update
-                {
-                    let mut vc_lock = vc_state.0.lock();
-                    if vc_lock.mock_toys {
-                        let pos = vc_lock.mock_toys_data.iter().position(|t| {
-                            t.toy_id == fe_toy.toy_id || t.toy_name == fe_toy.toy_name
-                        });
-                        if let Some(idx) = pos {
-                            vc_lock.mock_toys_data[idx] = fe_toy.clone();
-                            let updated = vc_lock.mock_toys_data[idx].clone();
-                            drop(vc_lock);
-                            emit_toy_event(&app_handle, FeToyEvent::Update(updated));
-                            return Ok(());
-                        } else {
-                            return Err(VCFeError::AlterToyFailure(ToyAlterError::NoToyIndex));
-                        }
-                    }
-                }
-
                 let altered = {
                     let mut vc_lock = vc_state.0.lock();
                     if let Some(toy) = vc_lock
@@ -356,32 +337,7 @@ pub fn sync_offline_toys(
     refresh_toys: bool,
 ) -> Result<Vec<FeVCToy>, VCFeError> {
     trace!("sync_offline_toys");
-    {
-        let mut vc_lock = vc_state.0.lock();
-        if vc_lock.mock_toys {
-            if vc_lock.mock_toys_data.is_empty() || refresh_toys {
-                vc_lock.mock_toys_data = crate::mock::mock_toys();
-                vc_lock.mock_toy_events_emitted = false;
-            }
-            let toys = vc_lock.mock_toys_data.clone();
-            let should_emit = !vc_lock.mock_toy_events_emitted;
-            let app_handle = vc_lock.app_handle.as_ref().cloned();
-            if should_emit {
-                vc_lock.mock_toy_events_emitted = true;
-            }
-            drop(vc_lock);
 
-            if should_emit {
-                if let Some(app_handle) = app_handle {
-                    for toy in toys.iter() {
-                        emit_toy_event(&app_handle, FeToyEvent::Add(toy.clone()));
-                    }
-                }
-            }
-
-            return Ok(toys);
-        }
-    }
     if let Some(toy_manager) = vc_state.0.lock().core_toy_manager.as_mut() {
         match toy_manager.sync_frontend(refresh_toys) {
             Ok(toys) => Ok(toys),
