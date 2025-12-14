@@ -1,10 +1,14 @@
-import { UpdateResult, check } from "@tauri-apps/plugin-updater";
+import { check } from "@tauri-apps/plugin-updater";
 import { useEffect, useState } from "react";
 
 export function useUpdate() {
   const [canUpdate, setCanUpdate] = useState(false);
   useEffect(() => {
-    check().then((res: UpdateResult) => setCanUpdate(res.shouldUpdate));
+    async function fetchUpdate() {
+      const update = await check();
+      setCanUpdate(update !== null);
+    }
+    fetchUpdate();
   }, []);
   return { canUpdate };
 }
