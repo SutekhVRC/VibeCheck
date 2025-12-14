@@ -19,7 +19,7 @@ impl ToString for ConfigFileType {
             #[cfg(target_os = "linux")]
             Self::App => "".to_string(),
             #[cfg(target_os = "windows")]
-            Self::Toy => "".to_string(),
+            Self::App => "".to_string(),
         }
     }
 }
