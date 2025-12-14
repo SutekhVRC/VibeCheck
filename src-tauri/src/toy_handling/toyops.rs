@@ -12,15 +12,14 @@ use ts_rs::TS;
 use crate::{
     config::toy::{VCToyAnatomy, VCToyConfig},
     frontend::{
-        frontend_types::{
+        FromFrontend, ToBackend, ToFrontend, frontend_types::{
             FeLevelTweaks, FeProcessingMode, FeToyParameter, FeVCFeatureType, FeVCToyFeature,
-        },
-        FromFrontend, ToBackend, ToFrontend,
+        }
     },
     toy_handling::input_processor::penetration_systems::{
-        sps::SPSProcessor, tps::TPSProcessor, PenetrationSystemType,
+        PenetrationSystemType, sps::SPSProcessor, tps::TPSProcessor
     },
-    util::fs::{build_path_file, file_exists, get_config_dir},
+    util::fs::{ConfigFileType, build_path_dir, build_path_file, file_exists, get_config_dir},
     vcore::errors::{
         self,
         backend::{VibeCheckFSError, VibeCheckToyConfigError},
@@ -299,10 +298,12 @@ impl VCToy {
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
 
-        let config_path = build_path_file(&[&config_dir, &format!("{}.json", self.toy_name)]);
+        let toy_config_dir = build_path_dir(&[&config_dir, "ToyConfigs"]);
+        let config_path = build_path_file(&[&toy_config_dir, &format!("{}.json", self.toy_name)]);
 
         if !file_exists(&config_path) {
             self.config = None;
+            debug!("Attempted to load toy config file: {}", config_path);
             Ok(())
         } else {
             let con = fs::read_to_string(config_path).unwrap();
@@ -326,8 +327,8 @@ impl VCToy {
             Ok(d) => d,
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
         };
-
-        let config_path = build_path_file(&[&config_dir, &format!("{}.json", self.toy_name)]);
+        let toy_config_dir = build_path_dir(&[&config_dir, "ToyConfigs"]);
+        let config_path = build_path_file(&[&toy_config_dir, &format!("{}.json", self.toy_name)]);
         info!("Saving toy config to: {}", config_path);
 
         if let Some(conf) = &self.config {

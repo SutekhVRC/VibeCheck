@@ -4,6 +4,26 @@ use tauri::{AppHandle, Manager};
 
 use crate::util::errors::UtilError;
 
+pub enum ConfigFileType {
+    Toy,
+    App,
+}
+
+impl ToString for ConfigFileType {
+    fn to_string(&self) -> String {
+        match self {
+            #[cfg(target_os = "linux")]
+            Self::Toy => "ToyConfigs".to_string(),
+            #[cfg(target_os = "windows")]
+            Self::Toy => "ToyConfigs".to_string(),
+            #[cfg(target_os = "linux")]
+            Self::App => "".to_string(),
+            #[cfg(target_os = "windows")]
+            Self::Toy => "".to_string(),
+        }
+    }
+}
+
 pub fn path_exists(p: &String) -> bool {
     Path::new(&p).is_dir()
 }
@@ -34,12 +54,13 @@ pub fn get_user_home_dir() -> Result<String, UtilError> {
 }
 
 pub fn get_config_dir(app_handle: &AppHandle) -> Result<String, UtilError> {
-    let pb = match app_handle.path().app_data_dir() {
+    let pb = match app_handle.path().app_config_dir() {
         Ok(path) => path,
         Err(_) => return Err(UtilError::ConfigDirFS),
     };
+
     match pb.to_str() {
-        Some(s) => Ok(s.to_string()),
+        Some(config_dir) => Ok(config_dir.to_string()),
         None => Err(UtilError::ConfigDirFS),
     }
 }
