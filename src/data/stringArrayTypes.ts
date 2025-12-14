@@ -1,6 +1,6 @@
-import { FeProcessingMode } from "src-tauri/bindings/FeProcessingMode";
-import { PenetrationSystemType } from "src-tauri/bindings/PenetrationSystemType";
-import { FeVCToyAnatomy } from "../../src-tauri/bindings/FeVCToyAnatomy";
+import { FeProcessingMode } from "@bindings/FeProcessingMode";
+import { FeVCToyAnatomy } from "@bindings/FeVCToyAnatomy";
+import { PenetrationSystemType } from "@bindings/PenetrationSystemType";
 
 /*
 This file is a workaround because we cannot create an iterable string array from a ts_rs exported enum type

@@ -1,8 +1,8 @@
+import type { FeVCToy } from "@bindings/FeVCToy";
+import { FeVCToyAnatomy } from "@bindings/FeVCToyAnatomy";
 import { ClipboardCopy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import type { FeVCToy } from "../../src-tauri/bindings/FeVCToy";
-import { FeVCToyAnatomy } from "../../src-tauri/bindings/FeVCToyAnatomy";
 import FourPanel from "../components/FourPanel";
 import FourPanelContainer from "../components/FourPanelContainer";
 import { OSC, TOOLTIP } from "../data/constants";

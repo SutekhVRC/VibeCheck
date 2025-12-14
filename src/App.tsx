@@ -1,7 +1,7 @@
+import { FeVCToy } from "@bindings/FeVCToy";
 import { AnimatePresence } from "framer-motion";
 import { Settings } from "lucide-react";
 import { useState } from "react";
-import { FeVCToy } from "../src-tauri/bindings/FeVCToy";
 import "./App.css";
 import GithubLogo from "./assets/GitHub-Mark-Light-64px.png";
 import VibecheckLogo from "./assets/VibeCheck_logo.png";

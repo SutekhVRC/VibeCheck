@@ -22,8 +22,8 @@
     "@radix-ui/react-switch": "^1.0.3",
     "@radix-ui/react-tooltip": "^1.0.7",
     "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-updater": "2.9.0",
     "@tauri-apps/plugin-process": "2.3.1",
+    "@tauri-apps/plugin-updater": "2.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^10.16.16",
@@ -34,8 +34,7 @@
     "react-dom": "^18.2.0",
     "sonner": "^1.7.4",
     "tailwind-merge": "^3.0.1",
-    "tailwindcss-animate": "^1.0.7",
-    "yarn": "^1.22.21"
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
@@ -43,18 +42,18 @@
     "@types/node": "^20.10.4",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
-    "@typescript-eslint/eslint-plugin": "^6.13.2",
-    "@typescript-eslint/parser": "^6.13.2",
+    "@typescript-eslint/eslint-plugin": "^8.49.0",
+    "@typescript-eslint/parser": "^8.49.0",
     "@vitejs/plugin-react-swc": "^3.5.0",
     "autoprefixer": "^10.4.16",
-    "eslint": "^8.55.0",
+    "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.33.2",
     "postcss": "^8.4.32",
     "prettier": "^3.1.0",
     "prettier-plugin-organize-imports": "^3.2.4",
     "prettier-plugin-tailwindcss": "^0.5.9",
     "tailwindcss": "^3.3.6",
-    "typescript": "^5.3.3",
+    "typescript": "^5.9.3",
     "vite": "^5.0.7"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
