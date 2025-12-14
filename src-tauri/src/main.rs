@@ -7,11 +7,18 @@ use std::sync::Arc;
 
 use log::{error as logerr, info, trace, warn};
 use parking_lot::Mutex;
-use tauri::{Manager, menu::{Menu, MenuItem}, tray::TrayIconBuilder};
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::TrayIconBuilder,
+    Manager,
+};
 
 use crate::{
     frontend::frontend_native,
-    vcore::config::{self, app::{VibeCheckConfig, config_load}},
+    vcore::config::{
+        self,
+        app::{config_load, VibeCheckConfig},
+    },
 };
 //use env_logger;
 
@@ -23,9 +30,7 @@ mod toy_handling;
 mod util;
 mod vcore;
 
-
 fn main() {
-
     #[cfg(debug_assertions)]
     {
         //tracing_subscriber::fmt::init();
@@ -35,7 +40,7 @@ fn main() {
     }
 
     let vibecheck_state_pointer = Arc::new(Mutex::new(vcore::state::VibeCheckState::new(
-        VibeCheckConfig::default()
+        VibeCheckConfig::default(),
     )));
     trace!("VibeCheckState created");
 
@@ -55,7 +60,9 @@ fn main() {
                 "Another {} process mutex created.. Showing already running app.",
                 app.package_info().name
             );
-            let window = app.get_webview_window("main").expect("Failed to get window main");
+            let window = app
+                .get_webview_window("main")
+                .expect("Failed to get window main");
             window.show().expect("Failed to show window");
         }))
         .setup(|_app| Ok(()))
@@ -80,7 +87,7 @@ fn main() {
         ])
         .build(tauri::generate_context!())
         .expect("Failed to generate Tauri context");
-    
+
     trace!("Tauri app built");
 
     let identifier = app.config().identifier.clone();
@@ -109,19 +116,17 @@ fn main() {
         vc_state.identifier = identifier;
         trace!("App Identifier set");
 
-            vc_state.start_tmh().unwrap();
-            trace!("Started TMH");
-            vc_state.init_ceh().unwrap();
-            trace!("Started CEH");
-            vc_state.start_disabled_listener().unwrap();
-            trace!("Started DOL");
-
+        vc_state.start_tmh().unwrap();
+        trace!("Started TMH");
+        vc_state.init_ceh().unwrap();
+        trace!("Started CEH");
+        vc_state.start_disabled_listener().unwrap();
+        trace!("Started DOL");
     }
-
 
     // System Tray Initialization
     //let app_handle = app.handle();
-    let quit = MenuItem::with_id(&app,"quit", "Quit", true, None::<&str>).unwrap();
+    let quit = MenuItem::with_id(&app, "quit", "Quit", true, None::<&str>).unwrap();
     let restart = MenuItem::with_id(&app, "restart", "Restart", true, None::<&str>).unwrap();
     let hide_app = MenuItem::with_id(&app, "hide", "Hide", true, None::<&str>).unwrap();
     let show_app = MenuItem::with_id(&app, "show", "Show", true, None::<&str>).unwrap();
@@ -137,16 +142,21 @@ fn main() {
                 app.restart();
             }
             "hide" => {
-                let window = app.get_webview_window("main").expect("Failed to get window main");
+                let window = app
+                    .get_webview_window("main")
+                    .expect("Failed to get window main");
                 window.hide().expect("Failed to hide window");
             }
             "show" => {
-                let window = app.get_webview_window("main").expect("Failed to get window main");
+                let window = app
+                    .get_webview_window("main")
+                    .expect("Failed to get window main");
                 window.show().expect("Failed to show window");
             }
             _ => {}
         })
-        .build(&app).unwrap();
+        .build(&app)
+        .unwrap();
 
     app.run(|_app_handle, event| {
         match event {
@@ -181,7 +191,7 @@ fn main() {
             tauri::RunEvent::MainEventsCleared => {}
             tauri::RunEvent::Ready => {
                 info!("App Ready");
-            },
+            }
             _ => {}
         }
     });

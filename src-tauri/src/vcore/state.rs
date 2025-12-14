@@ -3,7 +3,7 @@ use log::{error as logerr, info, warn};
 use parking_lot::Mutex;
 use std::net::SocketAddrV4;
 use std::sync::Arc;
-use tauri::{AppHandle};
+use tauri::AppHandle;
 use tokio::runtime::Runtime;
 use tokio::sync::{mpsc::unbounded_channel, mpsc::UnboundedReceiver, mpsc::UnboundedSender};
 use tokio::task::JoinHandle;

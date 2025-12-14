@@ -23,9 +23,9 @@ use futures::StreamExt;
 use futures_timer::Delay;
 use log::{error as logerr, info, trace, warn};
 use parking_lot::Mutex;
-use tauri_plugin_notification::{Notification, NotificationExt};
 use std::sync::mpsc::Sender;
-use tauri::{AppHandle};
+use tauri::AppHandle;
+use tauri_plugin_notification::{Notification, NotificationExt};
 use tokio::sync::mpsc::UnboundedSender;
 
 /*
@@ -156,7 +156,9 @@ pub async fn client_event_handler(
                     {
                         let vc_lock = vibecheck_state_pointer.lock();
                         if vc_lock.config.desktop_notifications {
-                            app_handle.notification().builder()
+                            app_handle
+                                .notification()
+                                .builder()
                                 .title("Toy Connected")
                                 .body(
                                     format!("{} ({})", toy.toy_name, toy.toy_power.to_string())
@@ -195,7 +197,9 @@ pub async fn client_event_handler(
                         {
                             let vc_lock = vibecheck_state_pointer.lock();
                             if vc_lock.config.desktop_notifications {
-                                app_handle.notification().builder()
+                                app_handle
+                                    .notification()
+                                    .builder()
                                     .title("Toy Disconnected")
                                     .body(toy.toy_name.to_string())
                                     .show();

@@ -213,15 +213,17 @@ pub fn alter_toy(
                     "FeToyAlter::Disconnected: Altering offline toy: {}",
                     fe_toy.toy_name
                 );
-                let mut offline_toy_config =
-                    match VCToyConfig::load_offline_toy_config(fe_toy.toy_name.clone(), &app_handle) {
-                        Ok(toy_config) => toy_config,
-                        Err(_e) => {
-                            return Err(VCFeError::AlterToyFailure(
-                                ToyAlterError::OfflineToyNotExist,
-                            ))
-                        }
-                    };
+                let mut offline_toy_config = match VCToyConfig::load_offline_toy_config(
+                    fe_toy.toy_name.clone(),
+                    &app_handle,
+                ) {
+                    Ok(toy_config) => toy_config,
+                    Err(_e) => {
+                        return Err(VCFeError::AlterToyFailure(
+                            ToyAlterError::OfflineToyNotExist,
+                        ))
+                    }
+                };
 
                 offline_toy_config.osc_data = fe_toy.osc_data;
                 offline_toy_config.bt_update_rate = fe_toy.bt_update_rate;
@@ -240,7 +242,10 @@ pub fn alter_toy(
                 fe_toy.bt_update_rate = offline_toy_config.bt_update_rate;
                 fe_toy.toy_anatomy = offline_toy_config.anatomy.to_fe();
 
-                if offline_toy_config.save_offline_toy_config(&app_handle).is_err() {
+                if offline_toy_config
+                    .save_offline_toy_config(&app_handle)
+                    .is_err()
+                {
                     return Err(VCFeError::SaveOfflineToyConfig);
                 }
 

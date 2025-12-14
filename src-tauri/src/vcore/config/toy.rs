@@ -174,7 +174,10 @@ impl VCToyConfig {
         }
     }
 
-    pub fn save_offline_toy_config(&self, app_handle: &AppHandle) -> Result<(), VibeCheckToyConfigError> {
+    pub fn save_offline_toy_config(
+        &self,
+        app_handle: &AppHandle,
+    ) -> Result<(), VibeCheckToyConfigError> {
         let config_dir = match get_config_dir(app_handle) {
             Ok(d) => d,
             Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),

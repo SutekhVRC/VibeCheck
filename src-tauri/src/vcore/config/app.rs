@@ -1,7 +1,7 @@
 use log::{error as logerr, info, trace, warn};
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
 use std::fs;
+use tauri::AppHandle;
 
 use crate::{
     osc::OSCNetworking,
@@ -22,7 +22,14 @@ pub struct VibeCheckConfig {
 
 impl Default for VibeCheckConfig {
     fn default() -> Self {
-        Self { networking: OSCNetworking::default(), scan_on_disconnect: false, minimize_on_exit: false, desktop_notifications: false, show_toy_advanced: false, show_feature_advanced: false }
+        Self {
+            networking: OSCNetworking::default(),
+            scan_on_disconnect: false,
+            minimize_on_exit: false,
+            desktop_notifications: false,
+            show_toy_advanced: false,
+            show_feature_advanced: false,
+        }
     }
 }
 

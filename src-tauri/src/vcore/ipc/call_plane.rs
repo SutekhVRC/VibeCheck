@@ -4,7 +4,8 @@ use log::{debug, error as logerr, info, trace, warn};
 
 use crate::{
     frontend::{
-        ToFrontend, frontend_types::{FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig}
+        frontend_types::{FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig},
+        ToFrontend,
     },
     osc::OSCNetworking,
     toy_handling::{
@@ -16,7 +17,9 @@ use crate::{
     vcore::{
         config::app::VibeCheckConfig,
         errors::{
-            VCError, VcoreError, backend::{ToyAlterError, VibeCheckConfigError, VibeCheckFSError}, frontend::VCFeError
+            backend::{ToyAlterError, VibeCheckConfigError, VibeCheckFSError},
+            frontend::VCFeError,
+            VCError, VcoreError,
         },
         ipc::emit_plane::emit_toy_event,
         state::{RunningState, VCStateMutex},
@@ -98,7 +101,7 @@ pub async fn native_vibecheck_enable(
     vc_state: tauri::State<'_, VCStateMutex>,
 ) -> Result<(), VCFeError> {
     let mut vc_lock = vc_state.0.lock();
-    
+
     if let RunningState::Running = vc_lock.running {
         return Ok(());
     }
@@ -202,7 +205,6 @@ pub fn native_osc_query_attempt_force(
     Ok(())
 }
 
-
 pub fn osc_query_force_populate(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), VCFeError> {
     Ok(())
 }
@@ -218,12 +220,11 @@ pub async fn native_vibecheck_start_bt_scan(
         ));
     }
 
-    if let Err(e) =
-        vc_lock
-            .tme_send_tx
-            .send(ToyManagementEvent::Sig(TmSig::StartListening(
-                vc_lock.config.networking.clone(),
-            )))
+    if let Err(e) = vc_lock
+        .tme_send_tx
+        .send(ToyManagementEvent::Sig(TmSig::StartListening(
+            vc_lock.config.networking.clone(),
+        )))
     {
         logerr!("Failed to send StartListening sig to tmh.");
         return Err(VCFeError::StartScanFailure(e.to_string()));
@@ -333,7 +334,10 @@ pub fn native_set_vibecheck_config(
     }
 }
 
-fn save_config(config: VibeCheckConfig, app_handle: &tauri::AppHandle) -> Result<(), VibeCheckConfigError> {
+fn save_config(
+    config: VibeCheckConfig,
+    app_handle: &tauri::AppHandle,
+) -> Result<(), VibeCheckConfigError> {
     let json_config_str = match serde_json::to_string(&config) {
         Ok(s) => s,
         Err(_e) => {

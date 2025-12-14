@@ -2,24 +2,25 @@ use buttplug::{
     client::ButtplugClientDevice,
     core::message::{ActuatorType, ClientDeviceMessageAttributesV3},
 };
-use tauri::AppHandle;
 use core::fmt;
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, sync::Arc, time::Instant};
+use tauri::AppHandle;
 use ts_rs::TS;
 
 use crate::{
     config::toy::{VCToyAnatomy, VCToyConfig},
     frontend::{
-        FromFrontend, ToBackend, ToFrontend, frontend_types::{
+        frontend_types::{
             FeLevelTweaks, FeProcessingMode, FeToyParameter, FeVCFeatureType, FeVCToyFeature,
-        }
+        },
+        FromFrontend, ToBackend, ToFrontend,
     },
     toy_handling::input_processor::penetration_systems::{
-        PenetrationSystemType, sps::SPSProcessor, tps::TPSProcessor
+        sps::SPSProcessor, tps::TPSProcessor, PenetrationSystemType,
     },
-    util::fs::{ConfigFileType, build_path_dir, build_path_file, file_exists, get_config_dir},
+    util::fs::{build_path_dir, build_path_file, file_exists, get_config_dir, ConfigFileType},
     vcore::errors::{
         self,
         backend::{VibeCheckFSError, VibeCheckToyConfigError},
