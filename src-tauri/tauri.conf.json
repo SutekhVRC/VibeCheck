@@ -42,7 +42,7 @@
         "depends": []
       }
     },
-    "createUpdaterArtifacts": "v1Compatible"
+    "createUpdaterArtifacts": true
   },
   "productName": "VibeCheck",
   "mainBinaryName": "VibeCheck",
