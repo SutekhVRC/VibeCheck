@@ -6,7 +6,7 @@ authors = ["SutekhVRC"]
 rust-version = "1.57"
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "2.5.3", features = [] }
 
 [dependencies]
 buttplug = "9.0.9"
@@ -35,7 +35,7 @@ dyn-clone = "1.0.20"
 tauri-plugin-single-instance = { version = "2" }
 strum = { version="0.27.2", features = ["derive"] }
 # Tauri dependencies
-tauri = { version = "2", features = ["tray-icon"] }
+tauri = { version = "2.9.5", features = ["tray-icon"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-http = "2"
 tauri-plugin-clipboard-manager = "2"
