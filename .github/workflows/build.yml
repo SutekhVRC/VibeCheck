@@ -17,6 +17,11 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
+      - name: If Linux setup dependencies
+        if: ${{ runner.os == 'Linux' }}        
+        run: |
+          sudo apt -y update
+          sudo apt -y install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libudev-dev libudev1
       - uses: actions/checkout@v4
       - name: setup node
         uses: actions/setup-node@v4
