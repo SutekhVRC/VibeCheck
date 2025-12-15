@@ -41,7 +41,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           TAURI_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          args: "-b ${{ matrix.bundle }}"
+          args: "-b ${{ matrix.bundle }} --no-sign"
       - name: upload ${{ matrix.bundle }} artifact
         uses: actions/upload-artifact@v4
         with:
