@@ -5,6 +5,7 @@ on:
 
 jobs:
   build-test-binaries:
+    environment: TauriReleaseBuildSecrets
     strategy:
       fail-fast: false
       matrix:
