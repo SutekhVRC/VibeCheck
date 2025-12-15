@@ -38,6 +38,11 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
+      - name: If Linux setup dependencies
+        if: ${{ runner.os == 'Linux' }}        
+        run: |
+          sudo apt -y update
+          sudo apt -y install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libudev-dev libudev1
       - name: checkout repo
         uses: actions/checkout@v4
       - name: install Rust stable
@@ -58,7 +63,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: "-b ${{ matrix.bundle }}"
+          args: "-b ${{ matrix.bundle }} --no-sign"
       - name: upload ${{ matrix.bundle }} artifact
         uses: actions/upload-artifact@v4
         with:
