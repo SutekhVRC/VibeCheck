@@ -403,10 +403,13 @@ pub fn native_alter_toy(
     }
 }
 
+#[cfg(target_os = "linux")]
 pub fn native_clear_osc_config() -> Result<(), VibeCheckFSError> {
-
-    #[cfg(target_os = "linux")]
     return Ok(());
+}
+
+#[cfg(target_os = "windows")]
+pub fn native_clear_osc_config() -> Result<(), VibeCheckFSError> {
 
     let home_dir = match get_user_home_dir() {
         Ok(hd) => hd,
