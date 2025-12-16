@@ -3,7 +3,7 @@ use std::{error::Error, fs, net::SocketAddrV4, str::FromStr};
 use log::{debug, error as logerr, info, trace, warn};
 
 #[cfg(target_os = "windows")]
-use util::fs::get_user_home_dir;
+use crate::util::fs::get_user_home_dir;
 
 use crate::{
     frontend::{
