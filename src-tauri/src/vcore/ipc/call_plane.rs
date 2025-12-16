@@ -2,6 +2,9 @@ use std::{error::Error, fs, net::SocketAddrV4, str::FromStr};
 
 use log::{debug, error as logerr, info, trace, warn};
 
+#[cfg(target_os = "windows")]
+use util::fs::get_user_home_dir;
+
 use crate::{
     frontend::{
         frontend_types::{FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig},
@@ -13,7 +16,7 @@ use crate::{
         toy_command_processor::command_toy,
         toyops::{VCFeatureType, VCToy},
     },
-    util::fs::{build_path_file, get_config_dir, get_user_home_dir},
+    util::fs::{build_path_file, get_config_dir},
     vcore::{
         config::app::VibeCheckConfig,
         errors::{

@@ -39,6 +39,7 @@ where
  * Old method for config path
  * Still used for clearing OSC avatar configs
 */
+#[cfg(target_os = "windows")]
 pub fn get_user_home_dir() -> Result<String, UtilError> {
     let bd = match BaseDirs::new() {
         Some(bd) => bd,
