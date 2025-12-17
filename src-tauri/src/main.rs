@@ -35,7 +35,7 @@ fn main() {
     {
         //tracing_subscriber::fmt::init();
         let mut log_builder = env_logger::builder();
-        log_builder.filter(None, log::LevelFilter::Trace);
+        log_builder.filter(None, log::LevelFilter::Debug);
         log_builder.init();
     }
 

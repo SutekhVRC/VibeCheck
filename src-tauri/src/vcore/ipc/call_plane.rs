@@ -373,7 +373,7 @@ pub fn native_alter_toy(
 ) -> Result<(), ToyAlterError> {
     let alter_clone = altered.clone();
     altered.save_toy_config();
-    info!("Altered toy config: {:?}", altered);
+    debug!("Altered toy config: {:#?}", altered);
 
     let send_res = {
         let vc_lock = vc_state.0.lock();

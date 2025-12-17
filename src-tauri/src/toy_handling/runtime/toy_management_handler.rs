@@ -10,7 +10,7 @@ use std::{collections::HashMap, sync::Arc, thread, time::Duration};
 
 use buttplug::client::ButtplugClientDevice;
 use futures_timer::Delay;
-use log::{error as logerr, info, warn};
+use log::{debug, error as logerr, info, warn};
 use parking_lot::{lock_api::Mutex, RawMutex};
 use tauri::AppHandle;
 use tokio::{
@@ -271,6 +271,7 @@ pub async fn toy_management_handler(
                             }
                         }
                         ToyUpdate::AlterToy(toy) => {
+                            debug!("Got ToyUpdate::AlterToy signal!");
                             match toy_sig_bcst_tx
                                 .send(ToySig::UpdateToy(ToyUpdate::AlterToy(toy.clone())))
                             {

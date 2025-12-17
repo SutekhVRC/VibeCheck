@@ -2,6 +2,7 @@ use crate::toy_handling::toyops::LevelTweaks;
 use crate::toy_handling::toyops::ProcessingModeValues;
 use crate::toy_handling::toyops::ToyParameter;
 
+use log::debug;
 use serde::Deserialize;
 use serde::Serialize;
 use ts_rs::TS;
@@ -13,6 +14,7 @@ use super::mode_rate::RateParser;
 use super::mode_smooth::parse_smoothing;
 use super::mode_smooth::SmoothParser;
 
+#[derive(Debug)]
 pub enum ModeProcessorInput<'processor> {
     InputProcessor((ModeProcessorInputType, &'processor mut ProcessingModeValues)),
     RawInput(ModeProcessorInputType, &'processor mut ToyParameter),
@@ -46,7 +48,7 @@ pub async fn mode_processor(
     flip_input: bool,
 ) -> Option<f64> {
     // Parse if input is from an Input Processor or raw input
-
+    debug!("Got Mode Processor Input: {:#?}", input);
     match input {
         // Input is from an Input Processor
         ModeProcessorInput::InputProcessor((input_type, processing_mode_values)) => {
