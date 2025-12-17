@@ -65,7 +65,45 @@ fn main() {
                 .expect("Failed to get window main");
             window.show().expect("Failed to show window");
         }))
-        .setup(|_app| Ok(()))
+        .setup(|app| {
+            
+            // System Tray Initialization
+            //let app_handle = app.handle();
+            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>).unwrap();
+            let restart = MenuItem::with_id(app, "restart", "Restart", true, None::<&str>).unwrap();
+            let hide_app = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>).unwrap();
+            let show_app = MenuItem::with_id(app, "show", "Show", true, None::<&str>).unwrap();
+            let menu = Menu::with_items(app, &[&quit, &restart, &hide_app, &show_app]).unwrap();
+
+            TrayIconBuilder::new()
+                .menu(&menu)
+                .icon(app.default_window_icon().unwrap().clone())
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    "restart" => {
+                        app.restart();
+                    }
+                    "hide" => {
+                        let window = app
+                            .get_webview_window("main")
+                            .expect("Failed to get window main");
+                        window.hide().expect("Failed to hide window");
+                    }
+                    "show" => {
+                        let window = app
+                            .get_webview_window("main")
+                            .expect("Failed to get window main");
+                        window.show().expect("Failed to show window");
+                    }
+                    _ => {}
+                })
+                .build(app)
+                .unwrap();
+
+            Ok(())
+        })
         .manage(vcore::state::VCStateMutex(vibecheck_state_pointer.clone()))
         .invoke_handler(tauri::generate_handler![
             frontend_native::vibecheck_version,
@@ -123,40 +161,6 @@ fn main() {
         vc_state.start_disabled_listener().unwrap();
         trace!("Started DOL");
     }
-
-    // System Tray Initialization
-    //let app_handle = app.handle();
-    let quit = MenuItem::with_id(&app, "quit", "Quit", true, None::<&str>).unwrap();
-    let restart = MenuItem::with_id(&app, "restart", "Restart", true, None::<&str>).unwrap();
-    let hide_app = MenuItem::with_id(&app, "hide", "Hide", true, None::<&str>).unwrap();
-    let show_app = MenuItem::with_id(&app, "show", "Show", true, None::<&str>).unwrap();
-    let menu = Menu::with_items(&app, &[&quit, &restart, &hide_app, &show_app]).unwrap();
-
-    TrayIconBuilder::new()
-        .menu(&menu)
-        .on_menu_event(|app, event| match event.id.as_ref() {
-            "quit" => {
-                app.exit(0);
-            }
-            "restart" => {
-                app.restart();
-            }
-            "hide" => {
-                let window = app
-                    .get_webview_window("main")
-                    .expect("Failed to get window main");
-                window.hide().expect("Failed to hide window");
-            }
-            "show" => {
-                let window = app
-                    .get_webview_window("main")
-                    .expect("Failed to get window main");
-                window.show().expect("Failed to show window");
-            }
-            _ => {}
-        })
-        .build(&app)
-        .unwrap();
 
     app.run(|_app_handle, event| {
         match event {

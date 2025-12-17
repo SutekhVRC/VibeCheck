@@ -73,10 +73,6 @@
       }
     ],
     "withGlobalTauri": false,
-    "trayIcon": {
-      "iconPath": "icons/vibecheck.ico",
-      "iconAsTemplate": true
-    },
     "security": {
       "csp": null
     }
