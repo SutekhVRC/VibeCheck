@@ -825,8 +825,19 @@ impl VCToyFeatures {
                 .is_parameter(param)
                 && f.feature_enabled
             {
-                // Add to features vector for features with a penetration system related to the input parameter
-                out.push(f);
+
+                // Input Filtering
+                if let Some(input_filter) = &f.penetration_system.pen_system_input_filter {
+                    if f.penetration_system.pen_system.as_ref().unwrap().input_filter(param, input_filter) {
+                        // Add to features vector for features with a penetration system related to the input parameter
+                        // and the input filter
+                        debug!("Input Filter success for {} : {:?}", param, input_filter);
+                        out.push(f);
+                    }
+                } else {// NO input filter
+                    // Add to features vector for features with a penetration system related to the input parameter
+                    out.push(f);
+                }
             }
         }
 

@@ -17,5 +17,6 @@ pub mod penetration_systems;
 pub trait InputProcessor: DynClone + Debug + Send + Sync {
     fn process(&mut self, addr: &str, input: ModeProcessorInputType) -> Option<f64>;
     fn is_parameter(&self, param: &str) -> bool;
+    fn input_filter(&self, param: &str, filter: &Vec<String>) -> bool;
 }
 dyn_clone::clone_trait_object!(InputProcessor);

@@ -15,6 +15,10 @@ impl InputProcessor for TPSProcessor {
         param.starts_with("/avatar/parameters/TPS_Internal/")
     }
 
+    fn input_filter(&self, _: &str, _: &Vec<String>) -> bool {
+        true
+    }
+
     fn process(&mut self, addr: &str, input: ModeProcessorInputType) -> Option<f64> {
         let tps_param = addr.strip_prefix("/avatar/parameters/")?;
 
