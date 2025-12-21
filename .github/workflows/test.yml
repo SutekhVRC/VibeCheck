@@ -17,6 +17,9 @@ jobs:
           node-version: 22
       - name: Enable Corepack
         run: corepack enable
+      - name: Configure Yarn cache location
+        run: |
+          yarn config set cacheFolder "${{ github.workspace }}/.yarn/cache"
       - name: install app dependencies and check frontend
         run: |
           yarn install
