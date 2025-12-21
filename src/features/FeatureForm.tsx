@@ -1,3 +1,4 @@
+import { FreeTextOptions } from "@/components/ui/FreeTextOptions";
 import { useCoreEventContext } from "@/context/CoreEvents";
 import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
 import { Select } from "@/layout/Select";
@@ -123,6 +124,7 @@ export default function FeatureForm({
           <FourPanelContainer>
             <Enabled />
             <InputProcessor />
+            <InputFilter />
             <Range />
             {config?.show_feature_advanced && (
               <>
@@ -336,6 +338,44 @@ function Parameters() {
         </button>
       </div>
     </>
+  );
+}
+
+function InputFilter() {
+  const { feature, setToyFeature, handleFeatureAlter } =
+    useFeatureFormContext();
+
+  function handleInputProcessor(items: string[]) {
+    setToyFeature((f) => {
+      const newF: FeVCToyFeature = {
+        ...f,
+        penetration_system: {
+          ...f.penetration_system,
+          pen_system_input_filter: items,
+        },
+      };
+      handleFeatureAlter(newF);
+      return newF;
+    });
+  }
+  return (
+    <FourPanel
+      text="Input Filter"
+      tooltip={TOOLTIP.InputFilter}
+      three={
+        <FreeTextOptions
+          values={feature.penetration_system.pen_system_input_filter ?? []}
+          onChange={handleInputProcessor}
+          placeholder="Add Filter Option"
+          transform={(s) => s.replaceAll(" ", "_")}
+          validator={{
+            // eslint-disable-next-line no-useless-escape
+            re: /^[\w\/]+$/,
+            message: "Only alphanumeric characters and slashes allowed",
+          }}
+        />
+      }
+    />
   );
 }
 

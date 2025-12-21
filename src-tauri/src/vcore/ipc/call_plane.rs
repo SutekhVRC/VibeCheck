@@ -413,7 +413,6 @@ pub fn native_clear_osc_config() -> Result<(), VibeCheckFSError> {
 
 #[cfg(target_os = "windows")]
 pub fn native_clear_osc_config() -> Result<(), VibeCheckFSError> {
-
     let home_dir = match get_user_home_dir() {
         Ok(hd) => hd,
         Err(_) => return Err(VibeCheckFSError::ReadDirFailure),

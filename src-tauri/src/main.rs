@@ -66,7 +66,6 @@ fn main() {
             window.show().expect("Failed to show window");
         }))
         .setup(|app| {
-            
             // System Tray Initialization
             //let app_handle = app.handle();
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>).unwrap();

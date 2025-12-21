@@ -27,6 +27,7 @@ pub struct PenetrationSystem {
     pub pen_system: Option<Box<dyn InputProcessor>>,
     pub pen_system_type: PenetrationSystemType,
     pub pen_system_processing_mode: ProcessingMode,
+    pub pen_system_input_filter: Option<Vec<String>>,
     #[serde(skip)]
     pub pen_system_processing_mode_values: ProcessingModeValues,
 }
@@ -37,6 +38,7 @@ impl Default for PenetrationSystem {
             pen_system: None,
             pen_system_type: PenetrationSystemType::None,
             pen_system_processing_mode: ProcessingMode::Raw,
+            pen_system_input_filter: None,
             pen_system_processing_mode_values: ProcessingModeValues::Raw,
         }
     }
@@ -45,9 +47,18 @@ impl Default for PenetrationSystem {
 impl ToFrontend<FePenetrationSystem> for PenetrationSystem {
     type OutputType = FePenetrationSystem;
     fn to_frontend(&self) -> Self::OutputType {
+
+        // Frontend expects empty Vec if no tags (In the future make tuti send null for input filter from frontend)
+        let pen_system_input_filter = if self.pen_system_input_filter.as_ref().is_some() {
+            self.pen_system_input_filter.clone()
+        } else {
+            Some(vec![])
+        };
+
         FePenetrationSystem {
             pen_system_type: self.pen_system_type.clone(),
             pen_system_processing_mode: self.pen_system_processing_mode.to_frontend(),
+            pen_system_input_filter,
         }
     }
 }
@@ -66,5 +77,12 @@ impl FromFrontend<FePenetrationSystem> for PenetrationSystem {
         let backend_pspm = frontend_type.pen_system_processing_mode.to_backend();
         self.pen_system_processing_mode_values = ProcessingModeValues::new_from(&backend_pspm);
         self.pen_system_processing_mode = backend_pspm;
+
+        // Backend expects None if no tags (In the future make tuti send null for input filter from frontend)
+        if frontend_type.pen_system_input_filter.as_ref().is_some_and(|v| v.is_empty()) {
+            self.pen_system_input_filter = None;
+        } else {
+            self.pen_system_input_filter = frontend_type.pen_system_input_filter.clone();
+        }
     }
 }

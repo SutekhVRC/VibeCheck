@@ -164,6 +164,7 @@ pub struct FeToyParameter {
 pub struct FePenetrationSystem {
     pub pen_system_type: PenetrationSystemType,
     pub pen_system_processing_mode: FeProcessingMode,
+    pub pen_system_input_filter: Option<Vec<String>>,
 }
 
 impl ToBackend<(PenetrationSystemType, ProcessingMode)> for FePenetrationSystem {

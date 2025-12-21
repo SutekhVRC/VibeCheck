@@ -15,10 +15,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "yarn"
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Configure Yarn for CI
+        run: |
+          yarn config set nodeLinker node-modules
       - name: install app dependencies and check frontend
         run: |
-          yarn install
+          yarn install --immutable
           yarn lint:check
           yarn format:check
           yarn typecheck
@@ -39,7 +43,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: If Linux setup dependencies
-        if: ${{ runner.os == 'Linux' }}        
+        if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt -y update
           sudo apt -y install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libudev-dev libudev1

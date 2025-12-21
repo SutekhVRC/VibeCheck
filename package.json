@@ -16,9 +16,12 @@
   },
   "dependencies": {
     "@radix-ui/react-collapsible": "^1.1.2",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-scroll-area": "^1.2.2",
+    "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slider": "^1.1.2",
-    "@radix-ui/react-slot": "^1.1.1",
+    "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-switch": "^1.0.3",
     "@radix-ui/react-tooltip": "^1.0.7",
     "@tauri-apps/api": "^2.0.0",
@@ -26,6 +29,7 @@
     "@tauri-apps/plugin-updater": "2.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "framer-motion": "^10.16.16",
     "lodash": "^4.17.21",
     "lucide-react": "^0.474.0",
@@ -37,6 +41,8 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.3",
+    "@eslint/js": "^9.39.2",
     "@tauri-apps/cli": "^2.9.6",
     "@types/lodash": "^4.14.202",
     "@types/node": "^20.10.4",
@@ -48,6 +54,7 @@
     "autoprefixer": "^10.4.16",
     "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.33.2",
+    "globals": "^16.5.0",
     "postcss": "^8.4.32",
     "prettier": "^3.1.0",
     "prettier-plugin-organize-imports": "^3.2.4",
@@ -56,5 +63,5 @@
     "typescript": "^5.9.3",
     "vite": "^5.0.7"
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "yarn@4.12.0"
 }

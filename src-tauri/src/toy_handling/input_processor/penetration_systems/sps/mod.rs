@@ -31,6 +31,12 @@ impl InputProcessor for SPSProcessor {
         param.starts_with("/avatar/parameters/OGB/")
     }
 
+    fn input_filter(&self, param: &str, filters: &Vec<String>) -> bool {
+        filters
+            .iter()
+            .any(|filter_element| param.contains(filter_element))
+    }
+
     /**
      * Inner workings of SPS according to SPS creator's app OGB (https://github.com/OscToys/OscGoesBrrr)
      *
