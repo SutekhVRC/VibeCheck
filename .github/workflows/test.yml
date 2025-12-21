@@ -22,7 +22,7 @@ jobs:
           yarn config set cacheFolder "${{ github.workspace }}/.yarn/cache"
       - name: install app dependencies and check frontend
         run: |
-          yarn install
+          yarn install --immutable
           yarn lint:check
           yarn format:check
           yarn typecheck

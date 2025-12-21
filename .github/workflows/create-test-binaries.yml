@@ -33,14 +33,14 @@ jobs:
       - name: Configure Yarn cache location
         run: |
           yarn config set cacheFolder "${{ github.workspace }}/.yarn/cache"
+      - name: install app dependencies
+        run: yarn install --immutable
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: "./src-tauri -> target"
-      - name: install app dependencies
-        run: yarn
       - name: build ${{ matrix.bundle }} test binary
         uses: tauri-apps/tauri-action@v0.6.0
         env:
