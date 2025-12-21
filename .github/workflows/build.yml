@@ -23,13 +23,12 @@ jobs:
           sudo apt -y update
           sudo apt -y install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libudev-dev libudev1
       - uses: actions/checkout@v4
-      - name: Enable Corepack
-        run: corepack enable
       - name: setup node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "yarn"
+      - name: Enable Corepack
+        run: corepack enable
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
       - name: Rust cache

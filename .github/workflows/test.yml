@@ -11,13 +11,12 @@ jobs:
     steps:
       - name: checkout repo
         uses: actions/checkout@v4
-      - name: Enable Corepack
-        run: corepack enable
       - name: setup node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "yarn"
+      - name: Enable Corepack
+        run: corepack enable
       - name: install app dependencies and check frontend
         run: |
           yarn install
