@@ -12,6 +12,12 @@ jobs:
           - os: ubuntu-latest
             bundle: deb
             artifact-path: src-tauri/target/release/bundle/deb/*.deb
+          - os: ubuntu-latest
+            bundle: rpm
+            artifact-path: src-tauri/target/release/bundle/rpm/*.rpm
+          - os: ubuntu-latest
+            bundle: appimage
+            artifact-path: src-tauri/target/release/bundle/appimage/*.AppImage
           - os: windows-latest
             bundle: msi
             artifact-path: src-tauri/target/release/bundle/msi/*.msi
