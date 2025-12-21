@@ -52,6 +52,10 @@ export const TOOLTIP = {
     text: "Choose the way VibeCheck processes input. Example: If your avatar is using SPS and you want VibeCheck to interact with it, switch to SPS.",
     link: "FeatureOptions",
   },
+  InputFilter: {
+    text: "Filter what parameters VibeCheck listens to for this feature.",
+    link: "FeatureOptions",
+  },
   LinearSpeed: {
     text: "Linear positional duration speed in milliseconds. Speed is determined by the toy itself, this is only requested speed.",
     link: "FeatureOptions",
