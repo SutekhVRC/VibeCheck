@@ -13,7 +13,8 @@
     "targets": "all",
     "externalBin": [],
     "icon": [
-      "icons/vibecheck.ico"
+      "icons/vibecheck.ico",
+      "icons/vibecheck_268x268.png"
     ],
     "windows": {
       "wix": {
