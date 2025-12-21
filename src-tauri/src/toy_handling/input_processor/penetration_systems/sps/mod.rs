@@ -32,9 +32,9 @@ impl InputProcessor for SPSProcessor {
     }
 
     fn input_filter(&self, param: &str, filters: &Vec<String>) -> bool {
-        filters.iter().any(|filter_element| {
-            param.contains(filter_element)
-        })
+        filters
+            .iter()
+            .any(|filter_element| param.contains(filter_element))
     }
 
     /**
