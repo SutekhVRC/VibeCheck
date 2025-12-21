@@ -841,6 +841,7 @@ impl VCToyFeatures {
                 } else {
                     // NO input filter
                     // Add to features vector for features with a penetration system related to the input parameter
+                    debug!("Got None for input filter!");
                     out.push(f);
                 }
             }
