@@ -367,8 +367,12 @@ function InputFilter() {
           values={feature.penetration_system.pen_system_input_filter ?? []}
           onChange={handleInputProcessor}
           placeholder="Add Filter Option"
-          // eslint-disable-next-line no-useless-escape
-          validator={new RegExp("^\w/$")}
+          transform={s => s.replaceAll(" ", "_")}
+          validator={{
+            // eslint-disable-next-line no-useless-escape
+            re: /^[\w\/]+$/,
+            message: "Only alphanumeric characters and slashes allowed",
+          }}
         />
       }
     />

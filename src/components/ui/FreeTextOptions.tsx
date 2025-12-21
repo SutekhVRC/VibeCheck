@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { XCircle } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 
 export interface FreeTextOptionProps extends Omit<
   React.HTMLAttributes<HTMLDivElement>,
@@ -10,7 +11,11 @@ export interface FreeTextOptionProps extends Omit<
   values: string[];
   onChange: (values: string[]) => void;
   placeholder?: string;
-  validator?: RegExp;
+  transform?: (input: string) => string;
+  validator?: {
+    re: RegExp;
+    message: string;
+  };
   disabled?: boolean;
 }
 
@@ -23,6 +28,7 @@ export const FreeTextOptions = React.forwardRef<
       values,
       onChange,
       placeholder = "Add item...",
+      transform,
       validator,
       disabled = false,
       className,
@@ -31,27 +37,21 @@ export const FreeTextOptions = React.forwardRef<
     ref,
   ) => {
     const [inputValue, setInputValue] = React.useState("");
-    const [announce, setAnnounce] = React.useState("");
     const inputRef = React.useRef<HTMLInputElement | null>(null);
-
-    React.useEffect(() => {
-      if (!announce) return;
-      const t = setTimeout(() => setAnnounce(""), 1000);
-      return () => clearTimeout(t);
-    }, [announce]);
 
     const addItem = () => {
       const trimmed = inputValue.trim();
-      if (!trimmed || disabled) return;
-      if (values.includes(trimmed)) {
-        setAnnounce("Duplicate items not allowed");
+      const parsed = transform ? transform(trimmed) : trimmed;
+      if (!parsed || disabled) return;
+      if (values.includes(parsed)) {
+        toast.error("Duplicate items not allowed");
         return;
       }
-      if (validator && !validator.test(trimmed)) {
-        setAnnounce("Invalid input");
+      if (validator && !validator.re.test(parsed)) {
+        toast.error(`Invalid input: ${validator.message}`);
         return;
       }
-      onChange([...values, trimmed]);
+      onChange([...values, parsed]);
       setInputValue("");
       if (inputRef.current) inputRef.current.focus();
     };
@@ -79,10 +79,6 @@ export const FreeTextOptions = React.forwardRef<
         className={cn("flex flex-wrap items-center gap-2", className)}
         {...props}
       >
-        <div className="sr-only" aria-live="polite">
-          {announce}
-        </div>
-
         {values.map((v) => (
           <Badge key={v} className="inline-flex items-center gap-2">
             <span className="max-w-[200px] truncate">{v}</span>
