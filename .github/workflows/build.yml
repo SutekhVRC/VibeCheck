@@ -13,6 +13,10 @@ jobs:
             bundle: msi
           - os: ubuntu-latest
             bundle: deb
+          - os: ubuntu-latest
+            bundle: rpm
+          - os: ubuntu-latest
+            bundle: appimage
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
