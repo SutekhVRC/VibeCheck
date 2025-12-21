@@ -29,6 +29,8 @@ jobs:
         with:
           node-version: 22
           cache: yarn
+      - name: Enable Corepack
+        run: corepack enable
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
       - name: Rust cache

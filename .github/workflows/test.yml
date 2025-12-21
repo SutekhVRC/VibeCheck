@@ -16,6 +16,8 @@ jobs:
         with:
           node-version: 22
           cache: "yarn"
+      - name: Enable Corepack
+        run: corepack enable
       - name: install app dependencies and check frontend
         run: |
           yarn install
