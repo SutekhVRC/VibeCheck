@@ -114,3 +114,4 @@ export const FreeTextOptions = React.forwardRef<
     );
   },
 );
+FreeTextOptions.displayName = "FreeTextOptions";

@@ -41,6 +41,8 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.3",
+    "@eslint/js": "^9.39.2",
     "@tauri-apps/cli": "^2.9.6",
     "@types/lodash": "^4.14.202",
     "@types/node": "^20.10.4",
@@ -52,6 +54,7 @@
     "autoprefixer": "^10.4.16",
     "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.33.2",
+    "globals": "^16.5.0",
     "postcss": "^8.4.32",
     "prettier": "^3.1.0",
     "prettier-plugin-organize-imports": "^3.2.4",
