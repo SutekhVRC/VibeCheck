@@ -60,6 +60,13 @@ jobs:
         with:
           node-version: 22
           cache: "yarn"
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Configure Yarn for CI
+        run: |
+          yarn config set nodeLinker node-modules
+      - name: install app dependencies
+        run: yarn install --immutable
       - name: install app dependencies
         run: yarn
       - name: test build ${{ matrix.bundle }}
