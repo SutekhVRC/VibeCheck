@@ -53,7 +53,7 @@ export const TOOLTIP = {
     link: "FeatureOptions",
   },
   InputFilter: {
-    text: "Filter what parameters VibeCheck listens to for this feature. These match if the parameter contains the given tag.",
+    text: "Filter what parameters VibeCheck listens to for this feature. These match if the parameter contains the given tag. If no tags are set then all SPS interaction will be used.",
     link: "FeatureOptions",
   },
   LinearSpeed: {
