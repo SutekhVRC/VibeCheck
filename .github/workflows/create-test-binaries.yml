@@ -35,8 +35,6 @@ jobs:
           yarn config set nodeLinker node-modules
       - name: install app dependencies
         run: yarn install --immutable
-      - name: install app dependencies
-        run: yarn install --immutable
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
       - name: Rust cache
