@@ -367,7 +367,7 @@ function InputFilter() {
           values={feature.penetration_system.pen_system_input_filter ?? []}
           onChange={handleInputProcessor}
           placeholder="Add Filter Option"
-          transform={s => s.replaceAll(" ", "_")}
+          transform={(s) => s.replaceAll(" ", "_")}
           validator={{
             // eslint-disable-next-line no-useless-escape
             re: /^[\w\/]+$/,
