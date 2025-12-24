@@ -812,6 +812,10 @@ impl VCToyFeatures {
         let mut out = Vec::new();
 
         for f in &mut self.features {
+
+            // If feature gets turned off at any time during the feature enum process clear the vector and return None
+            if !f.feature_enabled {continue;}
+
             // If penetration system not set for feature move to next feature
             if f.penetration_system.pen_system.is_none() {
                 continue;
@@ -823,7 +827,6 @@ impl VCToyFeatures {
                 .as_ref()
                 .unwrap()
                 .is_parameter(param)
-                && f.feature_enabled
             {
                 // Input Filtering
                 if let Some(input_filter) = &f.penetration_system.pen_system_input_filter {
