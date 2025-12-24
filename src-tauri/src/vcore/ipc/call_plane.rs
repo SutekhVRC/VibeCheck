@@ -1,5 +1,4 @@
-use std::{error::Error, fs, net::SocketAddrV4, str::FromStr};
-
+use std::{fs, net::SocketAddrV4, str::FromStr, thread, time::Duration};
 use log::{debug, error as logerr, info, trace, warn};
 
 #[cfg(target_os = "windows")]
@@ -377,28 +376,28 @@ pub fn native_alter_toy(
 
     let send_res = {
         let vc_lock = vc_state.0.lock();
-        vc_lock
+        let res = vc_lock
             .tme_send_tx
-            .send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)))
+            .send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)));
+        emit_toy_event(
+            &app_handle,
+            FeToyEvent::Update({
+                FeVCToy {
+                    toy_id: Some(alter_clone.toy_id),
+                    toy_name: alter_clone.toy_name,
+                    toy_anatomy: alter_clone.config.as_ref().unwrap().anatomy.to_fe(),
+                    toy_power: alter_clone.toy_power,
+                    toy_connected: alter_clone.toy_connected,
+                    features: alter_clone.parsed_toy_features.features.to_frontend(),
+                    listening: alter_clone.listening,
+                    osc_data: alter_clone.osc_data,
+                    bt_update_rate: alter_clone.bt_update_rate,
+                    sub_id: alter_clone.sub_id,
+                }
+            }),
+        );
+        res
     };
-
-    emit_toy_event(
-        &app_handle,
-        FeToyEvent::Update({
-            FeVCToy {
-                toy_id: Some(alter_clone.toy_id),
-                toy_name: alter_clone.toy_name,
-                toy_anatomy: alter_clone.config.as_ref().unwrap().anatomy.to_fe(),
-                toy_power: alter_clone.toy_power,
-                toy_connected: alter_clone.toy_connected,
-                features: alter_clone.parsed_toy_features.features.to_frontend(),
-                listening: alter_clone.listening,
-                osc_data: alter_clone.osc_data,
-                bt_update_rate: alter_clone.bt_update_rate,
-                sub_id: alter_clone.sub_id,
-            }
-        }),
-    );
 
     match send_res {
         Ok(()) => Ok(()),
@@ -499,9 +498,12 @@ pub fn native_simulate_device_feature(
                 let vc_lock = vc_state.0.lock();
                 // Add stop flag bc FE invoke simulation: diff between stop & idle.
                 if stop {
-                    debug!("Stopping Idle Simulate");
+                    debug!("Stopping toy feature.");
+                    // Sleep to allow the Alter Toy to populate the runtime before sending the stop command
+                    thread::sleep(Duration::from_millis(500));
                     vc_lock.async_rt.spawn(handle_clone.stop());
                 } else {
+                    debug!("Sending simulate command!");
                     vc_lock.async_rt.spawn(command_toy(
                         handle_clone,
                         feature.feature_type,
