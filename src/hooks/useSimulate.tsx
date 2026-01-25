@@ -51,7 +51,7 @@ export default function useSimulate(
         featureIndex: feature.feature_index,
         featureType: feature.feature_type,
         floatLevel,
-        stop: false,
+        stop: true,
       });
     } catch (e) {
       toast.error(`Could not simulate device feature!\n${JSON.stringify(e)}`);
