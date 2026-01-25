@@ -43,7 +43,10 @@ export default function useSimulate(
     }
   }, [simulateEnabled, level]);
 
-  async function invokeSimulation(floatLevel: number, isEnableDisable: boolean = false) {
+  async function invokeSimulation(
+    floatLevel: number,
+    isEnableDisable: boolean = false,
+  ) {
     if (toyId == null) return;
     try {
       await invoke(INVOKE.SIMULATE_TOY_FEATURE, {
