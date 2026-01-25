@@ -45,7 +45,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
 
   async function enable() {
     try {
-      await invoke(INVOKE.ENABLE, { stop: true });
+      await invoke(INVOKE.ENABLE);
       setIsEnabled(true);
     } catch (e) {
       toast.error(`Could not enable!\n${JSON.stringify(e)}`);
@@ -55,7 +55,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
   async function stopScanAndDisable() {
     try {
       await stopScan();
-      await invoke(INVOKE.DISABLE, { stop: true });
+      await invoke(INVOKE.DISABLE);
       setIsEnabled(false);
     } catch (e) {
       toast.error(`Could not disable!\nJSON.stringify(${e})`);
