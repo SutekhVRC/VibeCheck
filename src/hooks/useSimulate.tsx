@@ -31,7 +31,7 @@ export default function useSimulate(
     setLevel(0.5);
     return () => {
       if (feature.feature_levels.idle_level == 0) {
-        invokeSimulation(0);
+        invokeSimulation(0, true);
       }
     };
   }, [toyId, feature]);
@@ -39,11 +39,14 @@ export default function useSimulate(
   useUpdateEffect(() => {
     if (feature.feature_levels.idle_level == 0) {
       if (simulateEnabled) invokeSimulation(level);
-      else invokeSimulation(0);
+      else invokeSimulation(0, true);
     }
   }, [simulateEnabled, level]);
 
-  async function invokeSimulation(floatLevel: number) {
+  async function invokeSimulation(
+    floatLevel: number,
+    isEnableDisable: boolean = false,
+  ) {
     if (toyId == null) return;
     try {
       await invoke(INVOKE.SIMULATE_TOY_FEATURE, {
@@ -51,7 +54,7 @@ export default function useSimulate(
         featureIndex: feature.feature_index,
         featureType: feature.feature_type,
         floatLevel,
-        stop: false,
+        stop: isEnableDisable,
       });
     } catch (e) {
       toast.error(`Could not simulate device feature!\n${JSON.stringify(e)}`);
