@@ -1,6 +1,6 @@
 {
   "build": {
-    "beforeDevCommand": "yarn dev",
+    "beforeDevCommand": "yarnpkg dev",
     "beforeBuildCommand": "yarn build",
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420"

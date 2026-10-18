@@ -140,10 +140,10 @@
                   "identifier": {
                     "anyOf": [
                       {
-                        "description": "This set of permissions describes the what kind of\nfile system access the `fs` plugin has enabled or denied by default.\n\n#### Granted Permissions\n\nThis default permission set enables read access to the\napplication specific directories (AppConfig, AppData, AppLocalData, AppCache,\nAppLog) and all files and sub directories created in it.\nThe location of these directories depends on the operating system,\nwhere the application is run.\n\nIn general these directories need to be manually created\nby the application at runtime, before accessing files or folders\nin it is possible.\n\nTherefore, it is also allowed to create all of these folders via\nthe `mkdir` command.\n\n#### Denied Permissions\n\nThis default permission set prevents access to critical components\nof the Tauri application by default.\nOn Windows the webview data folder access is denied.\n\n#### This default permission set includes:\n\n- `create-app-specific-dirs`\n- `read-app-specific-dirs-recursive`\n- `deny-default`",
+                        "description": "This set of permissions describes the what kind of\nfile system access the `fs` plugin has enabled or denied by default.\n\n#### Granted Permissions\n\nThis default permission set enables read access to the\napplication specific directories (AppConfig, AppData, AppLocalData, AppCache,\nAppLog) and all files and sub directories created in it.\nThe location of these directories depends on the operating system,\nwhere the application is run.\n\nIn general these directories need to be manually created\nby the application at runtime, before accessing files or folders\nin it is possible.\n\nTherefore, it is also allowed to create all of these folders via\nthe `mkdir` command.\n\n#### Denied Permissions\n\nThis default permission set prevents access to critical components\nof the Tauri application by default.\n\n- On Windows the access to webview data folder `$APPLOCALDATA/EBWebView` is denied.\n- On Linux the access to webview data paths inside `$APPLOCALDATA` are denied.\n\n#### This default permission set includes:\n\n- `create-app-specific-dirs`\n- `read-app-specific-dirs-recursive`\n- `deny-default`",
                         "type": "string",
                         "const": "fs:default",
-                        "markdownDescription": "This set of permissions describes the what kind of\nfile system access the `fs` plugin has enabled or denied by default.\n\n#### Granted Permissions\n\nThis default permission set enables read access to the\napplication specific directories (AppConfig, AppData, AppLocalData, AppCache,\nAppLog) and all files and sub directories created in it.\nThe location of these directories depends on the operating system,\nwhere the application is run.\n\nIn general these directories need to be manually created\nby the application at runtime, before accessing files or folders\nin it is possible.\n\nTherefore, it is also allowed to create all of these folders via\nthe `mkdir` command.\n\n#### Denied Permissions\n\nThis default permission set prevents access to critical components\nof the Tauri application by default.\nOn Windows the webview data folder access is denied.\n\n#### This default permission set includes:\n\n- `create-app-specific-dirs`\n- `read-app-specific-dirs-recursive`\n- `deny-default`"
+                        "markdownDescription": "This set of permissions describes the what kind of\nfile system access the `fs` plugin has enabled or denied by default.\n\n#### Granted Permissions\n\nThis default permission set enables read access to the\napplication specific directories (AppConfig, AppData, AppLocalData, AppCache,\nAppLog) and all files and sub directories created in it.\nThe location of these directories depends on the operating system,\nwhere the application is run.\n\nIn general these directories need to be manually created\nby the application at runtime, before accessing files or folders\nin it is possible.\n\nTherefore, it is also allowed to create all of these folders via\nthe `mkdir` command.\n\n#### Denied Permissions\n\nThis default permission set prevents access to critical components\nof the Tauri application by default.\n\n- On Windows the access to webview data folder `$APPLOCALDATA/EBWebView` is denied.\n- On Linux the access to webview data paths inside `$APPLOCALDATA` are denied.\n\n#### This default permission set includes:\n\n- `create-app-specific-dirs`\n- `read-app-specific-dirs-recursive`\n- `deny-default`"
                       },
                       {
                         "description": "This allows non-recursive read access to metadata of the application folders, including file listing and statistics.\n#### This permission set includes:\n\n- `read-meta`\n- `scope-app-index`",
@@ -1046,10 +1046,34 @@
                         "markdownDescription": "This allows full recursive write access to the complete `$VIDEO` folder, files and subdirectories.\n#### This permission set includes:\n\n- `write-all`\n- `scope-video-recursive`"
                       },
                       {
+                        "description": "This permissions allows to create the application specific directories.\n\n#### This permission set includes:\n\n- `allow-mkdir`\n- `scope-app-index`",
+                        "type": "string",
+                        "const": "fs:create-app-specific-dirs",
+                        "markdownDescription": "This permissions allows to create the application specific directories.\n\n#### This permission set includes:\n\n- `allow-mkdir`\n- `scope-app-index`"
+                      },
+                      {
                         "description": "This denies access to dangerous Tauri relevant files and folders by default.\n#### This permission set includes:\n\n- `deny-webview-data-linux`\n- `deny-webview-data-windows`",
                         "type": "string",
                         "const": "fs:deny-default",
                         "markdownDescription": "This denies access to dangerous Tauri relevant files and folders by default.\n#### This permission set includes:\n\n- `deny-webview-data-linux`\n- `deny-webview-data-windows`"
+                      },
+                      {
+                        "description": "This permission allows recursive read functionality on the application\nspecific base directories.\n\n#### This permission set includes:\n\n- `allow-read-dir`\n- `allow-read-file`\n- `allow-read-text-file`\n- `allow-read-text-file-lines`\n- `allow-read-text-file-lines-next`\n- `allow-exists`\n- `scope-app-recursive`",
+                        "type": "string",
+                        "const": "fs:read-app-specific-dirs-recursive",
+                        "markdownDescription": "This permission allows recursive read functionality on the application\nspecific base directories.\n\n#### This permission set includes:\n\n- `allow-read-dir`\n- `allow-read-file`\n- `allow-read-text-file`\n- `allow-read-text-file-lines`\n- `allow-read-text-file-lines-next`\n- `allow-exists`\n- `scope-app-recursive`"
+                      },
+                      {
+                        "description": "This enables all write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-mkdir`\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`",
+                        "type": "string",
+                        "const": "fs:write-all",
+                        "markdownDescription": "This enables all write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-mkdir`\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`"
+                      },
+                      {
+                        "description": "This enables all file write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`",
+                        "type": "string",
+                        "const": "fs:write-files",
+                        "markdownDescription": "This enables all file write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`"
                       },
                       {
                         "description": "Enables the copy_file command without any pre-configured scope.",
@@ -1160,10 +1184,22 @@
                         "markdownDescription": "Enables the size command without any pre-configured scope."
                       },
                       {
+                        "description": "Enables the start_accessing_security_scoped_resource command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "fs:allow-start-accessing-security-scoped-resource",
+                        "markdownDescription": "Enables the start_accessing_security_scoped_resource command without any pre-configured scope."
+                      },
+                      {
                         "description": "Enables the stat command without any pre-configured scope.",
                         "type": "string",
                         "const": "fs:allow-stat",
                         "markdownDescription": "Enables the stat command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Enables the stop_accessing_security_scoped_resource command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "fs:allow-stop-accessing-security-scoped-resource",
+                        "markdownDescription": "Enables the stop_accessing_security_scoped_resource command without any pre-configured scope."
                       },
                       {
                         "description": "Enables the truncate command without any pre-configured scope.",
@@ -1200,12 +1236,6 @@
                         "type": "string",
                         "const": "fs:allow-write-text-file",
                         "markdownDescription": "Enables the write_text_file command without any pre-configured scope."
-                      },
-                      {
-                        "description": "This permissions allows to create the application specific directories.\n",
-                        "type": "string",
-                        "const": "fs:create-app-specific-dirs",
-                        "markdownDescription": "This permissions allows to create the application specific directories.\n"
                       },
                       {
                         "description": "Denies the copy_file command without any pre-configured scope.",
@@ -1316,10 +1346,22 @@
                         "markdownDescription": "Denies the size command without any pre-configured scope."
                       },
                       {
+                        "description": "Denies the start_accessing_security_scoped_resource command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "fs:deny-start-accessing-security-scoped-resource",
+                        "markdownDescription": "Denies the start_accessing_security_scoped_resource command without any pre-configured scope."
+                      },
+                      {
                         "description": "Denies the stat command without any pre-configured scope.",
                         "type": "string",
                         "const": "fs:deny-stat",
                         "markdownDescription": "Denies the stat command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Denies the stop_accessing_security_scoped_resource command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "fs:deny-stop-accessing-security-scoped-resource",
+                        "markdownDescription": "Denies the stop_accessing_security_scoped_resource command without any pre-configured scope."
                       },
                       {
                         "description": "Denies the truncate command without any pre-configured scope.",
@@ -1340,16 +1382,16 @@
                         "markdownDescription": "Denies the watch command without any pre-configured scope."
                       },
                       {
-                        "description": "This denies read access to the\n`$APPLOCALDATA` folder on linux as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered.",
+                        "description": "This denies access to the following paths\n\n- `$APPLOCALDATA/CacheStorage/**`\n- `$APPLOCALDATA/cookies`\n- `$APPLOCALDATA/hsts-storage.sqlite`\n- `$APPLOCALDATA/serviceworkers/**`\n- `$APPLOCALDATA/WebKitCache/**`\n- `$APPLOCALDATA/databases/**`\n- `$APPLOCALDATA/localstorage/**`\n- `$APPLOCALDATA/mediakeys/**`\n- `$APPLOCALDATA/storage/**`\n\non linux as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered.",
                         "type": "string",
                         "const": "fs:deny-webview-data-linux",
-                        "markdownDescription": "This denies read access to the\n`$APPLOCALDATA` folder on linux as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered."
+                        "markdownDescription": "This denies access to the following paths\n\n- `$APPLOCALDATA/CacheStorage/**`\n- `$APPLOCALDATA/cookies`\n- `$APPLOCALDATA/hsts-storage.sqlite`\n- `$APPLOCALDATA/serviceworkers/**`\n- `$APPLOCALDATA/WebKitCache/**`\n- `$APPLOCALDATA/databases/**`\n- `$APPLOCALDATA/localstorage/**`\n- `$APPLOCALDATA/mediakeys/**`\n- `$APPLOCALDATA/storage/**`\n\non linux as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered."
                       },
                       {
-                        "description": "This denies read access to the\n`$APPLOCALDATA/EBWebView` folder on windows as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered.",
+                        "description": "This denies access to the\n`$APPLOCALDATA/EBWebView` folder on windows as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered.",
                         "type": "string",
                         "const": "fs:deny-webview-data-windows",
-                        "markdownDescription": "This denies read access to the\n`$APPLOCALDATA/EBWebView` folder on windows as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered."
+                        "markdownDescription": "This denies access to the\n`$APPLOCALDATA/EBWebView` folder on windows as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered."
                       },
                       {
                         "description": "Denies the write command without any pre-configured scope.",
@@ -1374,12 +1416,6 @@
                         "type": "string",
                         "const": "fs:read-all",
                         "markdownDescription": "This enables all read related commands without any pre-configured accessible paths."
-                      },
-                      {
-                        "description": "This permission allows recursive read functionality on the application\nspecific base directories. \n",
-                        "type": "string",
-                        "const": "fs:read-app-specific-dirs-recursive",
-                        "markdownDescription": "This permission allows recursive read functionality on the application\nspecific base directories. \n"
                       },
                       {
                         "description": "This enables directory read and file metadata related commands without any pre-configured accessible paths.",
@@ -1854,18 +1890,6 @@
                         "type": "string",
                         "const": "fs:scope-video-recursive",
                         "markdownDescription": "This scope permits recursive access to the complete `$VIDEO` folder, including sub directories and files."
-                      },
-                      {
-                        "description": "This enables all write related commands without any pre-configured accessible paths.",
-                        "type": "string",
-                        "const": "fs:write-all",
-                        "markdownDescription": "This enables all write related commands without any pre-configured accessible paths."
-                      },
-                      {
-                        "description": "This enables all file write related commands without any pre-configured accessible paths.",
-                        "type": "string",
-                        "const": "fs:write-files",
-                        "markdownDescription": "This enables all file write related commands without any pre-configured accessible paths."
                       }
                     ]
                   }
@@ -1940,10 +1964,10 @@
                   "identifier": {
                     "anyOf": [
                       {
-                        "description": "This permission set configures what kind of\nfetch operations are available from the http plugin.\n\nThis enables all fetch operations but does not\nallow explicitly any origins to be fetched. This needs to\nbe manually configured before usage.\n\n#### Granted Permissions\n\nAll fetch operations are enabled.\n\n\n#### This default permission set includes:\n\n- `allow-fetch`\n- `allow-fetch-cancel`\n- `allow-fetch-read-body`\n- `allow-fetch-send`",
+                        "description": "This permission set configures what kind of\nfetch operations are available from the http plugin.\n\nThis enables all fetch operations but does not\nallow explicitly any origins to be fetched. This needs to\nbe manually configured before usage.\n\n#### Granted Permissions\n\nAll fetch operations are enabled.\n\n\n#### This default permission set includes:\n\n- `allow-fetch`\n- `allow-fetch-cancel`\n- `allow-fetch-send`\n- `allow-fetch-read-body`\n- `allow-fetch-cancel-body`",
                         "type": "string",
                         "const": "http:default",
-                        "markdownDescription": "This permission set configures what kind of\nfetch operations are available from the http plugin.\n\nThis enables all fetch operations but does not\nallow explicitly any origins to be fetched. This needs to\nbe manually configured before usage.\n\n#### Granted Permissions\n\nAll fetch operations are enabled.\n\n\n#### This default permission set includes:\n\n- `allow-fetch`\n- `allow-fetch-cancel`\n- `allow-fetch-read-body`\n- `allow-fetch-send`"
+                        "markdownDescription": "This permission set configures what kind of\nfetch operations are available from the http plugin.\n\nThis enables all fetch operations but does not\nallow explicitly any origins to be fetched. This needs to\nbe manually configured before usage.\n\n#### Granted Permissions\n\nAll fetch operations are enabled.\n\n\n#### This default permission set includes:\n\n- `allow-fetch`\n- `allow-fetch-cancel`\n- `allow-fetch-send`\n- `allow-fetch-read-body`\n- `allow-fetch-cancel-body`"
                       },
                       {
                         "description": "Enables the fetch command without any pre-configured scope.",
@@ -1956,6 +1980,12 @@
                         "type": "string",
                         "const": "http:allow-fetch-cancel",
                         "markdownDescription": "Enables the fetch_cancel command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Enables the fetch_cancel_body command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "http:allow-fetch-cancel-body",
+                        "markdownDescription": "Enables the fetch_cancel_body command without any pre-configured scope."
                       },
                       {
                         "description": "Enables the fetch_read_body command without any pre-configured scope.",
@@ -1980,6 +2010,12 @@
                         "type": "string",
                         "const": "http:deny-fetch-cancel",
                         "markdownDescription": "Denies the fetch_cancel command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Denies the fetch_cancel_body command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "http:deny-fetch-cancel-body",
+                        "markdownDescription": "Denies the fetch_cancel_body command without any pre-configured scope."
                       },
                       {
                         "description": "Denies the fetch_read_body command without any pre-configured scope.",
@@ -2349,6 +2385,12 @@
           "markdownDescription": "Enables the write_image command without any pre-configured scope."
         },
         {
+          "description": "Enables the write_secret command without any pre-configured scope.",
+          "type": "string",
+          "const": "clipboard-manager:allow-write-secret",
+          "markdownDescription": "Enables the write_secret command without any pre-configured scope."
+        },
+        {
           "description": "Enables the write_text command without any pre-configured scope.",
           "type": "string",
           "const": "clipboard-manager:allow-write-text",
@@ -2385,6 +2427,12 @@
           "markdownDescription": "Denies the write_image command without any pre-configured scope."
         },
         {
+          "description": "Denies the write_secret command without any pre-configured scope.",
+          "type": "string",
+          "const": "clipboard-manager:deny-write-secret",
+          "markdownDescription": "Denies the write_secret command without any pre-configured scope."
+        },
+        {
           "description": "Denies the write_text command without any pre-configured scope.",
           "type": "string",
           "const": "clipboard-manager:deny-write-text",
@@ -2397,10 +2445,10 @@
           "markdownDescription": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`"
         },
         {
-          "description": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-version`\n- `allow-name`\n- `allow-tauri-version`\n- `allow-identifier`\n- `allow-bundle-type`\n- `allow-register-listener`\n- `allow-remove-listener`",
+          "description": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-version`\n- `allow-name`\n- `allow-tauri-version`\n- `allow-identifier`\n- `allow-bundle-type`\n- `allow-register-listener`\n- `allow-remove-listener`\n- `allow-supports-multiple-windows`",
           "type": "string",
           "const": "core:app:default",
-          "markdownDescription": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-version`\n- `allow-name`\n- `allow-tauri-version`\n- `allow-identifier`\n- `allow-bundle-type`\n- `allow-register-listener`\n- `allow-remove-listener`"
+          "markdownDescription": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-version`\n- `allow-name`\n- `allow-tauri-version`\n- `allow-identifier`\n- `allow-bundle-type`\n- `allow-register-listener`\n- `allow-remove-listener`\n- `allow-supports-multiple-windows`"
         },
         {
           "description": "Enables the app_hide command without any pre-configured scope.",
@@ -2425,6 +2473,12 @@
           "type": "string",
           "const": "core:app:allow-default-window-icon",
           "markdownDescription": "Enables the default_window_icon command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the exit command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:allow-exit",
+          "markdownDescription": "Enables the exit command without any pre-configured scope."
         },
         {
           "description": "Enables the fetch_data_store_identifiers command without any pre-configured scope.",
@@ -2475,6 +2529,12 @@
           "markdownDescription": "Enables the set_dock_visibility command without any pre-configured scope."
         },
         {
+          "description": "Enables the supports_multiple_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:allow-supports-multiple-windows",
+          "markdownDescription": "Enables the supports_multiple_windows command without any pre-configured scope."
+        },
+        {
           "description": "Enables the tauri_version command without any pre-configured scope.",
           "type": "string",
           "const": "core:app:allow-tauri-version",
@@ -2509,6 +2569,12 @@
           "type": "string",
           "const": "core:app:deny-default-window-icon",
           "markdownDescription": "Denies the default_window_icon command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the exit command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:deny-exit",
+          "markdownDescription": "Denies the exit command without any pre-configured scope."
         },
         {
           "description": "Denies the fetch_data_store_identifiers command without any pre-configured scope.",
@@ -2557,6 +2623,12 @@
           "type": "string",
           "const": "core:app:deny-set-dock-visibility",
           "markdownDescription": "Denies the set_dock_visibility command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the supports_multiple_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:deny-supports-multiple-windows",
+          "markdownDescription": "Denies the supports_multiple_windows command without any pre-configured scope."
         },
         {
           "description": "Denies the tauri_version command without any pre-configured scope.",
@@ -3081,10 +3153,10 @@
           "markdownDescription": "Denies the close command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the plugin, which enables all commands.\n#### This default permission set includes:\n\n- `allow-new`\n- `allow-get-by-id`\n- `allow-remove-by-id`\n- `allow-set-icon`\n- `allow-set-menu`\n- `allow-set-tooltip`\n- `allow-set-title`\n- `allow-set-visible`\n- `allow-set-temp-dir-path`\n- `allow-set-icon-as-template`\n- `allow-set-show-menu-on-left-click`",
+          "description": "Default permissions for the plugin, which enables all commands.\n#### This default permission set includes:\n\n- `allow-new`\n- `allow-get-by-id`\n- `allow-remove-by-id`\n- `allow-set-icon`\n- `allow-set-menu`\n- `allow-set-tooltip`\n- `allow-set-title`\n- `allow-set-visible`\n- `allow-set-temp-dir-path`\n- `allow-set-icon-as-template`\n- `allow-set-icon-with-as-template`\n- `allow-set-show-menu-on-left-click`",
           "type": "string",
           "const": "core:tray:default",
-          "markdownDescription": "Default permissions for the plugin, which enables all commands.\n#### This default permission set includes:\n\n- `allow-new`\n- `allow-get-by-id`\n- `allow-remove-by-id`\n- `allow-set-icon`\n- `allow-set-menu`\n- `allow-set-tooltip`\n- `allow-set-title`\n- `allow-set-visible`\n- `allow-set-temp-dir-path`\n- `allow-set-icon-as-template`\n- `allow-set-show-menu-on-left-click`"
+          "markdownDescription": "Default permissions for the plugin, which enables all commands.\n#### This default permission set includes:\n\n- `allow-new`\n- `allow-get-by-id`\n- `allow-remove-by-id`\n- `allow-set-icon`\n- `allow-set-menu`\n- `allow-set-tooltip`\n- `allow-set-title`\n- `allow-set-visible`\n- `allow-set-temp-dir-path`\n- `allow-set-icon-as-template`\n- `allow-set-icon-with-as-template`\n- `allow-set-show-menu-on-left-click`"
         },
         {
           "description": "Enables the get_by_id command without any pre-configured scope.",
@@ -3115,6 +3187,12 @@
           "type": "string",
           "const": "core:tray:allow-set-icon-as-template",
           "markdownDescription": "Enables the set_icon_as_template command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_icon_with_as_template command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:tray:allow-set-icon-with-as-template",
+          "markdownDescription": "Enables the set_icon_with_as_template command without any pre-configured scope."
         },
         {
           "description": "Enables the set_menu command without any pre-configured scope.",
@@ -3181,6 +3259,12 @@
           "type": "string",
           "const": "core:tray:deny-set-icon-as-template",
           "markdownDescription": "Denies the set_icon_as_template command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_icon_with_as_template command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:tray:deny-set-icon-with-as-template",
+          "markdownDescription": "Denies the set_icon_with_as_template command without any pre-configured scope."
         },
         {
           "description": "Denies the set_menu command without any pre-configured scope.",
@@ -3441,10 +3525,16 @@
           "markdownDescription": "Denies the webview_size command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-get-all-windows`\n- `allow-scale-factor`\n- `allow-inner-position`\n- `allow-outer-position`\n- `allow-inner-size`\n- `allow-outer-size`\n- `allow-is-fullscreen`\n- `allow-is-minimized`\n- `allow-is-maximized`\n- `allow-is-focused`\n- `allow-is-decorated`\n- `allow-is-resizable`\n- `allow-is-maximizable`\n- `allow-is-minimizable`\n- `allow-is-closable`\n- `allow-is-visible`\n- `allow-is-enabled`\n- `allow-title`\n- `allow-current-monitor`\n- `allow-primary-monitor`\n- `allow-monitor-from-point`\n- `allow-available-monitors`\n- `allow-cursor-position`\n- `allow-theme`\n- `allow-is-always-on-top`\n- `allow-internal-toggle-maximize`",
+          "description": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-get-all-windows`\n- `allow-scale-factor`\n- `allow-inner-position`\n- `allow-outer-position`\n- `allow-inner-size`\n- `allow-outer-size`\n- `allow-is-fullscreen`\n- `allow-is-minimized`\n- `allow-is-maximized`\n- `allow-is-focused`\n- `allow-is-decorated`\n- `allow-is-resizable`\n- `allow-is-maximizable`\n- `allow-is-minimizable`\n- `allow-is-closable`\n- `allow-is-visible`\n- `allow-is-enabled`\n- `allow-title`\n- `allow-current-monitor`\n- `allow-primary-monitor`\n- `allow-monitor-from-point`\n- `allow-available-monitors`\n- `allow-cursor-position`\n- `allow-theme`\n- `allow-is-always-on-top`\n- `allow-activity-name`\n- `allow-scene-identifier`\n- `allow-internal-toggle-maximize`",
           "type": "string",
           "const": "core:window:default",
-          "markdownDescription": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-get-all-windows`\n- `allow-scale-factor`\n- `allow-inner-position`\n- `allow-outer-position`\n- `allow-inner-size`\n- `allow-outer-size`\n- `allow-is-fullscreen`\n- `allow-is-minimized`\n- `allow-is-maximized`\n- `allow-is-focused`\n- `allow-is-decorated`\n- `allow-is-resizable`\n- `allow-is-maximizable`\n- `allow-is-minimizable`\n- `allow-is-closable`\n- `allow-is-visible`\n- `allow-is-enabled`\n- `allow-title`\n- `allow-current-monitor`\n- `allow-primary-monitor`\n- `allow-monitor-from-point`\n- `allow-available-monitors`\n- `allow-cursor-position`\n- `allow-theme`\n- `allow-is-always-on-top`\n- `allow-internal-toggle-maximize`"
+          "markdownDescription": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-get-all-windows`\n- `allow-scale-factor`\n- `allow-inner-position`\n- `allow-outer-position`\n- `allow-inner-size`\n- `allow-outer-size`\n- `allow-is-fullscreen`\n- `allow-is-minimized`\n- `allow-is-maximized`\n- `allow-is-focused`\n- `allow-is-decorated`\n- `allow-is-resizable`\n- `allow-is-maximizable`\n- `allow-is-minimizable`\n- `allow-is-closable`\n- `allow-is-visible`\n- `allow-is-enabled`\n- `allow-title`\n- `allow-current-monitor`\n- `allow-primary-monitor`\n- `allow-monitor-from-point`\n- `allow-available-monitors`\n- `allow-cursor-position`\n- `allow-theme`\n- `allow-is-always-on-top`\n- `allow-activity-name`\n- `allow-scene-identifier`\n- `allow-internal-toggle-maximize`"
+        },
+        {
+          "description": "Enables the activity_name command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:allow-activity-name",
+          "markdownDescription": "Enables the activity_name command without any pre-configured scope."
         },
         {
           "description": "Enables the available_monitors command without any pre-configured scope.",
@@ -3639,6 +3729,12 @@
           "markdownDescription": "Enables the scale_factor command without any pre-configured scope."
         },
         {
+          "description": "Enables the scene_identifier command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:allow-scene-identifier",
+          "markdownDescription": "Enables the scene_identifier command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_always_on_bottom command without any pre-configured scope.",
           "type": "string",
           "const": "core:window:allow-set-always-on-bottom",
@@ -3739,6 +3835,12 @@
           "type": "string",
           "const": "core:window:allow-set-fullscreen",
           "markdownDescription": "Enables the set_fullscreen command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_fullscreen_on_monitor command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:allow-set-fullscreen-on-monitor",
+          "markdownDescription": "Enables the set_fullscreen_on_monitor command without any pre-configured scope."
         },
         {
           "description": "Enables the set_icon command without any pre-configured scope.",
@@ -3901,6 +4003,12 @@
           "type": "string",
           "const": "core:window:allow-unminimize",
           "markdownDescription": "Enables the unminimize command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the activity_name command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:deny-activity-name",
+          "markdownDescription": "Denies the activity_name command without any pre-configured scope."
         },
         {
           "description": "Denies the available_monitors command without any pre-configured scope.",
@@ -4095,6 +4203,12 @@
           "markdownDescription": "Denies the scale_factor command without any pre-configured scope."
         },
         {
+          "description": "Denies the scene_identifier command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:deny-scene-identifier",
+          "markdownDescription": "Denies the scene_identifier command without any pre-configured scope."
+        },
+        {
           "description": "Denies the set_always_on_bottom command without any pre-configured scope.",
           "type": "string",
           "const": "core:window:deny-set-always-on-bottom",
@@ -4195,6 +4309,12 @@
           "type": "string",
           "const": "core:window:deny-set-fullscreen",
           "markdownDescription": "Denies the set_fullscreen command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_fullscreen_on_monitor command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:deny-set-fullscreen-on-monitor",
+          "markdownDescription": "Denies the set_fullscreen_on_monitor command without any pre-configured scope."
         },
         {
           "description": "Denies the set_icon command without any pre-configured scope.",
@@ -4359,22 +4479,22 @@
           "markdownDescription": "Denies the unminimize command without any pre-configured scope."
         },
         {
-          "description": "This permission set configures the types of dialogs\navailable from the dialog plugin.\n\n#### Granted Permissions\n\nAll dialog types are enabled.\n\n\n\n#### This default permission set includes:\n\n- `allow-ask`\n- `allow-confirm`\n- `allow-message`\n- `allow-save`\n- `allow-open`",
+          "description": "This permission set configures the types of dialogs\navailable from the dialog plugin.\n\n#### Granted Permissions\n\nAll dialog types are enabled.\n\n\n\n#### This default permission set includes:\n\n- `allow-message`\n- `allow-save`\n- `allow-open`",
           "type": "string",
           "const": "dialog:default",
-          "markdownDescription": "This permission set configures the types of dialogs\navailable from the dialog plugin.\n\n#### Granted Permissions\n\nAll dialog types are enabled.\n\n\n\n#### This default permission set includes:\n\n- `allow-ask`\n- `allow-confirm`\n- `allow-message`\n- `allow-save`\n- `allow-open`"
+          "markdownDescription": "This permission set configures the types of dialogs\navailable from the dialog plugin.\n\n#### Granted Permissions\n\nAll dialog types are enabled.\n\n\n\n#### This default permission set includes:\n\n- `allow-message`\n- `allow-save`\n- `allow-open`"
         },
         {
-          "description": "Enables the ask command without any pre-configured scope.",
+          "description": "Enables the ask command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `allow-message` and will be removed in v3)",
           "type": "string",
           "const": "dialog:allow-ask",
-          "markdownDescription": "Enables the ask command without any pre-configured scope."
+          "markdownDescription": "Enables the ask command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `allow-message` and will be removed in v3)"
         },
         {
-          "description": "Enables the confirm command without any pre-configured scope.",
+          "description": "Enables the confirm command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `allow-message` and will be removed in v3)",
           "type": "string",
           "const": "dialog:allow-confirm",
-          "markdownDescription": "Enables the confirm command without any pre-configured scope."
+          "markdownDescription": "Enables the confirm command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `allow-message` and will be removed in v3)"
         },
         {
           "description": "Enables the message command without any pre-configured scope.",
@@ -4395,16 +4515,16 @@
           "markdownDescription": "Enables the save command without any pre-configured scope."
         },
         {
-          "description": "Denies the ask command without any pre-configured scope.",
+          "description": "Denies the ask command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `deny-message` and will be removed in v3)",
           "type": "string",
           "const": "dialog:deny-ask",
-          "markdownDescription": "Denies the ask command without any pre-configured scope."
+          "markdownDescription": "Denies the ask command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `deny-message` and will be removed in v3)"
         },
         {
-          "description": "Denies the confirm command without any pre-configured scope.",
+          "description": "Denies the confirm command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `deny-message` and will be removed in v3)",
           "type": "string",
           "const": "dialog:deny-confirm",
-          "markdownDescription": "Denies the confirm command without any pre-configured scope."
+          "markdownDescription": "Denies the confirm command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `deny-message` and will be removed in v3)"
         },
         {
           "description": "Denies the message command without any pre-configured scope.",
@@ -4425,10 +4545,10 @@
           "markdownDescription": "Denies the save command without any pre-configured scope."
         },
         {
-          "description": "This set of permissions describes the what kind of\nfile system access the `fs` plugin has enabled or denied by default.\n\n#### Granted Permissions\n\nThis default permission set enables read access to the\napplication specific directories (AppConfig, AppData, AppLocalData, AppCache,\nAppLog) and all files and sub directories created in it.\nThe location of these directories depends on the operating system,\nwhere the application is run.\n\nIn general these directories need to be manually created\nby the application at runtime, before accessing files or folders\nin it is possible.\n\nTherefore, it is also allowed to create all of these folders via\nthe `mkdir` command.\n\n#### Denied Permissions\n\nThis default permission set prevents access to critical components\nof the Tauri application by default.\nOn Windows the webview data folder access is denied.\n\n#### This default permission set includes:\n\n- `create-app-specific-dirs`\n- `read-app-specific-dirs-recursive`\n- `deny-default`",
+          "description": "This set of permissions describes the what kind of\nfile system access the `fs` plugin has enabled or denied by default.\n\n#### Granted Permissions\n\nThis default permission set enables read access to the\napplication specific directories (AppConfig, AppData, AppLocalData, AppCache,\nAppLog) and all files and sub directories created in it.\nThe location of these directories depends on the operating system,\nwhere the application is run.\n\nIn general these directories need to be manually created\nby the application at runtime, before accessing files or folders\nin it is possible.\n\nTherefore, it is also allowed to create all of these folders via\nthe `mkdir` command.\n\n#### Denied Permissions\n\nThis default permission set prevents access to critical components\nof the Tauri application by default.\n\n- On Windows the access to webview data folder `$APPLOCALDATA/EBWebView` is denied.\n- On Linux the access to webview data paths inside `$APPLOCALDATA` are denied.\n\n#### This default permission set includes:\n\n- `create-app-specific-dirs`\n- `read-app-specific-dirs-recursive`\n- `deny-default`",
           "type": "string",
           "const": "fs:default",
-          "markdownDescription": "This set of permissions describes the what kind of\nfile system access the `fs` plugin has enabled or denied by default.\n\n#### Granted Permissions\n\nThis default permission set enables read access to the\napplication specific directories (AppConfig, AppData, AppLocalData, AppCache,\nAppLog) and all files and sub directories created in it.\nThe location of these directories depends on the operating system,\nwhere the application is run.\n\nIn general these directories need to be manually created\nby the application at runtime, before accessing files or folders\nin it is possible.\n\nTherefore, it is also allowed to create all of these folders via\nthe `mkdir` command.\n\n#### Denied Permissions\n\nThis default permission set prevents access to critical components\nof the Tauri application by default.\nOn Windows the webview data folder access is denied.\n\n#### This default permission set includes:\n\n- `create-app-specific-dirs`\n- `read-app-specific-dirs-recursive`\n- `deny-default`"
+          "markdownDescription": "This set of permissions describes the what kind of\nfile system access the `fs` plugin has enabled or denied by default.\n\n#### Granted Permissions\n\nThis default permission set enables read access to the\napplication specific directories (AppConfig, AppData, AppLocalData, AppCache,\nAppLog) and all files and sub directories created in it.\nThe location of these directories depends on the operating system,\nwhere the application is run.\n\nIn general these directories need to be manually created\nby the application at runtime, before accessing files or folders\nin it is possible.\n\nTherefore, it is also allowed to create all of these folders via\nthe `mkdir` command.\n\n#### Denied Permissions\n\nThis default permission set prevents access to critical components\nof the Tauri application by default.\n\n- On Windows the access to webview data folder `$APPLOCALDATA/EBWebView` is denied.\n- On Linux the access to webview data paths inside `$APPLOCALDATA` are denied.\n\n#### This default permission set includes:\n\n- `create-app-specific-dirs`\n- `read-app-specific-dirs-recursive`\n- `deny-default`"
         },
         {
           "description": "This allows non-recursive read access to metadata of the application folders, including file listing and statistics.\n#### This permission set includes:\n\n- `read-meta`\n- `scope-app-index`",
@@ -5331,10 +5451,34 @@
           "markdownDescription": "This allows full recursive write access to the complete `$VIDEO` folder, files and subdirectories.\n#### This permission set includes:\n\n- `write-all`\n- `scope-video-recursive`"
         },
         {
+          "description": "This permissions allows to create the application specific directories.\n\n#### This permission set includes:\n\n- `allow-mkdir`\n- `scope-app-index`",
+          "type": "string",
+          "const": "fs:create-app-specific-dirs",
+          "markdownDescription": "This permissions allows to create the application specific directories.\n\n#### This permission set includes:\n\n- `allow-mkdir`\n- `scope-app-index`"
+        },
+        {
           "description": "This denies access to dangerous Tauri relevant files and folders by default.\n#### This permission set includes:\n\n- `deny-webview-data-linux`\n- `deny-webview-data-windows`",
           "type": "string",
           "const": "fs:deny-default",
           "markdownDescription": "This denies access to dangerous Tauri relevant files and folders by default.\n#### This permission set includes:\n\n- `deny-webview-data-linux`\n- `deny-webview-data-windows`"
+        },
+        {
+          "description": "This permission allows recursive read functionality on the application\nspecific base directories.\n\n#### This permission set includes:\n\n- `allow-read-dir`\n- `allow-read-file`\n- `allow-read-text-file`\n- `allow-read-text-file-lines`\n- `allow-read-text-file-lines-next`\n- `allow-exists`\n- `scope-app-recursive`",
+          "type": "string",
+          "const": "fs:read-app-specific-dirs-recursive",
+          "markdownDescription": "This permission allows recursive read functionality on the application\nspecific base directories.\n\n#### This permission set includes:\n\n- `allow-read-dir`\n- `allow-read-file`\n- `allow-read-text-file`\n- `allow-read-text-file-lines`\n- `allow-read-text-file-lines-next`\n- `allow-exists`\n- `scope-app-recursive`"
+        },
+        {
+          "description": "This enables all write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-mkdir`\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`",
+          "type": "string",
+          "const": "fs:write-all",
+          "markdownDescription": "This enables all write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-mkdir`\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`"
+        },
+        {
+          "description": "This enables all file write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`",
+          "type": "string",
+          "const": "fs:write-files",
+          "markdownDescription": "This enables all file write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`"
         },
         {
           "description": "Enables the copy_file command without any pre-configured scope.",
@@ -5445,10 +5589,22 @@
           "markdownDescription": "Enables the size command without any pre-configured scope."
         },
         {
+          "description": "Enables the start_accessing_security_scoped_resource command without any pre-configured scope.",
+          "type": "string",
+          "const": "fs:allow-start-accessing-security-scoped-resource",
+          "markdownDescription": "Enables the start_accessing_security_scoped_resource command without any pre-configured scope."
+        },
+        {
           "description": "Enables the stat command without any pre-configured scope.",
           "type": "string",
           "const": "fs:allow-stat",
           "markdownDescription": "Enables the stat command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the stop_accessing_security_scoped_resource command without any pre-configured scope.",
+          "type": "string",
+          "const": "fs:allow-stop-accessing-security-scoped-resource",
+          "markdownDescription": "Enables the stop_accessing_security_scoped_resource command without any pre-configured scope."
         },
         {
           "description": "Enables the truncate command without any pre-configured scope.",
@@ -5485,12 +5641,6 @@
           "type": "string",
           "const": "fs:allow-write-text-file",
           "markdownDescription": "Enables the write_text_file command without any pre-configured scope."
-        },
-        {
-          "description": "This permissions allows to create the application specific directories.\n",
-          "type": "string",
-          "const": "fs:create-app-specific-dirs",
-          "markdownDescription": "This permissions allows to create the application specific directories.\n"
         },
         {
           "description": "Denies the copy_file command without any pre-configured scope.",
@@ -5601,10 +5751,22 @@
           "markdownDescription": "Denies the size command without any pre-configured scope."
         },
         {
+          "description": "Denies the start_accessing_security_scoped_resource command without any pre-configured scope.",
+          "type": "string",
+          "const": "fs:deny-start-accessing-security-scoped-resource",
+          "markdownDescription": "Denies the start_accessing_security_scoped_resource command without any pre-configured scope."
+        },
+        {
           "description": "Denies the stat command without any pre-configured scope.",
           "type": "string",
           "const": "fs:deny-stat",
           "markdownDescription": "Denies the stat command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the stop_accessing_security_scoped_resource command without any pre-configured scope.",
+          "type": "string",
+          "const": "fs:deny-stop-accessing-security-scoped-resource",
+          "markdownDescription": "Denies the stop_accessing_security_scoped_resource command without any pre-configured scope."
         },
         {
           "description": "Denies the truncate command without any pre-configured scope.",
@@ -5625,16 +5787,16 @@
           "markdownDescription": "Denies the watch command without any pre-configured scope."
         },
         {
-          "description": "This denies read access to the\n`$APPLOCALDATA` folder on linux as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered.",
+          "description": "This denies access to the following paths\n\n- `$APPLOCALDATA/CacheStorage/**`\n- `$APPLOCALDATA/cookies`\n- `$APPLOCALDATA/hsts-storage.sqlite`\n- `$APPLOCALDATA/serviceworkers/**`\n- `$APPLOCALDATA/WebKitCache/**`\n- `$APPLOCALDATA/databases/**`\n- `$APPLOCALDATA/localstorage/**`\n- `$APPLOCALDATA/mediakeys/**`\n- `$APPLOCALDATA/storage/**`\n\non linux as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered.",
           "type": "string",
           "const": "fs:deny-webview-data-linux",
-          "markdownDescription": "This denies read access to the\n`$APPLOCALDATA` folder on linux as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered."
+          "markdownDescription": "This denies access to the following paths\n\n- `$APPLOCALDATA/CacheStorage/**`\n- `$APPLOCALDATA/cookies`\n- `$APPLOCALDATA/hsts-storage.sqlite`\n- `$APPLOCALDATA/serviceworkers/**`\n- `$APPLOCALDATA/WebKitCache/**`\n- `$APPLOCALDATA/databases/**`\n- `$APPLOCALDATA/localstorage/**`\n- `$APPLOCALDATA/mediakeys/**`\n- `$APPLOCALDATA/storage/**`\n\non linux as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered."
         },
         {
-          "description": "This denies read access to the\n`$APPLOCALDATA/EBWebView` folder on windows as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered.",
+          "description": "This denies access to the\n`$APPLOCALDATA/EBWebView` folder on windows as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered.",
           "type": "string",
           "const": "fs:deny-webview-data-windows",
-          "markdownDescription": "This denies read access to the\n`$APPLOCALDATA/EBWebView` folder on windows as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered."
+          "markdownDescription": "This denies access to the\n`$APPLOCALDATA/EBWebView` folder on windows as the webview data and configuration values are stored here.\nAllowing access can lead to sensitive information disclosure and should be well considered."
         },
         {
           "description": "Denies the write command without any pre-configured scope.",
@@ -5659,12 +5821,6 @@
           "type": "string",
           "const": "fs:read-all",
           "markdownDescription": "This enables all read related commands without any pre-configured accessible paths."
-        },
-        {
-          "description": "This permission allows recursive read functionality on the application\nspecific base directories. \n",
-          "type": "string",
-          "const": "fs:read-app-specific-dirs-recursive",
-          "markdownDescription": "This permission allows recursive read functionality on the application\nspecific base directories. \n"
         },
         {
           "description": "This enables directory read and file metadata related commands without any pre-configured accessible paths.",
@@ -6141,18 +6297,6 @@
           "markdownDescription": "This scope permits recursive access to the complete `$VIDEO` folder, including sub directories and files."
         },
         {
-          "description": "This enables all write related commands without any pre-configured accessible paths.",
-          "type": "string",
-          "const": "fs:write-all",
-          "markdownDescription": "This enables all write related commands without any pre-configured accessible paths."
-        },
-        {
-          "description": "This enables all file write related commands without any pre-configured accessible paths.",
-          "type": "string",
-          "const": "fs:write-files",
-          "markdownDescription": "This enables all file write related commands without any pre-configured accessible paths."
-        },
-        {
           "description": "No features are enabled by default, as we believe\nthe shortcuts can be inherently dangerous and it is\napplication specific if specific shortcuts should be\nregistered or unregistered.\n",
           "type": "string",
           "const": "global-shortcut:default",
@@ -6219,10 +6363,10 @@
           "markdownDescription": "Denies the unregister_all command without any pre-configured scope."
         },
         {
-          "description": "This permission set configures what kind of\nfetch operations are available from the http plugin.\n\nThis enables all fetch operations but does not\nallow explicitly any origins to be fetched. This needs to\nbe manually configured before usage.\n\n#### Granted Permissions\n\nAll fetch operations are enabled.\n\n\n#### This default permission set includes:\n\n- `allow-fetch`\n- `allow-fetch-cancel`\n- `allow-fetch-read-body`\n- `allow-fetch-send`",
+          "description": "This permission set configures what kind of\nfetch operations are available from the http plugin.\n\nThis enables all fetch operations but does not\nallow explicitly any origins to be fetched. This needs to\nbe manually configured before usage.\n\n#### Granted Permissions\n\nAll fetch operations are enabled.\n\n\n#### This default permission set includes:\n\n- `allow-fetch`\n- `allow-fetch-cancel`\n- `allow-fetch-send`\n- `allow-fetch-read-body`\n- `allow-fetch-cancel-body`",
           "type": "string",
           "const": "http:default",
-          "markdownDescription": "This permission set configures what kind of\nfetch operations are available from the http plugin.\n\nThis enables all fetch operations but does not\nallow explicitly any origins to be fetched. This needs to\nbe manually configured before usage.\n\n#### Granted Permissions\n\nAll fetch operations are enabled.\n\n\n#### This default permission set includes:\n\n- `allow-fetch`\n- `allow-fetch-cancel`\n- `allow-fetch-read-body`\n- `allow-fetch-send`"
+          "markdownDescription": "This permission set configures what kind of\nfetch operations are available from the http plugin.\n\nThis enables all fetch operations but does not\nallow explicitly any origins to be fetched. This needs to\nbe manually configured before usage.\n\n#### Granted Permissions\n\nAll fetch operations are enabled.\n\n\n#### This default permission set includes:\n\n- `allow-fetch`\n- `allow-fetch-cancel`\n- `allow-fetch-send`\n- `allow-fetch-read-body`\n- `allow-fetch-cancel-body`"
         },
         {
           "description": "Enables the fetch command without any pre-configured scope.",
@@ -6235,6 +6379,12 @@
           "type": "string",
           "const": "http:allow-fetch-cancel",
           "markdownDescription": "Enables the fetch_cancel command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the fetch_cancel_body command without any pre-configured scope.",
+          "type": "string",
+          "const": "http:allow-fetch-cancel-body",
+          "markdownDescription": "Enables the fetch_cancel_body command without any pre-configured scope."
         },
         {
           "description": "Enables the fetch_read_body command without any pre-configured scope.",
@@ -6261,6 +6411,12 @@
           "markdownDescription": "Denies the fetch_cancel command without any pre-configured scope."
         },
         {
+          "description": "Denies the fetch_cancel_body command without any pre-configured scope.",
+          "type": "string",
+          "const": "http:deny-fetch-cancel-body",
+          "markdownDescription": "Denies the fetch_cancel_body command without any pre-configured scope."
+        },
+        {
           "description": "Denies the fetch_read_body command without any pre-configured scope.",
           "type": "string",
           "const": "http:deny-fetch-read-body",
@@ -6273,10 +6429,10 @@
           "markdownDescription": "Denies the fetch_send command without any pre-configured scope."
         },
         {
-          "description": "This permission set configures which\nnotification features are by default exposed.\n\n#### Granted Permissions\n\nIt allows all notification related features.\n\n\n#### This default permission set includes:\n\n- `allow-is-permission-granted`\n- `allow-request-permission`\n- `allow-notify`\n- `allow-register-action-types`\n- `allow-register-listener`\n- `allow-cancel`\n- `allow-get-pending`\n- `allow-remove-active`\n- `allow-get-active`\n- `allow-check-permissions`\n- `allow-show`\n- `allow-batch`\n- `allow-list-channels`\n- `allow-delete-channel`\n- `allow-create-channel`\n- `allow-permission-state`",
+          "description": "This permission set configures which\nnotification features are by default exposed.\n\n#### Granted Permissions\n\nIt allows all notification related features.\n\n\n#### This default permission set includes:\n\n- `allow-is-permission-granted`\n- `allow-request-permission`\n- `allow-notify`\n- `allow-register-action-types`\n- `allow-register-listener`\n- `allow-remove-listener`\n- `allow-cancel`\n- `allow-get-pending`\n- `allow-remove-active`\n- `allow-get-active`\n- `allow-check-permissions`\n- `allow-show`\n- `allow-batch`\n- `allow-list-channels`\n- `allow-delete-channel`\n- `allow-create-channel`\n- `allow-permission-state`",
           "type": "string",
           "const": "notification:default",
-          "markdownDescription": "This permission set configures which\nnotification features are by default exposed.\n\n#### Granted Permissions\n\nIt allows all notification related features.\n\n\n#### This default permission set includes:\n\n- `allow-is-permission-granted`\n- `allow-request-permission`\n- `allow-notify`\n- `allow-register-action-types`\n- `allow-register-listener`\n- `allow-cancel`\n- `allow-get-pending`\n- `allow-remove-active`\n- `allow-get-active`\n- `allow-check-permissions`\n- `allow-show`\n- `allow-batch`\n- `allow-list-channels`\n- `allow-delete-channel`\n- `allow-create-channel`\n- `allow-permission-state`"
+          "markdownDescription": "This permission set configures which\nnotification features are by default exposed.\n\n#### Granted Permissions\n\nIt allows all notification related features.\n\n\n#### This default permission set includes:\n\n- `allow-is-permission-granted`\n- `allow-request-permission`\n- `allow-notify`\n- `allow-register-action-types`\n- `allow-register-listener`\n- `allow-remove-listener`\n- `allow-cancel`\n- `allow-get-pending`\n- `allow-remove-active`\n- `allow-get-active`\n- `allow-check-permissions`\n- `allow-show`\n- `allow-batch`\n- `allow-list-channels`\n- `allow-delete-channel`\n- `allow-create-channel`\n- `allow-permission-state`"
         },
         {
           "description": "Enables the batch command without any pre-configured scope.",
@@ -6361,6 +6517,12 @@
           "type": "string",
           "const": "notification:allow-remove-active",
           "markdownDescription": "Enables the remove_active command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the remove_listener command without any pre-configured scope.",
+          "type": "string",
+          "const": "notification:allow-remove-listener",
+          "markdownDescription": "Enables the remove_listener command without any pre-configured scope."
         },
         {
           "description": "Enables the request_permission command without any pre-configured scope.",
@@ -6457,6 +6619,12 @@
           "type": "string",
           "const": "notification:deny-remove-active",
           "markdownDescription": "Denies the remove_active command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the remove_listener command without any pre-configured scope.",
+          "type": "string",
+          "const": "notification:deny-remove-listener",
+          "markdownDescription": "Denies the remove_listener command without any pre-configured scope."
         },
         {
           "description": "Denies the request_permission command without any pre-configured scope.",
