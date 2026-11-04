@@ -29,7 +29,8 @@ export default function Batteryicon({ toyPower }: { toyPower: ToyPower }) {
   } else {
     const battery = toyPower.Battery;
     tooltipText = percent.format(battery);
-    iconStyle = { color: `hsl(${battery * 120}, 75%, 50%)` };
+    // Pastel red -> pastel green as the battery fills
+    iconStyle = { color: `hsl(${battery * 140 + 340}, 80%, 78%)` };
     if (battery <= 0.1) {
       iconComponent = <BatteryWarning className="h-8" />;
     } else if (battery <= 0.4) {
@@ -43,7 +44,7 @@ export default function Batteryicon({ toyPower }: { toyPower: ToyPower }) {
 
   return (
     <Tooltip text={tooltipText}>
-      <span className="cursor-help" style={iconStyle}>
+      <span className="cursor-help text-cute-muted" style={iconStyle}>
         {iconComponent}
       </span>
     </Tooltip>

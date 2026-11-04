@@ -32,11 +32,21 @@ module.exports = {
 					to: {
 						height: 0
 					}
+				},
+				wiggle: {
+					'0%, 100%': { transform: 'rotate(-8deg)' },
+					'50%': { transform: 'rotate(8deg)' }
+				},
+				float: {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-4px)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				wiggle: 'wiggle 0.5s ease-in-out infinite',
+				float: 'float 3s ease-in-out infinite'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -44,6 +54,21 @@ module.exports = {
 				sm: 'calc(var(--radius) - 4px)'
 			},
 			colors: {
+				// Pastel-on-dark "cute" palette used across the app
+				cute: {
+					night: '#17131f',
+					panel: '#221c2e',
+					raised: '#2d2540',
+					line: '#43395c',
+					pink: '#f7b2d9',
+					lilac: '#c7b3f5',
+					mint: '#9fe3c8',
+					sky: '#a5d4f2',
+					peach: '#ffc9a8',
+					rose: '#f29bb0',
+					cream: '#fbefff',
+					muted: '#9d90b8'
+				},
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				card: {

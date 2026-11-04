@@ -4,71 +4,68 @@
 
 :root {
   overflow: hidden;
+  /* Ask the webview to draw native form controls (dropdown lists,
+     scrollbars, autofill) in their dark variant */
+  color-scheme: dark;
 
-  --text-color: rgba(255, 255, 255, 0.87);
-  --background-color: #18181b;
+  --text-color: #fbefff;
+  --background-color: #17131f;
   color: var(--text-color);
   background-color: var(--background-color);
 }
 
 body {
   font-family:
-    "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS", sans-serif !important;
+    "Nunito", "Quicksand", "Varela Round", ui-rounded, "SF Pro Rounded",
+    "Segoe UI", system-ui, sans-serif !important;
+  /* Soft scattered paw prints over a plum glow */
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='%23c7b3f5' fill-opacity='0.05'%3E%3Cg transform='translate(28 30) rotate(-20)'%3E%3Cellipse cx='0' cy='8' rx='9' ry='7'/%3E%3Ccircle cx='-9' cy='-4' r='3.6'/%3E%3Ccircle cx='-3' cy='-9' r='3.6'/%3E%3Ccircle cx='4' cy='-9' r='3.6'/%3E%3Ccircle cx='10' cy='-4' r='3.6'/%3E%3C/g%3E%3Cg transform='translate(112 104) rotate(18)'%3E%3Cellipse cx='0' cy='8' rx='9' ry='7'/%3E%3Ccircle cx='-9' cy='-4' r='3.6'/%3E%3Ccircle cx='-3' cy='-9' r='3.6'/%3E%3Ccircle cx='4' cy='-9' r='3.6'/%3E%3Ccircle cx='10' cy='-4' r='3.6'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(
+      ellipse at top left,
+      rgba(247, 178, 217, 0.08),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at bottom right,
+      rgba(199, 179, 245, 0.1),
+      transparent 55%
+    );
+  background-color: #17131f;
 }
 
+/*
+ * Pastel dark theme for the shadcn components (badge, dialog, command...).
+ * The app always runs in dark mode, so both blocks use the same palette.
+ */
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-  }
+  :root,
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --background: 263 24% 10%;
+    --foreground: 288 100% 97%;
+    --card: 263 24% 15%;
+    --card-foreground: 288 100% 97%;
+    --popover: 263 24% 15%;
+    --popover-foreground: 288 100% 97%;
+    --primary: 326 80% 83%;
+    --primary-foreground: 263 24% 10%;
+    --secondary: 259 26% 20%;
+    --secondary-foreground: 288 100% 97%;
+    --muted: 259 26% 20%;
+    --muted-foreground: 260 20% 64%;
+    --accent: 260 76% 83%;
+    --accent-foreground: 263 24% 10%;
+    --destructive: 346 75% 78%;
+    --destructive-foreground: 263 24% 10%;
+    --border: 259 23% 29%;
+    --input: 259 23% 29%;
+    --ring: 260 76% 83%;
+    --chart-1: 326 80% 83%;
+    --chart-2: 260 76% 83%;
+    --chart-3: 157 56% 76%;
+    --chart-4: 204 72% 80%;
+    --chart-5: 22 100% 83%;
+    --radius: 0.9rem;
   }
 }
 
@@ -77,6 +74,63 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+  }
+  ::selection {
+    @apply bg-cute-pink/40 text-cute-cream;
+  }
+}
+
+@layer components {
+  /* Rounded, softly glowing card used for the main panels */
+  .cute-panel {
+    @apply rounded-3xl border border-cute-line/70 bg-cute-panel shadow-[0_8px_30px_-12px_rgba(199,179,245,0.35)];
+  }
+
+  /* Text inputs and selects.
+     appearance:none stops WebKitGTK from drawing its native (white) widget
+     over our background. */
+  .cute-input {
+    @apply appearance-none rounded-xl border border-cute-line bg-cute-night px-3 py-0.5 text-cute-cream outline-none transition-colors placeholder:text-cute-muted focus:border-cute-pink focus:ring-2 focus:ring-cute-pink/30;
+  }
+
+  /*
+   * Fluffy ears that poke out of the top of a panel.
+   * The ears share the panel colour so their bottom halves blend into it;
+   * the pink inner ear sits near the tip.
+   */
+  .cute-ears {
+    position: relative;
+    /* Own stacking context so z-index:-1 ears paint above the panel
+       background but below everything inside the panel */
+    isolation: isolate;
+  }
+  .cute-ears::before,
+  .cute-ears::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: -14px;
+    width: 30px;
+    height: 30px;
+    border-radius: 10px 4px 4px 4px;
+    background:
+      radial-gradient(
+        circle at 32% 32%,
+        rgba(247, 178, 217, 0.85) 0 26%,
+        transparent 28%
+      ),
+      #221c2e;
+    border-top: 1px solid rgba(67, 57, 92, 0.7);
+    border-left: 1px solid rgba(67, 57, 92, 0.7);
+    pointer-events: none;
+  }
+  .cute-ears::before {
+    left: 34px;
+    transform: rotate(45deg) skew(-6deg, -6deg);
+  }
+  .cute-ears::after {
+    right: 34px;
+    transform: rotate(45deg) skew(-6deg, -6deg);
   }
 }

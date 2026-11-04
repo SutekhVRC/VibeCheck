@@ -10,7 +10,7 @@ import { FeVCToy } from "@bindings/FeVCToy";
 import type { FeVCToyFeature } from "@bindings/FeVCToyFeature";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { DebouncedFunc, debounce } from "lodash";
-import { Plus, X } from "lucide-react";
+import { PawPrint, Plus, X } from "lucide-react";
 import {
   ChangeEvent,
   Dispatch,
@@ -118,7 +118,7 @@ export default function FeatureForm({
         handleLevels,
       }}
     >
-      <div className="rounded-md bg-zinc-700 p-4">
+      <div className="mt-2 rounded-2xl border border-cute-line/60 bg-cute-raised p-4">
         <HackyScrollArea>
           <FourPanelContainer>
             <Enabled />
@@ -137,7 +137,10 @@ export default function FeatureForm({
               </>
             )}
           </FourPanelContainer>
-          <div className="text-left">Parameters</div>
+          <div className="flex items-center gap-2 text-left font-semibold text-cute-lilac">
+            <PawPrint className="h-4 w-4" />
+            Parameters
+          </div>
           <FourPanelContainer>
             <Parameters />
           </FourPanelContainer>
@@ -169,13 +172,15 @@ function InputProcessor() {
   const { feature, setToyFeature, handleFeatureAlter } =
     useFeatureFormContext();
 
-  function handleInputProcessor(e: ChangeEvent<HTMLSelectElement>) {
+  function handleInputProcessor<
+    K extends "pen_system_type" | "pen_system_processing_mode",
+  >(key: K, value: FeVCToyFeature["penetration_system"][K]) {
     setToyFeature((f) => {
       const newF = {
         ...f,
         penetration_system: {
           ...f.penetration_system,
-          [e.target.name]: e.target.value,
+          [key]: value,
         },
       };
       handleFeatureAlter(newF);
@@ -192,17 +197,15 @@ function InputProcessor() {
           <Select
             name="pen_system_type"
             value={feature.penetration_system.pen_system_type}
-            onChange={(e) => {
-              handleInputProcessor(e);
-            }}
+            onValueChange={(v) => handleInputProcessor("pen_system_type", v)}
             options={PenetrationSystems}
           />
           <Select
             name="pen_system_processing_mode"
             value={feature.penetration_system.pen_system_processing_mode}
-            onChange={(e) => {
-              handleInputProcessor(e);
-            }}
+            onValueChange={(v) =>
+              handleInputProcessor("pen_system_processing_mode", v)
+            }
             options={ProcessingModes}
           />
         </div>
@@ -279,15 +282,12 @@ function Parameters() {
     });
   }
 
-  function handleOscParamMode(
-    e: ChangeEvent<HTMLSelectElement>,
-    paramIndex: number,
-  ) {
+  function handleOscParamMode(mode: FeProcessingMode, paramIndex: number) {
     setToyFeature((f) => {
       const newParams = [...f.osc_parameters];
       newParams[paramIndex] = {
         ...newParams[paramIndex],
-        processing_mode: e.target.value as FeProcessingMode,
+        processing_mode: mode,
       };
       const newF = {
         ...f,
@@ -313,7 +313,7 @@ function Parameters() {
           <Fragment key={paramIndex}>
             {/* Adding debounce on this makes it more complex b/c separate state, plus parent key on index */}
             <input
-              className="col-span-1 w-full rounded-sm px-4 text-zinc-800 outline-none md:col-span-2"
+              className="cute-input col-span-1 w-full md:col-span-2"
               name="osc_parameter"
               value={param.parameter.replace(OSC.PARAM_PREFIX, "")}
               onChange={(e) => handleOscParam(e, paramIndex)}
@@ -321,13 +321,11 @@ function Parameters() {
             <Select
               name="osc_parameter_mode"
               value={param.processing_mode}
-              onChange={(e) => {
-                handleOscParamMode(e, paramIndex);
-              }}
+              onValueChange={(mode) => handleOscParamMode(mode, paramIndex)}
               options={ProcessingModes}
             />
             <button
-              className="flex justify-center"
+              className="flex justify-center text-cute-muted transition-colors hover:text-cute-rose"
               onClick={() => removeParam(param.parameter)}
             >
               <X className="h-5" />
@@ -337,7 +335,10 @@ function Parameters() {
       })}
       <div className="col-span-3"></div>
       <div className="col-span-2 flex justify-center md:col-span-1">
-        <button onClick={addParam}>
+        <button
+          onClick={addParam}
+          className="rounded-full p-1 text-cute-mint transition-all hover:scale-110 hover:bg-cute-mint/20"
+        >
           <Plus className="h-5" />
         </button>
       </div>

@@ -1,5 +1,6 @@
 import type { FeVibeCheckConfig } from "@bindings/FeVibeCheckConfig";
 import { invoke } from "@tauri-apps/api/core";
+import { Settings } from "lucide-react";
 import { ChangeEvent, FormEvent, useState } from "react";
 import { toast } from "sonner";
 import UpdateButton from "../components/UpdateButton";
@@ -70,16 +71,21 @@ export default function Config({
   return (
     <div className="h-full w-full">
       <div className="flex items-center justify-between px-6 text-4xl">
-        <div className="flex items-end gap-2">Config</div>
+        <div className="flex items-center gap-3 font-bold">
+          <Settings className="h-8 w-8 text-cute-lilac" />
+          <span className="bg-gradient-to-r from-cute-lilac via-cute-pink to-cute-peach bg-clip-text text-transparent">
+            Config
+          </span>
+        </div>
       </div>
       <div className="flex w-full flex-col justify-between">
         <form id="config" onSubmit={handleSubmit}>
-          <div className="mx-8 my-4 grid grid-cols-[minmax(10rem,4fr)_1fr_minmax(4rem,_4fr)] gap-1 text-justify text-sm">
+          <div className="mx-8 my-4 grid grid-cols-[minmax(10rem,4fr)_1fr_minmax(4rem,_4fr)] items-center gap-x-1 gap-y-2 rounded-2xl border border-cute-line/60 bg-cute-raised p-4 text-left text-sm">
             <TooltipLabel text="OSC Bind" tooltip={TOOLTIP.OSC_Bind} />
             <div />
             <input
               name="bind"
-              className="rounded-sm px-1 text-zinc-800 outline-none"
+              className="cute-input"
               value={newConfig.networking.bind}
               onChange={onChangeNetworking}
               pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}
@@ -96,7 +102,7 @@ export default function Config({
             <div />
             <input
               name="remote"
-              className="rounded-sm px-1 text-zinc-800 outline-none"
+              className="cute-input"
               value={newConfig.networking.remote}
               onChange={onChangeNetworking}
               pattern={String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`}

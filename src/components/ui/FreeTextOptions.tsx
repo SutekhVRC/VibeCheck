@@ -76,7 +76,10 @@ export const FreeTextOptions = React.forwardRef<
     return (
       <div
         ref={ref}
-        className={cn("flex flex-wrap items-center gap-2", className)}
+        className={cn(
+          "cute-input flex flex-wrap items-center gap-2 px-2 py-1 focus-within:border-cute-pink focus-within:ring-2 focus-within:ring-cute-pink/30",
+          className,
+        )}
         {...props}
       >
         {values.map((v) => (
@@ -104,7 +107,7 @@ export const FreeTextOptions = React.forwardRef<
           placeholder={placeholder}
           aria-label={placeholder}
           disabled={disabled}
-          className="min-w-[140px] flex-1 bg-transparent p-1 outline-none"
+          className="min-w-[140px] flex-1 appearance-none bg-transparent p-0.5 text-cute-cream outline-none placeholder:text-cute-muted"
         />
       </div>
     );

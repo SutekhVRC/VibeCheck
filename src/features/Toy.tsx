@@ -2,6 +2,7 @@ import { useCoreEventContext } from "@/context/CoreEvents";
 import { FeVCToy } from "@bindings/FeVCToy";
 import { FeVCToyFeature } from "@bindings/FeVCToyFeature";
 import { ToyPower } from "@bindings/ToyPower";
+import { PawPrint } from "lucide-react";
 import { useEffect, useState } from "react";
 import lovenseLogo from "../assets/Lovense.png";
 import BatteryIcon from "../components/BatteryIcon";
@@ -31,8 +32,13 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
 
   return (
     <div className="h-full w-full">
-      <div className="flex items-center justify-between px-2 text-4xl">
-        <div>{nameInfo.shortName}</div>
+      <div className="flex items-center justify-between px-2 pb-2 text-4xl">
+        <div className="flex items-center gap-3 font-bold">
+          <PawPrint className="h-8 w-8 text-cute-pink" />
+          <span className="bg-gradient-to-r from-cute-pink via-cute-lilac to-cute-sky bg-clip-text text-transparent">
+            {nameInfo.shortName}
+          </span>
+        </div>
         <ToyInfo nameInfo={nameInfo} toyPower={toy.toy_power} />
       </div>
       <div className="px-2">
@@ -44,9 +50,11 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
               key={toyFeatureKey(toy, feature)}
               onClick={() => setSelectedFeatureIndex(featureArrayIndex)}
               className={cn(
-                "whitespace-nowrap rounded-md border-2 border-transparent bg-zinc-700 px-4 py-1 hover:bg-cyan-600",
-                feature.feature_enabled ? "text-zinc-200" : "text-zinc-500",
-                featureArrayIndex == selectedFeatureIndex && "border-cyan-500",
+                "whitespace-nowrap rounded-full border-2 px-4 py-1 transition-all duration-200",
+                feature.feature_enabled ? "text-cute-cream" : "text-cute-muted",
+                featureArrayIndex == selectedFeatureIndex
+                  ? "border-cute-pink bg-cute-pink/20"
+                  : "border-transparent bg-cute-raised hover:bg-cute-line",
               )}
             >
               {feature.feature_type} {feature.feature_index}
@@ -60,7 +68,7 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
             key={toyFeatureKey(toy, toy.features[clampedIndex])}
           />
         ) : (
-          <div className="mt-4 text-sm text-zinc-400">
+          <div className="mt-4 text-sm text-cute-muted">
             No features available for this toy.
           </div>
         )}

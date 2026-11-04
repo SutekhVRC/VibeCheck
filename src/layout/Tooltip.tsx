@@ -23,11 +23,11 @@ export default function Tooltip({
         </TooltipPrimitive.Trigger>
         <TooltipPrimitive.Portal>
           <TooltipPrimitive.Content
-            className="pointer-events-none z-50 max-w-md cursor-pointer rounded-md bg-zinc-600 pl-3 pr-3 text-zinc-50"
+            className="pointer-events-none z-50 max-w-md cursor-pointer rounded-2xl border border-cute-line bg-cute-raised px-3 py-1 text-sm text-cute-cream shadow-[0_6px_20px_-6px_rgba(199,179,245,0.45)]"
             sideOffset={5}
           >
             {text}
-            <TooltipPrimitive.Arrow className="fill-zinc-600" />
+            <TooltipPrimitive.Arrow className="fill-cute-raised" />
           </TooltipPrimitive.Content>
         </TooltipPrimitive.Portal>
       </TooltipPrimitive.Root>
@@ -51,7 +51,7 @@ export function TooltipLabel({ text, tooltip }: TooltipProps) {
           onClick={async () => {
             await invoke(INVOKE.OPEN_BROWSER, { link });
           }}
-          className="cursor-pointer select-none justify-self-start underline"
+          className="cursor-pointer select-none justify-self-start text-cute-sky underline decoration-cute-sky/50 decoration-dotted underline-offset-4 hover:text-cute-pink"
         >
           {text}
         </label>
@@ -60,7 +60,9 @@ export function TooltipLabel({ text, tooltip }: TooltipProps) {
   } else {
     return (
       <Tooltip text={tooltipText}>
-        <label className="cursor-help justify-self-start">{text}</label>
+        <label className="cursor-help justify-self-start text-cute-cream/90">
+          {text}
+        </label>
       </Tooltip>
     );
   }

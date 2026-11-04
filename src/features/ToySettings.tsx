@@ -1,5 +1,4 @@
 import type { FeVCToy } from "@bindings/FeVCToy";
-import { FeVCToyAnatomy } from "@bindings/FeVCToyAnatomy";
 import { ClipboardCopy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -55,7 +54,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
   }
 
   return (
-    <div className="rounded-md bg-zinc-700 px-4 text-sm">
+    <div className="rounded-2xl border border-cute-line/60 bg-cute-raised px-4 text-sm">
       <FourPanelContainer>
         <div className="flex items-center gap-1">
           <TooltipLabel text="OSC Data" tooltip={TOOLTIP.OSC_Data} />
@@ -63,7 +62,7 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
             <Tooltip text="Copy osc data address to clipboard">
               <ClipboardCopy
                 onClick={handleCopy}
-                className="h-4 cursor-pointer"
+                className="h-4 cursor-pointer text-cute-lilac hover:text-cute-pink"
               />
             </Tooltip>
           )}
@@ -83,11 +82,8 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
           three={
             <Select
               value={toy.toy_anatomy}
-              onChange={(e) =>
-                handleToyAlter({
-                  ...toy,
-                  toy_anatomy: e.target.value as FeVCToyAnatomy,
-                })
+              onValueChange={(anatomy) =>
+                handleToyAlter({ ...toy, toy_anatomy: anatomy })
               }
               options={ToyAnatomyArray}
             />
