@@ -66,8 +66,8 @@ export default function useSimulate(
       simulateEnabled: null,
       simulateLevel: null,
       toggleSimulate: () => null,
-      simultaeOnValueChange: () => null,
-      simultaeOnValueCommit: () => null,
+      simulateOnValueChange: () => null,
+      simulateOnValueCommit: () => null,
     };
   else
     return {

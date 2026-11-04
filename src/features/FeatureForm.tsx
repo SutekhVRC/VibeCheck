@@ -69,7 +69,6 @@ export default function FeatureForm({
   const [feature, setToyFeature] = useState(
     toy.features[selectedIndex] ?? toy.features[0],
   );
-  const levels = feature.feature_levels;
   const { config } = useCoreEventContext();
 
   // Only need debounce for input fields, levels work with onValueCommit
@@ -95,7 +94,7 @@ export default function FeatureForm({
     setToyFeature((feature) => {
       return {
         ...feature,
-        feature_levels: { ...levels, [key]: value },
+        feature_levels: { ...feature.feature_levels, [key]: value },
       };
     });
   }
@@ -267,7 +266,10 @@ function Parameters() {
   ) {
     setToyFeature((f) => {
       const newParams = [...f.osc_parameters];
-      newParams[paramIndex].parameter = normalizeOscParameter(e.target.value);
+      newParams[paramIndex] = {
+        ...newParams[paramIndex],
+        parameter: normalizeOscParameter(e.target.value),
+      };
       const newF = {
         ...f,
         osc_parameters: newParams,
@@ -283,8 +285,10 @@ function Parameters() {
   ) {
     setToyFeature((f) => {
       const newParams = [...f.osc_parameters];
-      newParams[paramIndex].processing_mode = e.target
-        .value as FeProcessingMode;
+      newParams[paramIndex] = {
+        ...newParams[paramIndex],
+        processing_mode: e.target.value as FeProcessingMode,
+      };
       const newF = {
         ...f,
         osc_parameters: newParams,
@@ -446,7 +450,7 @@ function Range() {
               return {
                 ...f,
                 feature_levels: {
-                  ...levels,
+                  ...f.feature_levels,
                   minimum_level: e[0],
                   maximum_level: e[1],
                 },
