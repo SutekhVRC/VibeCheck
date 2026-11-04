@@ -790,13 +790,11 @@ impl VCToyFeatures {
     }
 
     pub fn get_features_from_param(&mut self, param: &String) -> Option<Vec<&mut VCToyFeature>> {
-        let mut out = Vec::new();
-
-        for f in &mut self.features {
-            if let Some(feature) = f.get_enabled_feature_from_param(param) {
-                out.push(feature);
-            }
-        }
+        let out = self
+            .features
+            .iter_mut()
+            .filter_map(|f| f.get_enabled_feature_from_param(param))
+            .collect::<Vec<&mut VCToyFeature>>();
 
         if out.is_empty() {
             None
@@ -812,9 +810,10 @@ impl VCToyFeatures {
         let mut out = Vec::new();
 
         for f in &mut self.features {
-
             // If feature gets turned off at any time during the feature enum process clear the vector and return None
-            if !f.feature_enabled {continue;}
+            if !f.feature_enabled {
+                continue;
+            }
 
             // If penetration system not set for feature move to next feature
             if f.penetration_system.pen_system.is_none() {

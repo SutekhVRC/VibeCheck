@@ -1,5 +1,5 @@
-use std::{fs, net::SocketAddrV4, str::FromStr, thread, time::Duration};
 use log::{debug, error as logerr, info, trace, warn};
+use std::{fs, net::SocketAddrV4, str::FromStr, thread, time::Duration};
 
 #[cfg(target_os = "windows")]
 use crate::util::fs::get_user_home_dir;
@@ -204,10 +204,6 @@ pub fn native_osc_query_attempt_force(
     // This is only to attempt to auto-induce an mDNS response with separated answers.
     vc_lock.osc_query_associate();
 
-    Ok(())
-}
-
-pub fn osc_query_force_populate(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), VCFeError> {
     Ok(())
 }
 
