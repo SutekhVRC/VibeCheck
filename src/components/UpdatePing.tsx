@@ -12,8 +12,8 @@ export default function UpdatePing({
       {children}
       {canUpdate && (
         <>
-          <div className="absolute right-0 top-0 h-2 w-2 animate-ping rounded-full bg-cute-mint" />
-          <div className="absolute right-0 top-0 h-2 w-2 rounded-full bg-cute-mint" />
+          <div className="absolute right-0 top-0 h-2 w-2 animate-ping rounded-full bg-theme-success" />
+          <div className="absolute right-0 top-0 h-2 w-2 rounded-full bg-theme-success" />
         </>
       )}
     </div>

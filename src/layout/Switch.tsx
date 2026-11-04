@@ -1,20 +1,20 @@
+import ThemeIcon from "@/theme/ThemeIcon";
 import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { SwitchProps } from "@radix-ui/react-switch";
-import { PawPrint } from "lucide-react";
 import { cn } from "../lib/utils";
 
 const themeColors = {
   // Default switch: sleepy lilac when off, pink when on
   "white-cyan": {
-    inactive: "bg-cute-line",
-    active: "bg-cute-pink",
-    paw: "text-cute-pink",
+    inactive: "bg-theme-border",
+    active: "bg-theme-primary",
+    paw: "text-theme-primary",
   },
   // App on/off switch: rose when off, mint when on
   "red-green": {
-    inactive: "bg-cute-rose",
-    active: "bg-cute-mint",
-    paw: "text-cute-mint",
+    inactive: "bg-theme-danger",
+    active: "bg-theme-success",
+    paw: "text-theme-success",
   },
 };
 
@@ -55,23 +55,23 @@ export default function Switch(
       className={cn(
         props.checked ? selectedTheme.active : selectedTheme.inactive,
         selectedSize.container,
-        "relative inline-flex cursor-pointer rounded-full border-transparent transition-all duration-200 ease-in-out disabled:cursor-not-allowed disabled:bg-cute-raised",
+        "relative inline-flex cursor-pointer rounded-full border-transparent transition-all duration-200 ease-in-out disabled:cursor-not-allowed disabled:bg-theme-raised",
       )}
     >
       <SwitchPrimitive.Thumb
         className={cn(
           props.checked ? selectedSize.translateLeft : "translate-x-0",
           selectedSize.switch,
-          props.disabled ? "bg-cute-line" : "bg-cute-cream",
+          props.disabled ? "bg-theme-border" : "bg-theme-text",
           "flex items-center justify-center rounded-full shadow transition duration-200 ease-in-out",
         )}
       >
         {selectedSize.paw && !props.disabled && (
-          <PawPrint
+          <ThemeIcon
             className={cn(
               selectedSize.paw,
               "transition-opacity duration-200",
-              props.checked ? selectedTheme.paw : "text-cute-muted",
+              props.checked ? selectedTheme.paw : "text-theme-muted",
             )}
             strokeWidth={2.5}
           />

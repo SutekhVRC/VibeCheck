@@ -1,14 +1,17 @@
+import BatteryIcon from "@/components/ui/BatteryIcon";
 import { useCoreEventContext } from "@/context/CoreEvents";
+import Button from "@/layout/Button";
+import ThemeIcon from "@/theme/ThemeIcon";
 import { FeVCToy } from "@bindings/FeVCToy";
 import { FeVCToyFeature } from "@bindings/FeVCToyFeature";
 import { ToyPower } from "@bindings/ToyPower";
-import { PawPrint } from "lucide-react";
+import { Settings2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import lovenseLogo from "../assets/Lovense.png";
-import BatteryIcon from "../components/BatteryIcon";
 import Tooltip from "../layout/Tooltip";
 import { cn } from "../lib/utils";
 import FeatureForm from "./FeatureForm";
+import { featureIcons, featureLabel } from "./featureMeta";
 import ToySettings from "./ToySettings";
 
 export default function Toy({ toy }: { toy: FeVCToy }) {
@@ -16,6 +19,14 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
   const nameInfo = NameInfo(toy);
 
   const { config } = useCoreEventContext();
+  // The Config "advanced" switches now decide what starts open
+  const [toySettingsOpen, setToySettingsOpen] = useState(
+    () => config?.show_toy_advanced ?? false,
+  );
+  const [advancedOpen, setAdvancedOpen] = useState(
+    () => config?.show_feature_advanced ?? false,
+  );
+
   const clampedIndex =
     toy.features.length === 0
       ? 0
@@ -31,49 +42,115 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
   }
 
   return (
-    <div className="h-full w-full">
-      <div className="flex items-center justify-between px-2 pb-2 text-4xl">
-        <div className="flex items-center gap-3 font-bold">
-          <PawPrint className="h-8 w-8 text-cute-pink" />
-          <span className="bg-gradient-to-r from-cute-pink via-cute-lilac to-cute-sky bg-clip-text text-transparent">
+    <div className="flex h-full w-full min-w-0 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-2 pb-2">
+        <div className="flex min-w-0 items-center gap-3 text-4xl font-bold">
+          <ThemeIcon className="h-8 w-8 shrink-0 text-theme-primary" />
+          <span className="truncate bg-gradient-to-r from-theme-primary via-theme-secondary to-theme-info bg-clip-text text-transparent">
             {nameInfo.shortName}
           </span>
         </div>
-        <ToyInfo nameInfo={nameInfo} toyPower={toy.toy_power} />
+        <div className="flex items-center gap-4">
+          <Button
+            variant="secondary"
+            onClick={() => setToySettingsOpen((o) => !o)}
+            aria-expanded={toySettingsOpen}
+            className={cn(
+              "m-0 flex items-center gap-1.5 px-3 py-0.5 text-sm",
+              toySettingsOpen &&
+                "border-theme-primary bg-theme-primary/15 text-theme-primary",
+            )}
+          >
+            <Settings2 className="h-4 w-4" />
+            Toy settings
+          </Button>
+          <ToyInfo nameInfo={nameInfo} toyPower={toy.toy_power} />
+        </div>
       </div>
-      <div className="px-2">
-        {config?.show_toy_advanced && <ToySettings toy={toy} />}
-        {/* pt-2 because scrollbar gap is bottom */}
-        <div className="scrollbar flex w-[calc(100vw-320px)] select-none items-center gap-4 overflow-x-scroll pt-2 md:w-[calc(100vw-340px)]">
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col px-2">
+        {toySettingsOpen && (
+          <div className="shrink-0">
+            <ToySettings toy={toy} />
+          </div>
+        )}
+
+        <div className="scrollbar flex w-full min-w-0 shrink-0 select-none gap-3 overflow-x-auto pb-2 pt-3">
           {toy.features.map((feature, featureArrayIndex) => (
-            <button
+            <FeatureChip
               key={toyFeatureKey(toy, feature)}
+              feature={feature}
+              label={featureLabel(toy.features, featureArrayIndex)}
+              selected={featureArrayIndex == clampedIndex}
               onClick={() => setSelectedFeatureIndex(featureArrayIndex)}
-              className={cn(
-                "whitespace-nowrap rounded-full border-2 px-4 py-1 transition-all duration-200",
-                feature.feature_enabled ? "text-cute-cream" : "text-cute-muted",
-                featureArrayIndex == selectedFeatureIndex
-                  ? "border-cute-pink bg-cute-pink/20"
-                  : "border-transparent bg-cute-raised hover:bg-cute-line",
-              )}
-            >
-              {feature.feature_type} {feature.feature_index}
-            </button>
+            />
           ))}
         </div>
+
         {toy.features.length > 0 ? (
           <FeatureForm
             toy={toy}
             selectedIndex={clampedIndex}
+            label={featureLabel(toy.features, clampedIndex)}
+            advancedOpen={advancedOpen}
+            onAdvancedOpenChange={setAdvancedOpen}
             key={toyFeatureKey(toy, toy.features[clampedIndex])}
           />
         ) : (
-          <div className="mt-4 text-sm text-cute-muted">
+          <div className="mt-4 text-sm text-theme-muted">
             No features available for this toy.
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+/** Feature tab showing its type, on/off state and parameter count */
+function FeatureChip({
+  feature,
+  label,
+  selected,
+  onClick,
+}: {
+  feature: FeVCToyFeature;
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const Icon = featureIcons[feature.feature_type];
+  const paramCount = feature.osc_parameters.length;
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        "flex shrink-0 flex-col items-start gap-0.5 rounded-2xl border-2 px-3 py-1.5 text-left transition-all duration-200",
+        selected
+          ? "border-theme-primary bg-theme-primary/15"
+          : "border-transparent bg-theme-raised hover:border-theme-border",
+      )}
+    >
+      <span
+        className={cn(
+          "flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold",
+          feature.feature_enabled ? "text-theme-text" : "text-theme-muted",
+        )}
+      >
+        <Icon className="h-4 w-4 text-theme-secondary" />
+        {label}
+      </span>
+      <span className="flex items-center gap-1.5 whitespace-nowrap text-xs text-theme-muted">
+        <span
+          className={cn(
+            "h-2 w-2 rounded-full",
+            feature.feature_enabled ? "bg-theme-success" : "bg-theme-muted/50",
+          )}
+        />
+        {feature.feature_enabled ? "On" : "Off"} · {paramCount}{" "}
+        {paramCount === 1 ? "param" : "params"}
+      </span>
+    </button>
   );
 }
 

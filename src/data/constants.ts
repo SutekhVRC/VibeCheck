@@ -1,6 +1,7 @@
 export const LISTEN = {
   CORE_EVENT: "fe_core_event",
   TOY_EVENT: "fe_toy_event",
+  ERROR: "fe_error",
 } as const;
 
 export const INVOKE = {
@@ -113,11 +114,11 @@ export const TOOLTIP = {
     link: "",
   },
   AdvancedToy: {
-    text: "Show advanced toy options like osc data and anatomy",
+    text: "Open the toy settings strip (OSC data, anatomy, update rate) by default when viewing a toy",
     link: "",
   },
   AdvancedFeature: {
-    text: "Show advanced options for features [vibrator, constrict, oscillate, etc], will show options like idle speed, flip input, simulate",
+    text: "Expand the Advanced section of feature settings (idle speed, flip input, smoothing) by default",
     link: "",
   },
   ToyUpdateRate: {

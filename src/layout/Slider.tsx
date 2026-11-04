@@ -15,10 +15,12 @@ export default function Slider(
   const [hover, setHover] = useState(false);
   const first = props.value?.at(0);
   const second = props.value?.at(1);
-  const color = props?.accent && "from-cute-mint to-cute-sky";
+  const color = props?.accent && "from-theme-success to-theme-info";
   const thumbClass = cn(
-    "block h-4 w-4 rounded-full border-2 bg-cute-cream shadow transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-cute-pink/50",
-    props.disabled ? "border-cute-line" : "border-cute-pink hover:scale-110",
+    "block h-4 w-4 rounded-full border-2 bg-theme-text shadow transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary/50",
+    props.disabled
+      ? "border-theme-border"
+      : "border-theme-primary hover:scale-110",
   );
   // This is really dumb right now
   // Hopefully RadixPopper "updatePositionStrategy" = "always" will be added to tooltip
@@ -33,10 +35,10 @@ export default function Slider(
       {...props}
       aria-label="Slider"
     >
-      <SliderPrimitive.Track className="relative flex h-2 flex-grow rounded-full bg-cute-night outline outline-1 outline-cute-line">
+      <SliderPrimitive.Track className="relative flex h-2 flex-grow rounded-full bg-theme-background outline outline-1 outline-theme-border">
         <SliderPrimitive.Range
           className={cn(
-            "absolute h-full rounded-full bg-gradient-to-r from-cute-pink to-cute-lilac transition-all data-[disabled]:from-cute-line data-[disabled]:to-cute-line",
+            "absolute h-full rounded-full bg-gradient-to-r from-theme-primary to-theme-secondary transition-all data-[disabled]:from-theme-border data-[disabled]:to-theme-border",
             color,
           )}
         />
@@ -49,7 +51,7 @@ export default function Slider(
             </TooltipPrimitive.Trigger>
             <TooltipPrimitive.Portal>
               <TooltipPrimitive.Content
-                className="max-w-md rounded-full bg-cute-lilac px-3 text-sm font-semibold text-cute-night shadow-lg"
+                className="max-w-md rounded-full bg-theme-secondary px-3 text-sm font-semibold text-theme-on-accent shadow-lg"
                 sideOffset={10}
                 key={first} // force update with key
               >
@@ -67,7 +69,7 @@ export default function Slider(
             </TooltipPrimitive.Trigger>
             <TooltipPrimitive.Portal>
               <TooltipPrimitive.Content
-                className="max-w-md rounded-full bg-cute-lilac px-3 text-sm font-semibold text-cute-night shadow-lg"
+                className="max-w-md rounded-full bg-theme-secondary px-3 text-sm font-semibold text-theme-on-accent shadow-lg"
                 sideOffset={10}
                 key={second} // force update with key
               >

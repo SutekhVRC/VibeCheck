@@ -1,21 +1,22 @@
+import { SettingRow } from "@/components/SettingRow";
 import type { FeVCToy } from "@bindings/FeVCToy";
 import { ClipboardCopy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import FourPanel from "../components/FourPanel";
-import FourPanelContainer from "../components/FourPanelContainer";
+import EditableNumber from "../components/EditableNumber";
 import { OSC, TOOLTIP } from "../data/constants";
 import { ToyAnatomyArray } from "../data/stringArrayTypes";
 import { handleToyAlter } from "../hooks/useToys";
 import { Select } from "../layout/Select";
 import Slider from "../layout/Slider";
 import Switch from "../layout/Switch";
-import Tooltip, { TooltipLabel } from "../layout/Tooltip";
+import Tooltip from "../layout/Tooltip";
 
+/** Toy-wide settings, shown in the strip under the toy's name */
 export default function ToySettings({ toy }: { toy: FeVCToy }) {
   const BT_UPDATE_DEFAULT = 20;
   const BT_UPDATE_MIN = 1;
-  const BT_UPDATE_MAX = 500;
+  const BT_UPDATE_MAX = 20;
 
   function clampUpdateRate(rate: number) {
     return Math.min(BT_UPDATE_MAX, Math.max(BT_UPDATE_MIN, rate));
@@ -54,59 +55,69 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
   }
 
   return (
-    <div className="rounded-2xl border border-cute-line/60 bg-cute-raised px-4 text-sm">
-      <FourPanelContainer>
-        <div className="flex items-center gap-1">
-          <TooltipLabel text="OSC Data" tooltip={TOOLTIP.OSC_Data} />
-          {toy.toy_connected && (
+    <div className="grid grid-cols-1 gap-x-6 rounded-2xl border border-theme-border/60 bg-theme-raised px-4 py-1 text-left text-sm md:grid-cols-3">
+      <SettingRow
+        label="OSC Data"
+        tooltip={TOOLTIP.OSC_Data}
+        extra={
+          toy.toy_connected && (
             <Tooltip text="Copy osc data address to clipboard">
-              <ClipboardCopy
+              <button
+                type="button"
+                aria-label="Copy osc data address"
                 onClick={handleCopy}
-                className="h-4 cursor-pointer text-cute-lilac hover:text-cute-pink"
-              />
+                className="text-theme-secondary hover:text-theme-primary"
+              >
+                <ClipboardCopy className="h-4 w-4" />
+              </button>
             </Tooltip>
-          )}
-        </div>
-        <Switch
-          size="small"
-          checked={toy.osc_data}
-          onCheckedChange={(checked) =>
-            handleToyAlter({ ...toy, osc_data: checked })
+          )
+        }
+        control={
+          <Switch
+            size="small"
+            checked={toy.osc_data}
+            onCheckedChange={(checked) =>
+              handleToyAlter({ ...toy, osc_data: checked })
+            }
+          />
+        }
+      />
+      <SettingRow label="Anatomy" tooltip={TOOLTIP.Anatomy}>
+        <Select
+          value={toy.toy_anatomy}
+          onValueChange={(anatomy) =>
+            handleToyAlter({ ...toy, toy_anatomy: anatomy })
           }
+          options={ToyAnatomyArray}
         />
-        <div></div>
-        <div></div>
-        <FourPanel
-          text="Anatomy"
-          tooltip={TOOLTIP.Anatomy}
-          three={
-            <Select
-              value={toy.toy_anatomy}
-              onValueChange={(anatomy) =>
-                handleToyAlter({ ...toy, toy_anatomy: anatomy })
-              }
-              options={ToyAnatomyArray}
-            />
+      </SettingRow>
+      <SettingRow
+        label="Update Rate"
+        tooltip={TOOLTIP.ToyUpdateRate}
+        control={
+          <EditableNumber
+            value={btUpdateRate}
+            min={BT_UPDATE_MIN}
+            max={BT_UPDATE_MAX}
+            step={1}
+            suffix="hz"
+            onCommit={handleBtUpdateRateCommit}
+            label="Toy update rate"
+          />
+        }
+      >
+        <Slider
+          min={BT_UPDATE_MIN}
+          max={BT_UPDATE_MAX}
+          step={1}
+          value={[btUpdateRate]}
+          onValueChange={(value) =>
+            setBtUpdateRate(clampUpdateRate(value[0] ?? BT_UPDATE_DEFAULT))
           }
+          onValueCommit={(value) => handleBtUpdateRateCommit(value[0])}
         />
-        <FourPanel
-          text="Toy Update Rate"
-          tooltip={TOOLTIP.ToyUpdateRate}
-          three={
-            <Slider
-              min={BT_UPDATE_MIN}
-              max={BT_UPDATE_MAX}
-              step={1}
-              value={[btUpdateRate]}
-              onValueChange={(value) =>
-                setBtUpdateRate(clampUpdateRate(value[0] ?? BT_UPDATE_DEFAULT))
-              }
-              onValueCommit={(value) => handleBtUpdateRateCommit(value[0])}
-            />
-          }
-          four={`${btUpdateRate}hz`}
-        />
-      </FourPanelContainer>
+      </SettingRow>
     </div>
   );
 }

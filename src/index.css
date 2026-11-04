@@ -2,71 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * All colours come from the active theme (src/theme/). ThemeProvider sets
+ * --theme-<role> variables ("r g b") on <html>, plus data-ears and
+ * data-pattern for decorations. Use them as rgb(var(--theme-primary)) or
+ * rgb(var(--theme-primary) / 0.5).
+ */
+
 :root {
   overflow: hidden;
-  /* Ask the webview to draw native form controls (dropdown lists,
-     scrollbars, autofill) in their dark variant */
-  color-scheme: dark;
-
-  --text-color: #fbefff;
-  --background-color: #17131f;
-  color: var(--text-color);
-  background-color: var(--background-color);
+  --radius: 0.9rem;
+  color: rgb(var(--theme-text));
+  background-color: rgb(var(--theme-background));
 }
 
 body {
-  font-family:
-    "Nunito", "Quicksand", "Varela Round", ui-rounded, "SF Pro Rounded",
-    "Segoe UI", system-ui, sans-serif !important;
-  /* Soft scattered paw prints over a plum glow */
+  /* --theme-font comes from the theme's font style (src/theme/styles.ts) */
+  font-family: var(
+    --theme-font,
+    "Nunito",
+    "Quicksand",
+    ui-rounded,
+    system-ui,
+    sans-serif
+  ) !important;
+  /* Soft glows of the two accent colours in opposite corners */
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='%23c7b3f5' fill-opacity='0.05'%3E%3Cg transform='translate(28 30) rotate(-20)'%3E%3Cellipse cx='0' cy='8' rx='9' ry='7'/%3E%3Ccircle cx='-9' cy='-4' r='3.6'/%3E%3Ccircle cx='-3' cy='-9' r='3.6'/%3E%3Ccircle cx='4' cy='-9' r='3.6'/%3E%3Ccircle cx='10' cy='-4' r='3.6'/%3E%3C/g%3E%3Cg transform='translate(112 104) rotate(18)'%3E%3Cellipse cx='0' cy='8' rx='9' ry='7'/%3E%3Ccircle cx='-9' cy='-4' r='3.6'/%3E%3Ccircle cx='-3' cy='-9' r='3.6'/%3E%3Ccircle cx='4' cy='-9' r='3.6'/%3E%3Ccircle cx='10' cy='-4' r='3.6'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
     radial-gradient(
       ellipse at top left,
-      rgba(247, 178, 217, 0.08),
+      rgb(var(--theme-primary) / 0.08),
       transparent 55%
     ),
     radial-gradient(
       ellipse at bottom right,
-      rgba(199, 179, 245, 0.1),
+      rgb(var(--theme-secondary) / 0.1),
       transparent 55%
     );
-  background-color: #17131f;
+  background-color: rgb(var(--theme-background));
 }
 
 /*
- * Pastel dark theme for the shadcn components (badge, dialog, command...).
- * The app always runs in dark mode, so both blocks use the same palette.
+ * Background pattern (paws, hearts...). The theme's pattern SVG is used as a
+ * mask over a faint secondary-coloured layer, so the shapes take the theme
+ * colour without the SVG needing to know it.
  */
-@layer base {
-  :root,
-  .dark {
-    --background: 263 24% 10%;
-    --foreground: 288 100% 97%;
-    --card: 263 24% 15%;
-    --card-foreground: 288 100% 97%;
-    --popover: 263 24% 15%;
-    --popover-foreground: 288 100% 97%;
-    --primary: 326 80% 83%;
-    --primary-foreground: 263 24% 10%;
-    --secondary: 259 26% 20%;
-    --secondary-foreground: 288 100% 97%;
-    --muted: 259 26% 20%;
-    --muted-foreground: 260 20% 64%;
-    --accent: 260 76% 83%;
-    --accent-foreground: 263 24% 10%;
-    --destructive: 346 75% 78%;
-    --destructive-foreground: 263 24% 10%;
-    --border: 259 23% 29%;
-    --input: 259 23% 29%;
-    --ring: 260 76% 83%;
-    --chart-1: 326 80% 83%;
-    --chart-2: 260 76% 83%;
-    --chart-3: 157 56% 76%;
-    --chart-4: 204 72% 80%;
-    --chart-5: 22 100% 83%;
-    --radius: 0.9rem;
-  }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: rgb(
+    var(--theme-secondary) / var(--theme-pattern-opacity, 0.05)
+  );
+  -webkit-mask-image: var(--theme-pattern);
+  mask-image: var(--theme-pattern);
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+}
+html:not([data-pattern]) body::before,
+html[data-pattern="none"] body::before {
+  display: none;
+}
+
+/*
+ * decorations.corners = "sharp": square off every rounded corner, including
+ * switches, pills and the scrollbar, for brutalist themes.
+ */
+html[data-corners="sharp"] *,
+html[data-corners="sharp"] *::before,
+html[data-corners="sharp"] *::after,
+html[data-corners="sharp"] .scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 0 !important;
 }
 
 @layer base {
@@ -77,36 +84,36 @@ body {
     @apply text-foreground;
   }
   ::selection {
-    @apply bg-cute-pink/40 text-cute-cream;
+    @apply bg-theme-primary/40 text-theme-text;
   }
 }
 
 @layer components {
   /* Rounded, softly glowing card used for the main panels */
-  .cute-panel {
-    @apply rounded-3xl border border-cute-line/70 bg-cute-panel shadow-[0_8px_30px_-12px_rgba(199,179,245,0.35)];
+  .theme-panel {
+    @apply rounded-3xl border border-theme-border/70 bg-theme-surface shadow-theme-panel;
   }
 
   /* Text inputs and selects.
      appearance:none stops WebKitGTK from drawing its native (white) widget
      over our background. */
-  .cute-input {
-    @apply appearance-none rounded-xl border border-cute-line bg-cute-night px-3 py-0.5 text-cute-cream outline-none transition-colors placeholder:text-cute-muted focus:border-cute-pink focus:ring-2 focus:ring-cute-pink/30;
+  .theme-input {
+    @apply appearance-none rounded-xl border border-theme-border bg-theme-background px-3 py-0.5 text-theme-text outline-none transition-colors placeholder:text-theme-muted focus:border-theme-primary focus:ring-2 focus:ring-theme-primary/30;
   }
 
   /*
-   * Fluffy ears that poke out of the top of a panel.
-   * The ears share the panel colour so their bottom halves blend into it;
-   * the pink inner ear sits near the tip.
+   * Ears that poke out of the top of a panel, for themes with
+   * decorations.ears. The ears share the panel colour so their bottom halves
+   * blend into it; the primary-coloured inner ear sits near the tip.
    */
-  .cute-ears {
+  .theme-ears {
     position: relative;
     /* Own stacking context so z-index:-1 ears paint above the panel
        background but below everything inside the panel */
     isolation: isolate;
   }
-  .cute-ears::before,
-  .cute-ears::after {
+  html[data-ears="true"] .theme-ears::before,
+  html[data-ears="true"] .theme-ears::after {
     content: "";
     position: absolute;
     z-index: -1;
@@ -117,20 +124,19 @@ body {
     background:
       radial-gradient(
         circle at 32% 32%,
-        rgba(247, 178, 217, 0.85) 0 26%,
+        rgb(var(--theme-primary) / 0.85) 0 26%,
         transparent 28%
       ),
-      #221c2e;
-    border-top: 1px solid rgba(67, 57, 92, 0.7);
-    border-left: 1px solid rgba(67, 57, 92, 0.7);
+      rgb(var(--theme-surface));
+    border-top: 1px solid rgb(var(--theme-border) / 0.7);
+    border-left: 1px solid rgb(var(--theme-border) / 0.7);
     pointer-events: none;
+    transform: rotate(45deg) skew(-6deg, -6deg);
   }
-  .cute-ears::before {
+  html[data-ears="true"] .theme-ears::before {
     left: 34px;
-    transform: rotate(45deg) skew(-6deg, -6deg);
   }
-  .cute-ears::after {
+  html[data-ears="true"] .theme-ears::after {
     right: 34px;
-    transform: rotate(45deg) skew(-6deg, -6deg);
   }
 }

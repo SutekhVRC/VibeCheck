@@ -21,7 +21,11 @@
 }
 
 .scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #f7b2d9, #c7b3f5);
+  background: linear-gradient(
+    180deg,
+    rgb(var(--theme-primary)),
+    rgb(var(--theme-secondary))
+  );
   border-radius: 100vh;
 }
 

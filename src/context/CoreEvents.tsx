@@ -1,6 +1,7 @@
 import type { FeCoreEvent } from "@bindings/FeCoreEvent";
 import { FeStateEvent } from "@bindings/FeStateEvent";
 import type { FeVibeCheckConfig } from "@bindings/FeVibeCheckConfig";
+import type { FrontendError } from "@bindings/FrontendError";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { createContext, useContext, useEffect, useState } from "react";
@@ -133,6 +134,30 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
     const unlistenPromise = listen<FeCoreEvent>(LISTEN.CORE_EVENT, (event) =>
       handleCoreEvent(event.payload),
     );
+
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
+
+  // Errors reported by the backend's error signal handler
+  useEffect(() => {
+    const unlistenPromise = listen<FrontendError>(LISTEN.ERROR, (event) => {
+      const payload = event.payload;
+      switch (payload.kind) {
+        case "Error":
+          toast.error(payload.data);
+          break;
+        case "Warning":
+          toast.warning(payload.data);
+          break;
+        case "Info":
+          toast.info(payload.data);
+          break;
+        default:
+          assertExhaustive(payload);
+      }
+    });
 
     return () => {
       unlistenPromise.then((unlisten) => unlisten());
