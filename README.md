@@ -24,7 +24,7 @@
 
 ---
 
-## ✨ Features
+## Features
 
 - **Bluetooth toy support** through [Buttplug.io](https://buttplug.io/): connect any [supported toy](https://iostindex.com/?filter0ButtplugSupport=4) directly, no extra app needed.
 - **Driven by your avatar**: map VRChat avatar parameters to each toy motor over OSC.
@@ -34,7 +34,7 @@
 - **Battery levels sent back to VRChat** as OSC data for your avatar to use.
 - **Quality of life**: scan automatically when a toy disconnects, desktop notifications, minimise instead of closing.
 
-## 🚀 Getting started
+## Getting started
 
 1. **Get a toy** that [Buttplug.io supports](https://iostindex.com/?filter0ButtplugSupport=4).
 2. **Connect it**: follow [Connecting Toys](https://github.com/SutekhVRC/VibeCheck/wiki/Connecting-Toys).
@@ -42,7 +42,7 @@
 4. **Set up your avatar** with a known system or your own: [Avatar Setup](https://github.com/SutekhVRC/VibeCheck/wiki/Avatar-Setup).
 5. **Set up the app**: [VibeCheck App Setup](https://github.com/SutekhVRC/VibeCheck/wiki/VibeCheck-App-Setup).
 
-## 📖 Documentation
+## Documentation
 
 | Guide | What it covers |
 |---|---|
@@ -54,7 +54,7 @@
 
 More guides live on the [wiki](https://github.com/SutekhVRC/VibeCheck/wiki).
 
-## 💬 Community
+## Community
 
 <p align="center">
   <a href="https://discord.gg/C8ACSGSyfq">
@@ -71,11 +71,11 @@ More guides live on the [wiki](https://github.com/SutekhVRC/VibeCheck/wiki).
   <b><a href="https://discord.gg/C8ACSGSyfq">discord.gg/C8ACSGSyfq</a></b>
 </p>
 
-## 🐛 Bugs and feature requests
+## Bugs and feature requests
 
 Found a bug or have an idea? Please [open an issue](https://github.com/SutekhVRC/VibeCheck/issues) or tell us on [Discord](https://discord.gg/C8ACSGSyfq). Reports help a lot!
 
-## 🛠️ Building from source
+## Building from source
 
 VibeCheck is a [Tauri](https://tauri.app/) app with a Rust backend and a React frontend.
 
@@ -87,6 +87,6 @@ yarn tauri dev     # run the app in development mode
 yarn tauri build   # build an installer
 ```
 
-## 📄 License
+## License
 
 VibeCheck is licensed under the [Apache License 2.0](./LICENSE).
