@@ -7,9 +7,14 @@ import Tooltip from "../layout/Tooltip";
 type ExternalLogoProps = {
   src: string;
   tooltip: ObjectValues<typeof TOOLTIP>;
+  className?: string;
 };
 
-export default function ExternalLogo({ src, tooltip }: ExternalLogoProps) {
+export default function ExternalLogo({
+  src,
+  tooltip,
+  className = "h-6",
+}: ExternalLogoProps) {
   async function openBrowser() {
     try {
       await invoke(INVOKE.OPEN_BROWSER, { link: tooltip.link });
@@ -19,7 +24,11 @@ export default function ExternalLogo({ src, tooltip }: ExternalLogoProps) {
   }
   return (
     <Tooltip text={tooltip.text}>
-      <img className="h-6 cursor-pointer" src={src} onClick={openBrowser} />
+      <img
+        className={`${className} cursor-pointer opacity-80 transition-opacity hover:opacity-100`}
+        src={src}
+        onClick={openBrowser}
+      />
     </Tooltip>
   );
 }

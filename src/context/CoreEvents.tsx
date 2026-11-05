@@ -9,7 +9,8 @@ import { toast } from "sonner";
 import { INVOKE, LISTEN } from "../data/constants";
 import { assertExhaustive } from "../utils";
 
-const SCAN_LENGTH = 10000;
+/** How long a Bluetooth scan runs before it stops itself (ms) */
+export const SCAN_LENGTH = 10000;
 
 type CoreEventContextProps = {
   isScanning: boolean;
