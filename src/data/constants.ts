@@ -105,6 +105,10 @@ export const TOOLTIP = {
     text: "Automatically start scanning when a toy disconnects.",
     link: "",
   },
+  AutoEnableOnScan: {
+    text: "Turn VibeCheck on automatically when you press the button to look for toys. When off, you need to turn VibeCheck on first.",
+    link: "",
+  },
   MinimizeOnExit: {
     text: "Minimize VibeCheck instead of exiting.",
     link: "",

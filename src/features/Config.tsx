@@ -3,7 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { Settings } from "lucide-react";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
+import PageHeader from "../components/PageHeader";
 import UpdateButton from "../components/UpdateButton";
+import { useCoreEventContext } from "../context/CoreEvents";
 import { INVOKE, TOOLTIP } from "../data/constants";
 import Button from "../layout/Button";
 import Switch from "../layout/Switch";
@@ -125,6 +127,8 @@ export default function Config({
   version: string;
   disableOnPortChange: () => Promise<void>;
 }) {
+  const { autoEnableOnScan, setAutoEnableOnScan } = useCoreEventContext();
+
   // Toggles save instantly; kept locally so the switch flips immediately
   const [general, setGeneral] = useState(() => pickGeneral(config));
 
@@ -194,17 +198,16 @@ export default function Config({
 
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="flex shrink-0 items-center justify-between px-6 text-4xl">
-        <div className="flex items-center gap-3 font-bold">
-          <Settings className="h-8 w-8 text-theme-secondary" />
-          <span className="bg-gradient-to-r from-theme-secondary via-theme-primary to-theme-warning bg-clip-text text-transparent">
-            Config
-          </span>
-        </div>
-      </div>
+      {/* Same insets as the toy page, so switching pages doesn't shift things */}
+      <PageHeader
+        className="px-2 pb-2"
+        icon={<Settings className="h-5 w-5" />}
+        title="Settings"
+        subtitle="Connection, behaviour and appearance"
+      />
 
       <div className="scrollbar min-h-0 w-full flex-1 overflow-y-auto">
-        <div className="mx-8 my-4 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 px-2 pb-4 pt-3">
           <Section title="Connection">
             <form onSubmit={applyConnection}>
               <div className="grid grid-cols-[minmax(8rem,1fr)_minmax(8rem,2fr)] items-center gap-x-4 gap-y-2">
@@ -259,6 +262,16 @@ export default function Config({
                   />
                 </div>
               ))}
+              {/* Frontend-only preference, saved on this device */}
+              <TooltipLabel
+                text="Turn on when scanning"
+                tooltip={TOOLTIP.AutoEnableOnScan}
+              />
+              <Switch
+                size="small"
+                checked={autoEnableOnScan}
+                onCheckedChange={setAutoEnableOnScan}
+              />
             </div>
           </Section>
 

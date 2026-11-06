@@ -48,6 +48,11 @@ module.exports = {
 				'scan-progress': {
 					from: { width: '100%' },
 					to: { width: '0%' }
+				},
+				// Rings rippling out from the empty-screen icon while scanning
+				radar: {
+					'0%': { transform: 'scale(1)', opacity: '0.55' },
+					'100%': { transform: 'scale(2.3)', opacity: '0' }
 				}
 			},
 			animation: {
@@ -55,7 +60,8 @@ module.exports = {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				wiggle: 'wiggle 0.5s ease-in-out infinite',
 				float: 'float 3s ease-in-out infinite',
-				'scan-progress': 'scan-progress linear forwards'
+				'scan-progress': 'scan-progress linear forwards',
+				radar: 'radar 2.4s ease-out infinite'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
