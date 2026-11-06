@@ -1,8 +1,9 @@
 import { Cpu } from "lucide-react";
 import { defineTheme } from "../defineTheme";
+import { logoGradient } from "../logo";
 
 // Brutalist cyberpunk: raw black and concrete greys, hazard yellow and red,
-// square corners, hard offset shadows, monospace type and a grid backdrop
+// square corners, hard offset shadows, monospace type and a circuit-trace backdrop
 export default defineTheme({
   id: "hardline",
   name: "Hardline",
@@ -21,18 +22,15 @@ export default defineTheme({
     warning: "#ff9500",
   },
   logo: {
-    stops: [
-      // Outlines -> off-white
-      { brightness: 0, color: "#f0f0f0" },
-      { brightness: 0.12, color: "#f0f0f0" },
-      // "VIBE" -> hazard yellow
-      { brightness: 0.26, color: "#f5e400" },
-      { brightness: 0.4, color: "#f5e400" },
-      // Lips and "check" -> red
-      { brightness: 0.55, color: "#ff2d2d" },
-      { brightness: 0.75, color: "#ff2d2d" },
-      { brightness: 1, color: "#ffffff" },
-    ],
+    // Off-white outlines, hazard yellow "VIBE", red lips. Half shading keeps
+    // the yellow bright instead of muddy.
+    stops: logoGradient({
+      outline: "#f0f0f0",
+      vibe: "#f5e400",
+      lips: "#ff2d2d",
+      background: "#0a0a0a",
+      shade: 0.5,
+    }),
     glow: null,
   },
   text: {
@@ -42,7 +40,7 @@ export default defineTheme({
     noToysHint: "Press SCAN to search for devices",
   },
   decorations: {
-    pattern: "grid",
+    pattern: "circuit",
     icon: Cpu,
     corners: "sharp",
     shadows: "hard",

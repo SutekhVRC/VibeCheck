@@ -1,7 +1,7 @@
 import { PawPrint } from "lucide-react";
 import { defineTheme } from "../defineTheme";
 
-// Warm cosy browns with orange and cream, ears and paws
+// Warm cosy browns with orange and cream, fox ears and paws
 export default defineTheme({
   id: "fox-den",
   name: "Fox Den",
@@ -26,8 +26,8 @@ export default defineTheme({
     noToysHint: "Press \u201cLook for toys\u201d to sniff some out",
   },
   decorations: {
-    ears: true,
-    pattern: "paws",
+    ears: "fox",
+    pattern: "leaves-paws",
     icon: PawPrint,
   },
 });

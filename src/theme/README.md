@@ -31,8 +31,8 @@ export default defineTheme({
   },
   // Everything below is optional
   decorations: {
-    ears: true,          // ears on top of the main panels
-    pattern: "hearts",   // "none" | "paws" | "hearts" | "stars" | "grid"
+    ears: "cat",         // "cat" | "kitten" | "fox" | "none"
+    pattern: "hearts",   // see patterns.ts, e.g. "paws", "kisses", "starfield"
     icon: Rabbit,        // any lucide-react icon
     corners: "round",    // "round" | "sharp"
     shadows: "glow",     // "glow" | "neon" | "hard" | "none"
@@ -45,7 +45,7 @@ Colours must be 6-digit hex (`#rrggbb`). A typo throws an error naming the
 bad value when the app starts.
 
 The default theme for new users is set by `DEFAULT_THEME_ID` in
-`registry.ts` (currently `velvet-kiss`).
+`registry.ts` (currently `vibecheck`).
 
 ## Colour roles
 
@@ -76,7 +76,7 @@ so they need a darker `background` behind them to stay visible.
 | Setting | Default | What it does |
 |---|---|---|
 | `scheme` | `"dark"` | How the webview draws native controls (dropdown lists, scrollbars) |
-| `decorations.ears` | `false` | Ears on the main panels, inner ear in `primary` |
+| `decorations.ears` | `"none"` | `"cat"` (rounded, inner ear in `primary`), `"kitten"` (curved sides, `primary` inner ear) or `"fox"` (straight sides, `secondary` inner ear, `border` tip). Kitten and fox are drawn as SVG by `PanelEars.tsx`. `true` means `"cat"` |
 | `decorations.pattern` | `"none"` | Faint background pattern in `secondary` |
 | `decorations.icon` | `Sparkles` | Accent icon: toy list, switch knobs, loading, headings |
 | `decorations.corners` | `"round"` | `"sharp"` squares off every corner (switches, pills, panels) |
@@ -106,21 +106,30 @@ If you only set `scanButton`, the default hint uses it automatically.
 
 The logo is recoloured with a gradient map: each pixel's brightness (0 = black,
 1 = white) is swapped for a colour. By default outlines take `text`, "VIBE"
-takes `secondary` and the lips and "check" take `primary`. To customise it:
+takes `secondary` and the lips and "check" take `primary`, with the logo's
+shading kept: "VIBE" and the lip shadows are darkened towards `background`.
+
+To pick different colours but keep the shading, use `logoGradient` (from
+`logo.ts`):
 
 ```ts
+import { logoGradient } from "../logo";
+
 logo: {
-  stops: [
-    { brightness: 0, color: "#ffffff" },    // outlines (~0.03-0.09)
-    { brightness: 0.12, color: "#ffffff" },
-    { brightness: 0.26, color: "#d9c2ff" }, // "VIBE" (~0.26)
-    { brightness: 0.4, color: "#d9c2ff" },
-    { brightness: 0.55, color: "#ffc2e0" }, // lips, "check" (~0.53-0.63)
-    { brightness: 0.75, color: "#ffc2e0" },
-    { brightness: 1, color: "#ffffff" },    // highlights (~0.97)
-  ],
+  stops: logoGradient({
+    outline: "#f0f0f0", // outlines
+    vibe: "#f5e400",    // "VIBE"
+    lips: "#ff2d2d",    // lips and "check"
+    background: "#0a0a0a",
+    shade: 0.5,         // optional: less darkening for very saturated colours
+  }),
 },
 ```
+
+For full control, pass your own `stops` list. The logo's brightness bands are:
+outlines ~0.03-0.09, "VIBE" ~0.15-0.29, lip shadows from ~0.36, lips and
+"check" ~0.44-0.68, highlights ~0.97. See `vibecheck.ts` for an example that
+keeps the logo's original colours.
 
 ### Adding a background pattern
 
@@ -137,13 +146,13 @@ Shadow styles and font stacks live in `styles.ts`. Add an entry to
 
 | Theme | Shows off |
 |---|---|
-| `velvet-kiss.ts` | **The default.** Colours taken from the logo, logo kept in its own colours (custom stops), neon glows, hearts |
-| `comfy.ts` | Warm and neutral, only colours and an icon (the simplest template) |
-| `cute.ts` | Pastel colours, ears, paw pattern, paw icon |
-| `midnight.ts` | Minimal: no ears, faint stars |
-| `fox-den.ts` | Warm palette with ears and paws |
-| `hardline.ts` | Brutalist: sharp corners, hard shadows, mono font, grid, custom logo stops, no logo glow |
-| `neon-kitten.ts` | Neon glows, hearts pattern, heart icon, ears |
+| `vibecheck.ts` | **The default.** Colours taken from the logo, logo kept in its own colours (custom stops), neon glows, kisses pattern |
+| `comfy.ts` | Warm and neutral: colours, an icon and a knit texture (the simplest template) |
+| `cute.ts` | Pastel colours, cat ears, paws-and-sparkles pattern, paw icon |
+| `midnight.ts` | Minimal: no ears, faint starfield |
+| `fox-den.ts` | Warm palette with fox ears, leaves-and-paws pattern |
+| `hardline.ts` | Brutalist: sharp corners, hard shadows, mono font, circuit pattern, custom logo stops, no logo glow |
+| `neon-kitten.ts` | Neon glows, hearts-and-sparkles pattern, heart icon, kitten ears |
 
 ## How it works
 

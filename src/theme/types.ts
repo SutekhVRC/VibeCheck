@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { PatternName } from "./patterns";
-import type { CornerStyle, FontStyle, ShadowStyle } from "./styles";
+import type { CornerStyle, EarStyle, FontStyle, ShadowStyle } from "./styles";
 
 /**
  * The colour roles every theme fills in. Components only ever use these
@@ -87,8 +87,12 @@ export type ThemeDefinition = {
   /** Optional wording; anything left out uses the defaults */
   text?: Partial<ThemeText>;
   decorations?: {
-    /** Little ears on top of the main panels. Default: false */
-    ears?: boolean;
+    /**
+     * Ears on top of the main panels: "cat", "kitten", "fox" or "none"
+     * (default).
+     * `true` means "cat", `false` means "none".
+     */
+    ears?: boolean | EarStyle;
     /** Faint background pattern. Default: "none" */
     pattern?: PatternName;
     /**
@@ -121,7 +125,7 @@ export type Theme = {
   };
   text: ThemeText;
   decorations: {
-    ears: boolean;
+    ears: EarStyle;
     pattern: PatternName;
     icon: LucideIcon;
     corners: CornerStyle;

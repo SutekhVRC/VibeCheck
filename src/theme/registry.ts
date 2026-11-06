@@ -1,7 +1,7 @@
 import type { Theme } from "./types";
 
 /** Theme used on first launch, or if the saved theme no longer exists */
-export const DEFAULT_THEME_ID = "velvet-kiss";
+export const DEFAULT_THEME_ID = "vibecheck";
 
 /*
  * Every file in ./themes/ is picked up automatically (Vite import.meta.glob),

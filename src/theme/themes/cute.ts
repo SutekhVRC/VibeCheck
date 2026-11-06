@@ -26,8 +26,8 @@ export default defineTheme({
     noToysHint: "Press \u201cLook for toys\u201d to sniff some out",
   },
   decorations: {
-    ears: true,
-    pattern: "paws",
+    ears: "cat",
+    pattern: "paws-sparkles",
     icon: PawPrint,
   },
 });

@@ -2,10 +2,10 @@ import { Flame } from "lucide-react";
 import { defineTheme } from "../defineTheme";
 
 // The default theme, built from the VibeCheck logo: its coral lips and royal
-// purple on velvety near-black wine, with sultry glows and faint hearts.
+// purple on velvety near-black wine, with sultry glows and faint kiss marks.
 export default defineTheme({
-  id: "velvet-kiss",
-  name: "Velvet Kiss",
+  id: "vibecheck",
+  name: "VibeCheck",
   colors: {
     background: "#140a12",
     surface: "#1f0f1c",
@@ -48,7 +48,7 @@ export default defineTheme({
       "Press \u201cLook for toys\u201d to find something to play with",
   },
   decorations: {
-    pattern: "hearts",
+    pattern: "kisses",
     icon: Flame,
     shadows: "neon",
   },

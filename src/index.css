@@ -13,19 +13,12 @@
   overflow: hidden;
   --radius: 0.9rem;
   color: rgb(var(--theme-text));
+  /*
+   * The page background lives on <html> only. If <body> also had an opaque
+   * background it would paint over the z-index:-1 pattern layer below and
+   * hide it.
+   */
   background-color: rgb(var(--theme-background));
-}
-
-body {
-  /* --theme-font comes from the theme's font style (src/theme/styles.ts) */
-  font-family: var(
-    --theme-font,
-    "Nunito",
-    "Quicksand",
-    ui-rounded,
-    system-ui,
-    sans-serif
-  ) !important;
   /* Soft glows of the two accent colours in opposite corners */
   background-image:
     radial-gradient(
@@ -38,7 +31,20 @@ body {
       rgb(var(--theme-secondary) / 0.1),
       transparent 55%
     );
-  background-color: rgb(var(--theme-background));
+}
+
+body {
+  /* --theme-font comes from the theme's font style (src/theme/styles.ts) */
+  font-family: var(
+    --theme-font,
+    "Nunito",
+    "Quicksand",
+    ui-rounded,
+    system-ui,
+    sans-serif
+  ) !important;
+  /* Transparent so the pattern layer (body::before) shows through */
+  background: transparent;
 }
 
 /*
@@ -53,7 +59,7 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background-color: rgb(
-    var(--theme-secondary) / var(--theme-pattern-opacity, 0.05)
+    var(--theme-secondary) / var(--theme-pattern-opacity, 0.07)
   );
   -webkit-mask-image: var(--theme-pattern);
   mask-image: var(--theme-pattern);
@@ -102,9 +108,9 @@ html[data-corners="sharp"] .scrollbar::-webkit-scrollbar-thumb {
   }
 
   /*
-   * Ears that poke out of the top of a panel, for themes with
-   * decorations.ears. The ears share the panel colour so their bottom halves
-   * blend into it; the primary-coloured inner ear sits near the tip.
+   * Ears that poke out of the top of a panel, chosen by decorations.ears
+   * (data-ears on <html>). Cat ears are drawn here; kitten and fox ears are
+   * an SVG component (src/theme/PanelEars.tsx) rendered inside the panel.
    */
   .theme-ears {
     position: relative;
@@ -112,8 +118,11 @@ html[data-corners="sharp"] .scrollbar::-webkit-scrollbar-thumb {
        background but below everything inside the panel */
     isolation: isolate;
   }
-  html[data-ears="true"] .theme-ears::before,
-  html[data-ears="true"] .theme-ears::after {
+
+  /* Cat ears: rounded, rotated squares in the panel colour so their bottom
+     halves blend into the panel; primary-coloured inner ear near the tip. */
+  html[data-ears="cat"] .theme-ears::before,
+  html[data-ears="cat"] .theme-ears::after {
     content: "";
     position: absolute;
     z-index: -1;
@@ -133,10 +142,10 @@ html[data-corners="sharp"] .scrollbar::-webkit-scrollbar-thumb {
     pointer-events: none;
     transform: rotate(45deg) skew(-6deg, -6deg);
   }
-  html[data-ears="true"] .theme-ears::before {
+  html[data-ears="cat"] .theme-ears::before {
     left: 34px;
   }
-  html[data-ears="true"] .theme-ears::after {
+  html[data-ears="cat"] .theme-ears::after {
     right: 34px;
   }
 }

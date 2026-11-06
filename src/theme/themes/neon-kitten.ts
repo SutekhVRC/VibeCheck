@@ -27,8 +27,8 @@ export default defineTheme({
     noToysHint: "Press \u201cFind toys\u201d to ping some \u2661",
   },
   decorations: {
-    ears: true,
-    pattern: "hearts",
+    ears: "kitten",
+    pattern: "hearts-sparkles",
     icon: Heart,
     shadows: "neon",
   },

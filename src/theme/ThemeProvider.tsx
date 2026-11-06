@@ -40,7 +40,7 @@ function applyTheme(theme: Theme) {
     "--theme-pattern-opacity",
     String(patternStrength(theme.decorations.pattern)),
   );
-  root.dataset.ears = String(theme.decorations.ears);
+  root.dataset.ears = theme.decorations.ears;
   root.dataset.pattern = theme.decorations.pattern;
   root.dataset.corners = theme.decorations.corners;
 

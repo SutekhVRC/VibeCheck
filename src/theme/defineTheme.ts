@@ -1,6 +1,15 @@
 import { Sparkles } from "lucide-react";
 import { hexToRgb } from "./color";
+import { logoGradient } from "./logo";
+import type { EarStyle } from "./styles";
 import type { Theme, ThemeDefinition } from "./types";
+
+/** `true` is shorthand for cat ears, `false`/missing for none */
+function earStyle(ears: boolean | EarStyle | undefined): EarStyle {
+  if (ears === true) return "cat";
+  if (ears === false || ears === undefined) return "none";
+  return ears;
+}
 
 /**
  * Turns a theme file's definition into a complete Theme by filling in
@@ -23,19 +32,16 @@ export function defineTheme(def: ThemeDefinition): Theme {
     scheme: def.scheme ?? "dark",
     colors,
     logo: {
-      stops: def.logo?.stops ?? [
-        // Black outlines -> text colour so they stand out on the background
-        { brightness: 0, color: colors.text },
-        { brightness: 0.12, color: colors.text },
-        // Purple "VIBE" -> secondary
-        { brightness: 0.26, color: colors.secondary },
-        { brightness: 0.4, color: colors.secondary },
-        // Coral lips and "check" -> primary
-        { brightness: 0.55, color: colors.primary },
-        { brightness: 0.75, color: colors.primary },
-        // Highlights -> white
-        { brightness: 1, color: "#ffffff" },
-      ],
+      // Outlines -> text, "VIBE" -> secondary, lips -> primary, with the
+      // logo's shading kept (see logo.ts)
+      stops:
+        def.logo?.stops ??
+        logoGradient({
+          outline: colors.text,
+          vibe: colors.secondary,
+          lips: colors.primary,
+          background: colors.background,
+        }),
       glow: def.logo?.glow === undefined ? colors.primary : def.logo.glow,
     },
     text: {
@@ -46,7 +52,7 @@ export function defineTheme(def: ThemeDefinition): Theme {
         def.text?.noToysHint ?? `Press \u201c${scanButton}\u201d to find some`,
     },
     decorations: {
-      ears: def.decorations?.ears ?? false,
+      ears: earStyle(def.decorations?.ears),
       pattern: def.decorations?.pattern ?? "none",
       icon: def.decorations?.icon ?? Sparkles,
       corners: def.decorations?.corners ?? "round",

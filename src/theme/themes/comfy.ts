@@ -2,7 +2,7 @@ import { Coffee } from "lucide-react";
 import { defineTheme } from "../defineTheme";
 
 // Warm charcoal with soft apricot and oat accents.
-// Cosy and neutral, with no ears or background pattern.
+// Cosy and neutral, with a soft knitted texture and no ears.
 export default defineTheme({
   id: "comfy",
   name: "Comfy",
@@ -27,6 +27,7 @@ export default defineTheme({
     noToysHint: "Press \u201cLook for toys\u201d and make yourself comfy",
   },
   decorations: {
+    pattern: "knit",
     icon: Coffee,
   },
 });

@@ -1,7 +1,7 @@
 import { Star } from "lucide-react";
 import { defineTheme } from "../defineTheme";
 
-// Calm deep blue with teal accents, faint stars, no ears
+// Calm deep blue with teal accents, a faint starfield, no ears
 export default defineTheme({
   id: "midnight",
   name: "Midnight",
@@ -26,7 +26,7 @@ export default defineTheme({
     noToysHint: "Press \u201cScan for toys\u201d to search nearby",
   },
   decorations: {
-    pattern: "stars",
+    pattern: "starfield",
     icon: Star,
   },
 });

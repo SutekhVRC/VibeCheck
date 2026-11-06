@@ -3,6 +3,9 @@
  * ThemeProvider writes the chosen values into CSS variables / attributes.
  */
 
+/** Ears on top of the main panels */
+export type EarStyle = "none" | "cat" | "kitten" | "fox";
+
 export type CornerStyle = "round" | "sharp";
 
 export type ShadowStyle = "glow" | "neon" | "hard" | "none";
