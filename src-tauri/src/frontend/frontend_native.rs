@@ -271,6 +271,9 @@ pub fn open_default_browser(link: FeBrowserLink) {
         FeBrowserLink::Github => {
             let _ = open::that("https://github.com/SutekhVRC/VibeCheck");
         }
+        FeBrowserLink::GithubWiki => {
+            let _ = open::that("https://github.com/SutekhVRC/VibeCheck/wiki");
+        }
         FeBrowserLink::VRChatGroup => {
             let _ = open::that("https://vrc.group/VIBE.9503");
         }

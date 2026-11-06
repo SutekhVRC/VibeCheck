@@ -68,6 +68,7 @@ pub enum FeCoreEvent {
 #[ts(export)]
 pub enum FeBrowserLink {
     Github,
+    GithubWiki,
     VRChatGroup,
     Discord,
     ToyOptions,

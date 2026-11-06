@@ -5,6 +5,7 @@ import Switch from "@/layout/Switch";
 import { cn } from "@/lib/utils";
 import ThemeIcon from "@/theme/ThemeIcon";
 import { useTheme } from "@/theme/ThemeProvider";
+import type { FeBrowserLink } from "@bindings/FeBrowserLink";
 import { invoke } from "@tauri-apps/api/core";
 import { BookOpen, Check, Search } from "lucide-react";
 import { ReactNode } from "react";
@@ -174,13 +175,14 @@ function Step({
 }
 
 /*
- * The app can only open a fixed set of links, and none is the avatar setup
- * guide, so this opens the GitHub page, whose README links every guide.
+ * Opens the VibeCheck wiki, which has every setup guide (avatar setup,
+ * connecting toys, app setup).
  */
 function GuidesButton() {
   async function openGuides() {
     try {
-      await invoke(INVOKE.OPEN_BROWSER, { link: "Github" });
+      const link: FeBrowserLink = "GithubWiki";
+      await invoke(INVOKE.OPEN_BROWSER, { link });
     } catch (e) {
       toast.error(`Could not open browser\n${JSON.stringify(e)}`);
     }
