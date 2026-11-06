@@ -189,7 +189,7 @@ impl VCToy {
             toy_name: self.toy_name.clone(),
             features: self.parsed_toy_features.clone(),
             osc_data: false,
-            bt_update_rate: 20,
+            bt_update_rate: 10,
             anatomy: VCToyAnatomy::default(),
         });
         info!("Set toy config populate defaults");

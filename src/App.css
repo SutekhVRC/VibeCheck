@@ -16,7 +16,19 @@
   height: 0.5rem;
 }
 
+.scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .scrollbar::-webkit-scrollbar-thumb {
-  background: #4b5563;
+  background: linear-gradient(
+    180deg,
+    rgb(var(--theme-primary)),
+    rgb(var(--theme-secondary))
+  );
   border-radius: 100vh;
+}
+
+.scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
 }

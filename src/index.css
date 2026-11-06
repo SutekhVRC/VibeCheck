@@ -2,74 +2,84 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * All colours come from the active theme (src/theme/). ThemeProvider sets
+ * --theme-<role> variables ("r g b") on <html>, plus data-ears and
+ * data-pattern for decorations. Use them as rgb(var(--theme-primary)) or
+ * rgb(var(--theme-primary) / 0.5).
+ */
+
 :root {
   overflow: hidden;
-
-  --text-color: rgba(255, 255, 255, 0.87);
-  --background-color: #18181b;
-  color: var(--text-color);
-  background-color: var(--background-color);
+  --radius: 0.9rem;
+  color: rgb(var(--theme-text));
+  /*
+   * The page background lives on <html> only. If <body> also had an opaque
+   * background it would paint over the z-index:-1 pattern layer below and
+   * hide it.
+   */
+  background-color: rgb(var(--theme-background));
+  /* Soft glows of the two accent colours in opposite corners */
+  background-image:
+    radial-gradient(
+      ellipse at top left,
+      rgb(var(--theme-primary) / 0.08),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at bottom right,
+      rgb(var(--theme-secondary) / 0.1),
+      transparent 55%
+    );
 }
 
 body {
-  font-family:
-    "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS", sans-serif !important;
+  /* --theme-font comes from the theme's font style (src/theme/styles.ts) */
+  font-family: var(
+    --theme-font,
+    "Nunito",
+    "Quicksand",
+    ui-rounded,
+    system-ui,
+    sans-serif
+  ) !important;
+  /* Transparent so the pattern layer (body::before) shows through */
+  background: transparent;
 }
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-  }
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
+/*
+ * Background pattern (paws, hearts...). The theme's pattern SVG is used as a
+ * mask over a faint secondary-coloured layer, so the shapes take the theme
+ * colour without the SVG needing to know it.
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: rgb(
+    var(--theme-secondary) / var(--theme-pattern-opacity, 0.07)
+  );
+  -webkit-mask-image: var(--theme-pattern);
+  mask-image: var(--theme-pattern);
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+}
+html:not([data-pattern]) body::before,
+html[data-pattern="none"] body::before {
+  display: none;
+}
+
+/*
+ * decorations.corners = "sharp": square off every rounded corner, including
+ * switches, pills and the scrollbar, for brutalist themes.
+ */
+html[data-corners="sharp"] *,
+html[data-corners="sharp"] *::before,
+html[data-corners="sharp"] *::after,
+html[data-corners="sharp"] .scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 0 !important;
 }
 
 @layer base {
@@ -77,6 +87,65 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+  }
+  ::selection {
+    @apply bg-theme-primary/40 text-theme-text;
+  }
+}
+
+@layer components {
+  /* Rounded, softly glowing card used for the main panels */
+  .theme-panel {
+    @apply rounded-3xl border border-theme-border/70 bg-theme-surface shadow-theme-panel;
+  }
+
+  /* Text inputs and selects.
+     appearance:none stops WebKitGTK from drawing its native (white) widget
+     over our background. */
+  .theme-input {
+    @apply appearance-none rounded-xl border border-theme-border bg-theme-background px-3 py-0.5 text-theme-text outline-none transition-colors placeholder:text-theme-muted focus:border-theme-primary focus:ring-2 focus:ring-theme-primary/30;
+  }
+
+  /*
+   * Ears that poke out of the top of a panel, chosen by decorations.ears
+   * (data-ears on <html>). Cat ears are drawn here; kitten and fox ears are
+   * an SVG component (src/theme/PanelEars.tsx) rendered inside the panel.
+   */
+  .theme-ears {
+    position: relative;
+    /* Own stacking context so z-index:-1 ears paint above the panel
+       background but below everything inside the panel */
+    isolation: isolate;
+  }
+
+  /* Cat ears: rounded, rotated squares in the panel colour so their bottom
+     halves blend into the panel; primary-coloured inner ear near the tip. */
+  html[data-ears="cat"] .theme-ears::before,
+  html[data-ears="cat"] .theme-ears::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: -14px;
+    width: 30px;
+    height: 30px;
+    border-radius: 10px 4px 4px 4px;
+    background:
+      radial-gradient(
+        circle at 32% 32%,
+        rgb(var(--theme-primary) / 0.85) 0 26%,
+        transparent 28%
+      ),
+      rgb(var(--theme-surface));
+    border-top: 1px solid rgb(var(--theme-border) / 0.7);
+    border-left: 1px solid rgb(var(--theme-border) / 0.7);
+    pointer-events: none;
+    transform: rotate(45deg) skew(-6deg, -6deg);
+  }
+  html[data-ears="cat"] .theme-ears::before {
+    left: 34px;
+  }
+  html[data-ears="cat"] .theme-ears::after {
+    right: 34px;
   }
 }

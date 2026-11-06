@@ -93,7 +93,7 @@ pub async fn client_event_handler(
                         toy_features: dev.message_attributes().clone(),
                         parsed_toy_features: VCToyFeatures::new(),
                         osc_data: false,
-                        bt_update_rate: 20,
+                        bt_update_rate: 10,
                         listening: false,
                         device_handle: dev.clone(),
                         config: None,

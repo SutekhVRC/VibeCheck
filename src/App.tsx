@@ -1,26 +1,15 @@
+import PanelEars from "@/theme/PanelEars";
 import { FeVCToy } from "@bindings/FeVCToy";
-import { AnimatePresence } from "framer-motion";
-import { Settings } from "lucide-react";
 import { useState } from "react";
 import "./App.css";
-import GithubLogo from "./assets/GitHub-Mark-Light-64px.png";
-import VibecheckLogo from "./assets/VibeCheck_logo.png";
-import DiscordLogo from "./assets/discord-mark-white.svg";
-import cryingAnimeGirl from "./assets/menhera_chan.gif";
-import VrchatLogo from "./assets/vrchat-192x192.png";
-import ExternalLogo from "./components/ExternalLogo";
-import Loading from "./components/Loading";
-import UpdatePing from "./components/UpdatePing";
 import { useCoreEventContext } from "./context/CoreEvents";
-import { TOOLTIP } from "./data/constants";
 import Config from "./features/Config";
+import EmptyState from "./features/EmptyState";
+import Sidebar from "./features/Sidebar";
 import Toy from "./features/Toy";
 import { toyKey, useToys } from "./hooks/useToys";
 import { useUpdate } from "./hooks/useUpdate";
 import { useVersion } from "./hooks/useVersion";
-import Button from "./layout/Button";
-import Switch from "./layout/Switch";
-import Tooltip from "./layout/Tooltip";
 import { cn } from "./lib/utils";
 
 type Selection = ToySelection | ConfigSelection | null;
@@ -34,22 +23,29 @@ type ConfigSelection = {
   type: "Config";
 };
 
+const SIDEBAR_COLLAPSED_KEY = "vibecheck-sidebar-collapsed";
+
 export default function App() {
   const [selection, setSelection] = useState<Selection>(null);
+  // Sidebar collapsed to an icon bar; remembered between launches
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true",
+  );
+
+  function toggleSidebar() {
+    setSidebarCollapsed((collapsed) => {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(!collapsed));
+      return !collapsed;
+    });
+  }
   const { toys, hasOnlineToys } = useToys();
   const toy =
     selection?.type == "Toy" && selection.toyKey in toys
       ? toys[selection.toyKey]
       : null;
   const toysList = Object.values(toys);
-  const {
-    isScanning,
-    toggleScan,
-    isEnabled,
-    toggleIsEnabled,
-    config,
-    refreshConfig,
-  } = useCoreEventContext();
+  const { isEnabled, toggleIsEnabled, config, refreshConfig } =
+    useCoreEventContext();
   const { canUpdate } = useUpdate();
   const { version } = useVersion();
 
@@ -73,13 +69,11 @@ export default function App() {
         config={config}
         refreshConfig={refreshConfig}
         canUpdate={canUpdate}
+        version={version}
         disableOnPortChange={disableOnPortChange}
       />
     ) : !hasOnlineToys ? (
-      <div className="flex w-full flex-col items-center justify-center">
-        <img src={cryingAnimeGirl} />
-        <div>No Online Toys</div>
-      </div>
+      <EmptyState />
     ) : null;
 
   function setToy(toy: FeVCToy) {
@@ -98,77 +92,36 @@ export default function App() {
 
   return (
     <div
-      className="h-screen w-full p-4"
+      className="flex h-screen w-full flex-col p-4"
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div className="grid grid-cols-[12rem,_1fr] gap-3">
-        <div className="flex flex-col gap-1">
-          <img className="h-14 object-contain" src={VibecheckLogo} />
-          <div className="mb-1 mt-2 flex items-center justify-around">
-            <ExternalLogo src={VrchatLogo} tooltip={TOOLTIP.VrChatGroup} />
-            <ExternalLogo src={DiscordLogo} tooltip={TOOLTIP.Discord} />
-            <ExternalLogo src={GithubLogo} tooltip={TOOLTIP.Github} />
-          </div>
-          <div className="flex h-[calc(100vh-185px)] flex-col justify-between overflow-hidden rounded-md bg-zinc-800">
-            <div className="scrollbar flex select-none flex-col overflow-y-scroll pl-2">
-              <AnimatePresence>
-                {toysList.map((sidebarToy) => (
-                  <button
-                    key={toyKey(sidebarToy)}
-                    onClick={() => setToy(sidebarToy)}
-                    className={cn(
-                      selection?.type == "Toy" &&
-                        toyKey(sidebarToy) == selection.toyKey &&
-                        "outline",
-                      sidebarToy.toy_connected
-                        ? "text-zinc-200"
-                        : "text-zinc-500",
-                      "m-2 rounded-md bg-zinc-700 p-2 outline-2 outline-cyan-400 hover:bg-cyan-600",
-                    )}
-                  >
-                    {sidebarToy.toy_name}
-                  </button>
-                ))}
-              </AnimatePresence>
-            </div>
-            <Button onClick={toggleScan}>
-              {isScanning ? (
-                <div className="flex justify-center">
-                  <div>Scanning</div>
-                  <Loading />
-                </div>
-              ) : (
-                <div>Look for toys</div>
-              )}
-            </Button>
-          </div>
-          <div className="flex items-center justify-around">
-            <UpdatePing canUpdate={canUpdate}>
-              <Settings
-                className={cn(
-                  selection?.type == "Config" && "rotate-45",
-                  "h-10 transform cursor-pointer duration-300 ease-in-out",
-                )}
-                onClick={() => setConfig()}
-              />
-            </UpdatePing>
-            <Tooltip
-              text={isEnabled ? "Disable App" : "Enable App"}
-              asChild={false}
-            >
-              <Switch
-                theme="red-green"
-                checked={isEnabled}
-                onCheckedChange={toggleIsEnabled}
-              />
-            </Tooltip>
-          </div>
-        </div>
-        <div className="rounded-lg bg-zinc-800">
+      {/* The grid fills the window height; its single row is capped to that
+          height so tall content scrolls inside the panels instead of
+          stretching past the bottom of the window */}
+      <div
+        className={cn(
+          "grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-3 [transition:grid-template-columns_250ms_ease]",
+          sidebarCollapsed
+            ? "grid-cols-[4.5rem,_minmax(0,1fr)]"
+            : "grid-cols-[15rem,_minmax(0,1fr)]",
+        )}
+      >
+        <Sidebar
+          toys={toysList}
+          selectedToyKey={selection?.type == "Toy" ? selection.toyKey : null}
+          configSelected={selection?.type == "Config"}
+          onSelectToy={setToy}
+          onToggleConfig={setConfig}
+          canUpdate={canUpdate}
+          version={version}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleSidebar}
+        />
+        <div className="theme-panel theme-ears mt-3 min-h-0 min-w-0">
+          <PanelEars />
           <div className="flex h-full p-4">{mainPanel}</div>
         </div>
       </div>
-      {version}
     </div>
   );
 }

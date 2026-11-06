@@ -1,6 +1,7 @@
 import type { FeCoreEvent } from "@bindings/FeCoreEvent";
 import { FeStateEvent } from "@bindings/FeStateEvent";
 import type { FeVibeCheckConfig } from "@bindings/FeVibeCheckConfig";
+import type { FrontendError } from "@bindings/FrontendError";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { createContext, useContext, useEffect, useState } from "react";
@@ -8,7 +9,14 @@ import { toast } from "sonner";
 import { INVOKE, LISTEN } from "../data/constants";
 import { assertExhaustive } from "../utils";
 
-const SCAN_LENGTH = 10000;
+/** How long a Bluetooth scan runs before it stops itself (ms) */
+export const SCAN_LENGTH = 10000;
+
+/*
+ * Frontend-only preference (saved in localStorage, not the backend config):
+ * whether pressing the scan button turns VibeCheck on first.
+ */
+const AUTO_ENABLE_ON_SCAN_KEY = "vibecheck-auto-enable-on-scan";
 
 type CoreEventContextProps = {
   isScanning: boolean;
@@ -17,6 +25,9 @@ type CoreEventContextProps = {
   toggleScan: () => Promise<void>;
   config: FeVibeCheckConfig | undefined;
   refreshConfig: () => Promise<void>;
+  /** Turn the app on automatically when the scan button is pressed */
+  autoEnableOnScan: boolean;
+  setAutoEnableOnScan: (value: boolean) => void;
 };
 
 const CoreEventContext = createContext<CoreEventContextProps>({
@@ -26,6 +37,8 @@ const CoreEventContext = createContext<CoreEventContextProps>({
   toggleScan: () => new Promise(() => null),
   config: undefined,
   refreshConfig: () => new Promise(() => null),
+  autoEnableOnScan: false,
+  setAutoEnableOnScan: () => null,
 });
 
 export function useCoreEventContext() {
@@ -42,13 +55,24 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<FeVibeCheckConfig | undefined>(
     undefined,
   );
+  const [autoEnableOnScan, setAutoEnableOnScanState] = useState(
+    () => localStorage.getItem(AUTO_ENABLE_ON_SCAN_KEY) === "true",
+  );
 
+  function setAutoEnableOnScan(value: boolean) {
+    localStorage.setItem(AUTO_ENABLE_ON_SCAN_KEY, String(value));
+    setAutoEnableOnScanState(value);
+  }
+
+  /** Turns the app on; returns whether it worked */
   async function enable() {
     try {
       await invoke(INVOKE.ENABLE);
       setIsEnabled(true);
+      return true;
     } catch (e) {
       toast.error(`Could not enable!\n${JSON.stringify(e)}`);
+      return false;
     }
   }
 
@@ -70,14 +94,18 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function enableAndStartScan() {
+  async function startScan() {
     try {
-      await enable();
       await invoke(INVOKE.START_SCAN);
       setIsScanning(true);
     } catch (e) {
       toast.error(`Could not start scan!\n${JSON.stringify(e)}`);
     }
+  }
+
+  // Used when VRChat asks VibeCheck to turn on and scan (avatar parameter)
+  async function enableAndStartScan() {
+    if (await enable()) await startScan();
   }
 
   async function stopScan() {
@@ -92,8 +120,16 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
   async function toggleScan() {
     if (isScanning) {
       await stopScan();
-    } else {
+    } else if (isEnabled) {
+      await startScan();
+    } else if (autoEnableOnScan) {
       await enableAndStartScan();
+    } else {
+      // The backend would start scanning even while the app is off, so
+      // don't scan until VibeCheck has been turned on.
+      toast.info(
+        "Turn on VibeCheck first\nOr switch on \u201cTurn on when scanning\u201d in Settings",
+      );
     }
   }
 
@@ -139,6 +175,30 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Errors reported by the backend's error signal handler
+  useEffect(() => {
+    const unlistenPromise = listen<FrontendError>(LISTEN.ERROR, (event) => {
+      const payload = event.payload;
+      switch (payload.kind) {
+        case "Error":
+          toast.error(payload.data);
+          break;
+        case "Warning":
+          toast.warning(payload.data);
+          break;
+        case "Info":
+          toast.info(payload.data);
+          break;
+        default:
+          assertExhaustive(payload);
+      }
+    });
+
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
+
   async function refreshConfig() {
     try {
       const config = await invoke<FeVibeCheckConfig>(INVOKE.GET_CONFIG);
@@ -169,6 +229,8 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
         toggleScan,
         config,
         refreshConfig,
+        autoEnableOnScan,
+        setAutoEnableOnScan,
       }}
     >
       {children}

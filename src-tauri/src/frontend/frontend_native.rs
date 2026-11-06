@@ -266,7 +266,7 @@ pub fn alter_toy(
 pub fn open_default_browser(link: FeBrowserLink) {
     match link {
         FeBrowserLink::Discord => {
-            let _ = open::that("https://discord.gg/g6kUFtMtpw");
+            let _ = open::that("https://discord.gg/C8ACSGSyfq");
         }
         FeBrowserLink::Github => {
             let _ = open::that("https://github.com/SutekhVRC/VibeCheck");

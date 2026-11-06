@@ -1,18 +1,18 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { Toaster } from "sonner";
 import App from "./App";
-import { ThemeProvider } from "./components/theme-provider";
+import { Toaster } from "./components/ui/sonner";
 import { CoreEventProvider } from "./context/CoreEvents";
 import "./index.css";
+import { ThemeProvider } from "./theme/ThemeProvider";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+    <ThemeProvider>
       <CoreEventProvider>
         <App />
       </CoreEventProvider>
-      <Toaster richColors />
+      <Toaster />
     </ThemeProvider>
   </React.StrictMode>,
 );

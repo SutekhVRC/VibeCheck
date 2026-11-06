@@ -1,3 +1,7 @@
+import Tooltip from "@/layout/Tooltip";
+import { mix } from "@/theme/color";
+import { useTheme } from "@/theme/ThemeProvider";
+import { percent } from "@/utils";
 import { ToyPower } from "@bindings/ToyPower";
 import {
   BatteryFull,
@@ -9,10 +13,9 @@ import {
   WifiOff,
 } from "lucide-react";
 import { CSSProperties } from "react";
-import Tooltip from "../layout/Tooltip";
-import { percent } from "../utils";
 
 export default function Batteryicon({ toyPower }: { toyPower: ToyPower }) {
+  const { colors } = useTheme().theme;
   let tooltipText = "";
   let iconComponent: JSX.Element;
   let iconStyle: CSSProperties = {};
@@ -29,7 +32,8 @@ export default function Batteryicon({ toyPower }: { toyPower: ToyPower }) {
   } else {
     const battery = toyPower.Battery;
     tooltipText = percent.format(battery);
-    iconStyle = { color: `hsl(${battery * 120}, 75%, 50%)` };
+    // Theme danger colour when empty -> success colour when full
+    iconStyle = { color: mix(colors.danger, colors.success, battery) };
     if (battery <= 0.1) {
       iconComponent = <BatteryWarning className="h-8" />;
     } else if (battery <= 0.4) {
@@ -43,7 +47,7 @@ export default function Batteryicon({ toyPower }: { toyPower: ToyPower }) {
 
   return (
     <Tooltip text={tooltipText}>
-      <span className="cursor-help" style={iconStyle}>
+      <span className="cursor-help text-theme-muted" style={iconStyle}>
         {iconComponent}
       </span>
     </Tooltip>

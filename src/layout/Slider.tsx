@@ -15,7 +15,13 @@ export default function Slider(
   const [hover, setHover] = useState(false);
   const first = props.value?.at(0);
   const second = props.value?.at(1);
-  const color = props?.accent && "bg-cyan-500";
+  const color = props?.accent && "from-theme-success to-theme-info";
+  const thumbClass = cn(
+    "block h-4 w-4 rounded-full border-2 bg-theme-text shadow transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-theme-primary/50",
+    props.disabled
+      ? "border-theme-border"
+      : "border-theme-primary hover:scale-110",
+  );
   // This is really dumb right now
   // Hopefully RadixPopper "updatePositionStrategy" = "always" will be added to tooltip
   return (
@@ -29,10 +35,10 @@ export default function Slider(
       {...props}
       aria-label="Slider"
     >
-      <SliderPrimitive.Track className="relative flex h-2 flex-grow rounded-full bg-zinc-700 outline outline-1 outline-zinc-500">
+      <SliderPrimitive.Track className="relative flex h-2 flex-grow rounded-full bg-theme-background outline outline-1 outline-theme-border">
         <SliderPrimitive.Range
           className={cn(
-            "absolute h-full rounded-full bg-zinc-100 transition-all data-[disabled]:bg-zinc-600",
+            "absolute h-full rounded-full bg-gradient-to-r from-theme-primary to-theme-secondary transition-all data-[disabled]:from-theme-border data-[disabled]:to-theme-border",
             color,
           )}
         />
@@ -41,11 +47,11 @@ export default function Slider(
         <TooltipPrimitive.Provider>
           <TooltipPrimitive.Root open={hover}>
             <TooltipPrimitive.Trigger asChild>
-              <SliderPrimitive.Thumb />
+              <SliderPrimitive.Thumb className={thumbClass} />
             </TooltipPrimitive.Trigger>
             <TooltipPrimitive.Portal>
               <TooltipPrimitive.Content
-                className="max-w-md rounded-md bg-zinc-600 pl-3 pr-3 text-zinc-50"
+                className="max-w-md rounded-full bg-theme-secondary px-3 text-sm font-semibold text-theme-on-accent shadow-lg"
                 sideOffset={10}
                 key={first} // force update with key
               >
@@ -59,11 +65,11 @@ export default function Slider(
         <TooltipPrimitive.Provider>
           <TooltipPrimitive.Root open={hover}>
             <TooltipPrimitive.Trigger asChild>
-              <SliderPrimitive.Thumb />
+              <SliderPrimitive.Thumb className={thumbClass} />
             </TooltipPrimitive.Trigger>
             <TooltipPrimitive.Portal>
               <TooltipPrimitive.Content
-                className="max-w-md rounded-md bg-zinc-600 pl-3 pr-3 text-zinc-50"
+                className="max-w-md rounded-full bg-theme-secondary px-3 text-sm font-semibold text-theme-on-accent shadow-lg"
                 sideOffset={10}
                 key={second} // force update with key
               >
