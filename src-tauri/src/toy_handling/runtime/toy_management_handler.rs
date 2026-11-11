@@ -40,6 +40,7 @@ use crate::{
             osc_routing::{core_event_handler, osc_router, OscRoutes},
             toy_emitter_thread::{toy_emitter_thread, EmitterThreadData, ToyEmitterThreadSignal},
             toy_output::{buttplug_output, ToyCommandSink},
+            toy_pipeline::ToyPipeline,
         },
         toy_manager::ToyManager,
         toyops::VCToy,
@@ -62,14 +63,15 @@ pub async fn sleep_for_constant_rate(rate: u64, start: Instant) {
     }
 }
 
+/// Applies a config change. Returns `false` if it was for a different toy.
 #[inline(always)]
 fn update_toy(
     emitter_thread_tx: &UnboundedSender<ToyEmitterThreadSignal>,
     new_toy: VCToy,
     vc_toy: &mut VCToy,
-) {
+) -> bool {
     if new_toy.toy_id != vc_toy.toy_id {
-        return;
+        return false;
     }
 
     vc_toy.parsed_toy_features = new_toy.parsed_toy_features;
@@ -79,6 +81,7 @@ fn update_toy(
     }
 
     info!("Altered toy: {}", new_toy.toy_id);
+    true
 }
 
 /// Toy listening routine: processes this toy's OSC messages and config
@@ -96,6 +99,8 @@ async fn toy_task(
     // One latest-command slot per motor, drained by the emitter task
     let slots = CommandSlots::new();
     let command_sink = ToyCommandSink::new(&vc_toy, slots.clone());
+    // Mode processors and level tweaks for every feature, from the config
+    let mut pipeline = ToyPipeline::new(&vc_toy.parsed_toy_features);
 
     let tet_data = EmitterThreadData::new(
         emitter_thread_rx,
@@ -115,14 +120,21 @@ async fn toy_task(
             // Apply config changes before any OSC still queued behind them
             biased;
             update = control_rx.recv() => match update {
-                Some(new_toy) => update_toy(&emitter_thread_tx, new_toy, &mut vc_toy),
+                Some(new_toy) => {
+                    if update_toy(&emitter_thread_tx, new_toy, &mut vc_toy) {
+                        // Fresh processors with the new settings (resets their state)
+                        pipeline = ToyPipeline::new(&vc_toy.parsed_toy_features);
+                    }
+                }
                 None => break,
             },
             msg = osc_rx.recv() => match msg {
-                Some(mut msg) => {
-                    parse_osc_message(&command_sink, &mut msg, &mut vc_toy.parsed_toy_features)
-                        .await
-                }
+                Some(mut msg) => parse_osc_message(
+                    &command_sink,
+                    &mut msg,
+                    &mut vc_toy.parsed_toy_features,
+                    &mut pipeline,
+                ),
                 None => break,
             },
         }

@@ -5,7 +5,7 @@ use buttplug::{
 use core::fmt;
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, sync::Arc, time::Instant};
+use std::{collections::HashMap, fs, sync::Arc};
 use tauri::AppHandle;
 use ts_rs::TS;
 
@@ -67,7 +67,6 @@ impl VCToy {
                                 indexer
                             ),
                             processing_mode: ProcessingMode::Raw,
-                            processing_mode_values: ProcessingModeValues::default(),
                         }],
                         indexer,
                         VCFeatureType::Linear,
@@ -273,11 +272,6 @@ impl VCToy {
                                 Some(Box::<TPSProcessor>::default())
                         }
                     }
-
-                    feature.penetration_system.pen_system_processing_mode_values =
-                        ProcessingModeValues::new_from(
-                            &feature.penetration_system.pen_system_processing_mode,
-                        );
                 }
 
                 self.osc_data = conf.osc_data;
@@ -368,44 +362,6 @@ impl VCToy {
     }
 }
 
-#[derive(Clone, Default, Debug)]
-pub struct SmoothProcessingValues {
-    pub smooth_queue: Vec<f64>,
-}
-
-#[derive(Clone, Default, Debug)]
-pub struct RateProcessingValues {
-    pub rate_saved_level: f64,
-    pub rate_saved_osc_input: f64,
-    pub rate_timestamp: Option<Instant>,
-}
-
-#[derive(Clone, Default, Debug)]
-pub enum ProcessingModeValues {
-    #[default]
-    Raw,
-    Smooth(SmoothProcessingValues),
-    Rate(RateProcessingValues),
-    Constant,
-}
-
-impl ProcessingModeValues {
-    pub fn new_from(processing_mode: &ProcessingMode) -> Self {
-        match processing_mode {
-            ProcessingMode::Raw => Self::Raw,
-            ProcessingMode::Constant => Self::Constant,
-            ProcessingMode::Smooth => Self::Smooth(SmoothProcessingValues {
-                smooth_queue: Vec::new(),
-            }),
-            ProcessingMode::Rate => Self::Rate(RateProcessingValues {
-                rate_saved_level: 0.0,
-                rate_saved_osc_input: 0.0,
-                rate_timestamp: None,
-            }),
-        }
-    }
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub enum ProcessingMode {
     Raw,
@@ -431,15 +387,6 @@ impl ToFrontend<FeProcessingMode> for ProcessingMode {
 pub struct ToyParameter {
     pub parameter: String,
     pub processing_mode: ProcessingMode,
-    // Temporary values for calculations for Processing Modes
-    #[serde(skip)]
-    pub processing_mode_values: ProcessingModeValues,
-}
-
-impl ToyParameter {
-    fn is_assigned_param(&self, param: &String) -> bool {
-        self.parameter == *param
-    }
 }
 
 impl ToFrontend<Vec<FeToyParameter>> for Vec<ToyParameter> {
@@ -511,21 +458,49 @@ impl VCToyFeature {
         }
     }
 
-    pub fn get_enabled_feature_from_param(&mut self, param: &String) -> Option<&mut Self> {
-        // Implement parameter priority?
-        if self.feature_enabled {
-            for osc_param in &mut self.osc_parameters {
-                if osc_param.is_assigned_param(param) {
-                    debug!(
-                        "Found osc parameter match in feature! : {:?} - {}",
-                        (self.feature_index, self.feature_type),
-                        param
-                    );
-                    return Some(self);
+    /// Index of the first parameter assigned to `param`, if the feature is enabled.
+    pub fn enabled_param_index(&self, param: &str) -> Option<usize> {
+        if !self.feature_enabled {
+            return None;
+        }
+        let index = self
+            .osc_parameters
+            .iter()
+            .position(|osc_param| osc_param.parameter == param)?;
+        debug!(
+            "Found osc parameter match in feature! : {:?} - {}",
+            (self.feature_index, self.feature_type),
+            param
+        );
+        Some(index)
+    }
+
+    /// Whether this feature's input processor (SPS/TPS) handles `param`: the
+    /// feature is enabled, has an input processor that claims the address,
+    /// and the address passes the feature's input filter, if it has one.
+    pub fn input_processor_accepts(&self, param: &str) -> bool {
+        if !self.feature_enabled {
+            return false;
+        }
+        let Some(pen_system) = self.penetration_system.pen_system.as_ref() else {
+            return false;
+        };
+        if !pen_system.is_parameter(param) {
+            return false;
+        }
+        match &self.penetration_system.pen_system_input_filter {
+            Some(input_filter) => {
+                let passes = pen_system.input_filter(param, input_filter);
+                if passes {
+                    debug!("Input Filter success for {} : {:?}", param, input_filter);
                 }
+                passes
+            }
+            None => {
+                debug!("Got None for input filter!");
+                true
             }
         }
-        None
     }
 
     /*
@@ -574,9 +549,6 @@ impl FromFrontend<Vec<FeToyParameter>> for Vec<ToyParameter> {
             self.push(ToyParameter {
                 parameter: toy_param.parameter,
                 processing_mode: toy_param.processing_mode.to_backend(),
-                processing_mode_values: ProcessingModeValues::new_from(
-                    &toy_param.processing_mode.to_backend(),
-                ),
             });
         }
 
@@ -787,73 +759,6 @@ impl VCToyFeatures {
             }
         }
         count
-    }
-
-    pub fn get_features_from_param(&mut self, param: &String) -> Option<Vec<&mut VCToyFeature>> {
-        let out = self
-            .features
-            .iter_mut()
-            .filter_map(|f| f.get_enabled_feature_from_param(param))
-            .collect::<Vec<&mut VCToyFeature>>();
-
-        if out.is_empty() {
-            None
-        } else {
-            Some(out)
-        }
-    }
-
-    pub fn get_features_with_input_processors(
-        &mut self,
-        param: &String,
-    ) -> Option<Vec<&mut VCToyFeature>> {
-        let mut out = Vec::new();
-
-        for f in &mut self.features {
-            // If feature gets turned off at any time during the feature enum process clear the vector and return None
-            if !f.feature_enabled {
-                continue;
-            }
-
-            // If penetration system not set for feature move to next feature
-            if f.penetration_system.pen_system.is_none() {
-                continue;
-            }
-
-            // Is parameter part of the implemented penetration system?
-            if f.penetration_system
-                .pen_system
-                .as_ref()
-                .unwrap()
-                .is_parameter(param)
-            {
-                // Input Filtering
-                if let Some(input_filter) = &f.penetration_system.pen_system_input_filter {
-                    if f.penetration_system
-                        .pen_system
-                        .as_ref()
-                        .unwrap()
-                        .input_filter(param, input_filter)
-                    {
-                        // Add to features vector for features with a penetration system related to the input parameter
-                        // and the input filter
-                        debug!("Input Filter success for {} : {:?}", param, input_filter);
-                        out.push(f);
-                    }
-                } else {
-                    // NO input filter
-                    // Add to features vector for features with a penetration system related to the input parameter
-                    debug!("Got None for input filter!");
-                    out.push(f);
-                }
-            }
-        }
-
-        if out.is_empty() {
-            None
-        } else {
-            Some(out)
-        }
     }
 
     /*

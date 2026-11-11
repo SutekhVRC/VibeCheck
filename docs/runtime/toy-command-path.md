@@ -14,11 +14,12 @@ flowchart LR
 
   subgraph TT["Toy task (one per connected toy)<br/>runtime/toy_management_handler.rs"]
     direction TB
-    PARSE["parse_osc_message<br/>osc_processor.rs<br/>SPS/TPS · Raw/Smooth/Rate/Constant"]
+    PARSE["parse_osc_message<br/>osc_processor.rs<br/>matching · SPS/TPS"]
+    MODE["mode processor<br/>Raw/Smooth/Rate/Constant<br/>(vibecheck-core modes)"]
+    LT["OutputLevels<br/>Idle · Range · Flip Input<br/>(vibecheck-core levels)"]
     SINK["ToyCommandSink::send<br/>runtime/toy_output.rs"]
-    LT["clamp_and_flip<br/>Idle · Range · Flip Input"]
     SAFE["SafetyLayer::clamp<br/>(vibecheck-core)"]
-    PARSE --> SINK --> LT --> SAFE
+    PARSE --> MODE --> LT --> SINK --> SAFE
   end
 
   SAFE -- "ClampedCmd" --> SLOTS[("CommandSlots<br/>one latest command<br/>per motor")]
@@ -36,13 +37,34 @@ flowchart LR
 
 1. **`OscInput`** (`vibecheck-core/src/modules/osc.rs`) receives OSC from VRChat and unpacks bundles. `/avatar/change` becomes an `AvatarChange` event. Every other message writes its value to the signal plane and is passed, in order, to the OSC router through the input's *tap*.
 2. **OSC router** (`osc_routing.rs`) handles VibeCheck OSC API messages (`/avatar/parameters/vibecheck/api/...`) itself and sends every other message only to the toy tasks that use its address (see [Routing](#routing)).
-3. **Toy task** (`toy_management_handler.rs`) runs `parse_osc_message` (`osc_processor.rs`) for each message. For every feature the message applies to, it runs the input processor (SPS/TPS) and/or the parameter's processing mode, which produces a level.
-4. **`ToyCommandSink::send`** (`toy_output.rs`) takes that level and:
-   1. applies the feature's level tweaks with `clamp_and_flip`: a level of exactly 0 becomes Idle Speed, anything else is clamped to the Range, then Flip Input is applied;
-   2. for Linear features, attaches Linear Speed as the command's duration;
-   3. passes it through `SafetyLayer::clamp`, which returns a `ClampedCmd`;
-   4. writes it into the toy's `CommandSlots`.
+3. **Toy task** (`toy_management_handler.rs`) runs `parse_osc_message` (`osc_processor.rs`) for each message, using the toy's [pipeline](#the-pipeline):
+   1. features whose input processor (SPS/TPS) accepts the address run it, then the pipeline's mode processor for the input processor's output;
+   2. then features with a parameter for this address run that parameter's mode processor (only the first matching parameter of a feature counts);
+   3. each level a mode produces goes through the feature's `OutputLevels`: exactly 0 becomes Idle Speed, anything else is clamped to the Range, then Flip Input is applied. A mode can also hold a value back (Smooth while it collects), in which case nothing is sent.
+4. **`ToyCommandSink::send`** (`toy_output.rs`) takes the finished level and:
+   1. for Linear features, attaches Linear Speed as the command's duration;
+   2. passes it through `SafetyLayer::clamp`, which returns a `ClampedCmd`;
+   3. writes it into the toy's `CommandSlots`.
 5. **Emitter task** (`toy_emitter_thread.rs`) wakes at the toy's Update Rate, takes every command that changed since the last tick, and hands them to `ButtplugOutput::apply`, which sends one Buttplug command per motor.
+
+## The pipeline
+
+Each toy task builds a `ToyPipeline` (`runtime/toy_pipeline.rs`) from the toy's config. For every feature it holds:
+
+| Part | Built from | vibecheck-core type |
+|---|---|---|
+| One mode processor per OSC parameter | the parameter's mode | `modules::modes` (`RawMode`, `SmoothMode`, `RateMode`, `ConstantMode`) |
+| One mode processor for the input processor's output | the feature's SPS/TPS mode | same |
+| Output levels | Idle Speed, Range, Flip Input | `modules::levels::OutputLevels` |
+
+Mode settings come from the feature: Smooth Level, Rate Level, Constant Level and Flip Input.
+
+- The pipeline is built when the toy task starts, so saved modes apply straight away. Before, parameter modes loaded from the config file acted as Raw until a setting was changed in the app.
+- It is rebuilt on every config change (`alter_toy`), which resets processor state (Smooth's window, Rate's level), as before.
+- Processors run **once per message**, not on a timer: Smooth averages the last N messages and Rate measures movement between consecutive messages, as they always have.
+- The SPS/TPS input processors themselves still live on the feature config (`penetration_system.pen_system`); only their output mode is in the pipeline.
+
+The Test button's `clamp_and_flip` (`toy_command_processor.rs`) uses the same `OutputLevels`.
 
 ## Routing
 
@@ -115,7 +137,7 @@ The mapping lives in `actuator_for` (`toy_output.rs`).
 
 ## Config changes and update rate
 
-- `alter_toy` from the frontend reaches the toy management handler, which updates the toy's routes and sends the new config down that toy's **control channel**. The toy task always checks the control channel first, so a config change is applied before any OSC already queued behind it. The next level it processes uses the new settings.
+- `alter_toy` from the frontend reaches the toy management handler, which updates the toy's routes and sends the new config down that toy's **control channel**. The toy task always checks the control channel first, so a config change is applied before any OSC already queued behind it. It then rebuilds the toy's [pipeline](#the-pipeline), so the next level it processes uses the new settings.
 - If the Update Rate changed, the toy task sends `ToyEmitterThreadSignal::UpdateRate` to the emitter.
 - When the toy disconnects or VibeCheck turns off, the toy task sends `StopExecution` and the emitter exits.
 
@@ -138,6 +160,7 @@ The mapping lives in `actuator_for` (`toy_output.rs`).
 | Range and Smooth | `cargo run -p osc-tool -- sweep Boop 0 1 --seconds 3` | A steady ramp, capped at the top of Range |
 | Rate mode | `cargo run -p osc-tool -- sweep Boop 0 1 --seconds 0.3 --back` | A burst that winds down after the stroke |
 | Constant mode | `send Boop true`, then `send Boop false` | Constant Level, then Idle Speed (off if Idle Speed is 0) |
+| Saved modes after a restart | Set a parameter to Constant, restart VibeCheck, then `send Boop true` without touching any setting | Constant Level straight away (before, it acted as Raw until a setting was changed) |
 | One slot per motor | Map one parameter to two motors on one toy, then `sweep` it | Both motors follow the ramp |
 | Avatar change stops toys | `send Boop 0.5`, then `cargo run -p osc-tool -- send /avatar/change s:avtr_test` | The toy stops |
 | OSC API anatomy toggle | `cargo run -p osc-tool -- send vibecheck/api/anatomy/Vagina/enabled false` | Toys tagged Vagina are disabled (and the UI shows it) |

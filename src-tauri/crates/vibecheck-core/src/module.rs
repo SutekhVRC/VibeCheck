@@ -113,9 +113,28 @@ pub trait Processor: Send {
     /// Called once per graph tick, in topological order.
     ///
     /// `ins` and `out` are in the order of this module's signal in/out ports.
-    /// `dt` is the time since the last tick, in seconds. Events pushed onto
-    /// `events` are published on the event plane after the tick.
-    fn tick(&mut self, ins: &[Signal], dt: f32, out: &mut [Signal], events: &mut Vec<Event>);
+    /// Each `out` slot starts as `None`; set it to `Some` to write a new value
+    /// to that port, or leave it `None` to leave the port unchanged (e.g. a
+    /// smoother still collecting values). `dt` is the time since the last
+    /// tick, in seconds. Events pushed onto `events` are published on the
+    /// event plane after the tick.
+    fn tick(
+        &mut self,
+        ins: &[Signal],
+        dt: f32,
+        out: &mut [Option<Signal>],
+        events: &mut Vec<Event>,
+    );
+}
+
+/// Runs a single-input, single-output processor once and returns its output.
+///
+/// For callers that drive a processor per incoming value rather than from a
+/// graph tick. Events the processor emits are discarded.
+pub fn process_one(processor: &mut dyn Processor, input: Signal, dt: f32) -> Option<Signal> {
+    let mut out = [None];
+    processor.tick(&[input], dt, &mut out, &mut Vec::new());
+    out[0]
 }
 
 #[async_trait]

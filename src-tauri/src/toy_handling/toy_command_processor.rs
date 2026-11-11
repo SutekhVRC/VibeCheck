@@ -7,29 +7,23 @@ use buttplug::client::ScalarCommand::ScalarMap;
 use buttplug::core::message::ActuatorType;
 
 use log::{error as logerr, info};
+use vibecheck_core::modules::levels::OutputLevels;
 
 use std::collections::HashMap;
 
 use std::sync::Arc;
 
+/// Idle Speed, Range and Flip Input for one value. Same rules as the toy
+/// pipeline, from vibecheck-core.
 #[inline]
 pub(crate) fn clamp_and_flip(value: f64, flip: bool, levels: LevelTweaks) -> f64 {
-    let mut new_value;
-    if value == 0.0 {
-        new_value = levels.idle_level;
-    } else {
-        new_value = value.clamp(levels.minimum_level, levels.maximum_level);
+    OutputLevels {
+        min: levels.minimum_level,
+        max: levels.maximum_level,
+        idle: levels.idle_level,
+        flip,
     }
-    if flip {
-        new_value = flip_float64(new_value)
-    }
-    new_value
-}
-
-#[inline]
-pub fn flip_float64(orig: f64) -> f64 {
-    //1.00 - orig
-    ((1.00 - orig) * 100.0).round() / 100.0
+    .apply(value)
 }
 
 // Parse scalar levels and logic for level tweaks

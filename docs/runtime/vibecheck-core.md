@@ -27,7 +27,9 @@ The app is being moved onto it piece by piece, without changing behaviour. See [
 | `slots.rs` | `CommandSlots` | Yes |
 | `modules/buttplug.rs` | `ButtplugOutput`, `Actuator` | Yes |
 | `modules/osc.rs` | `OscInput` | Yes |
-| `module.rs` | `Input`, `Processor`, `Output` traits, `PortSpec`, `InputCtx` | `Input` and `Output` |
+| `modules/modes.rs` | `Mode`, `ModeSettings`, `RawMode`, `SmoothMode`, `RateMode`, `ConstantMode` | Yes |
+| `modules/levels.rs` | `OutputLevels` | Yes |
+| `module.rs` | `Input`, `Processor`, `Output` traits, `PortSpec`, `InputCtx`, `process_one` | Yes |
 | `signal.rs` | `Signal`, `SignalPlane` | Written by `OscInput`; nothing reads it yet |
 | `event.rs` | `Event`, `EventPlane`, `EventReceiver` | Yes: avatar change |
 | `error.rs` | `Error`, `Result` | Yes |
@@ -65,12 +67,16 @@ The safety layer uses `depth` to stop feedback loops.
 | Trait | Does | Shape |
 |---|---|---|
 | `Input` | Produces signals and events | `async fn run(&mut self, ctx: InputCtx)` runs for the module's lifetime |
-| `Processor` | Transforms signals once per graph tick, may emit events | `fn tick(&mut self, ins, dt, out, events)` |
+| `Processor` | Transforms signals once per graph tick, may emit events | `fn tick(&mut self, ins: &[Signal], dt, out: &mut [Option<Signal>], events)` |
 | `Output` | Acts on a device or service | `async fn apply(&mut self, cmds: &[ClampedCmd])` |
 
 Modules are ordinary Rust types compiled into the app. `async-trait` keeps `Input` and `Output` usable as trait objects.
 
 `InputCtx` gives an input its own module id and lets it write signals and publish events on its own ports.
+
+A processor's `out` slots start as `None`. Setting one to `Some` writes a new value to that port; leaving it `None` leaves the port unchanged, e.g. while Smooth is still collecting values.
+
+`process_one(processor, input, dt)` runs a single-input, single-output processor once and returns its output. The app uses it to run processors once per OSC message, since there is no graph runner yet.
 
 ## Safety layer
 
@@ -112,6 +118,27 @@ An `Input` that listens for OSC over UDP.
 
 `rosc` is re-exported as `modules::osc::rosc`, so the app uses the same `OscMessage` type.
 
+### Processing modes (`modules::modes`)
+
+Single-input, single-output processors (`in` → `out`), ported from the app's original mode processor with the same behaviour. `modes::build(mode, settings)` makes one from a `Mode` and `ModeSettings`.
+
+| Mode | Float in | Bool in |
+|---|---|---|
+| `RawMode` | passed through | 1.0 or 0.0 |
+| `SmoothMode` | collects `smooth_size` values; on the next value outputs their mean (rounded to hundredths), drops that value and starts a new window seeded with the mean. 0 (1 with flip) always passes straight through, and clears a full window | ignored (no output) |
+| `RateMode` | adds the movement since the previous value to an internal level (capped at 1); every 150 ms of input it takes `rate_decay` off. At rest (<= 0, or >= 1 with flip) it resets and outputs 0 | ignored |
+| `ConstantMode` | `constant_level` if >= 0.5, else 0 | `constant_level` if true, else 0 |
+
+They are meant to run once per incoming value. `RateMode` uses its own wall-clock timer, not `dt`. The tests pin each mode's behaviour, quirks included, so a change in feel shows up as a failing test.
+
+### `OutputLevels` (`modules::levels`)
+
+Idle Speed, Range and Flip Input, as a processor and as `apply(level)`:
+
+1. exactly 0 becomes `idle`;
+2. anything else is clamped to `min..=max` (a reversed range is tolerated instead of panicking);
+3. with `flip`, the result becomes `1 - level`, rounded to hundredths.
+
 ### `ButtplugOutput`
 
 An `Output` for one Buttplug device. Each port maps to an `Actuator`:
@@ -131,7 +158,8 @@ An `Output` for one Buttplug device. Each port maps to an `Actuator`:
 | Workspace split, core types and traits | Done |
 | Toy commands through `ButtplugOutput` with one slot per motor | Done ([toy-command-path.md](toy-command-path.md)) |
 | OSC listener as an `Input` module, routing each message once, avatar change as an event | Done ([toy-command-path.md](toy-command-path.md#routing)) |
-| SPS/TPS, Smooth, Rate, Constant and level tweaks as `Processor` modules | Not started |
+| Smooth, Rate, Constant and level tweaks as `Processor` modules | Done ([toy-command-path.md](toy-command-path.md#the-pipeline)) |
+| SPS/TPS as `Processor` modules | Waiting for the planned SPS/TPS rewrite; the current input processors stay in the app |
 | Each toy's graph generated from its existing config | Not started |
 
 ## Tests
@@ -141,4 +169,6 @@ cd src-tauri
 cargo test -p vibecheck-core
 ```
 
-Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, that motors on one toy don't overwrite each other in `CommandSlots`, and `OscInput` over real UDP: tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, and reporting a busy port.
+Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, and `OutputLevels`.
+
+The app's tests (`cargo test -p vibecheck`) cover the routing table and `parse_osc_message` end to end: modes loaded from config, one message driving several motors, Range and Idle after the mode, Smooth holding values back, the first matching parameter winning, disabled features, and Linear speed.

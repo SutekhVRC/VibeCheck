@@ -157,7 +157,7 @@ mod tests {
     use super::*;
     use crate::toy_handling::{
         input_processor::penetration_systems::{sps::SPSProcessor, PenetrationSystemType},
-        toyops::{ProcessingMode, ProcessingModeValues, ToyParameter, VCFeatureType, VCToyFeature},
+        toyops::{ProcessingMode, ToyParameter, VCFeatureType, VCToyFeature},
     };
     use tokio::sync::mpsc::unbounded_channel;
     use vibecheck_core::modules::osc::rosc::OscType;
@@ -169,7 +169,6 @@ mod tests {
                 .map(|p| ToyParameter {
                     parameter: p.to_string(),
                     processing_mode: ProcessingMode::Raw,
-                    processing_mode_values: ProcessingModeValues::default(),
                 })
                 .collect(),
             0,

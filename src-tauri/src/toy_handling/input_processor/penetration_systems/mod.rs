@@ -6,7 +6,7 @@ use ts_rs::TS;
 
 use crate::{
     frontend::{frontend_types::FePenetrationSystem, FromFrontend, ToBackend, ToFrontend},
-    toy_handling::toyops::{ProcessingMode, ProcessingModeValues},
+    toy_handling::toyops::ProcessingMode,
 };
 
 use self::{sps::SPSProcessor, tps::TPSProcessor};
@@ -28,8 +28,6 @@ pub struct PenetrationSystem {
     pub pen_system_type: PenetrationSystemType,
     pub pen_system_processing_mode: ProcessingMode,
     pub pen_system_input_filter: Option<Vec<String>>,
-    #[serde(skip)]
-    pub pen_system_processing_mode_values: ProcessingModeValues,
 }
 
 impl Default for PenetrationSystem {
@@ -39,7 +37,6 @@ impl Default for PenetrationSystem {
             pen_system_type: PenetrationSystemType::None,
             pen_system_processing_mode: ProcessingMode::Raw,
             pen_system_input_filter: None,
-            pen_system_processing_mode_values: ProcessingModeValues::Raw,
         }
     }
 }
@@ -75,7 +72,6 @@ impl FromFrontend<FePenetrationSystem> for PenetrationSystem {
         }
         self.pen_system_type = frontend_type.pen_system_type;
         let backend_pspm = frontend_type.pen_system_processing_mode.to_backend();
-        self.pen_system_processing_mode_values = ProcessingModeValues::new_from(&backend_pspm);
         self.pen_system_processing_mode = backend_pspm;
 
         // Backend expects None if no tags (In the future make tuti send null for input filter from frontend)

@@ -1,8 +1,9 @@
 /*
  * Bridge between the existing per-toy processing and the vibecheck-core output side.
  *
- * Processed levels go through the feature's LevelTweaks (idle, min/max, flip),
- * then the safety layer, into one latest-command slot per motor. The toy's
+ * Levels arrive already processed by the toy's pipeline (mode, then idle,
+ * Range and Flip Input). They go through the safety layer into one
+ * latest-command slot per motor. The toy's
  * emitter task drains the slots at the toy's update rate and hands the
  * commands to ButtplugOutput.
  */
@@ -13,10 +14,7 @@ use vibecheck_core::{
     CommandSlots, ModuleInstanceId, PortId, SafetyLayer,
 };
 
-use crate::toy_handling::{
-    toy_command_processor::clamp_and_flip,
-    toyops::{LevelTweaks, VCFeatureType, VCToy},
-};
+use crate::toy_handling::toyops::{VCFeatureType, VCToy};
 
 /// Module id for a toy, e.g. `toy:lovense_lush:0`. Same name form as the OSC
 /// battery address, and stable across reconnects (no Buttplug device index).
@@ -78,19 +76,28 @@ impl ToyCommandSink {
         }
     }
 
-    /// Queue a processed level for one feature. Replaces any command for the
-    /// same feature that hasn't been sent yet; other features are unaffected.
+    /// A sink for an explicit module id, for tests where there's no device.
+    #[cfg(test)]
+    pub fn for_module(module: ModuleInstanceId, slots: CommandSlots) -> Self {
+        Self {
+            module,
+            safety: SafetyLayer::default(),
+            slots,
+        }
+    }
+
+    /// Queue a fully processed level for one feature. Replaces any command
+    /// for the same feature that hasn't been sent yet; other features are
+    /// unaffected. `linear_speed_ms` is only used by Linear features.
     pub fn send(
         &self,
         feature_type: VCFeatureType,
         feature_index: u32,
-        flip_float: bool,
-        feature_levels: LevelTweaks,
+        linear_speed_ms: u32,
         level: f64,
     ) {
-        let level = clamp_and_flip(level, flip_float, feature_levels);
         let duration_ms = match feature_type {
-            VCFeatureType::Linear => Some(feature_levels.linear_position_speed),
+            VCFeatureType::Linear => Some(linear_speed_ms),
             _ => None,
         };
         let port = PortId::new(
