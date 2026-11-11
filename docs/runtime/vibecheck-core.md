@@ -1,6 +1,14 @@
 # `vibecheck-core`
 
-A library crate at `src-tauri/crates/vibecheck-core` that holds the module runtime. The app (`src-tauri`) depends on it by path; both are members of the Cargo workspace rooted at `src-tauri/Cargo.toml`.
+A library crate at `src-tauri/crates/vibecheck-core` that holds the module runtime. The app (`src-tauri`) depends on it by path.
+
+The Cargo workspace is rooted at `src-tauri/Cargo.toml`:
+
+| Member | Path | What it is |
+|---|---|---|
+| `vibecheck` | `src-tauri` | The Tauri app |
+| `vibecheck-core` | `src-tauri/crates/vibecheck-core` | This crate |
+| `osc-tool` | `src-tauri/crates/osc-tool` | Debug CLI to listen for, send and sweep OSC ([README](../../src-tauri/crates/osc-tool/README.md)). Not part of the app or installers |
 
 The goal is a pipeline of modules:
 

@@ -91,6 +91,21 @@ The mapping lives in `actuator_for` (`toy_output.rs`).
 
 - **The Test button** (`simulate_device_feature` in `vcore/ipc/call_plane.rs`) calls `command_toy` (`toy_command_processor.rs`) directly. It skips the slots and the safety layer.
 
+## Testing this path
+
+[`osc-tool`](../../src-tauri/crates/osc-tool/README.md) sends OSC to VibeCheck as if VRChat sent it, so the whole path can be exercised without VRChat. VibeCheck can stay open while sending.
+
+| To check | Run (from `src-tauri/`) | Expect |
+|---|---|---|
+| A parameter reaches the toy | `cargo run -p osc-tool -- send Boop 0.5` | The motor runs at 50%, or the nearest end of Range if 50% is outside it |
+| Idle Speed | `send Boop 0.5`, then `send Boop 0` | The motor drops to Idle Speed, not off |
+| Range and Smooth | `cargo run -p osc-tool -- sweep Boop 0 1 --seconds 3` | A steady ramp, capped at the top of Range |
+| Rate mode | `cargo run -p osc-tool -- sweep Boop 0 1 --seconds 0.3 --back` | A burst that winds down after the stroke |
+| Constant mode | `send Boop true`, then `send Boop false` | Constant Level, then Idle Speed (off if Idle Speed is 0) |
+| One slot per motor | Map one parameter to two motors on one toy, then `sweep` it | Both motors follow the ramp |
+
+If the toy doesn't react, `osc-tool listen` (with VibeCheck closed) shows whether VRChat or the tool is reaching the port at all.
+
 ## Values
 
 Levels are `f64` from the processors through to Buttplug, matching Buttplug's own type, so the core adds no conversions of its own.
