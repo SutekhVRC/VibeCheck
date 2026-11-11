@@ -13,7 +13,11 @@ use crate::{
 #[derive(Debug)]
 pub struct OscApiError {}
 
-pub mod api;
+/// Handles a VibeCheck OSC API message (`/avatar/parameters/vibecheck/api/...`).
+pub fn handle_api_message(msg: OscMessage, app_handle: &AppHandle) {
+    trace!("[*] VibeCheck API: {:?}", msg);
+    APIProcessor::parse(msg, app_handle);
+}
 
 struct APIProcessor;
 

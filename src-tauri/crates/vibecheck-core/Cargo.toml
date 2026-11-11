@@ -11,7 +11,8 @@ rust-version = "1.75"
 async-trait = "0.1.92"
 buttplug = "9.0.9"
 parking_lot = "0.12.5"
-tokio = { version = "1.53.3", features = ["sync"] }
+rosc = "0.11.4"
+tokio = { version = "1.53.3", features = ["sync", "net"] }
 
 [dev-dependencies]
-tokio = { version = "1.53.3", features = ["sync", "macros", "rt"] }
+tokio = { version = "1.53.3", features = ["sync", "net", "macros", "rt", "time"] }

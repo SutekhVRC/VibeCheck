@@ -26,9 +26,10 @@ The app is being moved onto it piece by piece, without changing behaviour. See [
 | `safety.rs` | `SafetyLayer`, `SafetyCaps`, `ClampedCmd` | Yes |
 | `slots.rs` | `CommandSlots` | Yes |
 | `modules/buttplug.rs` | `ButtplugOutput`, `Actuator` | Yes |
-| `module.rs` | `Input`, `Processor`, `Output` traits, `PortSpec`, `InputCtx` | `Output` only |
-| `signal.rs` | `Signal`, `SignalPlane` | Not yet |
-| `event.rs` | `Event`, `EventPlane`, `EventReceiver` | Not yet |
+| `modules/osc.rs` | `OscInput` | Yes |
+| `module.rs` | `Input`, `Processor`, `Output` traits, `PortSpec`, `InputCtx` | `Input` and `Output` |
+| `signal.rs` | `Signal`, `SignalPlane` | Written by `OscInput`; nothing reads it yet |
+| `event.rs` | `Event`, `EventPlane`, `EventReceiver` | Yes: avatar change |
 | `error.rs` | `Error`, `Result` | Yes |
 
 ## Addressing
@@ -99,6 +100,18 @@ This is what lets several motors on one toy be driven in the same tick.
 
 ## Built-in modules
 
+### `OscInput`
+
+An `Input` that listens for OSC over UDP.
+
+- `OscInput::bind(addr)` binds the socket, so a busy port is reported before anything runs.
+- `with_tap(tx)` also sends every message except avatar changes to `tx`, in arrival order. `run` returns once the tap's receiver is dropped.
+- `/avatar/change` (any address starting with it) is published as an `AvatarChange` event on the `avatar_change` port, with the avatar id as `Value::Text` when present.
+- Any other message whose last argument is a float or bool writes it to the signal plane, on a port named after the full OSC address, e.g. `osc//avatar/parameters/Boop`.
+- Bundles are unpacked. Packets that aren't valid OSC, and per-packet receive errors, are skipped.
+
+`rosc` is re-exported as `modules::osc::rosc`, so the app uses the same `OscMessage` type.
+
 ### `ButtplugOutput`
 
 An `Output` for one Buttplug device. Each port maps to an `Actuator`:
@@ -117,7 +130,7 @@ An `Output` for one Buttplug device. Each port maps to an `Actuator`:
 |---|---|
 | Workspace split, core types and traits | Done |
 | Toy commands through `ButtplugOutput` with one slot per motor | Done ([toy-command-path.md](toy-command-path.md)) |
-| OSC listener as an `Input` module, routing each message once, avatar change as an event | Not started |
+| OSC listener as an `Input` module, routing each message once, avatar change as an event | Done ([toy-command-path.md](toy-command-path.md#routing)) |
 | SPS/TPS, Smooth, Rate, Constant and level tweaks as `Processor` modules | Not started |
 | Each toy's graph generated from its existing config | Not started |
 
@@ -128,4 +141,4 @@ cd src-tauri
 cargo test -p vibecheck-core
 ```
 
-Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, and that motors on one toy don't overwrite each other in `CommandSlots`.
+Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, that motors on one toy don't overwrite each other in `CommandSlots`, and `OscInput` over real UDP: tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, and reporting a busy port.

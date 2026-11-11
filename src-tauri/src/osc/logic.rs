@@ -8,11 +8,7 @@ use rosc::{self, OscMessage, OscPacket};
 use tauri::AppHandle;
 use tokio::net::UdpSocket as tUdpSocket;
 
-use tokio::sync::broadcast::Sender as BSender;
-use tokio::sync::mpsc::UnboundedSender;
-
 use std::net::Ipv4Addr;
-use std::net::UdpSocket;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -20,59 +16,12 @@ use crate::frontend::frontend_types::FeCoreEvent;
 use crate::frontend::frontend_types::FeToyEvent;
 use crate::frontend::frontend_types::FeVCToy;
 use crate::frontend::ToFrontend;
-use crate::osc_api::api::vibecheck_osc_api;
 use crate::toy_handling::ToyPower;
-use crate::toy_handling::ToySig;
-use crate::vcore::ipc::call_plane::TmSig;
-use crate::vcore::ipc::call_plane::ToyManagementEvent;
 use crate::vcore::ipc::emit_plane::emit_core_event;
 use crate::vcore::ipc::emit_plane::emit_toy_event;
 use crate::vcore::state::VibeCheckState;
 
 use super::OSCNetworking;
-
-/*
-    This subroutine
-    Binds the OSC listen socket
-    receives OSC messages
-    broadcasts the OSC messages to each toy
-*/
-pub fn toy_input_routine(
-    toy_bcst_tx: BSender<ToySig>,
-    tme_send: UnboundedSender<ToyManagementEvent>,
-    app_handle: AppHandle,
-    vc_config: OSCNetworking,
-) {
-    let bind_sock =
-        match UdpSocket::bind(format!("{}:{}", vc_config.bind.ip(), vc_config.bind.port())) {
-            Ok(s) => {
-                let _ = tme_send.send(ToyManagementEvent::Sig(TmSig::Listening));
-                s
-            }
-            Err(_e) => {
-                let _ = tme_send.send(ToyManagementEvent::Sig(TmSig::BindError));
-                return;
-            }
-        };
-    info!(
-        "Listen sock is bound {} : {}",
-        vc_config.bind.ip(),
-        vc_config.bind.port()
-    );
-    bind_sock.set_nonblocking(false).unwrap();
-    let _ = bind_sock.set_read_timeout(Some(Duration::from_secs(1)));
-
-    loop {
-        // try recv OSC packet
-        // parse OSC packet
-        // Send address and arg to broadcast channel
-        // Die when channel disconnects
-
-        if !vibecheck_osc_api(&bind_sock, &app_handle, &toy_bcst_tx) {
-            return;
-        }
-    }
-}
 
 pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OSCNetworking) {
     info!("Listening for OSC commands while disabled");
@@ -138,27 +87,6 @@ pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OS
                 }
             }
         }
-    }
-}
-
-#[inline]
-pub fn recv_osc_cmd(sock: &UdpSocket) -> Option<OscMessage> {
-    let mut buf = [0u8; rosc::decoder::MTU];
-
-    let (br, _a) = match sock.recv_from(&mut buf) {
-        Ok((br, a)) => (br, a),
-        Err(_e) => {
-            return None;
-        }
-    };
-
-    if br == 0 {
-        return None;
-    }
-    let pkt = rosc::decoder::decode_udp(&buf).ok()?;
-    match pkt.1 {
-        OscPacket::Message(msg) => Some(msg),
-        _ => None,
     }
 }
 

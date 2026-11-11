@@ -6899,6 +6899,7 @@ dependencies = [
  "async-trait",
  "buttplug",
  "parking_lot",
+ "rosc",
  "tokio",
 ]
 

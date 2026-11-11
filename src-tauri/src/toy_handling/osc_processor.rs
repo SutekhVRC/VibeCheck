@@ -29,7 +29,10 @@ pub async fn parse_osc_message(
 
     // msg args pop should go here
     //let newest_msg_addr = msg.addr.clone();
-    let newest_msg_val = msg.args.pop().unwrap();
+    // A message without arguments carries no value to act on
+    let Some(newest_msg_val) = msg.args.pop() else {
+        return;
+    };
     //info!("Newest value: {:?}", newest_msg_val);
     /*
      * Input mode processing

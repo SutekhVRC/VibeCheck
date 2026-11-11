@@ -492,7 +492,7 @@ pub struct VCToyFeature {
 }
 
 impl VCToyFeature {
-    fn new(
+    pub(crate) fn new(
         osc_parameters: Vec<ToyParameter>,
         feature_index: u32,
         feature_type: VCFeatureType,
