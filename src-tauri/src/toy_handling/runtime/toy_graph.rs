@@ -38,7 +38,7 @@ use crate::toy_handling::{
 pub const OSC_MODULE: &str = "osc";
 
 /// Smooth Level is this many milliseconds of averaging per step.
-pub const SMOOTH_MS_PER_LEVEL: u64 = 50;
+pub const SMOOTH_MS_PER_LEVEL: u64 = 100;
 
 fn to_core_mode(mode: &ProcessingMode) -> Mode {
     match mode {
@@ -377,16 +377,16 @@ mod tests {
             VCFeatureType::Vibrator,
             vec![param(BOOP, ProcessingMode::Smooth)],
         );
-        smooth.feature_levels.smooth_rate = 2.0; // 100 ms
+        smooth.feature_levels.smooth_rate = 2.0; // 200 ms
         let mut h = Harness::new(vec![smooth]);
 
         h.osc(BOOP, Signal::Float(0.2));
-        for _ in 0..10 {
+        for _ in 0..20 {
             h.tick();
         }
         h.osc(BOOP, Signal::Float(0.8));
         let mut levels = Vec::new();
-        for _ in 0..12 {
+        for _ in 0..22 {
             levels.extend(h.tick().into_iter().map(|c| c.1));
         }
         // Rises step by step rather than jumping, and settles on 0.8

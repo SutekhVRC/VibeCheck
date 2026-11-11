@@ -71,10 +71,10 @@ Processors run on the graph's 100 Hz tick, reading the latest value, rather than
 | Mode | On the fixed tick |
 |---|---|
 | Raw, Constant | Unchanged |
-| Smooth | Averages over a **time window** of Smooth Level × 50 ms (Level 2 = 100 ms). It used to average the last N messages, so it depended on VRChat's send rate. 0 still passes straight through and restarts the average |
+| Smooth | Averages over a **time window** of Smooth Level × 100 ms (Level 2 = 0.2 s, Level 20 = 2 s). It used to average the last N messages, so it depended on VRChat's send rate. 0 still passes straight through and restarts the average |
 | Rate | Movement since the last tick raises the level; it decays by **Rate Level per 150 ms, every tick**. It used to decay only when a new message arrived, so it could stay stuck at its last level when the input stopped moving |
 
-The 50 ms per Smooth Level step is a starting point; it may need tuning by feel.
+The step is `SMOOTH_MS_PER_LEVEL` (`toy_graph.rs`). It started at 50 ms and was raised to 100 ms after testing, because Smooth still felt too jumpy.
 
 If a value changes more than once within one 10 ms tick, only the last one is seen.
 
