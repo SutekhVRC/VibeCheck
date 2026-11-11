@@ -37,8 +37,18 @@ use crate::toy_handling::{
 /// The module id OscInput writes parameter values under.
 pub const OSC_MODULE: &str = "osc";
 
-/// Smooth Level is this many milliseconds of averaging per step.
-pub const SMOOTH_MS_PER_LEVEL: u64 = 100;
+/// Smooth window at Smooth Level 1, in seconds.
+pub const SMOOTH_BASE_SECONDS: f64 = 0.25;
+/// How the window grows with Smooth Level. Below 1, low levels get
+/// relatively more smoothing and high levels relatively less.
+pub const SMOOTH_CURVE: f64 = 0.7;
+
+/// How long Smooth averages over for a Smooth Level:
+/// `0.25 s × level^0.7`, i.e. about 0.25 s at 1, 0.4 s at 2, 0.75 s at 5,
+/// 1.25 s at 10 and 2 s at 20. Levels below 1 count as 1.
+pub fn smooth_window(level: f64) -> Duration {
+    Duration::from_secs_f64(SMOOTH_BASE_SECONDS * level.max(1.0).powf(SMOOTH_CURVE))
+}
 
 fn to_core_mode(mode: &ProcessingMode) -> Mode {
     match mode {
@@ -126,9 +136,7 @@ pub fn build_toy_graph(toy: &ModuleInstanceId, features: &VCToyFeatures) -> Resu
 
         let l = feature.feature_levels;
         let settings = ModeSettings {
-            smooth_window: Duration::from_millis(
-                SMOOTH_MS_PER_LEVEL * l.smooth_rate.max(1.0) as u64,
-            ),
+            smooth_window: smooth_window(l.smooth_rate),
             rate_decay: l.rate_tune,
             constant_level: l.constant_level,
             flip: feature.flip_input_float,
@@ -371,22 +379,35 @@ mod tests {
     }
 
     #[test]
+    fn smooth_levels_follow_a_curve() {
+        let secs = |level: f64| smooth_window(level).as_secs_f64();
+        let close = |a: f64, b: f64| (a - b).abs() < 0.05;
+        assert!(close(secs(1.0), 0.25));
+        assert!(close(secs(2.0), 0.4));
+        assert!(close(secs(5.0), 0.75));
+        assert!(close(secs(10.0), 1.25));
+        assert!(close(secs(20.0), 2.0));
+        // Below 1 counts as 1
+        assert_eq!(smooth_window(0.0), smooth_window(1.0));
+    }
+
+    #[test]
     fn smooth_follows_over_its_window() {
         let mut smooth = feature(
             0,
             VCFeatureType::Vibrator,
             vec![param(BOOP, ProcessingMode::Smooth)],
         );
-        smooth.feature_levels.smooth_rate = 2.0; // 200 ms
+        smooth.feature_levels.smooth_rate = 2.0; // about 0.4 s
         let mut h = Harness::new(vec![smooth]);
 
         h.osc(BOOP, Signal::Float(0.2));
-        for _ in 0..20 {
+        for _ in 0..45 {
             h.tick();
         }
         h.osc(BOOP, Signal::Float(0.8));
         let mut levels = Vec::new();
-        for _ in 0..22 {
+        for _ in 0..50 {
             levels.extend(h.tick().into_iter().map(|c| c.1));
         }
         // Rises step by step rather than jumping, and settles on 0.8
