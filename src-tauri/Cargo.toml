@@ -6,7 +6,7 @@ authors = ["SutekhVRC"]
 rust-version = "1.57"
 
 [workspace]
-members = [".", "crates/vibecheck-core"]
+members = [".", "crates/vibecheck-core", "crates/osc-monitor"]
 resolver = "2"
 
 [build-dependencies]

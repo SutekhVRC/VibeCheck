@@ -1,0 +1,11 @@
+[package]
+name = "osc-monitor"
+version = "0.1.0"
+edition = "2021"
+authors = ["SutekhVRC"]
+license = "Apache-2.0"
+description = "Debug tool: print the OSC messages arriving on a UDP port, to check VRChat is sending to VibeCheck"
+publish = false
+
+[dependencies]
+rosc = "0.11.4"
