@@ -16,7 +16,9 @@ The goal is a pipeline of modules:
 Inputs  ->  Processors  ->  Safety layer  ->  Outputs
 ```
 
-The app is being moved onto it piece by piece, without changing behaviour. See [Migration status](#migration-status) for what is in use today.
+The app runs on it: OSC comes in through `OscInput`, each toy's processing is a `Graph` generated from its config and ticked at 100 Hz, and commands leave through the safety layer and `ButtplugOutput`. See [Migration status](#migration-status) for what's left.
+
+The app only uses graphs generated from toy settings; there's no way to build graphs by hand yet.
 
 ## Layout
 
@@ -24,13 +26,14 @@ The app is being moved onto it piece by piece, without changing behaviour. See [
 |---|---|---|
 | `address.rs` | `ModuleInstanceId`, `PortId` | Yes |
 | `safety.rs` | `SafetyLayer`, `SafetyCaps`, `ClampedCmd` | Yes |
+| `graph.rs` | `GraphBuilder`, `Graph` | Yes: one graph per toy |
 | `slots.rs` | `CommandSlots` | Yes |
 | `modules/buttplug.rs` | `ButtplugOutput`, `Actuator` | Yes |
 | `modules/osc.rs` | `OscInput` | Yes |
 | `modules/modes.rs` | `Mode`, `ModeSettings`, `RawMode`, `SmoothMode`, `RateMode`, `ConstantMode` | Yes |
 | `modules/levels.rs` | `OutputLevels` | Yes |
 | `module.rs` | `Input`, `Processor`, `Output` traits, `PortSpec`, `InputCtx`, `process_one` | Yes |
-| `signal.rs` | `Signal`, `SignalPlane` | Written by `OscInput`; nothing reads it yet |
+| `signal.rs` | `Signal`, `SignalPlane` | Yes: written by `OscInput` and SPS/TPS, read by graphs |
 | `event.rs` | `Event`, `EventPlane`, `EventReceiver` | Yes: avatar change |
 | `error.rs` | `Error`, `Result` | Yes |
 
@@ -76,7 +79,41 @@ Modules are ordinary Rust types compiled into the app. `async-trait` keeps `Inpu
 
 A processor's `out` slots start as `None`. Setting one to `Some` writes a new value to that port; leaving it `None` leaves the port unchanged, e.g. while Smooth is still collecting values.
 
-`process_one(processor, input, dt)` runs a single-input, single-output processor once and returns its output. The app uses it to run processors once per OSC message, since there is no graph runner yet.
+`process_one(processor, input, dt)` runs a single-input, single-output processor once and returns its output, for quick use outside a graph (and in tests).
+
+## Graphs
+
+`graph.rs` wires processors together by port and runs them on a tick.
+
+```rust
+let mut b = GraphBuilder::new();
+b.add_processor(id("mode"), modes::build(Mode::Raw, settings))?;
+b.add_processor(id("levels"), Box::new(levels))?;
+b.connect(PortId::new(osc, "/avatar/parameters/Boop"), PortId::new(id("mode"), "in"))?;
+b.connect(PortId::new(id("mode"), "out"), PortId::new(id("levels"), "in"))?;
+b.add_sink(PortId::new(id("levels"), "out"), motor_port, None)?;
+let mut graph = b.build()?;
+
+// every tick:
+for cmd in graph.tick(&signals, dt, &safety, &mut events) {
+    slots.write(cmd);
+}
+```
+
+**Building** (`GraphBuilder`):
+
+- `add_processor(id, processor)` adds a node; its ports are the processor's signal ports.
+- `connect(from, to)` wires a source into a node input. If `from` belongs to a node, it's that node's output; otherwise it's read from the signal plane (e.g. an OSC parameter or SPS/TPS output). Each input takes exactly one source.
+- `add_sink(from, target, duration_ms)` sends a node output to a target port, such as a motor.
+- `build()` rejects unknown nodes or ports, inputs wired twice or not at all, sinks fed from something other than a node, and cycles. It orders nodes so each runs after the nodes it reads from.
+
+**Ticking** (`Graph::tick`):
+
+1. Nodes run in dependency order, each reading the latest value of its inputs. A node only runs once **all** its inputs have a value, so nothing happens before the first input arrives.
+2. A node output keeps its last value until the node writes a new one (`None` means unchanged).
+3. Each sink whose value **changed** since it last fired goes through `SafetyLayer::clamp` and is returned as a `ClampedCmd`. Unchanged sinks send nothing, so idle graphs don't flood outputs.
+
+`Graph::tick` doesn't sleep or spawn anything; the caller decides the rate. The app ticks at 100 Hz (`graph_runner.rs`) and passes the real time since the last tick as `dt`, capped at 0.1 s.
 
 ## Safety layer
 
@@ -120,16 +157,16 @@ An `Input` that listens for OSC over UDP.
 
 ### Processing modes (`modules::modes`)
 
-Single-input, single-output processors (`in` → `out`), ported from the app's original mode processor with the same behaviour. `modes::build(mode, settings)` makes one from a `Mode` and `ModeSettings`.
+Single-input, single-output processors (`in` → `out`), meant to run on a fixed tick. `modes::build(mode, settings)` makes one from a `Mode` and `ModeSettings`.
 
 | Mode | Float in | Bool in |
 |---|---|---|
 | `RawMode` | passed through | 1.0 or 0.0 |
-| `SmoothMode` | collects `smooth_size` values; on the next value outputs their mean (rounded to hundredths), drops that value and starts a new window seeded with the mean. 0 (1 with flip) always passes straight through, and clears a full window | ignored (no output) |
-| `RateMode` | adds the movement since the previous value to an internal level (capped at 1); every 150 ms of input it takes `rate_decay` off. At rest (<= 0, or >= 1 with flip) it resets and outputs 0 | ignored |
+| `SmoothMode` | time-weighted mean over the last `smooth_window` of ticks, rounded to hundredths. 0 (1 with flip) passes straight through and restarts the average | ignored (no output) |
+| `RateMode` | adds the movement since the previous tick to an internal level (capped at 1), then decays it by `rate_decay` per 150 ms of `dt`, every tick. At rest (<= 0, or >= 1 with flip) it resets and outputs 0 | ignored |
 | `ConstantMode` | `constant_level` if >= 0.5, else 0 | `constant_level` if true, else 0 |
 
-They are meant to run once per incoming value. `RateMode` uses its own wall-clock timer, not `dt`. The tests pin each mode's behaviour, quirks included, so a change in feel shows up as a failing test.
+Raw and Constant behave exactly as the app's original modes. Smooth and Rate were redefined in time when the graph moved to a fixed tick: they used to work per OSC message (average the last N messages; decay only when a message arrived), which made them depend on VRChat's send rate and let Rate stick at its last level. The tests pin each mode's behaviour.
 
 ### `OutputLevels` (`modules::levels`)
 
@@ -158,9 +195,10 @@ An `Output` for one Buttplug device. Each port maps to an `Actuator`:
 | Workspace split, core types and traits | Done |
 | Toy commands through `ButtplugOutput` with one slot per motor | Done ([toy-command-path.md](toy-command-path.md)) |
 | OSC listener as an `Input` module, routing each message once, avatar change as an event | Done ([toy-command-path.md](toy-command-path.md#routing)) |
-| Smooth, Rate, Constant and level tweaks as `Processor` modules | Done ([toy-command-path.md](toy-command-path.md#the-pipeline)) |
+| Smooth, Rate, Constant and level tweaks as `Processor` modules | Done |
 | SPS/TPS as `Processor` modules | Waiting for the planned SPS/TPS rewrite; the current input processors stay in the app |
-| Each toy's graph generated from its existing config | Not started |
+| Each toy's graph generated from its existing config, ticked at a fixed rate | Done ([toy-command-path.md](toy-command-path.md#the-graph)) |
+| Output events (e.g. "pattern started on toy X") from `ButtplugOutput` | Not started |
 
 ## Tests
 
@@ -169,6 +207,6 @@ cd src-tauri
 cargo test -p vibecheck-core
 ```
 
-Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, and `OutputLevels`.
+Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `OutputLevels`, and the graph (dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, and rejecting bad wiring).
 
-The app's tests (`cargo test -p vibecheck`) cover the routing table and `parse_osc_message` end to end: modes loaded from config, one message driving several motors, Range and Idle after the mode, Smooth holding values back, the first matching parameter winning, disabled features, and Linear speed.
+The app's tests (`cargo test -p vibecheck`) cover the SPS/TPS routing table, `run_input_processors`, the graph runner task, and the generated toy graphs end to end: nothing before the first input, modes loaded from config, one parameter driving several motors, Range and Idle after the mode, the first matching parameter winning, disabled features, Linear speed, the f32 rounding, Smooth following over its window, Rate winding down after the input stops, and SPS/TPS output chains.

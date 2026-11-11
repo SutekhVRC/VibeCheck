@@ -3,4 +3,5 @@ pub mod osc_routing;
 pub mod toy_emitter_thread;
 pub mod toy_management_handler;
 pub mod toy_output;
-pub mod toy_pipeline;
+pub mod graph_runner;
+pub mod toy_graph;

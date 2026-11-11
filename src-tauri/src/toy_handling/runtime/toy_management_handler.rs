@@ -5,13 +5,16 @@
         + Send toy updates like (battery updates)
 
     While listening, each session runs on its own tokio runtime:
-    - OscInput (vibecheck-core) receives OSC, turns avatar changes into events
-      and taps every other message to the OSC router.
-    - The OSC router handles OSC API messages and sends each other message only
-      to the toy tasks that use its address.
+    - OscInput (vibecheck-core) receives OSC, writes parameter values to the
+      session's signal plane, turns avatar changes into events, and taps every
+      other message to the OSC router.
+    - The OSC router handles OSC API messages and sends SPS/TPS messages to the
+      toy tasks that use them.
     - The core event handler reacts to events (avatar change stops all toys).
-    - One task per toy processes its OSC messages and config changes, each on
-      its own channel, and feeds its emitter task.
+    - The graph runner ticks every toy's graph (built from its config) at a
+      fixed rate and fills each toy's command slots.
+    - One task per toy runs its SPS/TPS input processors and applies config
+      changes; its emitter task sends the toy's commands.
 */
 // Uses TME send and recv channel
 
@@ -35,12 +38,13 @@ use vibecheck_core::{
 use crate::{
     osc::OSCNetworking,
     toy_handling::{
-        osc_processor::parse_osc_message,
+        osc_processor::run_input_processors,
         runtime::{
+            graph_runner::{graph_runner, GraphControl},
             osc_routing::{core_event_handler, osc_router, OscRoutes},
             toy_emitter_thread::{toy_emitter_thread, EmitterThreadData, ToyEmitterThreadSignal},
-            toy_output::{buttplug_output, ToyCommandSink},
-            toy_pipeline::ToyPipeline,
+            toy_graph::{build_toy_graph, OSC_MODULE},
+            toy_output::{buttplug_output, toy_module_id},
         },
         toy_manager::ToyManager,
         toyops::VCToy,
@@ -84,24 +88,22 @@ fn update_toy(
     true
 }
 
-/// Toy listening routine: processes this toy's OSC messages and config
-/// changes until the device disconnects or the session ends.
+/// Toy listening routine: runs this toy's SPS/TPS input processors on its OSC
+/// messages and applies config changes, until the device disconnects or the
+/// session ends.
 async fn toy_task(
     async_rt: ToyRuntime,
     mut osc_rx: UnboundedReceiver<OscMessage>,
     mut control_rx: UnboundedReceiver<VCToy>,
     mut vc_toy: VCToy,
+    slots: CommandSlots,
+    signals: SignalPlane,
 ) {
     let dev = vc_toy.device_handle.clone();
+    let module = toy_module_id(&vc_toy);
 
     // Create in_signal channel for emitter thread
     let (emitter_thread_tx, emitter_thread_rx) = unbounded_channel::<ToyEmitterThreadSignal>();
-    // One latest-command slot per motor, drained by the emitter task
-    let slots = CommandSlots::new();
-    let command_sink = ToyCommandSink::new(&vc_toy, slots.clone());
-    // Mode processors and level tweaks for every feature, from the config
-    let mut pipeline = ToyPipeline::new(&vc_toy.parsed_toy_features);
-
     let tet_data = EmitterThreadData::new(
         emitter_thread_rx,
         slots,
@@ -121,19 +123,16 @@ async fn toy_task(
             biased;
             update = control_rx.recv() => match update {
                 Some(new_toy) => {
-                    if update_toy(&emitter_thread_tx, new_toy, &mut vc_toy) {
-                        // Fresh processors with the new settings (resets their state)
-                        pipeline = ToyPipeline::new(&vc_toy.parsed_toy_features);
-                    }
+                    update_toy(&emitter_thread_tx, new_toy, &mut vc_toy);
                 }
                 None => break,
             },
             msg = osc_rx.recv() => match msg {
-                Some(mut msg) => parse_osc_message(
-                    &command_sink,
+                Some(mut msg) => run_input_processors(
                     &mut msg,
                     &mut vc_toy.parsed_toy_features,
-                    &mut pipeline,
+                    &signals,
+                    &module,
                 ),
                 None => break,
             },
@@ -146,47 +145,102 @@ async fn toy_task(
     );
 }
 
+/// Everything one listening session shares.
+struct Session {
+    async_rt: ToyRuntime,
+    routes: OscRoutes,
+    signals: SignalPlane,
+    graphs: UnboundedSender<GraphControl>,
+}
+
+impl Session {
+    /// Creates the session runtime and starts the graph runner on it.
+    fn new() -> Self {
+        let async_rt: ToyRuntime = Arc::new(Mutex::new(Some(Runtime::new().unwrap())));
+        let signals = SignalPlane::new();
+        let (graphs, graphs_rx) = unbounded_channel();
+        async_rt
+            .lock()
+            .as_ref()
+            .unwrap()
+            .spawn(graph_runner(graphs_rx, signals.clone()));
+        Self {
+            async_rt,
+            routes: OscRoutes::default(),
+            signals,
+            graphs,
+        }
+    }
+
+    /// Builds the toy's graph from its config and hands it to the runner.
+    fn set_graph(&self, toy: &VCToy, slots: &CommandSlots) {
+        match build_toy_graph(&toy_module_id(toy), &toy.parsed_toy_features) {
+            Ok(graph) => {
+                let _ = self.graphs.send(GraphControl::Set {
+                    toy_id: toy.toy_id,
+                    graph,
+                    slots: slots.clone(),
+                });
+            }
+            Err(e) => logerr!("Couldn't build the graph for toy {}: {}", toy.toy_id, e),
+        }
+    }
+}
+
 struct RunningToy {
     handle: JoinHandle<()>,
     control: UnboundedSender<VCToy>,
+    slots: CommandSlots,
 }
 
-/// Registers the toy with the router and starts its task.
-fn start_toy(async_rt: &ToyRuntime, routes: &OscRoutes, toy: VCToy) -> RunningToy {
+/// Starts the toy's graph, registers it with the router and starts its task.
+fn start_toy(session: &Session, toy: VCToy) -> RunningToy {
     let (osc_tx, osc_rx) = unbounded_channel();
     let (control_tx, control_rx) = unbounded_channel();
+    // One latest-command slot per motor: filled by the graph, drained by the emitter
+    let slots = CommandSlots::new();
     let toy_id = toy.toy_id;
-    routes.insert(toy_id, osc_tx, &toy.parsed_toy_features);
 
-    let handle = async_rt.lock().as_ref().unwrap().spawn(toy_task(
-        async_rt.clone(),
+    session.set_graph(&toy, &slots);
+    session
+        .routes
+        .insert(toy_id, osc_tx, &toy.parsed_toy_features);
+
+    let handle = session.async_rt.lock().as_ref().unwrap().spawn(toy_task(
+        session.async_rt.clone(),
         osc_rx,
         control_rx,
         toy,
+        slots.clone(),
+        session.signals.clone(),
     ));
     info!("Toy: {} started listening..", toy_id);
 
     RunningToy {
         handle,
         control: control_tx,
+        slots,
     }
 }
 
 /// Starts OscInput, the OSC router and the core event handler for a session.
 fn start_osc(
-    async_rt: &ToyRuntime,
-    routes: &OscRoutes,
+    session: &Session,
     vc_config: &OSCNetworking,
     tme_send: &UnboundedSender<ToyManagementEvent>,
     app_handle: &AppHandle,
 ) {
     let (tap_tx, tap_rx) = unbounded_channel();
     let (events, event_rx) = EventPlane::new();
-    let ctx = InputCtx::new(ModuleInstanceId::new("osc"), SignalPlane::new(), events);
+    let ctx = InputCtx::new(
+        ModuleInstanceId::new(OSC_MODULE),
+        session.signals.clone(),
+        events,
+    );
     let bind = SocketAddr::V4(vc_config.bind);
     let tme_send = tme_send.clone();
 
-    let rt_lock = async_rt.lock();
+    let rt_lock = session.async_rt.lock();
     let rt = rt_lock.as_ref().unwrap();
 
     info!("Spawning OSC listener..");
@@ -207,17 +261,21 @@ fn start_osc(
             }
         }
     });
-    rt.spawn(osc_router(tap_rx, routes.clone(), app_handle.clone()));
-    rt.spawn(core_event_handler(event_rx, app_handle.clone()));
+    rt.spawn(osc_router(
+        tap_rx,
+        session.routes.clone(),
+        app_handle.clone(),
+    ));
+    rt.spawn(core_event_handler(
+        event_rx,
+        session.signals.clone(),
+        app_handle.clone(),
+    ));
 }
 
 /// Stops every toy task and the session's runtime (which ends OscInput, the
-/// router and the event handler, and frees the OSC port).
-async fn stop_listening(
-    running_toys: &mut HashMap<u32, RunningToy>,
-    routes: &OscRoutes,
-    async_rt: &ToyRuntime,
-) {
+/// router, the event handler and the graph runner, and frees the OSC port).
+async fn stop_listening(running_toys: &mut HashMap<u32, RunningToy>, session: &Session) {
     for (id, toy) in running_toys.drain() {
         toy.handle.abort();
         match toy.handle.await {
@@ -226,8 +284,13 @@ async fn stop_listening(
         }
         info!("[TOY ID: {}] Stopped listening. (TMSIG)", id);
     }
-    routes.clear();
-    async_rt.lock().take().unwrap().shutdown_background();
+    session.routes.clear();
+    session
+        .async_rt
+        .lock()
+        .take()
+        .unwrap()
+        .shutdown_background();
 }
 
 pub async fn toy_management_handler(
@@ -280,20 +343,19 @@ pub async fn toy_management_handler(
             continue;
         }
 
-        let toy_async_rt: ToyRuntime = Arc::new(Mutex::new(Some(Runtime::new().unwrap())));
+        let session = Session::new();
         info!("Started listening!");
         // Recv events (listening)
 
-        let routes = OscRoutes::default();
         let mut running_toys: HashMap<u32, RunningToy> = HashMap::new();
 
         // Create toy tasks
         for toy in core_toy_manager.online_toys.values() {
-            running_toys.insert(toy.toy_id, start_toy(&toy_async_rt, &routes, toy.clone()));
+            running_toys.insert(toy.toy_id, start_toy(&session, toy.clone()));
         }
 
         // Create OSC listener
-        start_osc(&toy_async_rt, &routes, &vc_config, &tme_send, &app_handle);
+        start_osc(&session, &vc_config, &tme_send, &app_handle);
 
         loop {
             // Recv event (listening)
@@ -304,11 +366,12 @@ pub async fn toy_management_handler(
                 ToyManagementEvent::Tu(tu) => match tu {
                     ToyUpdate::AddToy(toy) => {
                         core_toy_manager.online_toys.insert(toy.toy_id, toy.clone());
-                        running_toys.insert(toy.toy_id, start_toy(&toy_async_rt, &routes, toy));
+                        running_toys.insert(toy.toy_id, start_toy(&session, toy));
                     }
                     ToyUpdate::RemoveToy(id) => {
                         if let Some(toy) = running_toys.remove(&id) {
-                            routes.remove(id);
+                            session.routes.remove(id);
+                            let _ = session.graphs.send(GraphControl::Remove(id));
                             toy.handle.abort();
                             match toy.handle.await {
                                 Ok(()) => info!("Toy {} thread finished", id),
@@ -322,9 +385,11 @@ pub async fn toy_management_handler(
                     }
                     ToyUpdate::AlterToy(toy) => {
                         debug!("Got ToyUpdate::AlterToy signal!");
-                        routes.update(toy.toy_id, &toy.parsed_toy_features);
+                        session.routes.update(toy.toy_id, &toy.parsed_toy_features);
                         match running_toys.get(&toy.toy_id) {
                             Some(running) => {
+                                // Fresh graph with the new settings (resets processor state)
+                                session.set_graph(&toy, &running.slots);
                                 if running.control.send(toy.clone()).is_err() {
                                     logerr!(
                                         "Failed to send UpdateToy: toy {} task has stopped",
@@ -344,14 +409,14 @@ pub async fn toy_management_handler(
                         // Already listening
                     }
                     TmSig::StopListening => {
-                        stop_listening(&mut running_toys, &routes, &toy_async_rt).await;
+                        stop_listening(&mut running_toys, &session).await;
                         listening = false;
                         info!("Toys: {}", core_toy_manager.online_toys.len());
                         break; //Stop Listening
                     }
                     TmSig::TMHReset => {
                         info!("TMHReset");
-                        stop_listening(&mut running_toys, &routes, &toy_async_rt).await;
+                        stop_listening(&mut running_toys, &session).await;
                         listening = false;
                         info!("Toys: {}", core_toy_manager.online_toys.len());
                         break; //Stop Listening

@@ -1,38 +1,39 @@
 /*
- * Routes OSC messages from OscInput to the toy tasks that use them.
+ * Routes OSC messages from OscInput to the toy tasks that need them.
  *
- * Each OSC message is looked at once here instead of by every toy task. A toy
- * gets a message if one of its features lists the address as a parameter, or
- * if one of its features has an input processor (SPS/TPS) that claims the
- * address. This is deliberately a superset: the toy task still does the exact
- * matching (feature enabled, input filters), as before.
+ * Plain parameters don't need routing: OscInput writes them to the signal
+ * plane and each toy's graph reads them from there. Toy tasks only need the
+ * messages their SPS/TPS input processors handle, which are message-driven.
+ * A toy gets a message if one of its features has an input processor that
+ * claims the address. This is deliberately a superset: the toy task still
+ * checks the feature is enabled and applies input filters.
  *
  * VibeCheck OSC API messages are handled here and never reach toys.
  */
 
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 use log::{debug, info, warn};
 use parking_lot::RwLock;
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use vibecheck_core::{modules::osc::rosc::OscMessage, EventKind, EventReceiver};
+use vibecheck_core::{
+    modules::osc::rosc::OscMessage, EventKind, EventReceiver, ModuleInstanceId, SignalPlane,
+};
 
 use crate::{
     osc_api::handle_api_message,
-    toy_handling::{input_processor::InputProcessor, toyops::VCToyFeatures},
+    toy_handling::{
+        input_processor::InputProcessor, runtime::toy_graph::OSC_MODULE, toyops::VCToyFeatures,
+    },
     vcore::state::VCStateMutex,
 };
 
 const API_PREFIX: &str = "/avatar/parameters/vibecheck/api/";
 
-/// Which OSC addresses a toy cares about.
+/// Which OSC addresses a toy's input processors (SPS/TPS) care about.
 #[derive(Default)]
 pub struct ToyInterest {
-    params: HashSet<String>,
     processors: Vec<Box<dyn InputProcessor>>,
 }
 
@@ -42,9 +43,6 @@ impl ToyInterest {
     pub fn from_features(features: &VCToyFeatures) -> Self {
         let mut interest = Self::default();
         for feature in &features.features {
-            for param in &feature.osc_parameters {
-                interest.params.insert(param.parameter.clone());
-            }
             if let Some(processor) = &feature.penetration_system.pen_system {
                 interest.processors.push(processor.clone());
             }
@@ -53,7 +51,7 @@ impl ToyInterest {
     }
 
     pub fn wants(&self, addr: &str) -> bool {
-        self.params.contains(addr) || self.processors.iter().any(|p| p.is_parameter(addr))
+        self.processors.iter().any(|p| p.is_parameter(addr))
     }
 }
 
@@ -124,11 +122,18 @@ pub async fn osc_router(
 }
 
 /// Reacts to events from the event plane.
-pub async fn core_event_handler(mut events: EventReceiver, app_handle: AppHandle) {
+pub async fn core_event_handler(
+    mut events: EventReceiver,
+    signals: SignalPlane,
+    app_handle: AppHandle,
+) {
     while let Some(event) = events.recv().await {
         debug!("Core event: {:?}", event);
         if event.kind == EventKind::AvatarChange {
             info!("Avatar Changed: Halting toy actions");
+            // Forget the old avatar's parameter values, so a graph rebuilt
+            // later doesn't replay them
+            signals.clear_module(&ModuleInstanceId::new(OSC_MODULE));
             stop_all_devices(&app_handle).await;
         }
     }
@@ -191,21 +196,21 @@ mod tests {
     }
 
     #[test]
-    fn routes_only_to_interested_toys() {
+    fn routes_input_processor_messages_only_to_toys_that_use_them() {
         let routes = OscRoutes::default();
         let (boop_tx, mut boop_rx) = unbounded_channel();
         let (sps_tx, mut sps_rx) = unbounded_channel();
         routes.insert(1, boop_tx, &features(&["/avatar/parameters/Boop"], false));
         routes.insert(2, sps_tx, &features(&[], true));
 
-        assert_eq!(routes.route(&msg("/avatar/parameters/Boop")), 1);
+        // Plain parameters reach graphs through the signal plane, not toy tasks
+        assert_eq!(routes.route(&msg("/avatar/parameters/Boop")), 0);
         assert_eq!(
             routes.route(&msg("/avatar/parameters/OGB/Orf/Mouth/PenSelf")),
             1
         );
         assert_eq!(routes.route(&msg("/avatar/parameters/Unused")), 0);
 
-        assert_eq!(boop_rx.try_recv().unwrap().addr, "/avatar/parameters/Boop");
         assert!(boop_rx.try_recv().is_err());
         assert!(sps_rx.try_recv().unwrap().addr.contains("/OGB/"));
         assert!(sps_rx.try_recv().is_err());
@@ -215,14 +220,14 @@ mod tests {
     fn follows_feature_changes_and_removal() {
         let routes = OscRoutes::default();
         let (tx, mut rx) = unbounded_channel();
-        routes.insert(1, tx, &features(&["/avatar/parameters/Old"], false));
+        routes.insert(1, tx, &features(&[], false));
+        assert_eq!(routes.route(&msg("/avatar/parameters/OGB/x")), 0);
 
-        routes.update(1, &features(&["/avatar/parameters/New"], false));
-        assert_eq!(routes.route(&msg("/avatar/parameters/Old")), 0);
-        assert_eq!(routes.route(&msg("/avatar/parameters/New")), 1);
-        assert_eq!(rx.try_recv().unwrap().addr, "/avatar/parameters/New");
+        routes.update(1, &features(&[], true));
+        assert_eq!(routes.route(&msg("/avatar/parameters/OGB/x")), 1);
+        assert_eq!(rx.try_recv().unwrap().addr, "/avatar/parameters/OGB/x");
 
         routes.remove(1);
-        assert_eq!(routes.route(&msg("/avatar/parameters/New")), 0);
+        assert_eq!(routes.route(&msg("/avatar/parameters/OGB/x")), 0);
     }
 }

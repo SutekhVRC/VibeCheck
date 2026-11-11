@@ -1,17 +1,15 @@
 /*
- * Bridge between the existing per-toy processing and the vibecheck-core output side.
+ * Naming and the Buttplug output for toys.
  *
- * Levels arrive already processed by the toy's pipeline (mode, then idle,
- * Range and Flip Input). They go through the safety layer into one
- * latest-command slot per motor. The toy's
- * emitter task drains the slots at the toy's update rate and hands the
- * commands to ButtplugOutput.
+ * Each toy's graph (toy_graph.rs) sends commands for its motors through the
+ * safety layer into the toy's command slots. The toy's emitter task drains
+ * the slots at the toy's update rate and hands them to ButtplugOutput.
  */
 
 use buttplug::core::message::ActuatorType;
 use vibecheck_core::{
     modules::buttplug::{Actuator, ButtplugOutput},
-    CommandSlots, ModuleInstanceId, PortId, SafetyLayer,
+    ModuleInstanceId,
 };
 
 use crate::toy_handling::toyops::{VCFeatureType, VCToy};
@@ -58,53 +56,4 @@ pub fn buttplug_output(toy: &VCToy) -> ButtplugOutput {
             )
         }),
     )
-}
-
-/// Where the toy task puts processed levels.
-pub struct ToyCommandSink {
-    module: ModuleInstanceId,
-    safety: SafetyLayer,
-    slots: CommandSlots,
-}
-
-impl ToyCommandSink {
-    pub fn new(toy: &VCToy, slots: CommandSlots) -> Self {
-        Self {
-            module: toy_module_id(toy),
-            safety: SafetyLayer::default(),
-            slots,
-        }
-    }
-
-    /// A sink for an explicit module id, for tests where there's no device.
-    #[cfg(test)]
-    pub fn for_module(module: ModuleInstanceId, slots: CommandSlots) -> Self {
-        Self {
-            module,
-            safety: SafetyLayer::default(),
-            slots,
-        }
-    }
-
-    /// Queue a fully processed level for one feature. Replaces any command
-    /// for the same feature that hasn't been sent yet; other features are
-    /// unaffected. `linear_speed_ms` is only used by Linear features.
-    pub fn send(
-        &self,
-        feature_type: VCFeatureType,
-        feature_index: u32,
-        linear_speed_ms: u32,
-        level: f64,
-    ) {
-        let duration_ms = match feature_type {
-            VCFeatureType::Linear => Some(linear_speed_ms),
-            _ => None,
-        };
-        let port = PortId::new(
-            self.module.clone(),
-            feature_port_name(feature_type, feature_index),
-        );
-        self.slots
-            .write(self.safety.clamp(port, level, duration_ms));
-    }
 }

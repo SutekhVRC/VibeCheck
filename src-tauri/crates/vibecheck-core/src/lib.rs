@@ -21,6 +21,7 @@
 pub mod address;
 pub mod error;
 pub mod event;
+pub mod graph;
 pub mod module;
 pub mod modules;
 pub mod safety;
@@ -30,6 +31,7 @@ pub mod slots;
 pub use address::{ModuleInstanceId, PortId};
 pub use error::{Error, Result};
 pub use event::{Event, EventId, EventKind, EventPlane, EventReceiver, Value};
+pub use graph::{Graph, GraphBuilder};
 pub use module::{
     process_one, Input, InputCtx, Output, PortDirection, PortKind, PortSpec, Processor,
 };

@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::address::PortId;
+use crate::address::{ModuleInstanceId, PortId};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Signal {
@@ -60,12 +60,17 @@ impl SignalPlane {
     pub fn clear(&self, port: &PortId) {
         self.slots.write().remove(port);
     }
+
+    /// Forget every value written to `module`'s ports (e.g. all OSC parameters
+    /// when the avatar changes).
+    pub fn clear_module(&self, module: &ModuleInstanceId) {
+        self.slots.write().retain(|port, _| port.module != *module);
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::address::ModuleInstanceId;
 
     #[test]
     fn latest_value_wins() {
@@ -79,6 +84,22 @@ mod tests {
 
         plane.clear(&port);
         assert_eq!(plane.read(&port), None);
+    }
+
+    #[test]
+    fn clear_module_only_clears_that_module() {
+        let plane = SignalPlane::new();
+        let osc = PortId::new(ModuleInstanceId::new("osc"), "Boop");
+        let toy = PortId::new(
+            ModuleInstanceId::new("toy:x:0"),
+            "Vibrator_0/input_processor",
+        );
+        plane.write(&osc, Signal::Float(0.5));
+        plane.write(&toy, Signal::Float(0.5));
+
+        plane.clear_module(&ModuleInstanceId::new("osc"));
+        assert_eq!(plane.read(&osc), None);
+        assert_eq!(plane.read(&toy), Some(Signal::Float(0.5)));
     }
 
     #[test]

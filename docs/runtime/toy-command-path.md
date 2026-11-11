@@ -6,22 +6,21 @@ How an avatar parameter from VRChat ends up as a Bluetooth command, while VibeCh
 flowchart LR
   VRC[["VRChat"]] -- "UDP OSC" --> IN["OscInput<br/>(vibecheck-core)"]
 
-  IN -- "/avatar/change<br/>AvatarChange event" --> EV["core_event_handler<br/>runtime/osc_routing.rs<br/>stops all toys"]
+  IN -- "parameter values<br/>(latest wins)" --> SIG[("Signal plane")]
+  IN -- "/avatar/change<br/>AvatarChange event" --> EV["core_event_handler<br/>runtime/osc_routing.rs<br/>clears OSC values, stops all toys"]
   IN -- "every other message<br/>(tap, in order)" --> RT["osc_router<br/>runtime/osc_routing.rs"]
   RT -- "vibecheck/api/..." --> API["handle_api_message<br/>osc_api/mod.rs"]
-  RT -- "only to toys that use<br/>the address" --> TT
-  CFG["alter_toy<br/>(toy management handler)"] -- "control channel<br/>(applied first)" --> TT
+  RT -- "SPS/TPS messages, only to<br/>toys that use them" --> TT["Toy task (one per toy)<br/>runtime/toy_management_handler.rs<br/>runs SPS/TPS input processors"]
+  TT -- "SPS/TPS output" --> SIG
 
-  subgraph TT["Toy task (one per connected toy)<br/>runtime/toy_management_handler.rs"]
+  subgraph GR["Graph runner, 100 Hz<br/>runtime/graph_runner.rs"]
     direction TB
-    PARSE["parse_osc_message<br/>osc_processor.rs<br/>matching · SPS/TPS"]
-    MODE["mode processor<br/>Raw/Smooth/Rate/Constant<br/>(vibecheck-core modes)"]
-    LT["OutputLevels<br/>Idle · Range · Flip Input<br/>(vibecheck-core levels)"]
-    SINK["ToyCommandSink::send<br/>runtime/toy_output.rs"]
-    SAFE["SafetyLayer::clamp<br/>(vibecheck-core)"]
-    PARSE --> MODE --> LT --> SINK --> SAFE
+    G["each toy's Graph<br/>(built from config by toy_graph.rs):<br/>round → mode → levels → motor"]
+    SAFE["SafetyLayer::clamp"]
+    G -- "only when a motor's<br/>value changes" --> SAFE
   end
 
+  SIG --> G
   SAFE -- "ClampedCmd" --> SLOTS[("CommandSlots<br/>one latest command<br/>per motor")]
 
   subgraph EM["Emitter task (one per toy)<br/>runtime/toy_emitter_thread.rs"]
@@ -35,87 +34,103 @@ flowchart LR
 
 ## Step by step
 
-1. **`OscInput`** (`vibecheck-core/src/modules/osc.rs`) receives OSC from VRChat and unpacks bundles. `/avatar/change` becomes an `AvatarChange` event. Every other message writes its value to the signal plane and is passed, in order, to the OSC router through the input's *tap*.
-2. **OSC router** (`osc_routing.rs`) handles VibeCheck OSC API messages (`/avatar/parameters/vibecheck/api/...`) itself and sends every other message only to the toy tasks that use its address (see [Routing](#routing)).
-3. **Toy task** (`toy_management_handler.rs`) runs `parse_osc_message` (`osc_processor.rs`) for each message, using the toy's [pipeline](#the-pipeline):
-   1. features whose input processor (SPS/TPS) accepts the address run it, then the pipeline's mode processor for the input processor's output;
-   2. then features with a parameter for this address run that parameter's mode processor (only the first matching parameter of a feature counts);
-   3. each level a mode produces goes through the feature's `OutputLevels`: exactly 0 becomes Idle Speed, anything else is clamped to the Range, then Flip Input is applied. A mode can also hold a value back (Smooth while it collects), in which case nothing is sent.
-4. **`ToyCommandSink::send`** (`toy_output.rs`) takes the finished level and:
-   1. for Linear features, attaches Linear Speed as the command's duration;
-   2. passes it through `SafetyLayer::clamp`, which returns a `ClampedCmd`;
-   3. writes it into the toy's `CommandSlots`.
-5. **Emitter task** (`toy_emitter_thread.rs`) wakes at the toy's Update Rate, takes every command that changed since the last tick, and hands them to `ButtplugOutput::apply`, which sends one Buttplug command per motor.
+1. **`OscInput`** (`vibecheck-core/src/modules/osc.rs`) receives OSC from VRChat and unpacks bundles. Every parameter value is written to the session's **signal plane**, which keeps only the latest value per address. `/avatar/change` becomes an `AvatarChange` event. Every other message is also passed, in order, to the OSC router through the input's *tap*.
+2. **OSC router** (`osc_routing.rs`) handles VibeCheck OSC API messages (`/avatar/parameters/vibecheck/api/...`) itself, and sends SPS/TPS messages to the toy tasks whose input processors use them (see [Routing](#routing)).
+3. **Toy task** (`toy_management_handler.rs`) runs its features' SPS/TPS input processors on those messages (`run_input_processors` in `osc_processor.rs`) and writes each feature's result to the signal plane at `toy:…/<Motor>/input_processor`.
+4. **Graph runner** (`graph_runner.rs`) ticks every toy's [graph](#the-graph) 100 times a second. Each tick reads the latest values from the signal plane, runs the chains, and for every motor whose value changed, passes it through `SafetyLayer::clamp` into the toy's `CommandSlots`.
+5. **Emitter task** (`toy_emitter_thread.rs`) wakes at the toy's Update Rate, takes every command that changed since its last run, and hands them to `ButtplugOutput::apply`, which sends one Buttplug command per motor.
 
-## The pipeline
+## The graph
 
-Each toy task builds a `ToyPipeline` (`runtime/toy_pipeline.rs`) from the toy's config. For every feature it holds:
+Each toy's `Graph` is built from its config by `build_toy_graph` (`runtime/toy_graph.rs`). For every **enabled** feature (motor) it adds one chain per source:
 
-| Part | Built from | vibecheck-core type |
-|---|---|---|
-| One mode processor per OSC parameter | the parameter's mode | `modules::modes` (`RawMode`, `SmoothMode`, `RateMode`, `ConstantMode`) |
-| One mode processor for the input processor's output | the feature's SPS/TPS mode | same |
-| Output levels | Idle Speed, Range, Flip Input | `modules::levels::OutputLevels` |
+| Source | Chain |
+|---|---|
+| Each OSC parameter (`osc/<address>`) | round → mode → levels → motor |
+| SPS/TPS output, if the feature has an input processor (`toy:…/<Motor>/input_processor`) | mode → levels → motor |
 
-Mode settings come from the feature: Smooth Level, Rate Level, Constant Level and Flip Input.
+- **round** (`OscRounding`): rounds floats to hundredths as `f32`, exactly as VibeCheck always has (see [Values](#values)).
+- **mode**: the parameter's (or SPS/TPS output's) processing mode, from `vibecheck-core` `modules::modes`, built with the feature's Smooth Level, Rate Level, Constant Level and Flip Input.
+- **levels**: `OutputLevels` from `modules::levels`: exactly 0 becomes Idle Speed, anything else is clamped to the Range, then Flip Input is applied.
+- **motor**: a sink to the motor's port, with Linear Speed as the duration for Linear features.
 
-- The pipeline is built when the toy task starts, so saved modes apply straight away. Before, parameter modes loaded from the config file acted as Raw until a setting was changed in the app.
-- It is rebuilt on every config change (`alter_toy`), which resets processor state (Smooth's window, Rate's level), as before.
-- Processors run **once per message**, not on a timer: Smooth averages the last N messages and Rate measures movement between consecutive messages, as they always have.
-- The SPS/TPS input processors themselves still live on the feature config (`penetration_system.pen_system`); only their output mode is in the pipeline.
+Rules:
 
-The Test button's `clamp_and_flip` (`toy_command_processor.rs`) uses the same `OutputLevels`.
+- Only the **first** parameter with a given address counts within a feature.
+- Disabled features get no chains.
+- SPS/TPS chains come before parameter chains, so if both change in the same tick the parameter's value is the one sent.
+- Nothing is sent before a source has a value, so Idle Speed only starts after the first input.
+- A chain only sends when its result **changes**. A steady value costs nothing; time-based modes (Smooth catching up, Rate winding down) send while they move.
+
+The graph is built when the toy starts, so saved modes apply straight away, and **rebuilt on every config change**, which resets processor state (Smooth's window, Rate's level). A rebuilt graph reads the current values straight away, so a new Range or mode applies immediately rather than waiting for the next OSC message.
+
+### Fixed tick
+
+Processors run on the graph's 100 Hz tick, reading the latest value, rather than once per OSC message. This keeps behaviour independent of how often VRChat sends, and lets values change on their own over time:
+
+| Mode | On the fixed tick |
+|---|---|
+| Raw, Constant | Unchanged |
+| Smooth | Averages over a **time window** of Smooth Level × 50 ms (Level 2 = 100 ms). It used to average the last N messages, so it depended on VRChat's send rate. 0 still passes straight through and restarts the average |
+| Rate | Movement since the last tick raises the level; it decays by **Rate Level per 150 ms, every tick**. It used to decay only when a new message arrived, so it could stay stuck at its last level when the input stopped moving |
+
+The 50 ms per Smooth Level step is a starting point; it may need tuning by feel.
+
+If a value changes more than once within one 10 ms tick, only the last one is seen.
+
+### Several sources on one motor
+
+When a motor has several chains (several parameters, or SPS/TPS plus parameters), the chain whose value changed most recently decides the motor's level, much like "the latest message wins" before. One difference: a Rate chain winding down keeps changing, so it keeps sending until it reaches rest, even if another chain changed more recently.
 
 ## Routing
 
-The router keeps a table of which addresses each toy uses (`OscRoutes`, built from `ToyInterest`). A toy gets a message if:
+Plain parameters don't need routing: `OscInput` writes them to the signal plane and each toy's graph reads them from there.
 
-- one of its features lists the address as a parameter, or
-- one of its features has an input processor that claims the address (`/avatar/parameters/OGB/...` for SPS, `/avatar/parameters/TPS_Internal/...` for TPS).
+The router (`OscRoutes`, built from `ToyInterest`) only decides which toy tasks get **SPS/TPS** messages: a toy gets a message if one of its features has an input processor that claims the address (`/avatar/parameters/OGB/...` for SPS, `/avatar/parameters/TPS_Internal/...` for TPS, via `InputProcessor::is_parameter`). It ignores whether the feature is enabled and ignores input filters; the toy task checks those, so turning a feature on or editing a filter takes effect immediately.
 
-This is deliberately a little generous: it ignores whether the feature is enabled and ignores input filters. The toy task still does the exact matching, so turning a feature on or editing a filter takes effect immediately. Messages no toy uses go nowhere.
-
-The table is updated by the toy management handler when a toy is added, removed or altered.
-
-Each toy task has **its own unbounded channel** for OSC messages, so nothing is dropped if a toy falls behind. Previously every toy shared one broadcast channel that dropped messages (config changes included) for any toy that lagged.
+The table is updated by the toy management handler when a toy is added, removed or altered. Each toy task has its own unbounded channel, so nothing is dropped if a toy falls behind.
 
 ## Avatar change
 
-`OscInput` publishes an `AvatarChange` event (with the avatar id) on the event plane. `core_event_handler` (`osc_routing.rs`) reacts by stopping every device. It builds the Buttplug stop command while holding the global state lock, releases the lock, and only then waits for Buttplug, so the rest of the app isn't blocked. A failed stop is logged.
+`OscInput` publishes an `AvatarChange` event (with the avatar id) on the event plane. `core_event_handler` (`osc_routing.rs`) then:
 
-The stop runs alongside OSC routing rather than pausing it, so a parameter arriving at the same moment as an avatar change can land just before or just after the stop.
+1. clears every OSC value from the signal plane, so a graph rebuilt later doesn't replay the old avatar's parameters;
+2. stops every device. It builds the Buttplug stop command while holding the global state lock, releases the lock, and only then waits for Buttplug. A failed stop is logged.
+
+The stop runs alongside everything else, so a parameter arriving at the same moment as an avatar change can land just before or just after it.
 
 ## OSC API
 
-`/avatar/parameters/vibecheck/api/...` messages go to `handle_api_message` (`osc_api/mod.rs`). They never reach toys. The router runs the handler with `block_in_place`, because it locks the global state and may save config, so API messages are still handled in arrival order without stalling the async workers.
+`/avatar/parameters/vibecheck/api/...` messages go to `handle_api_message` (`osc_api/mod.rs`). They never reach toys. The router runs the handler with `block_in_place`, because it locks the global state and may save config, so API messages are handled in arrival order without stalling the async workers.
 
 `/avatar/parameters/vibecheck/state` (turn on) is not on this path: it's handled by the listener that runs while VibeCheck is **off** (`vc_disabled_osc_command_listen` in `osc/logic.rs`).
 
 ## Session lifetime
 
-Turning VibeCheck on starts a tokio runtime for the session. On it run `OscInput`, the router, the event handler, and one task plus one emitter per toy. Turning off (or a reset) aborts the toy tasks, clears the routes and shuts the runtime down, which closes the OSC socket and frees the port for the "off" listener.
+Turning VibeCheck on creates a `Session` (`toy_management_handler.rs`): a tokio runtime, a signal plane, the OSC routes and the graph runner. On it run `OscInput`, the router, the event handler, the graph runner, and one task plus one emitter per toy. Turning off (or a reset) aborts the toy tasks, clears the routes and shuts the runtime down, which closes the OSC socket and frees the port for the "off" listener.
 
 If the port can't be bound, `OscInput::bind` fails, the error is logged, and `TmSig::BindError` is sent.
 
 ## One slot per motor
 
-`CommandSlots` keeps **one latest command per motor**. Within one tick:
+`CommandSlots` keeps **one latest command per motor**. Between two emitter runs:
 
 - Two commands for the **same** motor: only the newest is sent.
 - Commands for **different** motors on the same toy: all of them are sent.
 
-This replaced a single `watch` channel per toy, which held one value for the whole toy. When one parameter drove several motors, each write overwrote the previous one before the emitter ticked, so only the last motor was ever commanded.
-
-Writing the same value twice still counts as a change, so it is sent again, as before.
+This replaced a single `watch` channel per toy, which held one value for the whole toy, so when one parameter drove several motors only the last was ever commanded.
 
 ## Names
 
-Commands are addressed with stable names rather than Buttplug device indexes, which change between sessions.
+Commands and signals are addressed with stable names rather than Buttplug device indexes, which change between sessions.
 
 | Thing | Format | Example | Made by |
 |---|---|---|---|
 | Toy (module instance) | `toy:{name}:{sub_id}` | `toy:lovense_edge:0` | `toy_module_id` |
 | Motor (port) | `{FeatureType}_{feature_index}` | `Vibrator_1`, `Linear_0` | `feature_port_name` |
+| OSC parameter value | `osc/<address>` | `osc//avatar/parameters/Boop` | `OscInput` |
+| SPS/TPS output | `toy:…/<Motor>/input_processor` | `toy:lovense_edge:0/Vibrator_1/input_processor` | `input_processor_port` |
+| Graph nodes | `toy:…/<Motor>/param<i>/{round,mode,levels}`, `toy:…/<Motor>/input_processor/{mode,levels}` | `toy:lovense_edge:0/Vibrator_1/param0/mode` | `build_toy_graph` |
 
 - The toy name is lowercase with spaces turned into underscores, the same as the OSC battery address.
 - Scalar features (vibrate, constrict, oscillate, inflate, position, scalar rotate) share one index space; rotators and linears each have their own. So type plus index is unique within a toy.
@@ -137,17 +152,18 @@ The mapping lives in `actuator_for` (`toy_output.rs`).
 
 ## Config changes and update rate
 
-- `alter_toy` from the frontend reaches the toy management handler, which updates the toy's routes and sends the new config down that toy's **control channel**. The toy task always checks the control channel first, so a config change is applied before any OSC already queued behind it. It then rebuilds the toy's [pipeline](#the-pipeline), so the next level it processes uses the new settings.
+- `alter_toy` from the frontend reaches the toy management handler, which builds a fresh graph from the new config and hands it to the runner, updates the toy's routes, and sends the new config down the toy task's **control channel** (for its SPS/TPS settings). The toy task checks the control channel before any OSC queued behind it.
 - If the Update Rate changed, the toy task sends `ToyEmitterThreadSignal::UpdateRate` to the emitter.
-- When the toy disconnects or VibeCheck turns off, the toy task sends `StopExecution` and the emitter exits.
+- When a toy is removed, its graph is removed from the runner. When the toy disconnects or VibeCheck turns off, the toy task sends `StopExecution` and the emitter exits.
 
 ## Errors
 
-`ButtplugOutput::apply` tries every command even if one fails, and returns the first error. The emitter logs it (`Send to device error: ...`).
+- `ButtplugOutput::apply` tries every command even if one fails, and returns the first error. The emitter logs it (`Send to device error: ...`).
+- If a toy's graph can't be built (a wiring bug), the error is logged and that toy gets no new graph.
 
 ## Not on this path
 
-- **The Test button** (`simulate_device_feature` in `vcore/ipc/call_plane.rs`) calls `command_toy` (`toy_command_processor.rs`) directly. It skips the slots and the safety layer.
+- **The Test button** (`simulate_device_feature` in `vcore/ipc/call_plane.rs`) calls `command_toy` (`toy_command_processor.rs`) directly, using the same `OutputLevels` rules. It skips the graph, the slots and the safety layer.
 
 ## Testing this path
 
@@ -157,23 +173,24 @@ The mapping lives in `actuator_for` (`toy_output.rs`).
 |---|---|---|
 | A parameter reaches the toy | `cargo run -p osc-tool -- send Boop 0.5` | The motor runs at 50%, or the nearest end of Range if 50% is outside it |
 | Idle Speed | `send Boop 0.5`, then `send Boop 0` | The motor drops to Idle Speed, not off |
-| Range and Smooth | `cargo run -p osc-tool -- sweep Boop 0 1 --seconds 3` | A steady ramp, capped at the top of Range |
+| Range and Smooth | `cargo run -p osc-tool -- sweep Boop 0 1 --seconds 3` | A steady ramp, capped at the top of Range; with Smooth, slightly behind the input |
 | Rate mode | `cargo run -p osc-tool -- sweep Boop 0 1 --seconds 0.3 --back` | A burst that winds down after the stroke |
+| Rate doesn't stick | Rate mode, then `send Boop 0.6` once and wait | A burst that winds down to Idle Speed on its own |
 | Constant mode | `send Boop true`, then `send Boop false` | Constant Level, then Idle Speed (off if Idle Speed is 0) |
-| Saved modes after a restart | Set a parameter to Constant, restart VibeCheck, then `send Boop true` without touching any setting | Constant Level straight away (before, it acted as Raw until a setting was changed) |
+| Saved modes after a restart | Set a parameter to Constant, restart VibeCheck, then `send Boop true` without touching any setting | Constant Level straight away |
 | One slot per motor | Map one parameter to two motors on one toy, then `sweep` it | Both motors follow the ramp |
-| Avatar change stops toys | `send Boop 0.5`, then `cargo run -p osc-tool -- send /avatar/change s:avtr_test` | The toy stops |
+| Avatar change stops toys | `send Boop 0.5`, then `cargo run -p osc-tool -- send /avatar/change s:avtr_test` | The toy stops, and changing a setting afterwards doesn't start it again |
 | OSC API anatomy toggle | `cargo run -p osc-tool -- send vibecheck/api/anatomy/Vagina/enabled false` | Toys tagged Vagina are disabled (and the UI shows it) |
-| Config changes while busy | Run a long `sweep`, change Range in the app mid-sweep | The new Range applies straight away |
+| Config changes apply at once | `send Boop 0.8`, then lower the top of Range in the app | The motor drops to the new maximum straight away |
 
 If the toy doesn't react, `osc-tool listen` (with VibeCheck closed) shows whether VRChat or the tool is reaching the port at all.
 
 ## Values
 
-Levels are `f64` from the processors through to Buttplug, matching Buttplug's own type, so the core adds no conversions of its own.
+Levels are `f64` from the processors through to Buttplug, matching Buttplug's own type.
 
-OSC floats arrive as `f32`. `parse_osc_message` rounds them to hundredths while still `f32` and then widens to `f64` (`((lvl * 100.0).round() / 100.0) as f64`), so a parameter value of `0.85` reaches the processors as `0.8500000238…`. This is unchanged from before the migration. Rounding after widening would give exact hundredths, but it could move some values onto a different Buttplug power step, so it should be its own deliberate change.
+OSC floats arrive as `f32`. The graph's `OscRounding` node (and `run_input_processors`, for SPS/TPS) round them to hundredths while still `f32` and then widen to `f64`, so a parameter value of `0.85` reaches the modes as `0.8500000238…`. This is unchanged from before the migration. Rounding after widening would give exact hundredths, but it could move some values onto a different Buttplug power step, so it should be its own deliberate change.
 
 ## Safety caps today
 
-The toy task uses `SafetyLayer::default()`: max level 1.0, max duration 10 s, max event depth 3. Since `clamp_and_flip` already keeps levels within 0 to 1 and Linear Speed tops out at 1000 ms, the only practical effect today is that a non-finite level (NaN or infinity) becomes 0 instead of reaching the toy. User-set caps will make this meaningful.
+The graph runner uses `SafetyLayer::default()`: max level 1.0, max duration 10 s, max event depth 3. Since `OutputLevels` already keeps levels within 0 to 1 and Linear Speed tops out at 1000 ms, the only practical effect today is that a non-finite level (NaN or infinity) becomes 0 instead of reaching the toy. User-set caps will make this meaningful.

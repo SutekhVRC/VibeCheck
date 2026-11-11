@@ -458,23 +458,6 @@ impl VCToyFeature {
         }
     }
 
-    /// Index of the first parameter assigned to `param`, if the feature is enabled.
-    pub fn enabled_param_index(&self, param: &str) -> Option<usize> {
-        if !self.feature_enabled {
-            return None;
-        }
-        let index = self
-            .osc_parameters
-            .iter()
-            .position(|osc_param| osc_param.parameter == param)?;
-        debug!(
-            "Found osc parameter match in feature! : {:?} - {}",
-            (self.feature_index, self.feature_type),
-            param
-        );
-        Some(index)
-    }
-
     /// Whether this feature's input processor (SPS/TPS) handles `param`: the
     /// feature is enabled, has an input processor that claims the address,
     /// and the address passes the feature's input filter, if it has one.

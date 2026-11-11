@@ -8,6 +8,8 @@ pub enum Error {
     UnknownPort(PortId),
     /// An output could not reach its device or service.
     OutputUnavailable(String),
+    /// A graph was wired incorrectly (unknown port, cycle, ...).
+    Graph(String),
     /// Anything else a module wants to report.
     Module(String),
 }
@@ -17,6 +19,7 @@ impl fmt::Display for Error {
         match self {
             Error::UnknownPort(port) => write!(f, "unknown port {port}"),
             Error::OutputUnavailable(why) => write!(f, "output unavailable: {why}"),
+            Error::Graph(why) => write!(f, "graph error: {why}"),
             Error::Module(why) => write!(f, "module error: {why}"),
         }
     }
