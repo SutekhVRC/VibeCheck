@@ -3850,7 +3850,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "osc-monitor"
+name = "osc-tool"
 version = "0.1.0"
 dependencies = [
  "rosc",
