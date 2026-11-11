@@ -31,7 +31,7 @@ pub enum EventKind {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     None,
-    Float(f32),
+    Float(f64),
     Bool(bool),
     Text(Arc<str>),
 }

@@ -13,13 +13,13 @@ use crate::address::PortId;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Signal {
-    Float(f32),
+    Float(f64),
     Bool(bool),
 }
 
 impl Signal {
     /// The signal as a level from 0.0 to 1.0. Booleans become 0.0 or 1.0.
-    pub fn as_level(self) -> f32 {
+    pub fn as_level(self) -> f64 {
         match self {
             Signal::Float(v) => v,
             Signal::Bool(b) => {

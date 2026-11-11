@@ -6890,6 +6890,7 @@ name = "vibecheck-core"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "buttplug",
  "parking_lot",
  "tokio",
 ]

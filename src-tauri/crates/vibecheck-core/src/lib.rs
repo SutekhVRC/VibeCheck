@@ -22,8 +22,10 @@ pub mod address;
 pub mod error;
 pub mod event;
 pub mod module;
+pub mod modules;
 pub mod safety;
 pub mod signal;
+pub mod slots;
 
 pub use address::{ModuleInstanceId, PortId};
 pub use error::{Error, Result};
@@ -31,3 +33,4 @@ pub use event::{Event, EventId, EventKind, EventPlane, EventReceiver, Value};
 pub use module::{Input, InputCtx, Output, PortDirection, PortKind, PortSpec, Processor};
 pub use safety::{ClampedCmd, SafetyCaps, SafetyLayer};
 pub use signal::{Signal, SignalPlane};
+pub use slots::CommandSlots;

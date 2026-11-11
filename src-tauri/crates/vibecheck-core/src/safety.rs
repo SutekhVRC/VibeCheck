@@ -15,7 +15,7 @@ use crate::event::Event;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SafetyCaps {
     /// Highest level any command may request, from 0.0 to 1.0.
-    pub max_level: f32,
+    pub max_level: f64,
     /// Longest duration any command may request, in milliseconds.
     pub max_duration_ms: u32,
     /// Longest chain of events a command may result from. Root events are
@@ -37,7 +37,7 @@ impl Default for SafetyCaps {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ClampedCmd {
     target: PortId,
-    level: f32,
+    level: f64,
     duration_ms: Option<u32>,
 }
 
@@ -47,7 +47,7 @@ impl ClampedCmd {
     }
 
     /// Level from 0.0 to the user's cap.
-    pub fn level(&self) -> f32 {
+    pub fn level(&self) -> f64 {
         self.level
     }
 
@@ -79,7 +79,7 @@ impl SafetyLayer {
     ///
     /// Levels are clamped to 0.0..=max_level. Non-finite levels (NaN or
     /// infinity) become 0.0 so a bad input can never drive an output.
-    pub fn clamp(&self, target: PortId, level: f32, duration_ms: Option<u32>) -> ClampedCmd {
+    pub fn clamp(&self, target: PortId, level: f64, duration_ms: Option<u32>) -> ClampedCmd {
         let max = self.caps.max_level.clamp(0.0, 1.0);
         let level = if level.is_finite() {
             level.clamp(0.0, max)
@@ -99,7 +99,7 @@ impl SafetyLayer {
         &self,
         cause: &Event,
         target: PortId,
-        level: f32,
+        level: f64,
         duration_ms: Option<u32>,
     ) -> Option<ClampedCmd> {
         if cause.depth >= self.caps.max_event_depth {
@@ -144,14 +144,18 @@ mod tests {
         assert_eq!(cmd.duration_ms(), Some(1000));
 
         assert_eq!(safety.clamp(target(), -1.0, None).level(), 0.0);
-        assert_eq!(safety.clamp(target(), f32::NAN, None).level(), 0.0);
-        assert_eq!(safety.clamp(target(), f32::INFINITY, None).level(), 0.0);
+        assert_eq!(safety.clamp(target(), f64::NAN, None).level(), 0.0);
+        assert_eq!(safety.clamp(target(), f64::INFINITY, None).level(), 0.0);
     }
 
     #[test]
     fn refuses_chains_past_max_depth() {
         let safety = SafetyLayer::default();
-        assert!(safety.clamp_caused_by(&event_at_depth(2), target(), 0.3, None).is_some());
-        assert!(safety.clamp_caused_by(&event_at_depth(3), target(), 0.3, None).is_none());
+        assert!(safety
+            .clamp_caused_by(&event_at_depth(2), target(), 0.3, None)
+            .is_some());
+        assert!(safety
+            .clamp_caused_by(&event_at_depth(3), target(), 0.3, None)
+            .is_none());
     }
 }

@@ -1,11 +1,7 @@
-use std::sync::Arc;
-
-use buttplug::client::ButtplugClientDevice;
 use log::debug;
 use rosc::{OscMessage, OscType};
-use tokio::sync::watch;
 
-use crate::toy_handling::runtime::toy_emitter_thread::OscParserData;
+use crate::toy_handling::runtime::toy_output::ToyCommandSink;
 use crate::toy_handling::toyops::ToyParameter;
 use crate::toy_handling::toyops::VCToyFeatures;
 
@@ -19,9 +15,8 @@ use mode_processor::core::mode_processor;
 
 #[inline(always)]
 pub async fn parse_osc_message(
-    emitter_thread_osc_tx: &watch::Sender<Option<OscParserData>>,
+    command_sink: &ToyCommandSink,
     msg: &mut OscMessage,
-    dev: Arc<ButtplugClientDevice>,
     vc_toy_features: &mut VCToyFeatures,
 ) {
     // Parse OSC msgs to toys commands
@@ -68,24 +63,13 @@ pub async fn parse_osc_message(
                         if let ProcessingMode::Raw =
                             feature.penetration_system.pen_system_processing_mode
                         {
-                            /*command_toy(
-                                dev.clone(),
+                            command_sink.send(
                                 feature.feature_type,
-                                i_mode_processed_value,
                                 feature.feature_index,
                                 feature.flip_input_float,
                                 feature.feature_levels,
-                            )
-                            .await;*/
-                            let osc_emit = OscParserData::new(
-                                dev.clone(),
-                                feature.feature_type,
                                 input_processor_processed_value,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
                             );
-                            emitter_thread_osc_tx.send(Some(osc_emit));
                         } else {
                             // If mode processor returns a value send to toy
                             if let Some(i) = mode_processor(
@@ -100,25 +84,13 @@ pub async fn parse_osc_message(
                             )
                             .await
                             {
-                                /*
-                                command_toy(
-                                    dev.clone(),
+                                command_sink.send(
                                     feature.feature_type,
-                                    i,
                                     feature.feature_index,
                                     feature.flip_input_float,
                                     feature.feature_levels,
-                                )
-                                .await;*/
-                                let osc_emit = OscParserData::new(
-                                    dev.clone(),
-                                    feature.feature_type,
                                     i,
-                                    feature.feature_index,
-                                    feature.flip_input_float,
-                                    feature.feature_levels,
                                 );
-                                emitter_thread_osc_tx.send(Some(osc_emit));
                             }
                         }
                     }
@@ -139,25 +111,13 @@ pub async fn parse_osc_message(
                         if let ProcessingMode::Raw =
                             feature.penetration_system.pen_system_processing_mode
                         {
-                            /*
-                            command_toy(
-                                dev.clone(),
+                            command_sink.send(
                                 feature.feature_type,
-                                i_mode_processed_value,
                                 feature.feature_index,
                                 feature.flip_input_float,
                                 feature.feature_levels,
-                            )
-                            .await;*/
-                            let osc_emit = OscParserData::new(
-                                dev.clone(),
-                                feature.feature_type,
                                 input_processor_processed_value,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
                             );
-                            emitter_thread_osc_tx.send(Some(osc_emit));
                         } else if let Some(i) = mode_processor(
                             ModeProcessorInput::InputProcessor((
                                 ModeProcessorInputType::Float(input_processor_processed_value),
@@ -168,25 +128,13 @@ pub async fn parse_osc_message(
                         )
                         .await
                         {
-                            /*
-                            command_toy(
-                                dev.clone(),
+                            command_sink.send(
                                 feature.feature_type,
-                                i,
                                 feature.feature_index,
                                 feature.flip_input_float,
                                 feature.feature_levels,
-                            )
-                            .await;*/
-                            let osc_emit = OscParserData::new(
-                                dev.clone(),
-                                feature.feature_type,
                                 i,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
                             );
-                            emitter_thread_osc_tx.send(Some(osc_emit));
                         }
                     }
                 }
@@ -228,25 +176,13 @@ pub async fn parse_osc_message(
                         )
                         .await
                         {
-                            /*
-                            command_toy(
-                                dev.clone(),
+                            command_sink.send(
                                 feature.feature_type,
-                                mode_processed_value,
                                 feature.feature_index,
                                 feature.flip_input_float,
                                 feature.feature_levels,
-                            )
-                            .await;*/
-                            let osc_emit = OscParserData::new(
-                                dev.clone(),
-                                feature.feature_type,
                                 mode_processed_value,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
                             );
-                            emitter_thread_osc_tx.send(Some(osc_emit));
                         }
                     } // If no matching toy parameter skip feature
                 }
@@ -278,25 +214,13 @@ pub async fn parse_osc_message(
                         )
                         .await
                         {
-                            /*
-                            command_toy(
-                                dev.clone(),
+                            command_sink.send(
                                 feature.feature_type,
-                                i,
                                 feature.feature_index,
                                 feature.flip_input_float,
                                 feature.feature_levels,
-                            )
-                            .await;*/
-                            let osc_emit = OscParserData::new(
-                                dev.clone(),
-                                feature.feature_type,
                                 i,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
                             );
-                            emitter_thread_osc_tx.send(Some(osc_emit));
                         }
                     }
                 }

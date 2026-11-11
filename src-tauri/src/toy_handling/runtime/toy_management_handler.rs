@@ -15,20 +15,19 @@ use parking_lot::{lock_api::Mutex, RawMutex};
 use tauri::AppHandle;
 use tokio::{
     runtime::Runtime,
-    sync::{
-        mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
-        watch,
-    },
+    sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
     task::JoinHandle,
     time::Instant,
 };
+use vibecheck_core::CommandSlots;
 
 use crate::{
     osc::{logic::toy_input_routine, OSCNetworking},
     toy_handling::{
         osc_processor::parse_osc_message,
-        runtime::toy_emitter_thread::{
-            toy_emitter_thread, EmitterThreadData, ToyEmitterThreadSignal,
+        runtime::{
+            toy_emitter_thread::{toy_emitter_thread, EmitterThreadData, ToyEmitterThreadSignal},
+            toy_output::{buttplug_output, ToyCommandSink},
         },
         toy_manager::ToyManager,
         toyops::VCToy,
@@ -94,11 +93,14 @@ pub async fn toy_management_handler(
             // Create in_signal channel for emitter thread
             let (emitter_thread_tx, emitter_thread_rx) =
                 unbounded_channel::<ToyEmitterThreadSignal>();
-            let (emitter_thread_osc_tx, emitter_thread_osc_rx) = watch::channel(None);
+            // One latest-command slot per motor, drained by the emitter task
+            let slots = CommandSlots::new();
+            let command_sink = ToyCommandSink::new(&vc_toy, slots.clone());
 
             let tet_data = EmitterThreadData::new(
                 emitter_thread_rx,
-                emitter_thread_osc_rx,
+                slots,
+                buttplug_output(&vc_toy),
                 vc_toy.bt_update_rate,
             );
 
@@ -114,13 +116,8 @@ pub async fn toy_management_handler(
                 };
                 match ts {
                     ToySig::OSCMsg(mut msg) => {
-                        parse_osc_message(
-                            &emitter_thread_osc_tx,
-                            &mut msg,
-                            dev.clone(),
-                            &mut vc_toy.parsed_toy_features,
-                        )
-                        .await
+                        parse_osc_message(&command_sink, &mut msg, &mut vc_toy.parsed_toy_features)
+                            .await
                     }
                     ToySig::UpdateToy(toy) => {
                         update_toy(&emitter_thread_tx, toy, dev.clone(), &mut vc_toy);

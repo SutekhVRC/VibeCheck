@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 #[inline]
-fn clamp_and_flip(value: f64, flip: bool, levels: LevelTweaks) -> f64 {
+pub(crate) fn clamp_and_flip(value: f64, flip: bool, levels: LevelTweaks) -> f64 {
     let mut new_value;
     if value == 0.0 {
         new_value = levels.idle_level;
