@@ -5,10 +5,15 @@ edition = "2021"
 authors = ["SutekhVRC"]
 rust-version = "1.57"
 
+[workspace]
+members = [".", "crates/vibecheck-core"]
+resolver = "2"
+
 [build-dependencies]
 tauri-build = { version = "2.5.3", features = [] }
 
 [dependencies]
+vibecheck-core = { path = "crates/vibecheck-core" }
 buttplug = "9.0.9"
 #buttplug = {path = "../../../vibecheck-dev-buttplug/buttplug/buttplug"}
 #vrcoscquery = {path = "../../../vrcoscquery-rs"}

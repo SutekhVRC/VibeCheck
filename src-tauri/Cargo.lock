@@ -6881,7 +6881,17 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "ts-rs",
+ "vibecheck-core",
  "vrcoscquery",
+]
+
+[[package]]
+name = "vibecheck-core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "parking_lot",
+ "tokio",
 ]
 
 [[package]]
