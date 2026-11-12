@@ -137,11 +137,13 @@ Commands and signals are addressed with stable names rather than Buttplug device
 
 ## Feature type → Buttplug command
 
-VibeCheck uses Buttplug's version 12 release (message spec v4), where a device is a list of numbered **features**, each with **outputs** such as vibrate, rotate or position-with-duration. VibeCheck's toy configs predate that and number features the spec v3 way: scalars, rotators and linears each counted from 0. `LegacyLayout` (`vibecheck-core` `modules::buttplug`) rebuilds that numbering from the device's features, the same way Buttplug's server describes devices to v3 clients, so saved configs keep matching their toys:
+VibeCheck uses Buttplug's version 12 release (message spec v4), where a device is a list of numbered **features**, each with **outputs** such as vibrate, rotate or position-with-duration. VibeCheck's toy configs predate that and number features the spec v3 way: scalars, rotators and linears each counted from 0. `LegacyLayout` (`vibecheck-core` `modules::buttplug`) rebuilds that numbering from the device's features, matching how Buttplug 9 listed devices, so saved configs keep matching their toys:
 
-- **scalars**: every vibrate, rotate, oscillate, constrict and position output, in feature order. Temperature, LED and spray outputs are skipped;
+- **scalars**: every vibrate, rotate, oscillate, constrict and position output, in feature order, except rotators that can turn both ways. Temperature, LED and spray outputs are skipped;
 - **rotators**: features whose rotate output can turn both ways;
 - **linears**: features with a position-with-duration output.
+
+A rotate feature is a scalar *or* a rotator, never both. In Buttplug 9 every rotating device's rotate features were either scalar-only or rotate-only, and the rotate-only ones are exactly those Buttplug 12 lets turn both ways (checked device by device across both versions' device lists). Buttplug 12's own v3 compatibility layer lists two-way rotators as scalars too; following it made toys like the Lovense Nora show their rotator twice.
 
 The layout is worked out when a toy connects (`VCToy.layout`). A feature then becomes an `Actuator` (`actuator_for` in `toy_output.rs`):
 

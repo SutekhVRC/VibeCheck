@@ -88,12 +88,17 @@ const LEVEL_OUTPUTS: [OutputType; 5] = [
 /// number their features this way, so keeping the layout keeps saved
 /// configs matching their toys.
 ///
-/// Built the way Buttplug's own server describes a device to v3 clients:
-///
-/// - **scalars**: every level output of every feature, in feature order
-///   (so a bidirectional rotator is also a scalar, as before);
-/// - **rotators**: features whose rotate output can go both ways;
+/// - **scalars**: every level output of every feature, in feature order,
+///   except rotators that can turn both ways;
+/// - **rotators**: features whose rotate output can turn both ways;
 /// - **linears**: features with a position-with-duration output.
+///
+/// This matches how Buttplug 9 listed devices: a rotate feature was either
+/// a scalar or a rotator, never both, and its rotators are exactly the
+/// features Buttplug 12 lets turn both ways (checked against every rotating
+/// device in both versions' device lists). Buttplug 12's own v3
+/// compatibility lists two-way rotators as scalars too, which would show
+/// one motor twice.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LegacyLayout {
     /// Feature and output for each scalar actuator.
@@ -114,17 +119,20 @@ impl LegacyLayout {
         let mut layout = Self::default();
         for feature in features {
             let index = feature.feature_index();
+            let two_way_rotator = matches!(
+                feature.get_output(OutputType::Rotate),
+                Some(DeviceFeatureOutput::Rotate(rotate)) if rotate.value().start() < 0
+            );
             for output in LEVEL_OUTPUTS {
+                if output == OutputType::Rotate && two_way_rotator {
+                    continue;
+                }
                 if feature.contains_output(output) {
                     layout.scalars.push((index, output));
                 }
             }
-            if let Some(DeviceFeatureOutput::Rotate(rotate)) =
-                feature.get_output(OutputType::Rotate)
-            {
-                if rotate.value().start() < 0 {
-                    layout.rotators.push(index);
-                }
+            if two_way_rotator {
+                layout.rotators.push(index);
             }
             if feature.contains_output(OutputType::HwPositionWithDuration) {
                 layout.linears.push(index);
@@ -339,19 +347,19 @@ mod tests {
         assert_eq!(
             layout,
             LegacyLayout {
+                // The two-way rotator is only a rotator, the one-way one
+                // only a scalar (as Buttplug 9 listed them)
                 scalars: vec![
                     (1, OutputType::Vibrate),
-                    (2, OutputType::Rotate),
                     (3, OutputType::Rotate),
                     (5, OutputType::Vibrate),
                 ],
-                // Only the rotator that can go both ways
                 rotators: vec![2],
                 linears: vec![4],
             }
         );
         assert_eq!(
-            layout.scalar(3),
+            layout.scalar(2),
             Some(Actuator::Level {
                 feature: 5,
                 output: OutputType::Vibrate
