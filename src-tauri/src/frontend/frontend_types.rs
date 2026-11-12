@@ -22,6 +22,8 @@ pub struct FeVibeCheckConfig {
     pub desktop_notifications: bool,
     pub show_toy_advanced: bool,
     pub show_feature_advanced: bool,
+    /// Master intensity, 0.0 to 1.0.
+    pub master_intensity: f64,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]
@@ -62,6 +64,15 @@ pub enum FeStateEvent {
 pub enum FeCoreEvent {
     Scan(FeScanEvent),
     State(FeStateEvent),
+    Safety(FeSafetyEvent),
+}
+
+#[derive(Serialize, Clone, TS)]
+#[ts(export)]
+pub enum FeSafetyEvent {
+    /// Panic stop: every toy stopped until resumed.
+    Panicked,
+    Resumed,
 }
 
 #[derive(Deserialize, Clone, TS)]

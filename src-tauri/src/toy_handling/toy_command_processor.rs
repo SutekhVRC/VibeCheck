@@ -7,29 +7,32 @@ use buttplug::client::ScalarCommand::ScalarMap;
 use buttplug::core::message::ActuatorType;
 
 use log::{error as logerr, info};
+use vibecheck_core::{
+    modules::{buttplug::device_level, levels::OutputLevels},
+    SafetyLayer,
+};
 
 use std::collections::HashMap;
 
 use std::sync::Arc;
 
+/// The level sent to the toy for one value, in the same order as the toy
+/// graph and output: Idle Speed and Range, then the master intensity (safety
+/// layer), then Flip Input.
 #[inline]
-fn clamp_and_flip(value: f64, flip: bool, levels: LevelTweaks) -> f64 {
-    let mut new_value;
-    if value == 0.0 {
-        new_value = levels.idle_level;
-    } else {
-        new_value = value.clamp(levels.minimum_level, levels.maximum_level);
+pub(crate) fn clamp_and_flip(
+    value: f64,
+    flip: bool,
+    levels: LevelTweaks,
+    safety: &SafetyLayer,
+) -> f64 {
+    let level = OutputLevels {
+        min: levels.minimum_level,
+        max: levels.maximum_level,
+        idle: levels.idle_level,
     }
-    if flip {
-        new_value = flip_float64(new_value)
-    }
-    new_value
-}
-
-#[inline]
-pub fn flip_float64(orig: f64) -> f64 {
-    //1.00 - orig
-    ((1.00 - orig) * 100.0).round() / 100.0
+    .apply(value);
+    device_level(safety.limit(level), flip)
 }
 
 // Parse scalar levels and logic for level tweaks
@@ -41,8 +44,9 @@ pub async fn scalar_parse_levels_send_toy_cmd(
     actuator_type: ActuatorType,
     flip_float: bool,
     feature_levels: LevelTweaks,
+    safety: &SafetyLayer,
 ) {
-    let new_level = clamp_and_flip(scalar_level, flip_float, feature_levels);
+    let new_level = clamp_and_flip(scalar_level, flip_float, feature_levels, safety);
     #[cfg(debug_assertions)]
     {
         let message_prefix = if scalar_level == 0.0 {
@@ -72,6 +76,7 @@ pub async fn scalar_parse_levels_send_toy_cmd(
 /*
  * Sends commands to toys
  */
+/// Used by the Test button. Applies the master intensity like the toy graph does.
 pub async fn command_toy(
     dev: Arc<ButtplugClientDevice>,
     feature_type: VCFeatureType,
@@ -79,6 +84,7 @@ pub async fn command_toy(
     feature_index: u32,
     flip_float: bool,
     feature_levels: LevelTweaks,
+    safety: SafetyLayer,
 ) {
     match feature_type {
         VCFeatureType::Vibrator => {
@@ -89,12 +95,13 @@ pub async fn command_toy(
                 ActuatorType::Vibrate,
                 flip_float,
                 feature_levels,
+                &safety,
             )
             .await;
         }
         // We handle Rotator differently because it is not included in the Scalar feature set
         VCFeatureType::Rotator => {
-            let new_level = clamp_and_flip(float_level, flip_float, feature_levels);
+            let new_level = clamp_and_flip(float_level, flip_float, feature_levels, &safety);
             let _ = dev
                 .rotate(&RotateMap(HashMap::from([(
                     feature_index,
@@ -110,6 +117,7 @@ pub async fn command_toy(
                 ActuatorType::Constrict,
                 flip_float,
                 feature_levels,
+                &safety,
             )
             .await;
         }
@@ -121,6 +129,7 @@ pub async fn command_toy(
                 ActuatorType::Oscillate,
                 flip_float,
                 feature_levels,
+                &safety,
             )
             .await;
         }
@@ -132,6 +141,7 @@ pub async fn command_toy(
                 ActuatorType::Position,
                 flip_float,
                 feature_levels,
+                &safety,
             )
             .await;
         }
@@ -143,12 +153,13 @@ pub async fn command_toy(
                 ActuatorType::Inflate,
                 flip_float,
                 feature_levels,
+                &safety,
             )
             .await;
         }
         // We handle Linear differently because it is not included in the Scalar feature set
         VCFeatureType::Linear => {
-            let new_level = clamp_and_flip(float_level, flip_float, feature_levels);
+            let new_level = clamp_and_flip(float_level, flip_float, feature_levels, &safety);
             let _ = dev
                 .linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from(
                     [(
@@ -166,8 +177,28 @@ pub async fn command_toy(
                 ActuatorType::Rotate,
                 flip_float,
                 feature_levels,
+                &safety,
             )
             .await;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_button_level_is_range_then_intensity_then_flip() {
+        let mut levels = LevelTweaks::default();
+        levels.maximum_level = 0.8;
+        let safety = SafetyLayer::default();
+
+        // Full intensity, no flip: unchanged from before
+        assert_eq!(clamp_and_flip(0.5, false, levels, &safety), 0.5);
+        // Range caps at 0.8 before the intensity halves it, then flip
+        safety.set_intensity(0.5);
+        assert!((clamp_and_flip(1.0, false, levels, &safety) - 0.4).abs() < 1e-9);
+        assert_eq!(clamp_and_flip(1.0, true, levels, &safety), 0.6);
     }
 }

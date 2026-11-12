@@ -22,6 +22,7 @@ use crate::vcore::errors::VcoreError;
 use super::config::app::VibeCheckConfig;
 use super::errors::VCError;
 use super::ipc::call_plane::ToyManagementEvent;
+use vibecheck_core::SafetyLayer;
 
 pub struct VCStateMutex(pub Arc<Mutex<VibeCheckState>>);
 
@@ -35,6 +36,9 @@ pub struct VibeCheckState {
     pub identifier: String,
 
     pub config: VibeCheckConfig,
+    /// Shared by every listening session and the Test button, so the master
+    /// intensity applies everywhere and can change while toys are running.
+    pub safety: SafetyLayer,
     pub osc_query_handler: Option<OSCQuery>,
     //pub connection_modes: ConnectionModes,
     pub bp_client: Option<ButtplugClient>,
@@ -89,10 +93,14 @@ impl VibeCheckState {
             UnboundedReceiver<ToyManagementEvent>,
         ) = unbounded_channel();
 
+        let safety = SafetyLayer::default();
+        safety.set_intensity(config.master_intensity);
+
         let state = Self {
             app_handle: None,
             identifier: String::new(),
             config,
+            safety,
             osc_query_handler: None,
             //connection_modes,
             bp_client: None,
@@ -179,6 +187,7 @@ impl VibeCheckState {
             self.tme_send_rx.take().unwrap(),
             self.core_toy_manager.as_ref().unwrap().clone(),
             self.config.networking.clone(),
+            self.safety.clone(),
             self.app_handle.as_ref().unwrap().clone(),
         )));
         info!("TMH started");

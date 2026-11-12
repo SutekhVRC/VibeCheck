@@ -1,0 +1,11 @@
+[package]
+name = "osc-tool"
+version = "0.1.0"
+edition = "2021"
+authors = ["SutekhVRC"]
+license = "Apache-2.0"
+description = "Debug tool: watch OSC arriving on a port, or send OSC to test VibeCheck inputs"
+publish = false
+
+[dependencies]
+rosc = "0.11.4"

@@ -87,6 +87,16 @@ yarn tauri dev     # run the app in development mode
 yarn tauri build   # build an installer
 ```
 
+### Testing OSC without VRChat
+
+The workspace includes [`osc-tool`](./src-tauri/crates/osc-tool/README.md), a small command-line tool for checking VibeCheck's OSC input. Run it from `src-tauri/`:
+
+```bash
+cargo run -p osc-tool -- listen                       # is VRChat sending? (close VibeCheck first)
+cargo run -p osc-tool -- send Boop 0.5                # send a parameter to VibeCheck as if VRChat did
+cargo run -p osc-tool -- sweep Boop 0 1 --back        # ramp a parameter up and back down
+```
+
 ## License
 
 VibeCheck is licensed under the [Apache License 2.0](./LICENSE).

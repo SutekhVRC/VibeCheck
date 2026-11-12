@@ -1,6 +1,6 @@
 # VibeCheck OSC API
 
-VibeCheck features an OSC API that listens while the app is enabled. At the moment the API is early in dev and has only two endpoints.
+VibeCheck features an OSC API that listens while the app is enabled. At the moment the API is early in dev and has a few endpoints.
 To use the API, the parameter on your avatar must be a synced parameter.
 
 Synced parameters include:
@@ -17,6 +17,15 @@ Parameter Address:
 `vibecheck/api/state`
 
 This endpoint changes the app's OSC state. There are two states: enabled (true) and disabled (false).
+
+### Panic
+
+Value Type: `Boolean` (a float of 0.5 or more also counts as true)
+
+Parameter Address:
+`vibecheck/api/panic`
+
+Setting this to true stops every toy immediately, the same as the **Stop all toys** button in the app or its hotkey (Ctrl+Alt+P). Toys stay stopped until you press **Resume** in the app; this endpoint can't resume them, so a stray parameter can't start toys again. After resuming, each toy waits for its next new input instead of jumping back to where it was.
 
 ### Anatomy
 

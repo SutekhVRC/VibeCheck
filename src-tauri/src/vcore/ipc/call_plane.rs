@@ -286,6 +286,7 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
         desktop_notifications: config.desktop_notifications,
         show_toy_advanced: config.show_toy_advanced,
         show_feature_advanced: config.show_feature_advanced,
+        master_intensity: config.master_intensity,
     }
 }
 
@@ -313,6 +314,14 @@ pub fn native_set_vibecheck_config(
         vc_lock.config.desktop_notifications = fe_vc_config.desktop_notifications;
         vc_lock.config.show_toy_advanced = fe_vc_config.show_toy_advanced;
         vc_lock.config.show_feature_advanced = fe_vc_config.show_feature_advanced;
+        let master_intensity = if fe_vc_config.master_intensity.is_finite() {
+            fe_vc_config.master_intensity.clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
+        vc_lock.config.master_intensity = master_intensity;
+        // Applies straight away, including to toys that are already running
+        vc_lock.safety.set_intensity(master_intensity);
 
         vc_lock.config.clone()
     };
@@ -507,6 +516,7 @@ pub fn native_simulate_device_feature(
                         feature.feature_index,
                         feature.flip_input_float,
                         feature.feature_levels,
+                        vc_lock.safety.clone(),
                     ));
                 }
             }

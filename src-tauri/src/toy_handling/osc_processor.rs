@@ -1,307 +1,116 @@
-use std::sync::Arc;
+/*
+ * Runs a toy's SPS/TPS input processors on OSC messages.
+ *
+ * Input processors are still message-driven and live on the feature config
+ * (they are due a rewrite). Their output for each feature is written to the
+ * signal plane, where the toy's graph picks it up (see toy_graph.rs).
+ *
+ * Plain OSC parameters don't come through here: OscInput writes them to the
+ * signal plane directly.
+ */
 
-use buttplug::client::ButtplugClientDevice;
-use log::debug;
 use rosc::{OscMessage, OscType};
-use tokio::sync::watch;
+use vibecheck_core::{ModuleInstanceId, Signal, SignalPlane};
 
-use crate::toy_handling::runtime::toy_emitter_thread::OscParserData;
-use crate::toy_handling::toyops::ToyParameter;
+use crate::toy_handling::runtime::toy_graph::input_processor_port;
 use crate::toy_handling::toyops::VCToyFeatures;
 
-use log::info;
-
-use super::mode_processor;
-use super::mode_processor::core::ModeProcessorInput;
 use super::mode_processor::core::ModeProcessorInputType;
-use super::toyops::ProcessingMode;
-use mode_processor::core::mode_processor;
 
-#[inline(always)]
-pub async fn parse_osc_message(
-    emitter_thread_osc_tx: &watch::Sender<Option<OscParserData>>,
+/// OSC floats are rounded to hundredths, then widened to f64.
+fn round_osc_float(lvl: f32) -> f64 {
+    ((lvl * 100.0).round() / 100.0) as f64
+}
+
+pub fn run_input_processors(
     msg: &mut OscMessage,
-    dev: Arc<ButtplugClientDevice>,
     vc_toy_features: &mut VCToyFeatures,
+    signals: &SignalPlane,
+    toy: &ModuleInstanceId,
 ) {
-    // Parse OSC msgs to toys commands
-    //debug!("msg.addr = {} | msg.args = {:?}", msg.addr, msg.args);
-    /*
-     * Do Penetration System parsing first?
-     * Then parameter parsing?
-     * Mode processor is a function now so it can be used in both!
-     */
+    // A message without arguments carries no value to act on
+    let Some(newest_msg_val) = msg.args.pop() else {
+        return;
+    };
+    let input = match newest_msg_val {
+        OscType::Float(lvl) => ModeProcessorInputType::Float(round_osc_float(lvl)),
+        OscType::Bool(b) => ModeProcessorInputType::Boolean(b),
+        _ => return, // Unsupported OSC type
+    };
 
-    // msg args pop should go here
-    //let newest_msg_addr = msg.addr.clone();
-    let newest_msg_val = msg.args.pop().unwrap();
-    //info!("Newest value: {:?}", newest_msg_val);
-    /*
-     * Input mode processing
-     * Get all features with an enabled Input mode
-     * For each feature with a penetration system do processing for the current OSC input
-     * If get a value from processing check if the Input mode has a processing mode associated
-     *
-     */
-
-    // Get all features with an enabled input processor?
-    if let Some(input_processor_system_features) =
-        vc_toy_features.get_features_with_input_processors(&msg.addr)
-    {
-        match newest_msg_val {
-            OscType::Float(lvl) => {
-                for feature in input_processor_system_features {
-                    let float_level = ((lvl * 100.0).round() / 100.0) as f64;
-                    // pen_system is checked for None in get_features_with_penetration_systems method.
-                    // Give access to internal mode values here (input, internal_values)
-                    if let Some(input_processor_processed_value) = feature
-                        .penetration_system
-                        .pen_system
-                        .as_mut()
-                        .unwrap()
-                        .process(
-                            msg.addr.as_str(),
-                            ModeProcessorInputType::Float(float_level),
-                        )
-                    {
-                        // Send to mode processor if specified (Raw = no mode processing)
-                        if let ProcessingMode::Raw =
-                            feature.penetration_system.pen_system_processing_mode
-                        {
-                            /*command_toy(
-                                dev.clone(),
-                                feature.feature_type,
-                                i_mode_processed_value,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
-                            )
-                            .await;*/
-                            let osc_emit = OscParserData::new(
-                                dev.clone(),
-                                feature.feature_type,
-                                input_processor_processed_value,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
-                            );
-                            emitter_thread_osc_tx.send(Some(osc_emit));
-                        } else {
-                            // If mode processor returns a value send to toy
-                            if let Some(i) = mode_processor(
-                                ModeProcessorInput::InputProcessor((
-                                    ModeProcessorInputType::Float(input_processor_processed_value),
-                                    &mut feature
-                                        .penetration_system
-                                        .pen_system_processing_mode_values,
-                                )),
-                                feature.feature_levels,
-                                feature.flip_input_float,
-                            )
-                            .await
-                            {
-                                /*
-                                command_toy(
-                                    dev.clone(),
-                                    feature.feature_type,
-                                    i,
-                                    feature.feature_index,
-                                    feature.flip_input_float,
-                                    feature.feature_levels,
-                                )
-                                .await;*/
-                                let osc_emit = OscParserData::new(
-                                    dev.clone(),
-                                    feature.feature_type,
-                                    i,
-                                    feature.feature_index,
-                                    feature.flip_input_float,
-                                    feature.feature_levels,
-                                );
-                                emitter_thread_osc_tx.send(Some(osc_emit));
-                            }
-                        }
-                    }
-                }
-            }
-            // Boolean can be supported in the process trait method
-            OscType::Bool(b) => {
-                for feature in input_processor_system_features {
-                    // Boolean to float transformation here
-                    if let Some(input_processor_processed_value) = feature
-                        .penetration_system
-                        .pen_system
-                        .as_mut()
-                        .unwrap()
-                        .process(msg.addr.as_str(), ModeProcessorInputType::Boolean(b))
-                    {
-                        // Send to mode processor if specified (Raw = no mode processing)
-                        if let ProcessingMode::Raw =
-                            feature.penetration_system.pen_system_processing_mode
-                        {
-                            /*
-                            command_toy(
-                                dev.clone(),
-                                feature.feature_type,
-                                i_mode_processed_value,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
-                            )
-                            .await;*/
-                            let osc_emit = OscParserData::new(
-                                dev.clone(),
-                                feature.feature_type,
-                                input_processor_processed_value,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
-                            );
-                            emitter_thread_osc_tx.send(Some(osc_emit));
-                        } else if let Some(i) = mode_processor(
-                            ModeProcessorInput::InputProcessor((
-                                ModeProcessorInputType::Float(input_processor_processed_value),
-                                &mut feature.penetration_system.pen_system_processing_mode_values,
-                            )),
-                            feature.feature_levels,
-                            feature.flip_input_float,
-                        )
-                        .await
-                        {
-                            /*
-                            command_toy(
-                                dev.clone(),
-                                feature.feature_type,
-                                i,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
-                            )
-                            .await;*/
-                            let osc_emit = OscParserData::new(
-                                dev.clone(),
-                                feature.feature_type,
-                                i,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
-                            );
-                            emitter_thread_osc_tx.send(Some(osc_emit));
-                        }
-                    }
-                }
-            }
-            _ => (),
-        } // End match OscType for Input processors
-    } // End Input processing
-
-    if let Some(features) = vc_toy_features.get_features_from_param(&msg.addr) {
-        match newest_msg_val {
-            OscType::Float(lvl) => {
-                // Clamp float accuracy to hundredths and cast as 64 bit float
-                let float_level = ((lvl * 100.0).round() / 100.0) as f64;
-                debug!("Received and cast float lvl: {:.5}", float_level);
-
-                for feature in features {
-                    // Get ToyParameter here
-                    // We unwrap here because the call to get_features_from_param guarantees the parameter exists.
-                    let mut toy_parameter = feature
-                        .osc_parameters
-                        .iter_mut()
-                        .filter_map(|param| {
-                            if param.parameter == msg.addr {
-                                Some(param)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<&mut ToyParameter>>();
-
-                    if let Some(first_toy_param) = toy_parameter.first_mut() {
-                        if let Some(mode_processed_value) = mode_processor(
-                            ModeProcessorInput::RawInput(
-                                ModeProcessorInputType::Float(float_level),
-                                first_toy_param,
-                            ),
-                            feature.feature_levels,
-                            feature.flip_input_float,
-                        )
-                        .await
-                        {
-                            /*
-                            command_toy(
-                                dev.clone(),
-                                feature.feature_type,
-                                mode_processed_value,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
-                            )
-                            .await;*/
-                            let osc_emit = OscParserData::new(
-                                dev.clone(),
-                                feature.feature_type,
-                                mode_processed_value,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
-                            );
-                            emitter_thread_osc_tx.send(Some(osc_emit));
-                        }
-                    } // If no matching toy parameter skip feature
-                }
-            }
-            OscType::Bool(b) => {
-                info!("Got a Bool! {} = {}", msg.addr, b);
-                for feature in features {
-                    // Get ToyParameter here
-                    let mut toy_parameter = feature
-                        .osc_parameters
-                        .iter_mut()
-                        .filter_map(|param| {
-                            if param.parameter == msg.addr {
-                                Some(param)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<&mut ToyParameter>>();
-
-                    if let Some(first_toy_param) = toy_parameter.first_mut() {
-                        if let Some(i) = mode_processor(
-                            ModeProcessorInput::RawInput(
-                                ModeProcessorInputType::Boolean(b),
-                                first_toy_param,
-                            ),
-                            feature.feature_levels,
-                            feature.flip_input_float,
-                        )
-                        .await
-                        {
-                            /*
-                            command_toy(
-                                dev.clone(),
-                                feature.feature_type,
-                                i,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
-                            )
-                            .await;*/
-                            let osc_emit = OscParserData::new(
-                                dev.clone(),
-                                feature.feature_type,
-                                i,
-                                feature.feature_index,
-                                feature.flip_input_float,
-                                feature.feature_levels,
-                            );
-                            emitter_thread_osc_tx.send(Some(osc_emit));
-                        }
-                    }
-                }
-            }
-            _ => {} // Skip parameter because unsuppported OSC type
+    for feature in &mut vc_toy_features.features {
+        if !feature.input_processor_accepts(&msg.addr) {
+            continue;
         }
+        // input_processor_accepts guarantees there is an input processor
+        let processed = feature
+            .penetration_system
+            .pen_system
+            .as_mut()
+            .unwrap()
+            .process(msg.addr.as_str(), input);
+        if let Some(value) = processed {
+            signals.write(&input_processor_port(toy, feature), Signal::Float(value));
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::toy_handling::{
+        input_processor::{penetration_systems::PenetrationSystemType, InputProcessor},
+        toyops::{VCFeatureType, VCToyFeature},
+    };
+
+    /// Accepts /test/... addresses and halves float input.
+    #[derive(Clone, Debug)]
+    struct Halver;
+
+    impl InputProcessor for Halver {
+        fn process(&mut self, _: &str, input: ModeProcessorInputType) -> Option<f64> {
+            input.try_float().map(|f| f / 2.0)
+        }
+        fn is_parameter(&self, param: &str) -> bool {
+            param.starts_with("/test/")
+        }
+        fn input_filter(&self, param: &str, filters: &Vec<String>) -> bool {
+            filters.iter().any(|f| param.contains(f))
+        }
+    }
+
+    fn with_processor(index: u32, filter: Option<Vec<String>>) -> VCToyFeature {
+        let mut f = VCToyFeature::new(vec![], index, VCFeatureType::Vibrator);
+        f.penetration_system.pen_system_type = PenetrationSystemType::Sps;
+        f.penetration_system.pen_system = Some(Box::new(Halver));
+        f.penetration_system.pen_system_input_filter = filter;
+        f
+    }
+
+    #[test]
+    fn writes_output_for_each_accepting_feature() {
+        let toy = ModuleInstanceId::new("toy:test:0");
+        let mut disabled = with_processor(2, None);
+        disabled.feature_enabled = false;
+        let mut features = VCToyFeatures {
+            features: vec![
+                with_processor(0, None),
+                with_processor(1, Some(vec!["Mouth".into()])),
+                disabled,
+            ],
+        };
+        let signals = SignalPlane::new();
+
+        let mut msg = OscMessage {
+            addr: "/test/Hand".into(),
+            args: vec![OscType::Float(0.8)],
+        };
+        run_input_processors(&mut msg, &mut features, &signals, &toy);
+
+        let read = |i: usize| signals.read(&input_processor_port(&toy, &features.features[i]));
+        // 0.8 arrives rounded as f32, then widened
+        assert_eq!(read(0), Some(Signal::Float(0.8f32 as f64 / 2.0)));
+        assert_eq!(read(1), None, "filtered out");
+        assert_eq!(read(2), None, "disabled");
     }
 }

@@ -1,0 +1,18 @@
+[package]
+name = "vibecheck-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["SutekhVRC"]
+license = "Apache-2.0"
+description = "Module runtime for VibeCheck: signal and event planes, module traits and the safety layer"
+rust-version = "1.75"
+
+[dependencies]
+async-trait = "0.1.92"
+buttplug = "9.0.9"
+parking_lot = "0.12.5"
+rosc = "0.11.4"
+tokio = { version = "1.53.3", features = ["sync", "net"] }
+
+[dev-dependencies]
+tokio = { version = "1.53.3", features = ["sync", "net", "macros", "rt", "time"] }

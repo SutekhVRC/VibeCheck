@@ -2,7 +2,7 @@ import ExternalLogo from "@/components/ExternalLogo";
 import Loading from "@/components/Loading";
 import ThemedLogo from "@/components/ThemedLogo";
 import { SCAN_LENGTH, useCoreEventContext } from "@/context/CoreEvents";
-import { TOOLTIP } from "@/data/constants";
+import { PANIC_HOTKEY, TOOLTIP } from "@/data/constants";
 import { toyKey } from "@/hooks/useToys";
 import Button from "@/layout/Button";
 import Switch from "@/layout/Switch";
@@ -16,8 +16,10 @@ import type { FeVCToy } from "@bindings/FeVCToy";
 import type { ToyPower } from "@bindings/ToyPower";
 import {
   Moon,
+  OctagonX,
   PanelLeftClose,
   PanelLeftOpen,
+  Play,
   Plug,
   Power,
   Search,
@@ -49,7 +51,7 @@ type SidebarProps = {
 };
 
 /*
- * Left column: logo, app on/off status, toy list with scanning,
+ * Left column: logo, app on/off status, panic stop, toy list with scanning,
  * Settings, and a footer with community links and the version.
  * Collapses into a narrow icon-only bar; tooltips then carry the labels.
  */
@@ -113,6 +115,8 @@ export default function Sidebar({
       )}
 
       <StatusCard collapsed={collapsed} />
+
+      <PanicButton collapsed={collapsed} />
 
       {/* Toy list + scan. Ears only fit on the full-width panel. */}
       <div
@@ -312,6 +316,92 @@ function StatusCard({ collapsed }: { collapsed: boolean }) {
       </div>
       {toggle}
     </label>
+  );
+}
+
+/**
+ * Panic stop: always in reach. Stops every toy; once stopped it becomes a
+ * banner with Resume, since toys stay stopped until resumed on purpose.
+ */
+function PanicButton({ collapsed }: { collapsed: boolean }) {
+  const { isPanicked, panicStop, resumeFromPanic } = useCoreEventContext();
+
+  if (collapsed) {
+    return (
+      <Tooltip
+        text={
+          isPanicked
+            ? "All toys stopped. Click to resume."
+            : `Stop all toys (${PANIC_HOTKEY})`
+        }
+        side="right"
+      >
+        <button
+          type="button"
+          onClick={isPanicked ? resumeFromPanic : panicStop}
+          aria-label={isPanicked ? "Resume toys" : "Stop all toys"}
+          className={cn(
+            ICON_SQUARE,
+            "ring-1",
+            isPanicked
+              ? "animate-pulse bg-theme-danger text-theme-text ring-theme-danger"
+              : "bg-theme-danger/10 text-theme-danger ring-theme-danger/40 hover:bg-theme-danger/25",
+          )}
+        >
+          {isPanicked ? (
+            <Play className="h-5 w-5" strokeWidth={2.5} />
+          ) : (
+            <OctagonX className="h-5 w-5" strokeWidth={2.5} />
+          )}
+        </button>
+      </Tooltip>
+    );
+  }
+
+  if (isPanicked) {
+    return (
+      <div
+        role="alert"
+        className="flex shrink-0 items-center justify-between gap-2 rounded-2xl border border-theme-danger bg-theme-danger/15 px-3 py-2.5 text-left"
+      >
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 font-semibold text-theme-danger">
+            <OctagonX className="h-4 w-4 shrink-0" strokeWidth={2.5} />
+            All toys stopped
+          </div>
+          <div className="truncate text-xs text-theme-muted">
+            They stay stopped until you resume
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={resumeFromPanic}
+          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-theme-success/20 px-3 py-1 text-sm font-semibold text-theme-success ring-1 ring-theme-success/50 transition-colors hover:bg-theme-success/30"
+        >
+          <Play className="h-3.5 w-3.5" strokeWidth={2.5} />
+          Resume
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <Tooltip text={TOOLTIP.PanicStop.text}>
+      <button
+        type="button"
+        onClick={panicStop}
+        className="group flex w-full shrink-0 items-center gap-2 rounded-2xl border border-theme-danger/50 bg-theme-danger/10 px-3 py-2 text-left text-sm text-theme-danger transition-colors hover:bg-theme-danger/20"
+      >
+        <OctagonX
+          className="h-5 w-5 shrink-0 transition-transform group-hover:scale-110"
+          strokeWidth={2.5}
+        />
+        <span className="flex-1 font-semibold">Stop all toys</span>
+        <kbd className="rounded-md border border-theme-danger/40 px-1.5 py-0.5 font-mono text-[0.65rem] text-theme-danger/80">
+          {PANIC_HOTKEY}
+        </kbd>
+      </button>
+    </Tooltip>
   );
 }
 
