@@ -6,7 +6,7 @@ use ts_rs::TS;
 
 use crate::{
     frontend::{frontend_types::FePenetrationSystem, FromFrontend, ToBackend, ToFrontend},
-    toy_handling::toyops::ProcessingMode,
+    toy_handling::toyops::{ProcessingMode, VCFeatureType},
 };
 
 use self::{sps::SPSProcessor, tps::TPSProcessor};
@@ -22,11 +22,14 @@ pub enum PenetrationSystemType {
 }
 
 impl PenetrationSystemType {
-    /// A new instance of this input processor, or `None` for `None`.
-    pub fn processor(&self) -> Option<Box<dyn InputProcessor>> {
+    /// A new instance of this input processor for a feature of type
+    /// `feature_type`, or `None` for `None`.
+    pub fn processor(&self, feature_type: VCFeatureType) -> Option<Box<dyn InputProcessor>> {
         match self {
             Self::None => None,
-            Self::Sps => Some(Box::<SPSProcessor>::default()),
+            Self::Sps => Some(Box::new(SPSProcessor::new(
+                feature_type == VCFeatureType::Linear,
+            ))),
             Self::Tps => Some(Box::<TPSProcessor>::default()),
         }
     }

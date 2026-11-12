@@ -386,6 +386,22 @@ impl Graph {
         cmds
     }
 
+    /// Starts over as if the graph were new, keeping its wiring and
+    /// settings: every processor forgets its state, node outputs are
+    /// cleared, and sinks forget the last value they sent, so the next value
+    /// is sent even if it's the same as before (the device may have been
+    /// stopped in between). Watched values written before the reset aren't
+    /// delivered again.
+    pub fn reset(&mut self) {
+        for node in &mut self.nodes {
+            node.processor.reset();
+            node.outputs.iter_mut().for_each(|out| *out = None);
+        }
+        for sink in &mut self.sinks {
+            sink.last = None;
+        }
+    }
+
     /// Node ids in run order.
     pub fn node_ids(&self) -> impl Iterator<Item = &ModuleInstanceId> {
         self.nodes.iter().map(|n| &n.id)
@@ -702,6 +718,54 @@ mod tests {
             tick(&mut g, &signals),
             vec![("toy/Vibrator_0".into(), 0.75)]
         );
+        assert!(tick(&mut g, &signals).is_empty());
+    }
+
+    /// Counts its ticks; the count is its output.
+    #[derive(Default)]
+    struct Counter(u32);
+
+    impl Processor for Counter {
+        fn ports(&self) -> Vec<PortSpec> {
+            vec![PortSpec::signal_in("in"), PortSpec::signal_out("out")]
+        }
+        fn tick(
+            &mut self,
+            _: &[Signal],
+            _: f32,
+            out: &mut [Option<Signal>],
+            _: &mut Vec<EventOut>,
+        ) {
+            self.0 += 1;
+            out[0] = Some(Signal::Float(self.0 as f64 / 10.0));
+        }
+        fn reset(&mut self) {
+            self.0 = 0;
+        }
+    }
+
+    #[test]
+    fn reset_forgets_state_and_resends_the_same_value() {
+        let mut b = GraphBuilder::new();
+        b.add_processor(id("count"), Box::<Counter>::default())
+            .unwrap();
+        b.connect(port("osc", "Boop"), port("count", "in")).unwrap();
+        b.add_sink(port("count", "out"), port("toy", "Vibrator_0"), None)
+            .unwrap();
+        let mut g = b.build().unwrap();
+        let signals = SignalPlane::new();
+        signals.write(&port("osc", "Boop"), Signal::Float(1.0));
+
+        assert_eq!(tick(&mut g, &signals), vec![("toy/Vibrator_0".into(), 0.1)]);
+        assert_eq!(tick(&mut g, &signals), vec![("toy/Vibrator_0".into(), 0.2)]);
+
+        g.reset();
+        // Counting starts over, and 0.1 is sent again although it was sent before
+        assert_eq!(tick(&mut g, &signals), vec![("toy/Vibrator_0".into(), 0.1)]);
+
+        // With no input, a reset graph sends nothing
+        g.reset();
+        signals.clear(&port("osc", "Boop"));
         assert!(tick(&mut g, &signals).is_empty());
     }
 }

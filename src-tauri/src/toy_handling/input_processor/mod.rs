@@ -17,7 +17,8 @@
  *     -> processing mode -> Idle/Range -> motor
  *
  * A new instance is made whenever the toy's settings change, so any state
- * an input processor keeps (such as learned lengths) starts over then.
+ * an input processor keeps (such as learned lengths) starts over then. On
+ * avatar change, InputProcessor::reset is called instead.
  *
  * To add an input processor: implement InputProcessor, add a variant to
  * PenetrationSystemType and return the new processor from
@@ -48,6 +49,12 @@ pub trait InputProcessor: Send {
     /// the last tick, in seconds. Return the motor level (0.0 to 1.0) to set
     /// it, or `None` to leave it where it is.
     fn tick(&mut self, dt: f32) -> Option<f64>;
+
+    /// Forget everything learned from past input, as if new. Called when
+    /// the avatar changes, after its parameters have been cleared, so
+    /// nothing from the old avatar (zones, learned lengths, flags) carries
+    /// over. Until new input arrives, `tick` should return `None`.
+    fn reset(&mut self);
 
     /// Whether `addr` passes the feature's input filter tags. Only asked when
     /// the feature has tags. Default: the address contains any of the tags.
@@ -96,6 +103,10 @@ impl Processor for InputProcessorNode {
     fn tick(&mut self, _: &[Signal], dt: f32, out: &mut [Option<Signal>], _: &mut Vec<EventOut>) {
         out[0] = self.processor.tick(dt).map(Signal::Float);
     }
+
+    fn reset(&mut self) {
+        self.processor.reset();
+    }
 }
 
 #[cfg(test)]
@@ -116,6 +127,9 @@ mod tests {
         }
         fn tick(&mut self, _: f32) -> Option<f64> {
             self.0.take()
+        }
+        fn reset(&mut self) {
+            self.0 = None;
         }
     }
 

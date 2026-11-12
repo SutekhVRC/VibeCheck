@@ -32,6 +32,10 @@ impl InputProcessor for TPSProcessor {
         None
     }
 
+    fn reset(&mut self) {
+        // TODO: forget the tracked parameters
+    }
+
     // TODO: decide whether TPS uses input filter tags. The previous
     // version ignored them (override input_filter to return true)
 }

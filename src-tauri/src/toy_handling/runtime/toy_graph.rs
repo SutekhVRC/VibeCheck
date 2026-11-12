@@ -147,7 +147,7 @@ pub fn build_toy_graph(toy: &ModuleInstanceId, features: &VCToyFeatures) -> Resu
         };
 
         let pen = &feature.penetration_system;
-        if let Some(processor) = pen.pen_system_type.processor() {
+        if let Some(processor) = pen.pen_system_type.processor(feature.feature_type) {
             let node = ModuleInstanceId::new(format!("{prefix}/input_processor"));
             let tags = pen.pen_system_input_filter.clone().unwrap_or_default();
             b.add_processor(
@@ -441,16 +441,27 @@ mod tests {
             .node_ids()
             .any(|n| n.as_str() == "toy:test:0/Vibrator_0/input_processor"));
 
-        // The SPS processor is a stub for now: it reads SPS parameters but
-        // never sets a level
+        // SPS parameters reach the motor through the processor, unrounded
         h.osc(
             "/avatar/parameters/OGB/Orf/Mouth/PenOthers",
             Signal::Float(0.7),
         );
-        assert!(h.tick().is_empty());
+        assert_eq!(h.tick(), vec![("Vibrator_0".into(), 0.7, None)]);
 
-        // The feature's own parameters still work
+        // The feature's own parameters still work alongside
         h.osc(BOOP, Signal::Float(0.5));
+        assert_eq!(h.tick(), vec![("Vibrator_0".into(), 0.5, None)]);
+
+        // An avatar change resets the graph: the SPS zone is forgotten and
+        // nothing is sent until new input arrives
+        h.graph.reset();
+        h.signals.clear_module(&ModuleInstanceId::new(OSC_MODULE));
+        assert!(h.tick().is_empty());
+        h.osc(
+            "/avatar/parameters/OGB/Orf/Mouth/PenOthers",
+            Signal::Float(0.5),
+        );
+        // Sent again although 0.5 was the last value before the reset
         assert_eq!(h.tick(), vec![("Vibrator_0".into(), 0.5, None)]);
     }
 }

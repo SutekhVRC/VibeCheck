@@ -90,11 +90,26 @@ Each one runs inside the toy's graph as an `InputProcessorNode`, which:
 2. each tick, passes every watched parameter that changed since the last tick through the feature's **input filter** tags (`InputProcessor::input_filter`, by default "the address contains a tag"; no tags lets everything through) and gives the rest to `InputProcessor::update`, oldest change first;
 3. calls `InputProcessor::tick(dt)`; a returned level goes on to the chain's mode, `None` leaves the motor as it is.
 
-Input processors get values as VRChat sent them: they skip the `f32` rounding plain parameters get. Like every node, a processor is built anew when the toy's config changes, so any state it keeps starts over then.
+Input processors get values as VRChat sent them: they skip the `f32` rounding plain parameters get. Like every node, a processor is built anew when the toy's config changes, so any state it keeps starts over then. On avatar change, `InputProcessor::reset` is called instead (see [Avatar change](#avatar-change)). A processor is told whether its feature is Linear when it's created (`PenetrationSystemType::processor`).
 
 To add one: implement `InputProcessor`, add a variant to `PenetrationSystemType`, and return it from `PenetrationSystemType::processor`. The frontend lists the variants through the generated `PenetrationSystemType` binding.
 
-**SPS and TPS are stubs for now** (`penetration_systems/{sps,tps}/mod.rs`): they watch their prefixes but never set a level, waiting for their rewrite. A feature set to SPS or TPS still responds to its own parameters and Idle Speed. The previous implementations are in git history; each stub's header names the commit.
+**SPS** (`penetration_systems/sps/`) reads every SPS zone the avatar has, under `OGB/` and newer VRCFury's `VFH/Zone/`, in both the legacy (Pen/Orf) and SPS3 (Plug/Socket) formats:
+
+| Reading | Legacy | SPS3 |
+|---|---|---|
+| Depth on a socket | Root/tip depth with a learned plug length (`length.rs`), else `PenSelf`/`PenOthers` (`PenOthers` gated by `PenOthersClose` if sent) | 1 − separation / plug length. The length comes from a native SPS3 plug (collision tag + `SenderLossyScaleZ`), or is estimated for a legacy plug from `DepthRadius` |
+| Depth on a plug | `PenSelf`/`PenOthers` | 1 − separation / (`LengthMult1` × `LengthMult2`) |
+| Touch and frot | Proximity, gated by the `…Close` flag (except frot on sockets) | Proximity |
+
+- **Touch speed:** where the avatar sends `<Contact>_SenderVelocityMagnitude`, touch and frot use that speed instead of the proximity, with 1 m/s as full power.
+- **Combining:** the feature's level is the strongest reading of any zone that passes the input filter. Input filter tags match the zone's name (e.g. a socket's menu label), not the whole address.
+- **Linear features** follow depth only.
+- **`OGB/HapticsDisabled`** set by the avatar holds the level at 0 (which Idle Speed then applies to) until it's cleared.
+- **Learning per tick:** root/tip and separation readings are taken once per tick, so values VRChat sends together are used together. The learned length is the median of recent readings.
+- **Not ready yet:** nothing is sent until the first SPS value arrives.
+
+**TPS** (`penetration_systems/tps/mod.rs`) is still a stub: it watches its prefix but never sets a level. Its previous implementation is in git history; the stub's header names the commit.
 
 ## Routing
 
@@ -105,7 +120,8 @@ Nothing needs routing to toys: `OscInput` writes every parameter value to the si
 `OscInput` publishes an `AvatarChange` event (with the avatar id) on the event plane. `core_event_handler` (`osc_routing.rs`) then:
 
 1. clears every OSC value from the signal plane, so a graph rebuilt later doesn't replay the old avatar's parameters;
-2. stops every device. It builds the Buttplug stop command while holding the global state lock, releases the lock, and only then waits for Buttplug. A failed stop is logged.
+2. tells the graph runner to reset every toy's graph (`GraphControl::ResetAll` → `Graph::reset`). Every processor forgets its state (Smooth's window, Rate's level, SPS zones and learned lengths, via `InputProcessor::reset`), and each motor forgets the last level it sent, so the new avatar's first value is sent even if it equals the old one (the toy was stopped in between);
+3. stops every device. It builds the Buttplug stop command while holding the global state lock, releases the lock, and only then waits for Buttplug. A failed stop is logged.
 
 The stop runs alongside everything else, so a parameter arriving at the same moment as an avatar change can land just before or just after it.
 

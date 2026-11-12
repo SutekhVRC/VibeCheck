@@ -10,14 +10,15 @@
 
 use log::{debug, info, warn};
 use tauri::{AppHandle, Manager};
-use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use vibecheck_core::{
     modules::osc::rosc::OscMessage, EventKind, EventReceiver, ModuleInstanceId, SafetyLayer,
     SignalPlane, Value,
 };
 
 use crate::{
-    osc_api::handle_api_message, toy_handling::runtime::toy_graph::OSC_MODULE,
+    osc_api::handle_api_message,
+    toy_handling::runtime::{graph_runner::GraphControl, toy_graph::OSC_MODULE},
     vcore::state::VCStateMutex,
 };
 
@@ -40,6 +41,7 @@ pub async fn osc_router(mut rx: UnboundedReceiver<OscMessage>, app_handle: AppHa
 pub async fn core_event_handler(
     mut events: EventReceiver,
     signals: SignalPlane,
+    graphs: UnboundedSender<GraphControl>,
     safety: SafetyLayer,
     app_handle: AppHandle,
 ) {
@@ -51,6 +53,9 @@ pub async fn core_event_handler(
                 // Forget the old avatar's parameter values, so a graph rebuilt
                 // later doesn't replay them
                 signals.clear_module(&ModuleInstanceId::new(OSC_MODULE));
+                // ...and start every graph over, so no processor (Smooth,
+                // Rate, SPS zones and lengths) carries old state across
+                let _ = graphs.send(GraphControl::ResetAll);
                 stop_all_devices(&app_handle).await;
             }
             EventKind::OutputError => match &event.value {

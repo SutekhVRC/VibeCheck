@@ -136,6 +136,10 @@ impl Processor for SmoothMode {
             out[0] = Some(Signal::Float(self.smooth(value, dt)));
         }
     }
+
+    fn reset(&mut self) {
+        self.samples.clear();
+    }
 }
 
 /// Rate Level is "how much the level drops per this long".
@@ -187,6 +191,11 @@ impl Processor for RateMode {
         if let Signal::Float(value) = ins[0] {
             out[0] = Some(Signal::Float(self.rate(value, dt)));
         }
+    }
+
+    fn reset(&mut self) {
+        self.level = 0.0;
+        self.last_input = 0.0;
     }
 }
 

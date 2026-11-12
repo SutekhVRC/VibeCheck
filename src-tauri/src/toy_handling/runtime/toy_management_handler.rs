@@ -162,6 +162,7 @@ impl Session {
             rt.spawn(core_event_handler(
                 event_rx,
                 signals.clone(),
+                graphs.clone(),
                 safety.clone(),
                 app_handle.clone(),
             ));

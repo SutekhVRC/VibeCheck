@@ -166,6 +166,11 @@ pub trait Processor: Send {
     /// already on the plane.
     fn watched(&mut self, _changed: &[(PortId, Signal)]) {}
 
+    /// Forget any state built up from past input, as if the processor were
+    /// new (e.g. on avatar change, so nothing from the old avatar carries
+    /// over). Settings stay. Default: nothing to forget.
+    fn reset(&mut self) {}
+
     /// Called once per graph tick, in topological order.
     ///
     /// `ins` and `out` are in the order of this module's signal in/out ports.
