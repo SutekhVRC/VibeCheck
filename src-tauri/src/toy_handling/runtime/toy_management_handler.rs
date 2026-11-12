@@ -24,7 +24,7 @@ use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 use futures_timer::Delay;
 use log::{debug, error as logerr, info, warn};
 use parking_lot::{lock_api::Mutex, RawMutex};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tokio::{
     runtime::Runtime,
     sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
@@ -50,10 +50,7 @@ use crate::{
         toy_manager::ToyManager,
         toyops::VCToy,
     },
-    vcore::{
-        ipc::call_plane::{TmSig, ToyManagementEvent, ToyUpdate},
-        state::VCStateMutex,
-    },
+    vcore::ipc::call_plane::{TmSig, ToyManagementEvent, ToyUpdate},
 };
 
 type ToyRuntime = Arc<Mutex<RawMutex, Option<Runtime>>>;
@@ -168,20 +165,22 @@ struct Session {
 
 impl Session {
     /// Creates the session runtime, and starts the core event handler and the
-    /// graph runner on it.
-    fn new(app_handle: &AppHandle) -> Self {
+    /// graph runner on it. `safety` is the app-wide safety layer, so the
+    /// master intensity and panic stop apply here too.
+    fn new(app_handle: &AppHandle, safety: SafetyLayer) -> Self {
         let async_rt: ToyRuntime = Arc::new(Mutex::new(Some(Runtime::new().unwrap())));
         let signals = SignalPlane::new();
         let (events, event_rx) = EventPlane::new();
         let (graphs, graphs_rx) = unbounded_channel();
-        // The app-wide safety layer, so the master intensity applies here too
-        let safety = app_handle.state::<VCStateMutex>().0.lock().safety.clone();
+        // Don't lock the global state here: native_vibecheck_enable holds it
+        // while waiting for this session to start listening
         {
             let rt_lock = async_rt.lock();
             let rt = rt_lock.as_ref().unwrap();
             rt.spawn(core_event_handler(
                 event_rx,
                 signals.clone(),
+                safety.clone(),
                 app_handle.clone(),
             ));
             rt.spawn(graph_runner(
@@ -323,6 +322,7 @@ pub async fn toy_management_handler(
     mut tme_recv: UnboundedReceiver<ToyManagementEvent>,
     mut core_toy_manager: ToyManager,
     mut vc_config: OSCNetworking,
+    safety: SafetyLayer,
     app_handle: AppHandle,
 ) {
     let mut listening = false;
@@ -368,7 +368,7 @@ pub async fn toy_management_handler(
             continue;
         }
 
-        let session = Session::new(&app_handle);
+        let session = Session::new(&app_handle, safety.clone());
         info!("Started listening!");
         // Recv events (listening)
 

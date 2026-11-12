@@ -187,6 +187,7 @@ impl VibeCheckState {
             self.tme_send_rx.take().unwrap(),
             self.core_toy_manager.as_ref().unwrap().clone(),
             self.config.networking.clone(),
+            self.safety.clone(),
             self.app_handle.as_ref().unwrap().clone(),
         )));
         info!("TMH started");

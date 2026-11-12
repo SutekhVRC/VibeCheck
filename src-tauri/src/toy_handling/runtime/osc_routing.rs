@@ -18,7 +18,8 @@ use parking_lot::RwLock;
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use vibecheck_core::{
-    modules::osc::rosc::OscMessage, EventKind, EventReceiver, ModuleInstanceId, SignalPlane, Value,
+    modules::osc::rosc::OscMessage, EventKind, EventReceiver, ModuleInstanceId, SafetyLayer,
+    SignalPlane, Value,
 };
 
 use crate::{
@@ -125,6 +126,7 @@ pub async fn osc_router(
 pub async fn core_event_handler(
     mut events: EventReceiver,
     signals: SignalPlane,
+    safety: SafetyLayer,
     app_handle: AppHandle,
 ) {
     while let Some(event) = events.recv().await {
@@ -142,8 +144,6 @@ pub async fn core_event_handler(
                     warn!("{} is failing: {}", event.source.module, error);
                     // A risky output that stops responding must be re-armed
                     // on purpose once it's back (no-op for toys)
-                    let state = app_handle.state::<VCStateMutex>();
-                    let safety = state.0.lock().safety.clone();
                     if safety.is_armed(&event.source.module) {
                         safety.disarm(&event.source.module);
                         warn!(
