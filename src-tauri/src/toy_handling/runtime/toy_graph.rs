@@ -26,7 +26,7 @@ use vibecheck_core::{
         levels::OutputLevels,
         modes::{self, Mode, ModeSettings},
     },
-    Event, ModuleInstanceId, PortId, PortSpec, Processor, Result, Signal,
+    EventOut, ModuleInstanceId, PortId, PortSpec, Processor, Result, Signal,
 };
 
 use crate::toy_handling::{
@@ -79,7 +79,7 @@ impl Processor for OscRounding {
         vec![PortSpec::signal_in("in"), PortSpec::signal_out("out")]
     }
 
-    fn tick(&mut self, ins: &[Signal], _: f32, out: &mut [Option<Signal>], _: &mut Vec<Event>) {
+    fn tick(&mut self, ins: &[Signal], _: f32, out: &mut [Option<Signal>], _: &mut Vec<EventOut>) {
         out[0] = Some(match ins[0] {
             Signal::Float(v) => Signal::Float((((v as f32) * 100.0).round() / 100.0) as f64),
             other => other,
@@ -199,7 +199,7 @@ mod tests {
         input_processor::penetration_systems::{tps::TPSProcessor, PenetrationSystemType},
         toyops::ToyParameter,
     };
-    use vibecheck_core::{SafetyLayer, SignalPlane};
+    use vibecheck_core::{EventPlane, SafetyLayer, SignalPlane};
 
     const BOOP: &str = "/avatar/parameters/Boop";
 
@@ -218,6 +218,7 @@ mod tests {
         toy: ModuleInstanceId,
         graph: Graph,
         signals: SignalPlane,
+        events: EventPlane,
     }
 
     impl Harness {
@@ -228,6 +229,7 @@ mod tests {
                 toy,
                 graph,
                 signals: SignalPlane::new(),
+                events: EventPlane::new().0,
             }
         }
 
@@ -241,12 +243,7 @@ mod tests {
         /// One 10 ms tick; returns (motor, level, duration) for each command.
         fn tick(&mut self) -> Vec<(String, f64, Option<u32>)> {
             self.graph
-                .tick(
-                    &self.signals,
-                    0.01,
-                    &SafetyLayer::default(),
-                    &mut Vec::new(),
-                )
+                .tick(&self.signals, 0.01, &SafetyLayer::default(), &self.events)
                 .iter()
                 .map(|c| (c.target().port.to_string(), c.level(), c.duration_ms()))
                 .collect()

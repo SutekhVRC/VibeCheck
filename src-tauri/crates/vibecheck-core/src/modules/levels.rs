@@ -3,8 +3,7 @@
 //! A [`Processor`] with ports `in` and `out`, applied to a feature's level
 //! after its processing mode and before the safety layer.
 
-use crate::event::Event;
-use crate::module::{PortSpec, Processor};
+use crate::module::{EventOut, PortSpec, Processor};
 use crate::signal::Signal;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -48,7 +47,13 @@ impl Processor for OutputLevels {
         vec![PortSpec::signal_in("in"), PortSpec::signal_out("out")]
     }
 
-    fn tick(&mut self, ins: &[Signal], _dt: f32, out: &mut [Option<Signal>], _: &mut Vec<Event>) {
+    fn tick(
+        &mut self,
+        ins: &[Signal],
+        _dt: f32,
+        out: &mut [Option<Signal>],
+        _: &mut Vec<EventOut>,
+    ) {
         out[0] = Some(Signal::Float(self.apply(ins[0].as_level())));
     }
 }

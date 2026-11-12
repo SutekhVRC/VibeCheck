@@ -24,6 +24,9 @@ pub enum EventKind {
     RuleFired,
     Arming,
     Panic,
+    /// An output started failing (value: the error as text) or recovered
+    /// (value: `None`).
+    OutputError,
     /// Module-specific events that don't fit the kinds above.
     Custom(Arc<str>),
 }

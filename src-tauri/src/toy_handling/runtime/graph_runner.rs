@@ -14,7 +14,7 @@ use tokio::{
     sync::mpsc::UnboundedReceiver,
     time::{interval, Instant, MissedTickBehavior},
 };
-use vibecheck_core::{graph::Graph, CommandSlots, SafetyLayer, SignalPlane};
+use vibecheck_core::{graph::Graph, CommandSlots, EventPlane, SafetyLayer, SignalPlane};
 
 /// How often graphs run.
 pub const GRAPH_TICK_HZ: u64 = 100;
@@ -38,10 +38,14 @@ struct ToyGraph {
     slots: CommandSlots,
 }
 
-pub async fn graph_runner(mut control: UnboundedReceiver<GraphControl>, signals: SignalPlane) {
+/// Events processors emit are published on `events`.
+pub async fn graph_runner(
+    mut control: UnboundedReceiver<GraphControl>,
+    signals: SignalPlane,
+    events: EventPlane,
+) {
     let safety = SafetyLayer::default();
     let mut toys: HashMap<u32, ToyGraph> = HashMap::new();
-    let mut events = Vec::new();
 
     let mut ticker = interval(Duration::from_nanos(1_000_000_000 / GRAPH_TICK_HZ));
     ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
@@ -65,12 +69,10 @@ pub async fn graph_runner(mut control: UnboundedReceiver<GraphControl>, signals:
                 let dt = (now - last_tick).as_secs_f32().min(MAX_DT);
                 last_tick = now;
                 for toy in toys.values_mut() {
-                    for cmd in toy.graph.tick(&signals, dt, &safety, &mut events) {
+                    for cmd in toy.graph.tick(&signals, dt, &safety, &events) {
                         toy.slots.write(cmd);
                     }
                 }
-                // Processor events aren't routed anywhere yet
-                events.clear();
             }
         }
     }
@@ -109,7 +111,11 @@ mod tests {
     async fn ticks_graphs_into_their_slots_until_removed() {
         let signals = SignalPlane::new();
         let (control, control_rx) = unbounded_channel();
-        let runner = tokio::spawn(graph_runner(control_rx, signals.clone()));
+        let runner = tokio::spawn(graph_runner(
+            control_rx,
+            signals.clone(),
+            EventPlane::new().0,
+        ));
 
         let slots = CommandSlots::new();
         control

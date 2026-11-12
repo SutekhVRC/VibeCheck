@@ -14,8 +14,7 @@
 use std::collections::VecDeque;
 use std::time::Duration;
 
-use crate::event::Event;
-use crate::module::{PortSpec, Processor};
+use crate::module::{EventOut, PortSpec, Processor};
 use crate::signal::Signal;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -70,7 +69,13 @@ impl Processor for RawMode {
         ports()
     }
 
-    fn tick(&mut self, ins: &[Signal], _dt: f32, out: &mut [Option<Signal>], _: &mut Vec<Event>) {
+    fn tick(
+        &mut self,
+        ins: &[Signal],
+        _dt: f32,
+        out: &mut [Option<Signal>],
+        _: &mut Vec<EventOut>,
+    ) {
         out[0] = Some(Signal::Float(ins[0].as_level()));
     }
 }
@@ -126,7 +131,7 @@ impl Processor for SmoothMode {
         ports()
     }
 
-    fn tick(&mut self, ins: &[Signal], dt: f32, out: &mut [Option<Signal>], _: &mut Vec<Event>) {
+    fn tick(&mut self, ins: &[Signal], dt: f32, out: &mut [Option<Signal>], _: &mut Vec<EventOut>) {
         if let Signal::Float(value) = ins[0] {
             out[0] = Some(Signal::Float(self.smooth(value, dt)));
         }
@@ -178,7 +183,7 @@ impl Processor for RateMode {
         ports()
     }
 
-    fn tick(&mut self, ins: &[Signal], dt: f32, out: &mut [Option<Signal>], _: &mut Vec<Event>) {
+    fn tick(&mut self, ins: &[Signal], dt: f32, out: &mut [Option<Signal>], _: &mut Vec<EventOut>) {
         if let Signal::Float(value) = ins[0] {
             out[0] = Some(Signal::Float(self.rate(value, dt)));
         }
@@ -200,7 +205,13 @@ impl Processor for ConstantMode {
         ports()
     }
 
-    fn tick(&mut self, ins: &[Signal], _dt: f32, out: &mut [Option<Signal>], _: &mut Vec<Event>) {
+    fn tick(
+        &mut self,
+        ins: &[Signal],
+        _dt: f32,
+        out: &mut [Option<Signal>],
+        _: &mut Vec<EventOut>,
+    ) {
         let on = match ins[0] {
             Signal::Float(v) => v >= 0.5,
             Signal::Bool(b) => b,

@@ -20,13 +20,17 @@
 //! 3. each sink whose value changed since it last fired goes through the
 //!    [`SafetyLayer`] and comes back as a [`ClampedCmd`]. Unchanged sinks send
 //!    nothing, so an idle graph doesn't flood its outputs.
+//!
+//! Events a processor emits ([`EventOut`](crate::module::EventOut)) are published on the
+//! [`EventPlane`] with the node's port as their source, e.g.
+//! `proc:avg/above_0.7`.
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
 use crate::address::{ModuleInstanceId, PortId};
 use crate::error::{Error, Result};
-use crate::event::Event;
+use crate::event::EventPlane;
 use crate::module::{PortDirection, PortKind, Processor};
 use crate::safety::{ClampedCmd, SafetyLayer};
 use crate::signal::{Signal, SignalPlane};
@@ -280,15 +284,16 @@ pub struct Graph {
 impl Graph {
     /// Runs every node once, then returns a command for every sink whose
     /// value changed. `dt` is the time since the last tick, in seconds.
-    /// Events processors emit are appended to `events`.
+    /// Events processors emit are published on `events`.
     pub fn tick(
         &mut self,
         signals: &SignalPlane,
         dt: f32,
         safety: &SafetyLayer,
-        events: &mut Vec<Event>,
+        events: &EventPlane,
     ) -> Vec<ClampedCmd> {
         let mut ins = Vec::new();
+        let mut emitted = Vec::new();
         for i in 0..self.nodes.len() {
             // Nodes only read from nodes before them (run order)
             let (before, rest) = self.nodes.split_at_mut(i);
@@ -314,7 +319,14 @@ impl Graph {
             }
 
             let mut out = vec![None; node.outputs.len()];
-            node.processor.tick(&ins, dt, &mut out, events);
+            node.processor.tick(&ins, dt, &mut out, &mut emitted);
+            for event in emitted.drain(..) {
+                events.publish(
+                    PortId::new(node.id.clone(), event.port),
+                    event.kind,
+                    event.value,
+                );
+            }
             for (slot, new) in node.outputs.iter_mut().zip(out) {
                 if new.is_some() {
                     *slot = new;
@@ -346,7 +358,8 @@ impl Graph {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::module::PortSpec;
+    use crate::event::{EventKind, Value};
+    use crate::module::{EventOut, PortSpec};
 
     /// Adds a constant to its input.
     struct Add(f64);
@@ -355,7 +368,13 @@ mod tests {
         fn ports(&self) -> Vec<PortSpec> {
             vec![PortSpec::signal_in("in"), PortSpec::signal_out("out")]
         }
-        fn tick(&mut self, ins: &[Signal], _: f32, out: &mut [Option<Signal>], _: &mut Vec<Event>) {
+        fn tick(
+            &mut self,
+            ins: &[Signal],
+            _: f32,
+            out: &mut [Option<Signal>],
+            _: &mut Vec<EventOut>,
+        ) {
             out[0] = Some(Signal::Float(ins[0].as_level() + self.0));
         }
     }
@@ -367,7 +386,13 @@ mod tests {
         fn ports(&self) -> Vec<PortSpec> {
             vec![PortSpec::signal_in("in"), PortSpec::signal_out("out")]
         }
-        fn tick(&mut self, ins: &[Signal], _: f32, out: &mut [Option<Signal>], _: &mut Vec<Event>) {
+        fn tick(
+            &mut self,
+            ins: &[Signal],
+            _: f32,
+            out: &mut [Option<Signal>],
+            _: &mut Vec<EventOut>,
+        ) {
             if ins[0].as_level() > 0.5 {
                 out[0] = Some(ins[0]);
             }
@@ -383,7 +408,7 @@ mod tests {
     }
 
     fn tick(g: &mut Graph, signals: &SignalPlane) -> Vec<(String, f64)> {
-        g.tick(signals, 0.01, &SafetyLayer::default(), &mut Vec::new())
+        g.tick(signals, 0.01, &SafetyLayer::default(), &EventPlane::new().0)
             .iter()
             .map(|c| (c.target().to_string(), c.level()))
             .collect()
@@ -454,10 +479,67 @@ mod tests {
         let signals = SignalPlane::new();
         signals.write(&port("osc", "Boop"), Signal::Float(0.0));
 
-        let cmds = g.tick(&signals, 0.01, &SafetyLayer::default(), &mut Vec::new());
+        let cmds = g.tick(
+            &signals,
+            0.01,
+            &SafetyLayer::default(),
+            &EventPlane::new().0,
+        );
         assert_eq!(cmds.len(), 1);
         assert_eq!(cmds[0].level(), 1.0); // 5.0 clamped by the safety layer
         assert_eq!(cmds[0].duration_ms(), Some(250));
+    }
+
+    /// Emits an event when its input crosses 0.5.
+    struct Threshold {
+        above: bool,
+    }
+
+    impl Processor for Threshold {
+        fn ports(&self) -> Vec<PortSpec> {
+            vec![PortSpec::signal_in("in"), PortSpec::event_out("crossed")]
+        }
+        fn tick(
+            &mut self,
+            ins: &[Signal],
+            _: f32,
+            _: &mut [Option<Signal>],
+            events: &mut Vec<EventOut>,
+        ) {
+            let above = ins[0].as_level() > 0.5;
+            if above != self.above {
+                self.above = above;
+                events.push(EventOut::new(
+                    "crossed",
+                    EventKind::Threshold,
+                    Value::Bool(above),
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn publishes_processor_events_from_their_node() {
+        let mut b = GraphBuilder::new();
+        b.add_processor(id("proc:avg"), Box::new(Threshold { above: false }))
+            .unwrap();
+        b.connect(port("osc", "Boop"), port("proc:avg", "in"))
+            .unwrap();
+        let mut g = b.build().unwrap();
+        let signals = SignalPlane::new();
+        let (events, mut rx) = EventPlane::new();
+        let safety = SafetyLayer::default();
+
+        signals.write(&port("osc", "Boop"), Signal::Float(0.9));
+        g.tick(&signals, 0.01, &safety, &events);
+        let event = rx.try_recv().unwrap();
+        assert_eq!(event.source, port("proc:avg", "crossed"));
+        assert_eq!(event.kind, EventKind::Threshold);
+        assert_eq!(event.value, Value::Bool(true));
+
+        // No change, no event
+        g.tick(&signals, 0.01, &safety, &events);
+        assert!(rx.try_recv().is_none());
     }
 
     #[test]

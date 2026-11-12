@@ -70,7 +70,7 @@ The safety layer uses `depth` to stop feedback loops.
 | Trait | Does | Shape |
 |---|---|---|
 | `Input` | Produces signals and events | `async fn run(&mut self, ctx: InputCtx)` runs for the module's lifetime |
-| `Processor` | Transforms signals once per graph tick, may emit events | `fn tick(&mut self, ins: &[Signal], dt, out: &mut [Option<Signal>], events)` |
+| `Processor` | Transforms signals once per graph tick, may emit events | `fn tick(&mut self, ins: &[Signal], dt, out: &mut [Option<Signal>], events: &mut Vec<EventOut>)` |
 | `Output` | Acts on a device or service | `async fn apply(&mut self, cmds: &[ClampedCmd])` |
 
 Modules are ordinary Rust types compiled into the app. `async-trait` keeps `Input` and `Output` usable as trait objects.
@@ -79,7 +79,9 @@ Modules are ordinary Rust types compiled into the app. `async-trait` keeps `Inpu
 
 A processor's `out` slots start as `None`. Setting one to `Some` writes a new value to that port; leaving it `None` leaves the port unchanged, e.g. while Smooth is still collecting values.
 
-`process_one(processor, input, dt)` runs a single-input, single-output processor once and returns its output, for quick use outside a graph (and in tests).
+To emit an event, a processor pushes an `EventOut { port, kind, value }` naming one of its own event ports. It can't build a full `Event` itself, because ids and timestamps come from the event plane; the graph publishes it with the node's port as the source.
+
+`process_one(processor, input, dt)` runs a single-input, single-output processor once and returns its output, for quick use outside a graph (and in tests). Events it emits are discarded.
 
 ## Graphs
 
@@ -112,6 +114,8 @@ for cmd in graph.tick(&signals, dt, &safety, &mut events) {
 1. Nodes run in dependency order, each reading the latest value of its inputs. A node only runs once **all** its inputs have a value, so nothing happens before the first input arrives.
 2. A node output keeps its last value until the node writes a new one (`None` means unchanged).
 3. Each sink whose value **changed** since it last fired goes through `SafetyLayer::clamp` and is returned as a `ClampedCmd`. Unchanged sinks send nothing, so idle graphs don't flood outputs.
+
+Events processors emit during a tick are published on the `EventPlane` passed to `tick`, with the node's port as the source (e.g. `proc:avg/crossed`).
 
 `Graph::tick` doesn't sleep or spawn anything; the caller decides the rate. The app ticks at 100 Hz (`graph_runner.rs`) and passes the real time since the last tick as `dt`, capped at 0.1 s.
 
@@ -188,6 +192,8 @@ An `Output` for one Buttplug device. Each port maps to an `Actuator`:
 
 `apply` sends every command, even if one fails, and returns the first error. A command for a port the output doesn't have is an `Error::UnknownPort`.
 
+With `with_events(module, events)`, it publishes `EventKind::OutputError` on its `error` port when sending **starts** failing (value: the error as text) and when it **works again** (value: `None`). It doesn't fire on every failed send, so a disconnected toy at 20 Hz doesn't flood the event plane.
+
 ## Migration status
 
 | Step | State |
@@ -198,7 +204,8 @@ An `Output` for one Buttplug device. Each port maps to an `Actuator`:
 | Smooth, Rate, Constant and level tweaks as `Processor` modules | Done |
 | SPS/TPS as `Processor` modules | Waiting for the planned SPS/TPS rewrite; the current input processors stay in the app |
 | Each toy's graph generated from its existing config, ticked at a fixed rate | Done ([toy-command-path.md](toy-command-path.md#the-graph)) |
-| Output events (e.g. "pattern started on toy X") from `ButtplugOutput` | Not started |
+| Output events from `ButtplugOutput` | Error and recovery done. Activity events ("motor started/stopped") wait for a design that handles Flip Input, where level 0 isn't "off" |
+| Processor events published from the graph | Done |
 
 ## Tests
 
@@ -207,6 +214,6 @@ cd src-tauri
 cargo test -p vibecheck-core
 ```
 
-Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `OutputLevels`, and the graph (dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, and rejecting bad wiring).
+Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `OutputLevels`, `ButtplugOutput`'s error events firing only on change, and the graph (publishing processor events from their node, dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, and rejecting bad wiring).
 
 The app's tests (`cargo test -p vibecheck`) cover the SPS/TPS routing table, `run_input_processors`, the graph runner task, and the generated toy graphs end to end: nothing before the first input, modes loaded from config, one parameter driving several motors, Range and Idle after the mode, the first matching parameter winning, disabled features, Linear speed, the f32 rounding, Smooth following over its window, Rate winding down after the input stops, and SPS/TPS output chains.

@@ -18,7 +18,7 @@ use parking_lot::RwLock;
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use vibecheck_core::{
-    modules::osc::rosc::OscMessage, EventKind, EventReceiver, ModuleInstanceId, SignalPlane,
+    modules::osc::rosc::OscMessage, EventKind, EventReceiver, ModuleInstanceId, SignalPlane, Value,
 };
 
 use crate::{
@@ -129,12 +129,19 @@ pub async fn core_event_handler(
 ) {
     while let Some(event) = events.recv().await {
         debug!("Core event: {:?}", event);
-        if event.kind == EventKind::AvatarChange {
-            info!("Avatar Changed: Halting toy actions");
-            // Forget the old avatar's parameter values, so a graph rebuilt
-            // later doesn't replay them
-            signals.clear_module(&ModuleInstanceId::new(OSC_MODULE));
-            stop_all_devices(&app_handle).await;
+        match event.kind {
+            EventKind::AvatarChange => {
+                info!("Avatar Changed: Halting toy actions");
+                // Forget the old avatar's parameter values, so a graph rebuilt
+                // later doesn't replay them
+                signals.clear_module(&ModuleInstanceId::new(OSC_MODULE));
+                stop_all_devices(&app_handle).await;
+            }
+            EventKind::OutputError => match &event.value {
+                Value::Text(error) => warn!("{} is failing: {}", event.source.module, error),
+                _ => info!("{} is working again", event.source.module),
+            },
+            _ => {}
         }
     }
 }

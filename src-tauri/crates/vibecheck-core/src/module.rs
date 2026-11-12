@@ -9,11 +9,13 @@
 //! Modules are ordinary Rust types compiled into the app; there is no plugin
 //! ABI.
 
+use std::sync::Arc;
+
 use async_trait::async_trait;
 
 use crate::address::{ModuleInstanceId, PortId};
 use crate::error::Result;
-use crate::event::{Event, EventKind, EventPlane, Value};
+use crate::event::{EventKind, EventPlane, Value};
 use crate::safety::ClampedCmd;
 use crate::signal::{Signal, SignalPlane};
 
@@ -107,6 +109,26 @@ pub trait Input: Send {
     async fn run(&mut self, ctx: InputCtx) -> Result<()>;
 }
 
+/// An event a processor wants to publish, on one of its own event ports.
+/// The graph turns it into an [`Event`](crate::event::Event) with the node
+/// as its source.
+#[derive(Clone, Debug, PartialEq)]
+pub struct EventOut {
+    pub port: Arc<str>,
+    pub kind: EventKind,
+    pub value: Value,
+}
+
+impl EventOut {
+    pub fn new(port: impl AsRef<str>, kind: EventKind, value: Value) -> Self {
+        Self {
+            port: Arc::from(port.as_ref()),
+            kind,
+            value,
+        }
+    }
+}
+
 pub trait Processor: Send {
     fn ports(&self) -> Vec<PortSpec>;
 
@@ -117,13 +139,13 @@ pub trait Processor: Send {
     /// to that port, or leave it `None` to leave the port unchanged (e.g. a
     /// smoother still collecting values). `dt` is the time since the last
     /// tick, in seconds. Events pushed onto `events` are published on the
-    /// event plane after the tick.
+    /// event plane, from this node.
     fn tick(
         &mut self,
         ins: &[Signal],
         dt: f32,
         out: &mut [Option<Signal>],
-        events: &mut Vec<Event>,
+        events: &mut Vec<EventOut>,
     );
 }
 

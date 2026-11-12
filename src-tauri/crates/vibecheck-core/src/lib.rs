@@ -15,7 +15,7 @@
 //!   the safety layer can stop feedback loops.
 //!
 //! Modules implement the traits in [`module`]. Outputs only ever receive
-//! [`ClampedCmd`](safety::ClampedCmd)s, which only the [`SafetyLayer`](safety::SafetyLayer)
+//! [`ClampedCmd`]s, which only the [`SafetyLayer`]
 //! can create.
 
 pub mod address;
@@ -33,7 +33,7 @@ pub use error::{Error, Result};
 pub use event::{Event, EventId, EventKind, EventPlane, EventReceiver, Value};
 pub use graph::{Graph, GraphBuilder};
 pub use module::{
-    process_one, Input, InputCtx, Output, PortDirection, PortKind, PortSpec, Processor,
+    process_one, EventOut, Input, InputCtx, Output, PortDirection, PortKind, PortSpec, Processor,
 };
 pub use safety::{ClampedCmd, SafetyCaps, SafetyLayer};
 pub use signal::{Signal, SignalPlane};

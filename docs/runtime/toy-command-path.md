@@ -107,7 +107,7 @@ The stop runs alongside everything else, so a parameter arriving at the same mom
 
 ## Session lifetime
 
-Turning VibeCheck on creates a `Session` (`toy_management_handler.rs`): a tokio runtime, a signal plane, the OSC routes and the graph runner. On it run `OscInput`, the router, the event handler, the graph runner, and one task plus one emitter per toy. Turning off (or a reset) aborts the toy tasks, clears the routes and shuts the runtime down, which closes the OSC socket and frees the port for the "off" listener.
+Turning VibeCheck on creates a `Session` (`toy_management_handler.rs`): a tokio runtime, a signal plane, an event plane, the OSC routes and the graph runner. On it run the core event handler, the graph runner, `OscInput`, the router, and one task plus one emitter per toy. Everything in the session publishes on the same event plane: `OscInput` (avatar change), graph processors, and each toy's output (errors). Turning off (or a reset) aborts the toy tasks, clears the routes and shuts the runtime down, which closes the OSC socket and frees the port for the "off" listener.
 
 If the port can't be bound, `OscInput::bind` fails, the error is logged, and `TmSig::BindError` is sent.
 
@@ -159,6 +159,7 @@ The mapping lives in `actuator_for` (`toy_output.rs`).
 ## Errors
 
 - `ButtplugOutput::apply` tries every command even if one fails, and returns the first error. The emitter logs it (`Send to device error: ...`).
+- Each toy's `ButtplugOutput` also publishes an `OutputError` event when sending starts failing and when it works again. The core event handler logs these (`toy:… is failing: …` / `toy:… is working again`). Nothing reacts to them yet; the safety layer will (e.g. disarming risky outputs that stop responding).
 - If a toy's graph can't be built (a wiring bug), the error is logged and that toy gets no new graph.
 
 ## Not on this path

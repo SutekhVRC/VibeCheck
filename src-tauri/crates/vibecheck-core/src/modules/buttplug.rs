@@ -3,6 +3,11 @@
 //! Each actuator (motor) on the toy is one signal-in port. Port names are
 //! stable across reconnects, e.g. `Vibrator_0` or `Linear_0`; Buttplug's
 //! device index is only used internally.
+//!
+//! With [`with_events`](ButtplugOutput::with_events), the output publishes an
+//! [`EventKind::OutputError`] event on its `error` port when sending starts
+//! failing (value: the error as text) and again when it works again (value:
+//! `None`). It only fires when that state changes, not on every failed send.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -14,9 +19,38 @@ use buttplug::client::{
 };
 use buttplug::core::message::ActuatorType;
 
+use crate::address::{ModuleInstanceId, PortId};
 use crate::error::{Error, Result};
+use crate::event::{EventKind, EventPlane, Value};
 use crate::module::{Output, PortSpec};
 use crate::safety::ClampedCmd;
+
+/// Event port for send failures and recoveries.
+pub const ERROR_PORT: &str = "error";
+
+/// Tracks whether an output is failing, so error events fire only when that
+/// changes.
+#[derive(Default)]
+struct ErrorState {
+    failing: bool,
+}
+
+impl ErrorState {
+    /// The event value to publish for this result, if the state changed.
+    fn update(&mut self, result: &Result<()>) -> Option<Value> {
+        match (result, self.failing) {
+            (Err(e), false) => {
+                self.failing = true;
+                Some(Value::Text(e.to_string().into()))
+            }
+            (Ok(()), true) => {
+                self.failing = false;
+                Some(Value::None)
+            }
+            _ => None,
+        }
+    }
+}
 
 /// How to drive one actuator.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -33,6 +67,8 @@ pub enum Actuator {
 pub struct ButtplugOutput {
     device: Arc<ButtplugClientDevice>,
     actuators: HashMap<Arc<str>, Actuator>,
+    events: Option<(PortId, EventPlane)>,
+    error_state: ErrorState,
 }
 
 impl ButtplugOutput {
@@ -47,7 +83,15 @@ impl ButtplugOutput {
                 .into_iter()
                 .map(|(port, actuator)| (Arc::from(port), actuator))
                 .collect(),
+            events: None,
+            error_state: ErrorState::default(),
         }
+    }
+
+    /// Publish error and recovery events as `module`, on `events`.
+    pub fn with_events(mut self, module: ModuleInstanceId, events: EventPlane) -> Self {
+        self.events = Some((PortId::new(module, ERROR_PORT), events));
+        self
     }
 
     async fn send(&self, actuator: Actuator, cmd: &ClampedCmd) -> Result<()> {
@@ -83,6 +127,7 @@ impl Output for ButtplugOutput {
             .map(|port| PortSpec::signal_in(port.as_ref()))
             .collect();
         ports.sort_by(|a, b| a.name.cmp(&b.name));
+        ports.push(PortSpec::event_out(ERROR_PORT));
         ports
     }
 
@@ -99,6 +144,32 @@ impl Output for ButtplugOutput {
                 first_error.get_or_insert(e);
             }
         }
-        first_error.map_or(Ok(()), Err)
+        let result = first_error.map_or(Ok(()), Err);
+        if let Some((port, events)) = &self.events {
+            if let Some(value) = self.error_state.update(&result) {
+                events.publish(port.clone(), EventKind::OutputError, value);
+            }
+        }
+        result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_events_fire_only_when_the_state_changes() {
+        let mut state = ErrorState::default();
+        let failed = || Err(Error::OutputUnavailable("disconnected".into()));
+
+        assert_eq!(state.update(&Ok(())), None);
+        assert_eq!(
+            state.update(&failed()),
+            Some(Value::Text("output unavailable: disconnected".into()))
+        );
+        assert_eq!(state.update(&failed()), None, "still failing");
+        assert_eq!(state.update(&Ok(())), Some(Value::None), "recovered");
+        assert_eq!(state.update(&Ok(())), None);
     }
 }

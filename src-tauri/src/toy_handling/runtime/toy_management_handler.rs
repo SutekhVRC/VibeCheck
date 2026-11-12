@@ -10,7 +10,8 @@
       other message to the OSC router.
     - The OSC router handles OSC API messages and sends SPS/TPS messages to the
       toy tasks that use them.
-    - The core event handler reacts to events (avatar change stops all toys).
+    - The core event handler reacts to events on the session's event plane
+      (avatar change stops all toys; output errors are logged).
     - The graph runner ticks every toy's graph (built from its config) at a
       fixed rate and fills each toy's command slots.
     - One task per toy runs its SPS/TPS input processors and applies config
@@ -98,6 +99,7 @@ async fn toy_task(
     mut vc_toy: VCToy,
     slots: CommandSlots,
     signals: SignalPlane,
+    events: EventPlane,
 ) {
     let dev = vc_toy.device_handle.clone();
     let module = toy_module_id(&vc_toy);
@@ -107,7 +109,7 @@ async fn toy_task(
     let tet_data = EmitterThreadData::new(
         emitter_thread_rx,
         slots,
-        buttplug_output(&vc_toy),
+        buttplug_output(&vc_toy).with_events(module.clone(), events),
         vc_toy.bt_update_rate,
     );
 
@@ -150,24 +152,33 @@ struct Session {
     async_rt: ToyRuntime,
     routes: OscRoutes,
     signals: SignalPlane,
+    events: EventPlane,
     graphs: UnboundedSender<GraphControl>,
 }
 
 impl Session {
-    /// Creates the session runtime and starts the graph runner on it.
-    fn new() -> Self {
+    /// Creates the session runtime, and starts the core event handler and the
+    /// graph runner on it.
+    fn new(app_handle: &AppHandle) -> Self {
         let async_rt: ToyRuntime = Arc::new(Mutex::new(Some(Runtime::new().unwrap())));
         let signals = SignalPlane::new();
+        let (events, event_rx) = EventPlane::new();
         let (graphs, graphs_rx) = unbounded_channel();
-        async_rt
-            .lock()
-            .as_ref()
-            .unwrap()
-            .spawn(graph_runner(graphs_rx, signals.clone()));
+        {
+            let rt_lock = async_rt.lock();
+            let rt = rt_lock.as_ref().unwrap();
+            rt.spawn(core_event_handler(
+                event_rx,
+                signals.clone(),
+                app_handle.clone(),
+            ));
+            rt.spawn(graph_runner(graphs_rx, signals.clone(), events.clone()));
+        }
         Self {
             async_rt,
             routes: OscRoutes::default(),
             signals,
+            events,
             graphs,
         }
     }
@@ -213,6 +224,7 @@ fn start_toy(session: &Session, toy: VCToy) -> RunningToy {
         toy,
         slots.clone(),
         session.signals.clone(),
+        session.events.clone(),
     ));
     info!("Toy: {} started listening..", toy_id);
 
@@ -223,7 +235,7 @@ fn start_toy(session: &Session, toy: VCToy) -> RunningToy {
     }
 }
 
-/// Starts OscInput, the OSC router and the core event handler for a session.
+/// Starts OscInput and the OSC router for a session.
 fn start_osc(
     session: &Session,
     vc_config: &OSCNetworking,
@@ -231,11 +243,10 @@ fn start_osc(
     app_handle: &AppHandle,
 ) {
     let (tap_tx, tap_rx) = unbounded_channel();
-    let (events, event_rx) = EventPlane::new();
     let ctx = InputCtx::new(
         ModuleInstanceId::new(OSC_MODULE),
         session.signals.clone(),
-        events,
+        session.events.clone(),
     );
     let bind = SocketAddr::V4(vc_config.bind);
     let tme_send = tme_send.clone();
@@ -264,11 +275,6 @@ fn start_osc(
     rt.spawn(osc_router(
         tap_rx,
         session.routes.clone(),
-        app_handle.clone(),
-    ));
-    rt.spawn(core_event_handler(
-        event_rx,
-        session.signals.clone(),
         app_handle.clone(),
     ));
 }
@@ -343,7 +349,7 @@ pub async fn toy_management_handler(
             continue;
         }
 
-        let session = Session::new();
+        let session = Session::new(&app_handle);
         info!("Started listening!");
         // Recv events (listening)
 
