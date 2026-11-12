@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use log::{debug, info, trace};
-use rosc::OscMessage;
+use rosc::{OscMessage, OscType};
 use tauri::{AppHandle, Manager};
 
 use crate::{
@@ -45,6 +45,23 @@ impl APIProcessor {
                 &Rc::new(app_handle),
                 FeCoreEvent::State(crate::frontend::frontend_types::FeStateEvent::Disable),
             );
+        } else if api_tokenize.len() == 5
+            && api_tokenize[2] == "vibecheck"
+            && api_tokenize[3] == "api"
+            && api_tokenize[4] == "panic"
+        {
+            // /avatar/parameters/vibecheck/api/panic
+            // true (or a float of 0.5 and up) triggers a panic stop. It
+            // can't resume: that has to be done in the app on purpose.
+            let pressed = match endpoint.args.pop() {
+                Some(OscType::Bool(b)) => b,
+                Some(OscType::Float(f)) => f >= 0.5,
+                _ => false,
+            };
+            if pressed {
+                info!("Panic stop from the OSC API");
+                crate::vcore::panic::trigger_panic(app_handle);
+            }
         } else if api_tokenize.len() == 7
             && api_tokenize[4] == "anatomy"
             && api_tokenize[6] == "enabled"

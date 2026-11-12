@@ -17,7 +17,13 @@ export const INVOKE = {
   SET_CONFIG: "set_vibecheck_config",
   OPEN_BROWSER: "open_default_browser",
   OFFLINE_SYNC: "sync_offline_toys",
+  PANIC_STOP: "panic_stop",
+  PANIC_RESUME: "panic_resume",
+  GET_PANIC_STATE: "get_panic_state",
 } as const;
+
+/** Global hotkey for the panic stop (registered by the backend) */
+export const PANIC_HOTKEY = "Ctrl+Alt+P";
 
 export const OSC = {
   PARAM_PREFIX: "/avatar/parameters/",
@@ -119,6 +125,10 @@ export const TOOLTIP = {
   },
   AdvancedToy: {
     text: "Open the toy settings strip (OSC data, anatomy, update rate) by default when viewing a toy",
+    link: "",
+  },
+  PanicStop: {
+    text: "Stop every toy right now. They stay stopped until you press Resume. Also: Ctrl+Alt+P anywhere, or the vibecheck/api/panic avatar parameter.",
     link: "",
   },
   MasterVolume: {

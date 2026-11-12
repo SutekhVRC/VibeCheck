@@ -113,7 +113,7 @@ for cmd in graph.tick(&signals, dt, &safety, &mut events) {
 
 1. Nodes run in dependency order, each reading the latest value of its inputs. A node only runs once **all** its inputs have a value, so nothing happens before the first input arrives.
 2. A node output keeps its last value until the node writes a new one (`None` means unchanged).
-3. Each sink whose value **changed** since it last fired goes through `SafetyLayer::clamp` and is returned as a `ClampedCmd`. Unchanged sinks send nothing, so idle graphs don't flood outputs.
+3. Each sink whose value **changed** since it last fired goes through `SafetyLayer::clamp` and is returned as a `ClampedCmd`, unless the safety layer refuses it. Unchanged sinks send nothing, so idle graphs don't flood outputs. A refused value still counts as the sink's last value, so it isn't retried or replayed later (after a resume or arming): the sink waits for its next change.
 
 Events processors emit during a tick are published on the `EventPlane` passed to `tick`, with the node's port as the source (e.g. `proc:avg/crossed`).
 
@@ -125,17 +125,47 @@ Every command that reaches an output is a `ClampedCmd`. Its fields are private a
 
 Levels in the safety layer are **intensities**: 0 is off and 1 is full power for every toy. Per-actuator Flip Input is applied after it, by the output, so the caps mean the same thing for toys whose motors run backwards.
 
-`SafetyLayer::limit(level)` is the core rule:
+A `SafetyLayer` is cheap to clone, and **clones share all their state** (caps, panic, arming, rate-limit timers). The app keeps one in its state and hands clones to every session and the Test button, so changing it (master volume, panic, arming) affects toys that are already running.
 
-1. a non-finite level (NaN, infinity) becomes 0, and the rest is clamped to `0.0..=1.0`;
-2. it is scaled by the **master volume** (`volume`), keeping the full range: at 0.6, 1.0 becomes 0.6 and 0.5 becomes 0.3;
-3. it is capped at `max_level`.
+### Levels
 
-`SafetyLayer::clamp(target, level, duration_ms)` applies `limit` and caps the duration at `max_duration_ms`. `SafetyLayer::clamp_caused_by(cause, ...)` does the same, but returns `None` if `cause.depth` has reached `max_event_depth`.
+`SafetyLayer::limit(level)`:
 
-A `SafetyLayer` is cheap to clone, and **clones share their caps**: `set_volume` / `set_caps` on one changes them for all. The app keeps one in its state and hands clones to every session, so moving the master volume in Settings affects toys that are already running.
+1. 0 while panicked;
+2. otherwise, a non-finite level (NaN, infinity) becomes 0 and the rest is clamped to `0.0..=1.0`;
+3. scaled by the **master volume** (`volume`), keeping the full range: at 0.6, 1.0 becomes 0.6 and 0.5 becomes 0.3;
+4. capped at `max_level`.
 
-`SafetyLayer::clamp_caused_by(cause, ...)` does the same, but returns `None` if `cause.depth` has reached `max_event_depth`.
+The volume scales rather than clips because a ceiling flattens everything above it (70% and 100% would feel the same), while scaling keeps the feel of the whole range, just quieter. Per-motor hard ceilings are what Range is for.
+
+### Commands
+
+`SafetyLayer::clamp(target, level, duration_ms) -> Option<ClampedCmd>` applies `limit`, caps the duration at `max_duration_ms`, and **refuses** (`None`):
+
+- while panicked;
+- if the target's module has a `TargetPolicy` with `requires_arming` and isn't armed;
+- if the target's `min_interval` hasn't passed since its last command (per port).
+
+`clamp_caused_by(cause, ...)` also refuses if `cause.depth` has reached `max_event_depth`.
+
+Every `ClampedCmd` remembers the panic count (epoch) it was made in. **Outputs must call `admits(&cmd)` right before sending**: it's false if a panic has happened since, or if the target has been disarmed. That's how commands already queued when you panic (or disarm) get dropped instead of sent.
+
+### Panic stop
+
+- `panic()`: refuse every new command, make every existing command stale, and disarm everything.
+- `resume()`: lift it. Nothing is re-armed and nothing is replayed.
+- `is_panicked()`.
+
+Stopping the devices themselves is the caller's job (the app calls Buttplug's stop-all).
+
+### Arming and rate limits
+
+`set_policy(module, TargetPolicy { requires_arming, min_interval })` marks an output module as risky and/or rate-limited. Modules without a policy (toys) only get the caps and panic stop.
+
+- `arm(module)` (refused while panicked), `disarm(module)`, `disarm_all()`, `is_armed(module)`.
+- Arming lasts until disarmed or a panic. Nothing is armed by default.
+
+Nothing in the free app has a policy yet; this is ready for outputs that need it.
 
 | `SafetyCaps` | Default |
 |---|---|
@@ -144,9 +174,7 @@ A `SafetyLayer` is cheap to clone, and **clones share their caps**: `set_volume`
 | `max_duration_ms` | 10 000 |
 | `max_event_depth` | 3 |
 
-Not built yet: arming, rate limits and cooldowns, panic stop, and refusing an event a rule caused for itself.
-
-The `volume` scales rather than clips because a ceiling flattens everything above it (70% and 100% would feel the same), while scaling keeps the feel of the whole range, just quieter. Per-motor hard ceilings are what Range is for.
+Not here: refusing an event a rule caused for itself, and checking imported rules, both of which need the rule engine; and per-rule cooldowns, which belong to rules.
 
 ## Command slots
 

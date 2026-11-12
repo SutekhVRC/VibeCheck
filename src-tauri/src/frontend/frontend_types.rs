@@ -64,6 +64,15 @@ pub enum FeStateEvent {
 pub enum FeCoreEvent {
     Scan(FeScanEvent),
     State(FeStateEvent),
+    Safety(FeSafetyEvent),
+}
+
+#[derive(Serialize, Clone, TS)]
+#[ts(export)]
+pub enum FeSafetyEvent {
+    /// Panic stop: every toy stopped until resumed.
+    Panicked,
+    Resumed,
 }
 
 #[derive(Deserialize, Clone, TS)]

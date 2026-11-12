@@ -18,8 +18,10 @@
 //! 2. a node's output port keeps its last value until the node writes a new
 //!    one (`None` from a processor means "unchanged").
 //! 3. each sink whose value changed since it last fired goes through the
-//!    [`SafetyLayer`] and comes back as a [`ClampedCmd`]. Unchanged sinks send
-//!    nothing, so an idle graph doesn't flood its outputs.
+//!    [`SafetyLayer`] and comes back as a [`ClampedCmd`], unless the safety
+//!    layer refuses it (panic, not armed, rate limit). Unchanged sinks send
+//!    nothing, so an idle graph doesn't flood its outputs, and a refused
+//!    value isn't retried: the sink waits for its next change.
 //!
 //! Events a processor emits ([`EventOut`](crate::module::EventOut)) are published on the
 //! [`EventPlane`] with the node's port as their source, e.g.
@@ -343,8 +345,13 @@ impl Graph {
             if sink.last == Some(level) {
                 continue;
             }
+            // Recorded even if the safety layer refuses it (panic, not
+            // armed, rate limit), so nothing is replayed later: after a
+            // resume or arming, the sink waits for its next change
             sink.last = Some(level);
-            cmds.push(safety.clamp(sink.target.clone(), level, sink.duration_ms));
+            if let Some(cmd) = safety.clamp(sink.target.clone(), level, sink.duration_ms) {
+                cmds.push(cmd);
+            }
         }
         cmds
     }
@@ -540,6 +547,29 @@ mod tests {
         // No change, no event
         g.tick(&signals, 0.01, &safety, &events);
         assert!(rx.try_recv().is_none());
+    }
+
+    #[test]
+    fn values_refused_during_a_panic_are_not_replayed_after_resume() {
+        let mut b = GraphBuilder::new();
+        b.add_processor(id("add"), Box::new(Add(0.0))).unwrap();
+        b.connect(port("osc", "Boop"), port("add", "in")).unwrap();
+        b.add_sink(port("add", "out"), port("toy", "m"), None)
+            .unwrap();
+        let mut g = b.build().unwrap();
+        let signals = SignalPlane::new();
+        let safety = SafetyLayer::default();
+        let events = EventPlane::new().0;
+        let tick = |g: &mut Graph| g.tick(&signals, 0.01, &safety, &events).len();
+
+        safety.panic();
+        signals.write(&port("osc", "Boop"), Signal::Float(0.8));
+        assert_eq!(tick(&mut g), 0, "refused while panicked");
+
+        safety.resume();
+        assert_eq!(tick(&mut g), 0, "0.8 isn't replayed after resume");
+        signals.write(&port("osc", "Boop"), Signal::Float(0.5));
+        assert_eq!(tick(&mut g), 1, "the next change goes through");
     }
 
     #[test]

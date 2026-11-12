@@ -33,7 +33,7 @@ use tokio::{
 };
 use vibecheck_core::{
     modules::osc::{rosc::OscMessage, OscInput},
-    CommandSlots, EventPlane, Input, InputCtx, ModuleInstanceId, SignalPlane,
+    CommandSlots, EventPlane, Input, InputCtx, ModuleInstanceId, SafetyLayer, SignalPlane,
 };
 
 use crate::{
@@ -107,6 +107,7 @@ async fn toy_task(
     slots: CommandSlots,
     signals: SignalPlane,
     events: EventPlane,
+    safety: SafetyLayer,
 ) {
     let dev = vc_toy.device_handle.clone();
     let module = toy_module_id(&vc_toy);
@@ -118,6 +119,7 @@ async fn toy_task(
         slots,
         buttplug_output(&vc_toy).with_events(module.clone(), events),
         vc_toy.bt_update_rate,
+        safety,
     );
 
     async_rt
@@ -160,6 +162,7 @@ struct Session {
     routes: OscRoutes,
     signals: SignalPlane,
     events: EventPlane,
+    safety: SafetyLayer,
     graphs: UnboundedSender<GraphControl>,
 }
 
@@ -185,7 +188,7 @@ impl Session {
                 graphs_rx,
                 signals.clone(),
                 events.clone(),
-                safety,
+                safety.clone(),
             ));
         }
         Self {
@@ -193,6 +196,7 @@ impl Session {
             routes: OscRoutes::default(),
             signals,
             events,
+            safety,
             graphs,
         }
     }
@@ -239,6 +243,7 @@ fn start_toy(session: &Session, toy: VCToy) -> RunningToy {
         slots.clone(),
         session.signals.clone(),
         session.events.clone(),
+        session.safety.clone(),
     ));
     info!("Toy: {} started listening..", toy_id);
 

@@ -1,4 +1,5 @@
 import type { FeCoreEvent } from "@bindings/FeCoreEvent";
+import type { FeSafetyEvent } from "@bindings/FeSafetyEvent";
 import { FeStateEvent } from "@bindings/FeStateEvent";
 import type { FeVibeCheckConfig } from "@bindings/FeVibeCheckConfig";
 import type { FrontendError } from "@bindings/FrontendError";
@@ -28,6 +29,10 @@ type CoreEventContextProps = {
   /** Turn the app on automatically when the scan button is pressed */
   autoEnableOnScan: boolean;
   setAutoEnableOnScan: (value: boolean) => void;
+  /** Panic stop: every toy stopped until resumed */
+  isPanicked: boolean;
+  panicStop: () => Promise<void>;
+  resumeFromPanic: () => Promise<void>;
 };
 
 const CoreEventContext = createContext<CoreEventContextProps>({
@@ -39,6 +44,9 @@ const CoreEventContext = createContext<CoreEventContextProps>({
   refreshConfig: () => new Promise(() => null),
   autoEnableOnScan: false,
   setAutoEnableOnScan: () => null,
+  isPanicked: false,
+  panicStop: () => new Promise(() => null),
+  resumeFromPanic: () => new Promise(() => null),
 });
 
 export function useCoreEventContext() {
@@ -52,6 +60,9 @@ export function useCoreEventContext() {
 export function CoreEventProvider({ children }: { children: React.ReactNode }) {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  // Also changed by the hotkey and OSC API, so the backend's events are the
+  // source of truth; the invokes below don't set it themselves
+  const [isPanicked, setIsPanicked] = useState(false);
   const [config, setConfig] = useState<FeVibeCheckConfig | undefined>(
     undefined,
   );
@@ -152,6 +163,35 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  function handleSafetyEvent(payload: FeSafetyEvent) {
+    switch (payload) {
+      case "Panicked":
+        setIsPanicked(true);
+        break;
+      case "Resumed":
+        setIsPanicked(false);
+        break;
+      default:
+        assertExhaustive(payload);
+    }
+  }
+
+  async function panicStop() {
+    try {
+      await invoke(INVOKE.PANIC_STOP);
+    } catch (e) {
+      toast.error(`Could not stop toys!\n${JSON.stringify(e)}`);
+    }
+  }
+
+  async function resumeFromPanic() {
+    try {
+      await invoke(INVOKE.PANIC_RESUME);
+    } catch (e) {
+      toast.error(`Could not resume!\n${JSON.stringify(e)}`);
+    }
+  }
+
   function handleCoreEvent(payload: FeCoreEvent) {
     switch (payload.kind) {
       case "Scan":
@@ -159,6 +199,9 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
         break;
       case "State":
         handleStateEvent(payload.data);
+        break;
+      case "Safety":
+        handleSafetyEvent(payload.data);
         break;
       default:
         assertExhaustive(payload);
@@ -220,6 +263,13 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
     getConfig();
   }, []);
 
+  // A panic may have happened before this window loaded
+  useEffect(() => {
+    invoke<boolean>(INVOKE.GET_PANIC_STATE)
+      .then(setIsPanicked)
+      .catch(() => null);
+  }, []);
+
   return (
     <CoreEventContext.Provider
       value={{
@@ -231,6 +281,9 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
         refreshConfig,
         autoEnableOnScan,
         setAutoEnableOnScan,
+        isPanicked,
+        panicStop,
+        resumeFromPanic,
       }}
     >
       {children}

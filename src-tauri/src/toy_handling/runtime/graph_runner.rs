@@ -183,4 +183,45 @@ mod tests {
         drop(control);
         runner.await.unwrap();
     }
+
+    #[tokio::test]
+    async fn sends_nothing_while_panicked_and_waits_for_new_input_after() {
+        let signals = SignalPlane::new();
+        let safety = SafetyLayer::default();
+        let (control, control_rx) = unbounded_channel();
+        let runner = tokio::spawn(graph_runner(
+            control_rx,
+            signals.clone(),
+            EventPlane::new().0,
+            safety.clone(),
+        ));
+        let slots = CommandSlots::new();
+        control
+            .send(GraphControl::Set {
+                toy_id: 1,
+                graph: graph(),
+                slots: slots.clone(),
+            })
+            .unwrap();
+        let boop = PortId::new(ModuleInstanceId::new(OSC_MODULE), "/avatar/parameters/Boop");
+
+        safety.panic();
+        signals.write(&boop, Signal::Float(0.8));
+        sleep(Duration::from_millis(50)).await;
+        assert!(slots.take_changed().is_empty(), "nothing while panicked");
+
+        safety.resume();
+        sleep(Duration::from_millis(50)).await;
+        assert!(
+            slots.take_changed().is_empty(),
+            "no replay of 0.8 after resume"
+        );
+
+        signals.write(&boop, Signal::Float(0.5));
+        sleep(Duration::from_millis(50)).await;
+        assert_eq!(slots.take_changed().len(), 1, "new input goes through");
+
+        drop(control);
+        runner.await.unwrap();
+    }
 }

@@ -325,6 +325,27 @@ pub fn simulate_device_feature(
 }
 
 /*
+ * Panic stop: stops every toy until resumed
+ */
+#[tauri::command]
+pub fn panic_stop(app_handle: tauri::AppHandle) {
+    trace!("panic_stop");
+    crate::vcore::panic::trigger_panic(&app_handle)
+}
+
+#[tauri::command]
+pub fn panic_resume(app_handle: tauri::AppHandle) {
+    trace!("panic_resume");
+    crate::vcore::panic::resume_from_panic(&app_handle)
+}
+
+#[tauri::command]
+pub fn get_panic_state(app_handle: tauri::AppHandle) -> bool {
+    trace!("get_panic_state");
+    crate::vcore::panic::is_panicked(&app_handle)
+}
+
+/*
  * Sends the specified OSC address / value to the app itself
  * Args: simulated_param_address, simulated_param_value
  * Removing this code for now

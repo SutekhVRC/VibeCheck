@@ -120,6 +120,9 @@ fn main() {
             frontend_native::osc_query_start,
             frontend_native::osc_query_stop,
             frontend_native::osc_query_attempt_force_connect,
+            frontend_native::panic_stop,
+            frontend_native::panic_resume,
+            frontend_native::get_panic_state,
             //frontend_native::simulate_feature_osc_input,
         ])
         .build(tauri::generate_context!())
@@ -164,6 +167,8 @@ fn main() {
         trace!("Started DOL");
     }
 
+    register_panic_hotkey(app.app_handle());
+
     app.run(|_app_handle, event| {
         match event {
             tauri::RunEvent::WindowEvent {
@@ -202,3 +207,32 @@ fn main() {
         }
     });
 }
+
+/// Registers the panic hotkey. The global shortcut plugin is added after the
+/// app is built so that a failure (e.g. no global shortcuts under Wayland, or
+/// the combo already taken) only loses the hotkey instead of stopping the
+/// app from starting. The panic button and OSC parameter still work.
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+fn register_panic_hotkey(app_handle: &tauri::AppHandle) {
+    use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+    use vcore::panic::{trigger_panic, PANIC_HOTKEY};
+
+    let plugin = tauri_plugin_global_shortcut::Builder::new()
+        .with_handler(|app, _shortcut, event| {
+            if event.state == ShortcutState::Pressed {
+                trigger_panic(app);
+            }
+        })
+        .build();
+    if let Err(e) = app_handle.plugin(plugin) {
+        warn!("Global shortcuts unavailable, no panic hotkey: {}", e);
+        return;
+    }
+    match app_handle.global_shortcut().register(PANIC_HOTKEY) {
+        Ok(()) => info!("Panic hotkey: {}", PANIC_HOTKEY),
+        Err(e) => warn!("Panic hotkey {} unavailable: {}", PANIC_HOTKEY, e),
+    }
+}
+
+#[cfg(any(target_os = "android", target_os = "ios"))]
+fn register_panic_hotkey(_app_handle: &tauri::AppHandle) {}

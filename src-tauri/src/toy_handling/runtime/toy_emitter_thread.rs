@@ -5,7 +5,7 @@ use tokio::{
 };
 use vibecheck_core::{
     modules::buttplug::{ActuatorSpec, ButtplugOutput},
-    CommandSlots, Output,
+    CommandSlots, Output, SafetyLayer,
 };
 
 use crate::toy_handling::runtime::toy_management_handler::sleep_for_constant_rate;
@@ -22,6 +22,7 @@ pub struct EmitterThreadData {
     in_signal: UnboundedReceiver<ToyEmitterThreadSignal>,
     slots: CommandSlots,
     output: ButtplugOutput,
+    safety: SafetyLayer,
 }
 
 impl EmitterThreadData {
@@ -30,12 +31,14 @@ impl EmitterThreadData {
         slots: CommandSlots,
         output: ButtplugOutput,
         update_rate: u64,
+        safety: SafetyLayer,
     ) -> Self {
         Self {
             update_rate,
             in_signal,
             slots,
             output,
+            safety,
         }
     }
 }
@@ -46,7 +49,9 @@ pub async fn toy_emitter_thread(mut data: EmitterThreadData) {
     loop {
         let start = Instant::now();
 
-        let cmds = data.slots.take_changed();
+        let mut cmds = data.slots.take_changed();
+        // Drop anything a panic (or disarm) made stale since it was queued
+        cmds.retain(|cmd| data.safety.admits(cmd));
         if !cmds.is_empty() {
             for cmd in &cmds {
                 debug!("Sending {} to {}", cmd.level(), cmd.target());

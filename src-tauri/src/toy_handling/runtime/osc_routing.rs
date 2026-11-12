@@ -138,7 +138,20 @@ pub async fn core_event_handler(
                 stop_all_devices(&app_handle).await;
             }
             EventKind::OutputError => match &event.value {
-                Value::Text(error) => warn!("{} is failing: {}", event.source.module, error),
+                Value::Text(error) => {
+                    warn!("{} is failing: {}", event.source.module, error);
+                    // A risky output that stops responding must be re-armed
+                    // on purpose once it's back (no-op for toys)
+                    let state = app_handle.state::<VCStateMutex>();
+                    let safety = state.0.lock().safety.clone();
+                    if safety.is_armed(&event.source.module) {
+                        safety.disarm(&event.source.module);
+                        warn!(
+                            "Disarmed {} because it stopped responding",
+                            event.source.module
+                        );
+                    }
+                }
                 _ => info!("{} is working again", event.source.module),
             },
             _ => {}

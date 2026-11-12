@@ -75,8 +75,8 @@ mod tests {
         let slots = CommandSlots::new();
 
         // One OSC message driving two motors within the same tick.
-        slots.write(safety.clamp(motor("Vibrator_0"), 0.4, None));
-        slots.write(safety.clamp(motor("Vibrator_1"), 0.4, None));
+        slots.write(safety.clamp(motor("Vibrator_0"), 0.4, None).unwrap());
+        slots.write(safety.clamp(motor("Vibrator_1"), 0.4, None).unwrap());
 
         let sent = slots.take_changed();
         assert_eq!(sent.len(), 2);
@@ -89,8 +89,8 @@ mod tests {
         let safety = SafetyLayer::default();
         let slots = CommandSlots::new();
 
-        slots.write(safety.clamp(motor("Vibrator_0"), 0.2, None));
-        slots.write(safety.clamp(motor("Vibrator_0"), 0.7, None));
+        slots.write(safety.clamp(motor("Vibrator_0"), 0.2, None).unwrap());
+        slots.write(safety.clamp(motor("Vibrator_0"), 0.7, None).unwrap());
 
         let sent = slots.take_changed();
         assert_eq!(sent.len(), 1);
@@ -99,7 +99,7 @@ mod tests {
         assert!(slots.take_changed().is_empty());
 
         // Re-sending the same value counts as a change.
-        slots.write(safety.clamp(motor("Vibrator_0"), 0.7, None));
+        slots.write(safety.clamp(motor("Vibrator_0"), 0.7, None).unwrap());
         assert_eq!(slots.take_changed().len(), 1);
     }
 }

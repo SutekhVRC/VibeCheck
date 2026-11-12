@@ -38,7 +38,7 @@ flowchart LR
 2. **OSC router** (`osc_routing.rs`) handles VibeCheck OSC API messages (`/avatar/parameters/vibecheck/api/...`) itself, and sends SPS/TPS messages to the toy tasks whose input processors use them (see [Routing](#routing)).
 3. **Toy task** (`toy_management_handler.rs`) runs its features' SPS/TPS input processors on those messages (`run_input_processors` in `osc_processor.rs`) and writes each feature's result to the signal plane at `toy:…/<Motor>/input_processor`.
 4. **Graph runner** (`graph_runner.rs`) ticks every toy's [graph](#the-graph) 100 times a second. Each tick reads the latest values from the signal plane, runs the chains, and for every motor whose value changed, passes it through `SafetyLayer::clamp` into the toy's `CommandSlots`.
-5. **Emitter task** (`toy_emitter_thread.rs`) wakes at the toy's Update Rate, takes every command that changed since its last run, and hands them to `ButtplugOutput::apply`, which sends one Buttplug command per motor.
+5. **Emitter task** (`toy_emitter_thread.rs`) wakes at the toy's Update Rate, takes every command that changed since its last run, drops any the safety layer no longer `admits` (a panic since it was made), and hands the rest to `ButtplugOutput::apply`, which sends one Buttplug command per motor.
 
 ## The graph
 
@@ -183,6 +183,9 @@ The mapping lives in `actuator_for` (`toy_output.rs`).
 | Avatar change stops toys | `send Boop 0.5`, then `cargo run -p osc-tool -- send /avatar/change s:avtr_test` | The toy stops, and changing a setting afterwards doesn't start it again |
 | OSC API anatomy toggle | `cargo run -p osc-tool -- send vibecheck/api/anatomy/Vagina/enabled false` | Toys tagged Vagina are disabled (and the UI shows it) |
 | Master volume | `send Boop 1.0`, then set Settings > Toys > Master volume to 50% | The motor drops to half straight away; with Flip Input on, it also gets weaker, not stronger |
+| Panic stop | `sweep Boop 0 1 --seconds 5`, press **Stop all toys** (or Ctrl+Alt+P) mid-sweep | The toy stops at once and stays stopped while the sweep finishes; the sidebar shows "All toys stopped" |
+| Panic from VRChat | `send vibecheck/api/panic true` | Same as the button; `send vibecheck/api/panic false` does **not** resume |
+| Resume | Press **Resume**, then `send Boop 0.4` | Nothing happens until the new value arrives, then the toy runs at 0.4 |
 | Config changes apply at once | `send Boop 0.8`, then lower the top of Range in the app | The motor drops to the new maximum straight away |
 
 If the toy doesn't react, `osc-tool listen` (with VibeCheck closed) shows whether VRChat or the tool is reaching the port at all.
@@ -203,6 +206,30 @@ OSC floats arrive as `f32`. The graph's `OscRounding` node (and `run_input_proce
 **Flip Input** is applied last, by each toy's `ButtplugOutput` (`ActuatorSpec.flip`, set from the feature by `toy_actuators` in `toy_output.rs`). Everything before it, the graph and the safety layer, works in intensities where 0 is always off. That's what makes the master volume correct for toys whose motors run backwards: capping before the flip limits their power, where capping after it would do the opposite. When a toy's config changes, the toy task sends the new mapping to its emitter (`ToyEmitterThreadSignal::UpdateActuators`).
 
 At 100% volume the order changes nothing: levels reach the toy exactly as before.
+
+## Panic stop
+
+Three ways in, all ending in `trigger_panic` (`vcore/panic.rs`):
+
+| Trigger | Where |
+|---|---|
+| **Stop all toys** button, at the top of the sidebar | `panic_stop` command (`frontend_native.rs`) |
+| Global hotkey **Ctrl+Alt+P** (`PANIC_HOTKEY`) | `register_panic_hotkey` (`main.rs`) |
+| Avatar parameter `vibecheck/api/panic` set to true | `osc_api/mod.rs` (only while VibeCheck is on, like the rest of the OSC API) |
+
+`trigger_panic`:
+
+1. calls `panic()` on the app-wide safety layer: every new command is refused, every command already made is stale, everything is disarmed;
+2. stops every device with Buttplug's stop-all, awaited without holding the state lock;
+3. emits `FeCoreEvent::Safety(Panicked)`, so the sidebar shows "All toys stopped" with **Resume**.
+
+That covers every path a level could take: graph sinks get `None` from `clamp`, commands already sitting in a toy's slots fail `admits` in the emitter, and the Test button's `limit` returns 0.
+
+**Resume** (`panic_resume` → `resume_from_panic`) is only possible from the app, on purpose: neither the hotkey nor the OSC parameter can resume. After resuming, nothing is replayed: values that arrived during the panic count as already seen by each graph sink, so each motor waits for its next change. On load, the frontend asks `get_panic_state`, in case a panic happened before the window opened.
+
+The hotkey is registered after the app is built, through `AppHandle::plugin`. If global shortcuts aren't available (e.g. under some Wayland setups) or the combo is taken, VibeCheck logs a warning and runs without the hotkey; the button and OSC parameter still work. Registering it in the plugin builder instead would make a failure stop the app from starting.
+
+Outputs marked risky (none in the free app yet) are also disarmed by `core_event_handler` when they start failing (`OutputError`), so they must be re-armed on purpose once they're back.
 
 ### Other safety caps
 
