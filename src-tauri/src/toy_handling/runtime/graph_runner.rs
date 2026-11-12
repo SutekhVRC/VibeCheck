@@ -43,8 +43,8 @@ pub async fn graph_runner(
     mut control: UnboundedReceiver<GraphControl>,
     signals: SignalPlane,
     events: EventPlane,
+    safety: SafetyLayer,
 ) {
-    let safety = SafetyLayer::default();
     let mut toys: HashMap<u32, ToyGraph> = HashMap::new();
 
     let mut ticker = interval(Duration::from_nanos(1_000_000_000 / GRAPH_TICK_HZ));
@@ -115,6 +115,7 @@ mod tests {
             control_rx,
             signals.clone(),
             EventPlane::new().0,
+            SafetyLayer::default(),
         ));
 
         let slots = CommandSlots::new();
@@ -145,5 +146,41 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
+    }
+
+    #[tokio::test]
+    async fn applies_the_master_volume_even_while_running() {
+        let signals = SignalPlane::new();
+        let safety = SafetyLayer::default();
+        let (control, control_rx) = unbounded_channel();
+        let runner = tokio::spawn(graph_runner(
+            control_rx,
+            signals.clone(),
+            EventPlane::new().0,
+            safety.clone(),
+        ));
+        let slots = CommandSlots::new();
+        control
+            .send(GraphControl::Set {
+                toy_id: 1,
+                graph: graph(),
+                slots: slots.clone(),
+            })
+            .unwrap();
+
+        let boop = PortId::new(ModuleInstanceId::new(OSC_MODULE), "/avatar/parameters/Boop");
+        safety.set_volume(0.5);
+        signals.write(&boop, Signal::Float(0.8));
+        sleep(Duration::from_millis(50)).await;
+        assert!((slots.take_changed()[0].level() - 0.4).abs() < 1e-6);
+
+        // Changing the volume from Settings affects the running session
+        safety.set_volume(1.0);
+        signals.write(&boop, Signal::Float(0.6));
+        sleep(Duration::from_millis(50)).await;
+        assert!((slots.take_changed()[0].level() - 0.6).abs() < 1e-6);
+
+        drop(control);
+        runner.await.unwrap();
     }
 }

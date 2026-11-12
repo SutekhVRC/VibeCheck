@@ -22,6 +22,7 @@ use crate::vcore::errors::VcoreError;
 use super::config::app::VibeCheckConfig;
 use super::errors::VCError;
 use super::ipc::call_plane::ToyManagementEvent;
+use vibecheck_core::SafetyLayer;
 
 pub struct VCStateMutex(pub Arc<Mutex<VibeCheckState>>);
 
@@ -35,6 +36,9 @@ pub struct VibeCheckState {
     pub identifier: String,
 
     pub config: VibeCheckConfig,
+    /// Shared by every listening session and the Test button, so the master
+    /// volume applies everywhere and can change while toys are running.
+    pub safety: SafetyLayer,
     pub osc_query_handler: Option<OSCQuery>,
     //pub connection_modes: ConnectionModes,
     pub bp_client: Option<ButtplugClient>,
@@ -89,10 +93,14 @@ impl VibeCheckState {
             UnboundedReceiver<ToyManagementEvent>,
         ) = unbounded_channel();
 
+        let safety = SafetyLayer::default();
+        safety.set_volume(config.master_volume);
+
         let state = Self {
             app_handle: None,
             identifier: String::new(),
             config,
+            safety,
             osc_query_handler: None,
             //connection_modes,
             bp_client: None,

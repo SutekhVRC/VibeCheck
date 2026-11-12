@@ -123,21 +123,30 @@ Events processors emit during a tick are published on the `EventPlane` passed to
 
 Every command that reaches an output is a `ClampedCmd`. Its fields are private and it has no public constructor, so outside the crate the only way to get one is from `SafetyLayer`. An output can't receive, or invent, a command that skipped the user's caps.
 
-`SafetyLayer::clamp(target, level, duration_ms)`:
+Levels in the safety layer are **intensities**: 0 is off and 1 is full power for every toy. Per-actuator Flip Input is applied after it, by the output, so the caps mean the same thing for toys whose motors run backwards.
 
-- clamps the level to `0.0..=max_level`;
-- turns a non-finite level (NaN, infinity) into 0;
-- caps the duration at `max_duration_ms`.
+`SafetyLayer::limit(level)` is the core rule:
+
+1. a non-finite level (NaN, infinity) becomes 0, and the rest is clamped to `0.0..=1.0`;
+2. it is scaled by the **master volume** (`volume`), keeping the full range: at 0.6, 1.0 becomes 0.6 and 0.5 becomes 0.3;
+3. it is capped at `max_level`.
+
+`SafetyLayer::clamp(target, level, duration_ms)` applies `limit` and caps the duration at `max_duration_ms`. `SafetyLayer::clamp_caused_by(cause, ...)` does the same, but returns `None` if `cause.depth` has reached `max_event_depth`.
+
+A `SafetyLayer` is cheap to clone, and **clones share their caps**: `set_volume` / `set_caps` on one changes them for all. The app keeps one in its state and hands clones to every session, so moving the master volume in Settings affects toys that are already running.
 
 `SafetyLayer::clamp_caused_by(cause, ...)` does the same, but returns `None` if `cause.depth` has reached `max_event_depth`.
 
 | `SafetyCaps` | Default |
 |---|---|
+| `volume` | 1.0 (the app sets it from the saved master volume) |
 | `max_level` | 1.0 |
 | `max_duration_ms` | 10 000 |
 | `max_event_depth` | 3 |
 
 Not built yet: arming, rate limits and cooldowns, panic stop, and refusing an event a rule caused for itself.
+
+The `volume` scales rather than clips because a ceiling flattens everything above it (70% and 100% would feel the same), while scaling keeps the feel of the whole range, just quieter. Per-motor hard ceilings are what Range is for.
 
 ## Command slots
 
@@ -174,15 +183,16 @@ Raw and Constant behave exactly as the app's original modes. Smooth and Rate wer
 
 ### `OutputLevels` (`modules::levels`)
 
-Idle Speed, Range and Flip Input, as a processor and as `apply(level)`:
+Idle Speed and Range, as a processor and as `apply(level)`:
 
 1. exactly 0 becomes `idle`;
-2. anything else is clamped to `min..=max` (a reversed range is tolerated instead of panicking);
-3. with `flip`, the result becomes `1 - level`, rounded to hundredths.
+2. anything else is clamped to `min..=max` (a reversed range is tolerated instead of panicking).
+
+Flip Input isn't applied here, so levels stay intensities through the safety layer. `levels::flip(level)` (`1 - level`, rounded to hundredths) is what outputs use to apply it.
 
 ### `ButtplugOutput`
 
-An `Output` for one Buttplug device. Each port maps to an `Actuator`:
+An `Output` for one Buttplug device. Each port maps to an `ActuatorSpec`: an `Actuator` plus `flip`. Flipped actuators get `1 - level` (`device_level`), applied here after the safety layer. `set_actuators` replaces the mapping, e.g. when Flip Input changes.
 
 | `Actuator` | Buttplug call | Notes |
 |---|---|---|

@@ -24,7 +24,7 @@ use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 use futures_timer::Delay;
 use log::{debug, error as logerr, info, warn};
 use parking_lot::{lock_api::Mutex, RawMutex};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tokio::{
     runtime::Runtime,
     sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
@@ -45,12 +45,15 @@ use crate::{
             osc_routing::{core_event_handler, osc_router, OscRoutes},
             toy_emitter_thread::{toy_emitter_thread, EmitterThreadData, ToyEmitterThreadSignal},
             toy_graph::{build_toy_graph, OSC_MODULE},
-            toy_output::{buttplug_output, toy_module_id},
+            toy_output::{buttplug_output, toy_actuators, toy_module_id},
         },
         toy_manager::ToyManager,
         toyops::VCToy,
     },
-    vcore::ipc::call_plane::{TmSig, ToyManagementEvent, ToyUpdate},
+    vcore::{
+        ipc::call_plane::{TmSig, ToyManagementEvent, ToyUpdate},
+        state::VCStateMutex,
+    },
 };
 
 type ToyRuntime = Arc<Mutex<RawMutex, Option<Runtime>>>;
@@ -80,6 +83,10 @@ fn update_toy(
     }
 
     vc_toy.parsed_toy_features = new_toy.parsed_toy_features;
+    // Flip Input lives on the output now
+    let _ = emitter_thread_tx.send(ToyEmitterThreadSignal::UpdateActuators(toy_actuators(
+        vc_toy,
+    )));
     if vc_toy.bt_update_rate != new_toy.bt_update_rate {
         vc_toy.bt_update_rate = new_toy.bt_update_rate;
         let _ = emitter_thread_tx.send(ToyEmitterThreadSignal::UpdateRate(new_toy.bt_update_rate));
@@ -164,6 +171,8 @@ impl Session {
         let signals = SignalPlane::new();
         let (events, event_rx) = EventPlane::new();
         let (graphs, graphs_rx) = unbounded_channel();
+        // The app-wide safety layer, so the master volume applies here too
+        let safety = app_handle.state::<VCStateMutex>().0.lock().safety.clone();
         {
             let rt_lock = async_rt.lock();
             let rt = rt_lock.as_ref().unwrap();
@@ -172,7 +181,12 @@ impl Session {
                 signals.clone(),
                 app_handle.clone(),
             ));
-            rt.spawn(graph_runner(graphs_rx, signals.clone(), events.clone()));
+            rt.spawn(graph_runner(
+                graphs_rx,
+                signals.clone(),
+                events.clone(),
+                safety,
+            ));
         }
         Self {
             async_rt,

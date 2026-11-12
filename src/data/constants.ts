@@ -121,6 +121,10 @@ export const TOOLTIP = {
     text: "Open the toy settings strip (OSC data, anatomy, update rate) by default when viewing a toy",
     link: "",
   },
+  MasterVolume: {
+    text: "Scales every toy's strength, keeping the full range: at 60%, full power becomes 60% and half power becomes 30%. Also applies to the Test button.",
+    link: "",
+  },
   AdvancedFeature: {
     text: "Expand the Advanced section of feature settings (idle speed, flip input, smoothing) by default",
     link: "",

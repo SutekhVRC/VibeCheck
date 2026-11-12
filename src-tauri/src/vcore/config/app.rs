@@ -18,6 +18,14 @@ pub struct VibeCheckConfig {
     pub desktop_notifications: bool,
     pub show_toy_advanced: bool,
     pub show_feature_advanced: bool,
+    /// Master volume, 0.0 to 1.0: scales every toy's level. Defaults to full
+    /// volume, including for config files saved before it existed.
+    #[serde(default = "full_volume")]
+    pub master_volume: f64,
+}
+
+fn full_volume() -> f64 {
+    1.0
 }
 
 impl Default for VibeCheckConfig {
@@ -29,6 +37,7 @@ impl Default for VibeCheckConfig {
             desktop_notifications: false,
             show_toy_advanced: false,
             show_feature_advanced: false,
+            master_volume: full_volume(),
         }
     }
 }
@@ -70,6 +79,7 @@ pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckC
                 desktop_notifications: false,
                 show_toy_advanced: false,
                 show_feature_advanced: false,
+                master_volume: full_volume(),
             })
             .unwrap(),
         )
@@ -119,6 +129,7 @@ pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckC
                 desktop_notifications: false,
                 show_toy_advanced: false,
                 show_feature_advanced: false,
+                master_volume: full_volume(),
             };
             fs::write(
                 &vc_config_file,

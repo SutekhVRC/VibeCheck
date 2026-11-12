@@ -51,7 +51,7 @@ Each toy's `Graph` is built from its config by `build_toy_graph` (`runtime/toy_g
 
 - **round** (`OscRounding`): rounds floats to hundredths as `f32`, exactly as VibeCheck always has (see [Values](#values)).
 - **mode**: the parameter's (or SPS/TPS output's) processing mode, from `vibecheck-core` `modules::modes`, built with the feature's Smooth Level, Rate Level, Constant Level and Flip Input.
-- **levels**: `OutputLevels` from `modules::levels`: exactly 0 becomes Idle Speed, anything else is clamped to the Range, then Flip Input is applied.
+- **levels**: `OutputLevels` from `modules::levels`: exactly 0 becomes Idle Speed, anything else is clamped to the Range. Flip Input is **not** applied in the graph (see [Master volume and Flip Input](#master-volume-and-flip-input)).
 - **motor**: a sink to the motor's port, with Linear Speed as the duration for Linear features.
 
 Rules:
@@ -164,7 +164,7 @@ The mapping lives in `actuator_for` (`toy_output.rs`).
 
 ## Not on this path
 
-- **The Test button** (`simulate_device_feature` in `vcore/ipc/call_plane.rs`) calls `command_toy` (`toy_command_processor.rs`) directly, using the same `OutputLevels` rules. It skips the graph, the slots and the safety layer.
+- **The Test button** (`simulate_device_feature` in `vcore/ipc/call_plane.rs`) calls `command_toy` (`toy_command_processor.rs`) directly. It skips the graph and the slots, but applies the same steps in the same order: Idle and Range (`OutputLevels`), then the master volume (`SafetyLayer::limit`, using the app's shared safety layer), then Flip Input.
 
 ## Testing this path
 
@@ -182,6 +182,7 @@ The mapping lives in `actuator_for` (`toy_output.rs`).
 | One slot per motor | Map one parameter to two motors on one toy, then `sweep` it | Both motors follow the ramp |
 | Avatar change stops toys | `send Boop 0.5`, then `cargo run -p osc-tool -- send /avatar/change s:avtr_test` | The toy stops, and changing a setting afterwards doesn't start it again |
 | OSC API anatomy toggle | `cargo run -p osc-tool -- send vibecheck/api/anatomy/Vagina/enabled false` | Toys tagged Vagina are disabled (and the UI shows it) |
+| Master volume | `send Boop 1.0`, then set Settings > Toys > Master volume to 50% | The motor drops to half straight away; with Flip Input on, it also gets weaker, not stronger |
 | Config changes apply at once | `send Boop 0.8`, then lower the top of Range in the app | The motor drops to the new maximum straight away |
 
 If the toy doesn't react, `osc-tool listen` (with VibeCheck closed) shows whether VRChat or the tool is reaching the port at all.
@@ -192,6 +193,17 @@ Levels are `f64` from the processors through to Buttplug, matching Buttplug's ow
 
 OSC floats arrive as `f32`. The graph's `OscRounding` node (and `run_input_processors`, for SPS/TPS) round them to hundredths while still `f32` and then widen to `f64`, so a parameter value of `0.85` reaches the modes as `0.8500000238…`. This is unchanged from before the migration. Rounding after widening would give exact hundredths, but it could move some values onto a different Buttplug power step, so it should be its own deliberate change.
 
-## Safety caps today
+## Master volume and Flip Input
 
-The graph runner uses `SafetyLayer::default()`: max level 1.0, max duration 10 s, max event depth 3. Since `OutputLevels` already keeps levels within 0 to 1 and Linear Speed tops out at 1000 ms, the only practical effect today is that a non-finite level (NaN or infinity) becomes 0 instead of reaching the toy. User-set caps will make this meaningful.
+**Master volume** (Settings > Toys) scales every toy's level, keeping the full range: at 60%, full power becomes 60% and half power becomes 30%. It's saved as `master_volume` in the app config (default 1.0; config files from before it existed load as 1.0).
+
+- `VibeCheckState` holds one `SafetyLayer`, created with the saved volume. Each session's graph runner and the Test button use clones of it, which share their caps.
+- `set_vibecheck_config` saves the new volume and calls `set_volume` on that layer, so it applies straight away, including to toys already running.
+
+**Flip Input** is applied last, by each toy's `ButtplugOutput` (`ActuatorSpec.flip`, set from the feature by `toy_actuators` in `toy_output.rs`). Everything before it, the graph and the safety layer, works in intensities where 0 is always off. That's what makes the master volume correct for toys whose motors run backwards: capping before the flip limits their power, where capping after it would do the opposite. When a toy's config changes, the toy task sends the new mapping to its emitter (`ToyEmitterThreadSignal::UpdateActuators`).
+
+At 100% volume the order changes nothing: levels reach the toy exactly as before.
+
+### Other safety caps
+
+The other caps are still at their defaults: max level 1.0, max duration 10 s, max event depth 3. Since levels are already within 0 to 1 and Linear Speed tops out at 1000 ms, their only practical effect today is that a non-finite level (NaN or infinity) becomes 0 instead of reaching the toy.

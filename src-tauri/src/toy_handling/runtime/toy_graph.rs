@@ -9,7 +9,9 @@
  * - "round" rounds OSC floats to hundredths as f32, exactly as VibeCheck
  *   always has.
  * - "mode" is the parameter's (or the SPS/TPS output's) processing mode.
- * - "levels" is Idle Speed, Range and Flip Input.
+ * - "levels" is Idle Speed and Range. Flip Input is applied by the toy's
+ *   output, after the safety layer (master volume), so the graph and the
+ *   safety layer work in intensities where 0 is always off.
  *
  * Only the first parameter with a given address counts within a feature.
  * SPS/TPS chains come before parameter chains, so if both change in the same
@@ -145,7 +147,6 @@ pub fn build_toy_graph(toy: &ModuleInstanceId, features: &VCToyFeatures) -> Resu
             min: l.minimum_level,
             max: l.maximum_level,
             idle: l.idle_level,
-            flip: feature.flip_input_float,
         };
         let duration_ms = match feature.feature_type {
             VCFeatureType::Linear => Some(l.linear_position_speed),
@@ -347,6 +348,21 @@ mod tests {
 
         h.osc("/avatar/parameters/Other", Signal::Float(0.9));
         assert!(h.tick().is_empty());
+    }
+
+    #[test]
+    fn flip_input_is_left_to_the_output() {
+        let mut flipped = feature(
+            0,
+            VCFeatureType::Vibrator,
+            vec![param(BOOP, ProcessingMode::Raw)],
+        );
+        flipped.flip_input_float = true;
+        let mut h = Harness::new(vec![flipped]);
+
+        // The graph sends the intensity; ButtplugOutput flips it to 0.7
+        h.osc(BOOP, Signal::Float(0.3));
+        assert_eq!(h.tick(), vec![("Vibrator_0".into(), 0.3f32 as f64, None)]);
     }
 
     #[test]

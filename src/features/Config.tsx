@@ -3,11 +3,13 @@ import { invoke } from "@tauri-apps/api/core";
 import { Settings } from "lucide-react";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
+import EditableNumber from "../components/EditableNumber";
 import PageHeader from "../components/PageHeader";
 import UpdateButton from "../components/UpdateButton";
 import { useCoreEventContext } from "../context/CoreEvents";
 import { INVOKE, TOOLTIP } from "../data/constants";
 import Button from "../layout/Button";
+import Slider from "../layout/Slider";
 import Switch from "../layout/Switch";
 import { TooltipLabel } from "../layout/Tooltip";
 import ThemePicker from "./ThemePicker";
@@ -132,6 +134,9 @@ export default function Config({
   // Toggles save instantly; kept locally so the switch flips immediately
   const [general, setGeneral] = useState(() => pickGeneral(config));
 
+  // Kept locally while dragging; saved when the drag ends
+  const [volume, setVolume] = useState(config.master_volume);
+
   // Address edits are a draft until applied (applying turns the app off)
   const [draft, setDraft] = useState({
     bind: config.networking.bind,
@@ -158,6 +163,20 @@ export default function Config({
     } catch (e) {
       setGeneral((g) => ({ ...g, [key]: !value }));
       toast.error(`Could not save setting!\n${JSON.stringify(e)}`);
+    }
+  }
+
+  async function saveVolume(value: number) {
+    const previous = config.master_volume;
+    setVolume(value);
+    try {
+      await invoke(INVOKE.SET_CONFIG, {
+        feVcConfig: { ...config, ...general, master_volume: value },
+      });
+      await refreshConfig();
+    } catch (e) {
+      setVolume(previous);
+      toast.error(`Could not save master volume!\n${JSON.stringify(e)}`);
     }
   }
 
@@ -248,6 +267,33 @@ export default function Config({
                 </div>
               )}
             </form>
+          </Section>
+
+          <Section title="Toys" hint="Saves instantly">
+            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4">
+              <TooltipLabel
+                text="Master volume"
+                tooltip={TOOLTIP.MasterVolume}
+              />
+              <Slider
+                multiply={100}
+                min={0}
+                max={1}
+                step={0.01}
+                value={[volume]}
+                onValueChange={(v) => setVolume(v[0])}
+                onValueCommit={(v) => saveVolume(v[0])}
+              />
+              <EditableNumber
+                value={volume}
+                min={0}
+                max={1}
+                step={0.01}
+                scale={100}
+                onCommit={saveVolume}
+                label="Master volume"
+              />
+            </div>
           </Section>
 
           <Section title="General" hint="Saves instantly">

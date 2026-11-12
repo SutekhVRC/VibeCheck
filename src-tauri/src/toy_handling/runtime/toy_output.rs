@@ -8,7 +8,7 @@
 
 use buttplug::core::message::ActuatorType;
 use vibecheck_core::{
-    modules::buttplug::{Actuator, ButtplugOutput},
+    modules::buttplug::{Actuator, ActuatorSpec, ButtplugOutput},
     ModuleInstanceId,
 };
 
@@ -45,15 +45,24 @@ fn actuator_for(feature_type: VCFeatureType, index: u32) -> Actuator {
     }
 }
 
-/// The Buttplug output for a toy, with one port per feature.
-pub fn buttplug_output(toy: &VCToy) -> ButtplugOutput {
-    ButtplugOutput::new(
-        toy.device_handle.clone(),
-        toy.parsed_toy_features.features.iter().map(|f| {
+/// Each feature's port and how to drive it, including its Flip Input.
+pub fn toy_actuators(toy: &VCToy) -> Vec<(String, ActuatorSpec)> {
+    toy.parsed_toy_features
+        .features
+        .iter()
+        .map(|f| {
             (
                 feature_port_name(f.feature_type, f.feature_index),
-                actuator_for(f.feature_type, f.feature_index),
+                ActuatorSpec {
+                    actuator: actuator_for(f.feature_type, f.feature_index),
+                    flip: f.flip_input_float,
+                },
             )
-        }),
-    )
+        })
+        .collect()
+}
+
+/// The Buttplug output for a toy, with one port per feature.
+pub fn buttplug_output(toy: &VCToy) -> ButtplugOutput {
+    ButtplugOutput::new(toy.device_handle.clone(), toy_actuators(toy))
 }

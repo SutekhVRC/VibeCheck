@@ -3,13 +3,18 @@ use tokio::{
     sync::{mpsc::error::TryRecvError, mpsc::UnboundedReceiver},
     time::Instant,
 };
-use vibecheck_core::{modules::buttplug::ButtplugOutput, CommandSlots, Output};
+use vibecheck_core::{
+    modules::buttplug::{ActuatorSpec, ButtplugOutput},
+    CommandSlots, Output,
+};
 
 use crate::toy_handling::runtime::toy_management_handler::sleep_for_constant_rate;
 
 pub enum ToyEmitterThreadSignal {
     StopExecution,
     UpdateRate(u64),
+    /// New actuator mapping, e.g. after Flip Input changed.
+    UpdateActuators(Vec<(String, ActuatorSpec)>),
 }
 
 pub struct EmitterThreadData {
@@ -56,6 +61,9 @@ pub async fn toy_emitter_thread(mut data: EmitterThreadData) {
             Ok(signal) => match signal {
                 ToyEmitterThreadSignal::StopExecution => return,
                 ToyEmitterThreadSignal::UpdateRate(hz) => data.update_rate = hz,
+                ToyEmitterThreadSignal::UpdateActuators(actuators) => {
+                    data.output.set_actuators(actuators)
+                }
             },
             Err(e) => match e {
                 TryRecvError::Disconnected => return,

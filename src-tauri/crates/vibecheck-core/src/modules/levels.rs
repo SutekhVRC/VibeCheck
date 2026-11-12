@@ -1,7 +1,11 @@
-//! Output level tweaks: Idle Speed, Range and Flip Input.
+//! Output level tweaks: Idle Speed and Range.
 //!
 //! A [`Processor`] with ports `in` and `out`, applied to a feature's level
 //! after its processing mode and before the safety layer.
+//!
+//! Flip Input is not applied here: levels stay intensities (0 = off) through
+//! the safety layer, so the master volume means the same for every toy, and
+//! the output flips them last (see [`flip`]).
 
 use crate::module::{EventOut, PortSpec, Processor};
 use crate::signal::Signal;
@@ -14,30 +18,24 @@ pub struct OutputLevels {
     pub max: f64,
     /// Idle Speed: the level used when the input is exactly 0.
     pub idle: f64,
-    /// Flip Input: `1 - level`, applied last.
-    pub flip: bool,
 }
 
 impl OutputLevels {
     /// - Exactly 0 becomes Idle Speed.
     /// - Anything else is clamped to the Range.
-    /// - With Flip Input, the result becomes `1 - level`, rounded to hundredths.
     pub fn apply(&self, level: f64) -> f64 {
-        let level = if level == 0.0 {
+        if level == 0.0 {
             self.idle
         } else {
             // Tolerate a reversed range instead of panicking
             level.clamp(self.min.min(self.max), self.max.max(self.min))
-        };
-        if self.flip {
-            flip(level)
-        } else {
-            level
         }
     }
 }
 
-/// `1 - level`, rounded to hundredths.
+/// Flip Input for toys whose motors run backwards (0 = full power):
+/// `1 - level`, rounded to hundredths. Outputs apply this last, after the
+/// safety layer.
 pub fn flip(level: f64) -> f64 {
     ((1.0 - level) * 100.0).round() / 100.0
 }
@@ -62,18 +60,17 @@ impl Processor for OutputLevels {
 mod tests {
     use super::*;
 
-    fn levels(flip: bool) -> OutputLevels {
+    fn levels() -> OutputLevels {
         OutputLevels {
             min: 0.2,
             max: 0.8,
             idle: 0.1,
-            flip,
         }
     }
 
     #[test]
     fn zero_is_idle_and_the_rest_is_clamped() {
-        let l = levels(false);
+        let l = levels();
         assert_eq!(l.apply(0.0), 0.1);
         assert_eq!(l.apply(0.05), 0.2);
         assert_eq!(l.apply(0.5), 0.5);
@@ -81,10 +78,11 @@ mod tests {
     }
 
     #[test]
-    fn flip_is_applied_last() {
-        let l = levels(true);
-        assert_eq!(l.apply(0.0), 0.9); // idle 0.1, flipped
-        assert_eq!(l.apply(0.95), 0.2); // clamped to 0.8, flipped
+    fn flip_inverts_and_rounds() {
+        assert_eq!(flip(0.1), 0.9);
+        assert_eq!(flip(0.8), 0.2);
+        assert_eq!(flip(1.0), 0.0);
+        assert_eq!(flip(0.333), 0.67);
     }
 
     #[test]
@@ -92,7 +90,7 @@ mod tests {
         let l = OutputLevels {
             min: 0.8,
             max: 0.2,
-            ..levels(false)
+            ..levels()
         };
         assert_eq!(l.apply(0.5), 0.5);
     }
