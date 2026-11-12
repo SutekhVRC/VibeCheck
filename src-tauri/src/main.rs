@@ -141,6 +141,9 @@ fn main() {
                 std::process::exit(-1);
             }
         };
+        // The state was created with a default config; apply the saved volume
+        let master_volume = vc_state.config.master_volume;
+        vc_state.safety.set_volume(master_volume);
 
         vc_state.set_state_pointer(vc_state_pointer);
         trace!("State pointer set");
