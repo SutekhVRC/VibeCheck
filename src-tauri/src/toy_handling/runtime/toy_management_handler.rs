@@ -8,14 +8,14 @@
     - OscInput (vibecheck-core) receives OSC, writes parameter values to the
       session's signal plane, turns avatar changes into events, and taps every
       other message to the OSC router.
-    - The OSC router handles OSC API messages and sends SPS/TPS messages to the
-      toy tasks that use them.
+    - The OSC router handles OSC API messages.
     - The core event handler reacts to events on the session's event plane
       (avatar change stops all toys; output errors are logged).
-    - The graph runner ticks every toy's graph (built from its config) at a
-      fixed rate and fills each toy's command slots.
-    - One task per toy runs its SPS/TPS input processors and applies config
-      changes; its emitter task sends the toy's commands.
+    - The graph runner ticks every toy's graph (built from its config, and
+      including its SPS/TPS input processors) at a fixed rate and fills each
+      toy's command slots.
+    - One task per toy applies config changes to its output; its emitter task
+      sends the toy's commands.
 */
 // Uses TME send and recv channel
 
@@ -32,17 +32,16 @@ use tokio::{
     time::Instant,
 };
 use vibecheck_core::{
-    modules::osc::{rosc::OscMessage, OscInput},
-    CommandSlots, EventPlane, Input, InputCtx, ModuleInstanceId, SafetyLayer, SignalPlane,
+    modules::osc::OscInput, CommandSlots, EventPlane, Input, InputCtx, ModuleInstanceId,
+    SafetyLayer, SignalPlane,
 };
 
 use crate::{
     osc::OSCNetworking,
     toy_handling::{
-        osc_processor::run_input_processors,
         runtime::{
             graph_runner::{graph_runner, GraphControl},
-            osc_routing::{core_event_handler, osc_router, OscRoutes},
+            osc_routing::{core_event_handler, osc_router},
             toy_emitter_thread::{toy_emitter_thread, EmitterThreadData, ToyEmitterThreadSignal},
             toy_graph::{build_toy_graph, OSC_MODULE},
             toy_output::{buttplug_output, toy_actuators, toy_module_id},
@@ -93,16 +92,13 @@ fn update_toy(
     true
 }
 
-/// Toy listening routine: runs this toy's SPS/TPS input processors on its OSC
-/// messages and applies config changes, until the device disconnects or the
-/// session ends.
+/// Toy listening routine: starts the toy's emitter and applies config changes
+/// to it, until the device disconnects or the session ends.
 async fn toy_task(
     async_rt: ToyRuntime,
-    mut osc_rx: UnboundedReceiver<OscMessage>,
     mut control_rx: UnboundedReceiver<VCToy>,
     mut vc_toy: VCToy,
     slots: CommandSlots,
-    signals: SignalPlane,
     events: EventPlane,
     safety: SafetyLayer,
 ) {
@@ -126,24 +122,11 @@ async fn toy_task(
         .spawn(async move { toy_emitter_thread(tet_data).await });
 
     while dev.connected() {
-        tokio::select! {
-            // Apply config changes before any OSC still queued behind them
-            biased;
-            update = control_rx.recv() => match update {
-                Some(new_toy) => {
-                    update_toy(&emitter_thread_tx, new_toy, &mut vc_toy);
-                }
-                None => break,
-            },
-            msg = osc_rx.recv() => match msg {
-                Some(mut msg) => run_input_processors(
-                    &mut msg,
-                    &mut vc_toy.parsed_toy_features,
-                    &signals,
-                    &module,
-                ),
-                None => break,
-            },
+        match control_rx.recv().await {
+            Some(new_toy) => {
+                update_toy(&emitter_thread_tx, new_toy, &mut vc_toy);
+            }
+            None => break,
         }
     }
     let _ = emitter_thread_tx.send(ToyEmitterThreadSignal::StopExecution);
@@ -156,7 +139,6 @@ async fn toy_task(
 /// Everything one listening session shares.
 struct Session {
     async_rt: ToyRuntime,
-    routes: OscRoutes,
     signals: SignalPlane,
     events: EventPlane,
     safety: SafetyLayer,
@@ -192,7 +174,6 @@ impl Session {
         }
         Self {
             async_rt,
-            routes: OscRoutes::default(),
             signals,
             events,
             safety,
@@ -221,26 +202,20 @@ struct RunningToy {
     slots: CommandSlots,
 }
 
-/// Starts the toy's graph, registers it with the router and starts its task.
+/// Starts the toy's graph and its task.
 fn start_toy(session: &Session, toy: VCToy) -> RunningToy {
-    let (osc_tx, osc_rx) = unbounded_channel();
     let (control_tx, control_rx) = unbounded_channel();
     // One latest-command slot per motor: filled by the graph, drained by the emitter
     let slots = CommandSlots::new();
     let toy_id = toy.toy_id;
 
     session.set_graph(&toy, &slots);
-    session
-        .routes
-        .insert(toy_id, osc_tx, &toy.parsed_toy_features);
 
     let handle = session.async_rt.lock().as_ref().unwrap().spawn(toy_task(
         session.async_rt.clone(),
-        osc_rx,
         control_rx,
         toy,
         slots.clone(),
-        session.signals.clone(),
         session.events.clone(),
         session.safety.clone(),
     ));
@@ -290,11 +265,7 @@ fn start_osc(
             }
         }
     });
-    rt.spawn(osc_router(
-        tap_rx,
-        session.routes.clone(),
-        app_handle.clone(),
-    ));
+    rt.spawn(osc_router(tap_rx, app_handle.clone()));
 }
 
 /// Stops every toy task and the session's runtime (which ends OscInput, the
@@ -308,7 +279,6 @@ async fn stop_listening(running_toys: &mut HashMap<u32, RunningToy>, session: &S
         }
         info!("[TOY ID: {}] Stopped listening. (TMSIG)", id);
     }
-    session.routes.clear();
     session
         .async_rt
         .lock()
@@ -395,7 +365,6 @@ pub async fn toy_management_handler(
                     }
                     ToyUpdate::RemoveToy(id) => {
                         if let Some(toy) = running_toys.remove(&id) {
-                            session.routes.remove(id);
                             let _ = session.graphs.send(GraphControl::Remove(id));
                             toy.handle.abort();
                             match toy.handle.await {
@@ -410,7 +379,6 @@ pub async fn toy_management_handler(
                     }
                     ToyUpdate::AlterToy(toy) => {
                         debug!("Got ToyUpdate::AlterToy signal!");
-                        session.routes.update(toy.toy_id, &toy.parsed_toy_features);
                         match running_toys.get(&toy.toy_id) {
                             Some(running) => {
                                 // Fresh graph with the new settings (resets processor state)

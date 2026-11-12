@@ -6,8 +6,6 @@ use ts_rs::TS;
 
 pub mod errors;
 pub mod input_processor;
-pub mod mode_processor;
-pub mod osc_processor;
 pub mod runtime;
 pub mod toy_command_processor;
 pub mod toy_manager;

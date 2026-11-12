@@ -7,14 +7,19 @@
 //! - [`connect`](GraphBuilder::connect) wires a source to a node's input. The
 //!   source is either another node's output port, or any other port, which is
 //!   read from the [`SignalPlane`] (e.g. an OSC parameter written by an input).
+//! - a processor can also [watch](crate::module::Watch) a prefix of signal-plane
+//!   ports instead of having each one wired, for inputs that aren't known up
+//!   front (e.g. every SPS parameter an avatar sends).
 //! - [`add_sink`](GraphBuilder::add_sink) sends a node's output to a target,
 //!   such as a toy's motor port.
 //!
 //! On every [`tick`](Graph::tick):
 //!
 //! 1. nodes run in dependency order, each reading the latest value of its
-//!    inputs. A node runs only once all of its inputs have a value, so
-//!    nothing happens before the first input arrives.
+//!    inputs. Watching nodes are first given the watched values written
+//!    since their last tick. A node runs only once all of its inputs have a
+//!    value, so nothing happens before the first input arrives (a node with
+//!    only watches has no inputs to wait for, and runs every tick).
 //! 2. a node's output port keeps its last value until the node writes a new
 //!    one (`None` from a processor means "unchanged").
 //! 3. each sink whose value changed since it last fired goes through the
@@ -33,9 +38,9 @@ use std::sync::Arc;
 use crate::address::{ModuleInstanceId, PortId};
 use crate::error::{Error, Result};
 use crate::event::EventPlane;
-use crate::module::{PortDirection, PortKind, Processor};
+use crate::module::{PortDirection, PortKind, Processor, Watch};
 use crate::safety::{ClampedCmd, SafetyLayer};
-use crate::signal::{Signal, SignalPlane};
+use crate::signal::{Signal, SignalPlane, SignalSeq};
 
 struct NodeSpec {
     id: ModuleInstanceId,
@@ -43,6 +48,7 @@ struct NodeSpec {
     inputs: Vec<Arc<str>>,
     outputs: Vec<Arc<str>>,
     wiring: Vec<Option<PortId>>,
+    watches: Vec<Watch>,
 }
 
 struct SinkSpec {
@@ -86,10 +92,12 @@ impl GraphBuilder {
         };
         let inputs = signal_ports(PortDirection::In);
         let outputs = signal_ports(PortDirection::Out);
+        let watches = processor.watches();
         self.index.insert(id.clone(), self.nodes.len());
         self.nodes.push(NodeSpec {
             id,
             wiring: vec![None; inputs.len()],
+            watches,
             processor,
             inputs,
             outputs,
@@ -218,6 +226,11 @@ impl GraphBuilder {
                 let spec = specs[old].take().unwrap();
                 Node {
                     outputs: vec![None; spec.outputs.len()],
+                    watches: spec
+                        .watches
+                        .into_iter()
+                        .map(|w| (w, SignalSeq::default()))
+                        .collect(),
                     inputs: inputs[old].iter().map(renumber).collect(),
                     processor: spec.processor,
                     id: spec.id,
@@ -267,6 +280,8 @@ struct Node {
     inputs: Vec<InputRef>,
     output_names: Vec<Arc<str>>,
     outputs: Vec<Option<Signal>>,
+    /// Each watch, with how far the node has seen.
+    watches: Vec<(Watch, SignalSeq)>,
 }
 
 struct Sink {
@@ -296,10 +311,25 @@ impl Graph {
     ) -> Vec<ClampedCmd> {
         let mut ins = Vec::new();
         let mut emitted = Vec::new();
+        let mut changed = Vec::new();
         for i in 0..self.nodes.len() {
             // Nodes only read from nodes before them (run order)
             let (before, rest) = self.nodes.split_at_mut(i);
             let node = &mut rest[0];
+
+            // Watched values first, even if the node isn't ready to run, so
+            // none are missed
+            if !node.watches.is_empty() {
+                changed.clear();
+                for (watch, seen) in &mut node.watches {
+                    let (new, seq) = signals.changed_since(&watch.module, &watch.prefix, *seen);
+                    *seen = seq;
+                    changed.extend(new);
+                }
+                if !changed.is_empty() {
+                    node.processor.watched(&changed);
+                }
+            }
 
             ins.clear();
             let mut ready = true;
@@ -612,5 +642,66 @@ mod tests {
         b.connect(port("a", "out"), port("b", "in")).unwrap();
         b.connect(port("b", "out"), port("a", "in")).unwrap();
         assert!(b.build().is_err(), "cycle");
+    }
+
+    /// Sums every value under a prefix, keeping the latest per port.
+    #[derive(Default)]
+    struct SumWatched(HashMap<PortId, f64>);
+
+    impl Processor for SumWatched {
+        fn ports(&self) -> Vec<PortSpec> {
+            vec![PortSpec::signal_out("out")]
+        }
+        fn watches(&self) -> Vec<Watch> {
+            vec![Watch::new(ModuleInstanceId::new("osc"), "/sum/")]
+        }
+        fn watched(&mut self, changed: &[(PortId, Signal)]) {
+            for (port, value) in changed {
+                self.0.insert(port.clone(), value.as_level());
+            }
+        }
+        fn tick(
+            &mut self,
+            _: &[Signal],
+            _: f32,
+            out: &mut [Option<Signal>],
+            _: &mut Vec<EventOut>,
+        ) {
+            if !self.0.is_empty() {
+                out[0] = Some(Signal::Float(self.0.values().sum()));
+            }
+        }
+    }
+
+    #[test]
+    fn watching_nodes_see_ports_that_were_never_wired() {
+        let mut b = GraphBuilder::new();
+        b.add_processor(id("sum"), Box::<SumWatched>::default())
+            .unwrap();
+        b.add_processor(id("add"), Box::new(Add(0.0))).unwrap();
+        b.connect(port("sum", "out"), port("add", "in")).unwrap();
+        b.add_sink(port("add", "out"), port("toy", "Vibrator_0"), None)
+            .unwrap();
+        let mut g = b.build().unwrap();
+        let signals = SignalPlane::new();
+        let osc = |name: &str| PortId::new(ModuleInstanceId::new("osc"), name);
+
+        // Nothing watched yet: nothing to send
+        assert!(tick(&mut g, &signals).is_empty());
+
+        signals.write(&osc("/sum/a"), Signal::Float(0.25));
+        signals.write(&osc("/other"), Signal::Float(0.5));
+        assert_eq!(
+            tick(&mut g, &signals),
+            vec![("toy/Vibrator_0".into(), 0.25)]
+        );
+
+        // A port nobody knew about when the graph was built
+        signals.write(&osc("/sum/b"), Signal::Float(0.5));
+        assert_eq!(
+            tick(&mut g, &signals),
+            vec![("toy/Vibrator_0".into(), 0.75)]
+        );
+        assert!(tick(&mut g, &signals).is_empty());
     }
 }

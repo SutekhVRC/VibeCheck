@@ -1,31 +1,37 @@
-use serde::{Deserialize, Serialize};
-use ts_rs::TS;
+/*
+ * TPS input processor. TODO: rewrite.
+ *
+ * TPS (https://www.poiyomi.com/TPS/wizard) sends its parameters under
+ * /avatar/parameters/TPS_Internal/. The previous implementation used the
+ * value of any parameter ending in Depth_In or RootRoot as the level, and
+ * ignored input filter tags. It's in git history, in
+ * toy_handling/input_processor/penetration_systems/tps/ as of commit fdefa56 (PR #73).
+ *
+ * Until this is written it reads the TPS parameters but never sets a level,
+ * so a feature using TPS only responds to its own parameters and Idle.
+ */
 
-use crate::toy_handling::{
-    input_processor::InputProcessor, mode_processor::core::ModeProcessorInputType,
-};
+use vibecheck_core::Signal;
 
-#[derive(Default, Clone, Debug, Serialize, Deserialize, TS)]
-pub struct TPSProcessor {
-    pub parameter_list: Vec<String>,
-}
+use crate::toy_handling::input_processor::InputProcessor;
+
+#[derive(Default)]
+pub struct TPSProcessor {}
 
 impl InputProcessor for TPSProcessor {
-    fn is_parameter(&self, param: &str) -> bool {
-        param.starts_with("/avatar/parameters/TPS_Internal/")
+    fn prefixes(&self) -> Vec<String> {
+        vec!["/avatar/parameters/TPS_Internal/".into()]
     }
 
-    fn input_filter(&self, _: &str, _: &Vec<String>) -> bool {
-        true
+    fn update(&mut self, _addr: &str, _value: Signal) {
+        // TODO: track the TPS parameters
     }
 
-    fn process(&mut self, addr: &str, input: ModeProcessorInputType) -> Option<f64> {
-        let tps_param = addr.strip_prefix("/avatar/parameters/")?;
-
-        if tps_param.ends_with("Depth_In") || tps_param.ends_with("RootRoot") {
-            input.try_float()
-        } else {
-            None
-        }
+    fn tick(&mut self, _dt: f32) -> Option<f64> {
+        // TODO: return the level worked out from the tracked parameters
+        None
     }
+
+    // TODO: decide whether TPS uses input filter tags. The previous
+    // version ignored them (override input_filter to return true)
 }

@@ -129,8 +129,42 @@ impl EventOut {
     }
 }
 
+/// A set of signal-plane ports a [`Processor`] reads without wiring them one
+/// by one: every port of `module` whose name starts with `prefix`.
+///
+/// For processors whose inputs aren't known when the graph is built, such as
+/// one that reads every `/avatar/parameters/OGB/...` parameter an avatar
+/// happens to send.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Watch {
+    pub module: ModuleInstanceId,
+    pub prefix: String,
+}
+
+impl Watch {
+    pub fn new(module: ModuleInstanceId, prefix: impl Into<String>) -> Self {
+        Self {
+            module,
+            prefix: prefix.into(),
+        }
+    }
+}
+
 pub trait Processor: Send {
     fn ports(&self) -> Vec<PortSpec>;
+
+    /// Signal-plane ports this processor reads besides its wired inputs.
+    /// Asked once, when the node is added to a graph. Default: none.
+    fn watches(&self) -> Vec<Watch> {
+        Vec::new()
+    }
+
+    /// Called each tick, before [`tick`](Processor::tick), with the watched
+    /// ports written since the last tick: the latest value of each, oldest
+    /// write first (watch by watch, if there are several). Not called when
+    /// nothing changed. On the first tick it gets every matching value
+    /// already on the plane.
+    fn watched(&mut self, _changed: &[(PortId, Signal)]) {}
 
     /// Called once per graph tick, in topological order.
     ///

@@ -16,9 +16,6 @@ use crate::{
         },
         FromFrontend, ToBackend, ToFrontend,
     },
-    toy_handling::input_processor::penetration_systems::{
-        sps::SPSProcessor, tps::TPSProcessor, PenetrationSystemType,
-    },
     util::fs::{build_path_dir, build_path_file, file_exists, get_config_dir, ConfigFileType},
     vcore::errors::{
         self,
@@ -154,21 +151,6 @@ impl VCToy {
 
                 // Feature count is the same so its probably safe to assume the toy config is intact
                 self.parsed_toy_features = conf.features.clone();
-
-                // Allocate / Instantiate new Penetration system structure based on configuration data
-                for feature in &mut self.parsed_toy_features.features {
-                    match feature.penetration_system.pen_system_type {
-                        PenetrationSystemType::None => feature.penetration_system.pen_system = None,
-                        PenetrationSystemType::Sps => {
-                            feature.penetration_system.pen_system =
-                                Some(Box::<SPSProcessor>::default())
-                        }
-                        PenetrationSystemType::Tps => {
-                            feature.penetration_system.pen_system =
-                                Some(Box::<TPSProcessor>::default())
-                        }
-                    }
-                }
 
                 self.osc_data = conf.osc_data;
                 self.bt_update_rate = conf.bt_update_rate;
@@ -351,34 +333,6 @@ impl VCToyFeature {
             smooth_enabled: true,
             rate_enabled: false,
             //processor: FeatureProcessor::default(),
-        }
-    }
-
-    /// Whether this feature's input processor (SPS/TPS) handles `param`: the
-    /// feature is enabled, has an input processor that claims the address,
-    /// and the address passes the feature's input filter, if it has one.
-    pub fn input_processor_accepts(&self, param: &str) -> bool {
-        if !self.feature_enabled {
-            return false;
-        }
-        let Some(pen_system) = self.penetration_system.pen_system.as_ref() else {
-            return false;
-        };
-        if !pen_system.is_parameter(param) {
-            return false;
-        }
-        match &self.penetration_system.pen_system_input_filter {
-            Some(input_filter) => {
-                let passes = pen_system.input_filter(param, input_filter);
-                if passes {
-                    debug!("Input Filter success for {} : {:?}", param, input_filter);
-                }
-                passes
-            }
-            None => {
-                debug!("Got None for input filter!");
-                true
-            }
         }
     }
 

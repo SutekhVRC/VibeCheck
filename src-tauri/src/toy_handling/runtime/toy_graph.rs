@@ -3,19 +3,22 @@
  *
  * For every enabled feature (motor), one chain per source:
  *
- *   OSC parameter:   osc/<address> -> round -> mode -> levels -> motor
- *   SPS/TPS output:  toy/<Motor>/input_processor -> mode -> levels -> motor
+ *   OSC parameter:    osc/<address> -> round -> mode -> levels -> motor
+ *   Input processor:  input_processor -> mode -> levels -> motor
  *
  * - "round" rounds OSC floats to hundredths as f32, exactly as VibeCheck
  *   always has.
- * - "mode" is the parameter's (or the SPS/TPS output's) processing mode.
+ * - "input_processor" is the feature's SPS/TPS processor (see
+ *   input_processor/mod.rs). It watches its OSC parameters itself, so it
+ *   has no wired input.
+ * - "mode" is the parameter's (or the input processor's) processing mode.
  * - "levels" is Idle Speed and Range. Flip Input is applied by the toy's
  *   output, after the safety layer (master intensity), so the graph and the
  *   safety layer work in intensities where 0 is always off.
  *
  * Only the first parameter with a given address counts within a feature.
- * SPS/TPS chains come before parameter chains, so if both change in the same
- * tick the parameter wins, as it did when messages were processed one by one.
+ * Input processor chains come before parameter chains, so if both change in
+ * the same tick the parameter wins.
  *
  * The graph is rebuilt whenever the toy's config changes.
  */
@@ -32,8 +35,9 @@ use vibecheck_core::{
 };
 
 use crate::toy_handling::{
+    input_processor::InputProcessorNode,
     runtime::toy_output::feature_port_name,
-    toyops::{ProcessingMode, VCFeatureType, VCToyFeature, VCToyFeatures},
+    toyops::{ProcessingMode, VCFeatureType, VCToyFeatures},
 };
 
 /// The module id OscInput writes parameter values under.
@@ -59,17 +63,6 @@ fn to_core_mode(mode: &ProcessingMode) -> Mode {
         ProcessingMode::Rate => Mode::Rate,
         ProcessingMode::Constant => Mode::Constant,
     }
-}
-
-/// Where a feature's SPS/TPS output is written on the signal plane.
-pub fn input_processor_port(toy: &ModuleInstanceId, feature: &VCToyFeature) -> PortId {
-    PortId::new(
-        toy.clone(),
-        format!(
-            "{}/input_processor",
-            feature_port_name(feature.feature_type, feature.feature_index)
-        ),
-    )
 }
 
 /// Rounds OSC floats to hundredths in f32 before widening, as VibeCheck
@@ -153,14 +146,21 @@ pub fn build_toy_graph(toy: &ModuleInstanceId, features: &VCToyFeatures) -> Resu
             _ => None,
         };
 
-        if feature.penetration_system.pen_system.is_some() {
+        let pen = &feature.penetration_system;
+        if let Some(processor) = pen.pen_system_type.processor() {
+            let node = ModuleInstanceId::new(format!("{prefix}/input_processor"));
+            let tags = pen.pen_system_input_filter.clone().unwrap_or_default();
+            b.add_processor(
+                node.clone(),
+                Box::new(InputProcessorNode::new(processor, tags)),
+            )?;
             add_chain(
                 &mut b,
                 Chain {
                     prefix: format!("{prefix}/input_processor"),
-                    source: input_processor_port(toy, feature),
+                    source: PortId::new(node, "out"),
                     round: false,
-                    mode: to_core_mode(&feature.penetration_system.pen_system_processing_mode),
+                    mode: to_core_mode(&pen.pen_system_processing_mode),
                     settings,
                     levels,
                     motor: &motor,
@@ -197,8 +197,8 @@ pub fn build_toy_graph(toy: &ModuleInstanceId, features: &VCToyFeatures) -> Resu
 mod tests {
     use super::*;
     use crate::toy_handling::{
-        input_processor::penetration_systems::{tps::TPSProcessor, PenetrationSystemType},
-        toyops::ToyParameter,
+        input_processor::penetration_systems::PenetrationSystemType,
+        toyops::{ToyParameter, VCToyFeature},
     };
     use vibecheck_core::{EventPlane, SafetyLayer, SignalPlane};
 
@@ -216,7 +216,6 @@ mod tests {
     }
 
     struct Harness {
-        toy: ModuleInstanceId,
         graph: Graph,
         signals: SignalPlane,
         events: EventPlane,
@@ -227,7 +226,6 @@ mod tests {
             let toy = ModuleInstanceId::new("toy:test:0");
             let graph = build_toy_graph(&toy, &VCToyFeatures { features }).unwrap();
             Self {
-                toy,
                 graph,
                 signals: SignalPlane::new(),
                 events: EventPlane::new().0,
@@ -430,15 +428,29 @@ mod tests {
     }
 
     #[test]
-    fn input_processor_output_has_its_own_chain() {
-        let mut tps = feature(0, VCFeatureType::Vibrator, vec![]);
-        tps.penetration_system.pen_system_type = PenetrationSystemType::Tps;
-        tps.penetration_system.pen_system = Some(Box::<TPSProcessor>::default());
-        tps.feature_levels.maximum_level = 0.6;
-        let mut h = Harness::new(vec![tps.clone()]);
+    fn input_processors_get_their_own_chain_next_to_parameters() {
+        let mut sps = feature(
+            0,
+            VCFeatureType::Vibrator,
+            vec![param(BOOP, ProcessingMode::Raw)],
+        );
+        sps.penetration_system.pen_system_type = PenetrationSystemType::Sps;
+        let mut h = Harness::new(vec![sps]);
+        assert!(h
+            .graph
+            .node_ids()
+            .any(|n| n.as_str() == "toy:test:0/Vibrator_0/input_processor"));
 
-        h.signals
-            .write(&input_processor_port(&h.toy, &tps), Signal::Float(0.9));
-        assert_eq!(h.tick(), vec![("Vibrator_0".into(), 0.6, None)]);
+        // The SPS processor is a stub for now: it reads SPS parameters but
+        // never sets a level
+        h.osc(
+            "/avatar/parameters/OGB/Orf/Mouth/PenOthers",
+            Signal::Float(0.7),
+        );
+        assert!(h.tick().is_empty());
+
+        // The feature's own parameters still work
+        h.osc(BOOP, Signal::Float(0.5));
+        assert_eq!(h.tick(), vec![("Vibrator_0".into(), 0.5, None)]);
     }
 }
