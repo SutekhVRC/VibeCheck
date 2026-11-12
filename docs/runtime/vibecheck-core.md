@@ -301,7 +301,7 @@ With `with_events(module, events)`, it publishes `EventKind::OutputError` on its
 | Toy commands through `ButtplugOutput` with one slot per motor | Done ([toy-command-path.md](toy-command-path.md)) |
 | OSC listener as an `Input` module, avatar change as an event | Done ([toy-command-path.md](toy-command-path.md#routing)) |
 | Smooth, Rate, Constant and level tweaks as `Processor` modules | Done |
-| Input processors (SPS/TPS) as graph nodes | Done: they watch their parameters on the signal plane, and the per-toy OSC routing is gone ([toy-command-path.md](toy-command-path.md#input-processors)). SPS is rewritten for both the legacy and SPS3 formats; TPS is a stub until its rewrite |
+| Input processors (SPS/TPS) as graph nodes | Done: they watch their parameters on the signal plane, and the per-toy OSC routing is gone ([toy-command-path.md](toy-command-path.md#input-processors)). SPS is rewritten for both the legacy and SPS3 formats, and TPS follows the deepest orifice or penetrator |
 | Each toy's graph generated from its existing config, ticked at a fixed rate | Done ([toy-command-path.md](toy-command-path.md#the-graph)) |
 | Output events from `ButtplugOutput` | Error and recovery done. Activity events ("motor started/stopped") wait for a design that handles Flip Input, where level 0 isn't "off" |
 | Processor events published from the graph | Done |

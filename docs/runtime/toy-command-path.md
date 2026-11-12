@@ -109,7 +109,13 @@ To add one: implement `InputProcessor`, add a variant to `PenetrationSystemType`
 - **Learning per tick:** root/tip and separation readings are taken once per tick, so values VRChat sends together are used together. The learned length is the median of recent readings.
 - **Not ready yet:** nothing is sent until the first SPS value arrives.
 
-**TPS** (`penetration_systems/tps/mod.rs`) is still a stub: it watches its prefix but never sets a level. Its previous implementation is in git history; the stub's header names the commit.
+**TPS** (`penetration_systems/tps/mod.rs`) reads `TPS_Internal/<Type>/<Id>/…`:
+
+- **Depth:** an orifice's `Depth_In` and a penetrator's `RootRoot` are already depths from 0 to 1, and are used as they are. As before, either name is accepted whatever the type.
+- **Combining:** each orifice and penetrator is tracked separately and the feature follows the deepest one. Before, the latest message won, so two TPS zones fought over the motor.
+- **Input filter:** tags don't apply to TPS, as before.
+- **Not ready yet:** nothing is sent until the first depth arrives.
+- **Avatar change:** `reset` forgets every depth.
 
 ## Routing
 

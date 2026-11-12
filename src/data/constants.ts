@@ -60,7 +60,7 @@ export const TOOLTIP = {
     link: "FeatureOptions",
   },
   InputFilter: {
-    text: "Filter what parameters VibeCheck listens to for this feature. These match if the parameter contains the given tag. If no tags are set then all SPS interaction will be used.",
+    text: "Pick which SPS sockets, plugs and touch zones drive this feature. A zone is used if its name (such as the socket's menu label) contains any of the tags. If no tags are set then all SPS interaction will be used. Tags don't apply to TPS.",
     link: "FeatureOptions",
   },
   LinearSpeed: {
