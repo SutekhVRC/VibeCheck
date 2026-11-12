@@ -1,15 +1,13 @@
 use btleplug::api::{Central, Manager as _};
 use btleplug::platform::Manager;
-use buttplug::client::ButtplugClient;
-use buttplug::core::connector::ButtplugInProcessClientConnectorBuilder;
-//new_json_ws_client_connector};
-use buttplug::server::device::hardware::communication::btleplug::BtlePlugCommunicationManagerBuilder;
-use buttplug::server::device::hardware::communication::lovense_dongle::{
-    LovenseHIDDongleCommunicationManagerBuilder, LovenseSerialDongleCommunicationManagerBuilder,
-};
-use buttplug::server::device::ServerDeviceManagerBuilder;
-use buttplug::server::ButtplugServerBuilder;
-use buttplug::util::device_configuration::load_protocol_configs;
+use buttplug_client::ButtplugClient;
+use buttplug_client_in_process::ButtplugInProcessClientConnectorBuilder;
+use buttplug_server::device::ServerDeviceManagerBuilder;
+use buttplug_server::ButtplugServerBuilder;
+use buttplug_server_device_config::load_protocol_configs;
+use buttplug_server_hwmgr_btleplug::BtlePlugCommunicationManagerBuilder;
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+use buttplug_server_hwmgr_lovense_dongle::LovenseHIDDongleCommunicationManagerBuilder;
 use log::{error as logerr, info, trace, warn};
 
 use crate::util::errors::UtilError;
@@ -34,27 +32,29 @@ pub async fn detect_btle_adapter() -> bool {
     !adapters.is_empty() // TODO is this always true?
 }
 
-pub async fn vc_toy_client_server_init(
-    client_name: &str,
-    allow_raw_messages: bool,
-) -> Result<ButtplugClient, UtilError> {
-    let mut dcmb = match load_protocol_configs(&None, &None, false) {
-        Ok(dcmb) => dcmb,
-        Err(_) => return Err(UtilError::BPIOInit),
-    };
-
-    let dcm = match dcmb.allow_raw_messages(allow_raw_messages).finish() {
+/// Starts VibeCheck's own Buttplug server in-process (Bluetooth LE, plus the
+/// Lovense USB dongle on Windows and Linux) and connects a client to it.
+pub async fn vc_toy_client_server_init(client_name: &str) -> Result<ButtplugClient, UtilError> {
+    // Buttplug's built-in device list, no user config
+    let dcm = match load_protocol_configs(&None, &None, false).and_then(|mut b| b.finish()) {
         Ok(dcm) => dcm,
-        Err(_) => return Err(UtilError::BPIOInit),
+        Err(e) => {
+            logerr!("Couldn't load Buttplug's device configuration: {}", e);
+            return Err(UtilError::BPIOInit);
+        }
     };
 
     let mut device_manager_builder = ServerDeviceManagerBuilder::new(dcm);
     device_manager_builder.comm_manager(BtlePlugCommunicationManagerBuilder::default());
     trace!("Added BtlePlug comm manager");
 
-    device_manager_builder.comm_manager(LovenseHIDDongleCommunicationManagerBuilder::default());
-    device_manager_builder.comm_manager(LovenseSerialDongleCommunicationManagerBuilder::default());
-    trace!("Added Lovense Dongle HID/Serial managers");
+    // Buttplug 12 dropped the serial (COM port) Lovense dongle manager; the
+    // HID dongle is still supported
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        device_manager_builder.comm_manager(LovenseHIDDongleCommunicationManagerBuilder::default());
+        trace!("Added Lovense HID dongle manager");
+    }
 
     let sdm = match device_manager_builder.finish() {
         Ok(sdm) => sdm,

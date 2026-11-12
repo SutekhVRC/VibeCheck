@@ -1,13 +1,12 @@
-use buttplug::{
-    client::ButtplugClientDevice,
-    core::message::{ActuatorType, ClientDeviceMessageAttributesV3},
-};
+use buttplug_client::ButtplugClientDevice;
+use buttplug_core::message::OutputType;
 use core::fmt;
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, sync::Arc};
 use tauri::AppHandle;
 use ts_rs::TS;
+use vibecheck_core::modules::buttplug::LegacyLayout;
 
 use crate::{
     config::toy::{VCToyAnatomy, VCToyConfig},
@@ -37,7 +36,8 @@ pub struct VCToy {
     pub toy_name: String,
     pub toy_power: ToyPower,
     pub toy_connected: bool,
-    pub toy_features: ClientDeviceMessageAttributesV3,
+    /// The toy's actuators, numbered the way its config numbers its features.
+    pub layout: LegacyLayout,
     pub parsed_toy_features: VCToyFeatures,
     pub osc_data: bool,
     pub listening: bool,
@@ -49,140 +49,60 @@ pub struct VCToy {
 }
 
 impl VCToy {
-    fn populate_linears(&mut self, features: &ClientDeviceMessageAttributesV3) {
-        // Populate Linears
-        if features.linear_cmd().is_some() {
-            let mut indexer = 0;
-            features
-                .linear_cmd()
-                .as_ref()
-                .unwrap()
-                .iter()
-                .for_each(|_linear_feature| {
-                    self.parsed_toy_features.features.push(VCToyFeature::new(
-                        vec![ToyParameter {
-                            parameter: format!(
-                                "/avatar/parameters/{:?}_{}",
-                                VCFeatureType::Linear,
-                                indexer
-                            ),
-                            processing_mode: ProcessingMode::Raw,
-                        }],
-                        indexer,
-                        VCFeatureType::Linear,
-                    ));
-
-                    indexer += 1;
-                });
-            info!("Populated {} linears", indexer);
+    fn populate_linears(&mut self, layout: &LegacyLayout) {
+        for index in 0..layout.linears.len() as u32 {
+            self.parsed_toy_features.features.push(VCToyFeature::new(
+                vec![ToyParameter {
+                    parameter: format!("/avatar/parameters/{:?}_{}", VCFeatureType::Linear, index),
+                    processing_mode: ProcessingMode::Raw,
+                }],
+                index,
+                VCFeatureType::Linear,
+            ));
         }
+        info!("Populated {} linears", layout.linears.len());
     }
 
-    fn populate_rotators(&mut self, features: &ClientDeviceMessageAttributesV3) {
-        // Populate rotators
-        if features.rotate_cmd().is_some() {
-            let mut indexer = 0;
-            features
-                .rotate_cmd()
-                .as_ref()
-                .unwrap()
-                .iter()
-                .for_each(|_rotate_feature| {
-                    self.parsed_toy_features.features.push(VCToyFeature::new(
-                        vec![],
-                        indexer,
-                        VCFeatureType::Rotator,
-                    ));
-
-                    indexer += 1;
-                });
-            info!("Populated {} rotators", indexer);
+    fn populate_rotators(&mut self, layout: &LegacyLayout) {
+        for index in 0..layout.rotators.len() as u32 {
+            self.parsed_toy_features.features.push(VCToyFeature::new(
+                vec![],
+                index,
+                VCFeatureType::Rotator,
+            ));
         }
+        info!("Populated {} rotators", layout.rotators.len());
     }
 
-    fn populate_scalars(&mut self, features: &ClientDeviceMessageAttributesV3) {
-        // Populate scalars
-        if features.scalar_cmd().is_some() {
-            let mut indexer = 0;
-
-            features
-                .scalar_cmd()
-                .as_ref()
-                .unwrap()
-                .iter()
-                .for_each(|scalar_feature| {
-                    // Filter out Rotators
-                    match *scalar_feature.actuator_type() {
-                        ActuatorType::Rotate => {
-                            self.parsed_toy_features.features.push(VCToyFeature::new(
-                                vec![],
-                                indexer,
-                                VCFeatureType::ScalarRotator,
-                            ));
-
-                            indexer += 1;
-                        }
-                        ActuatorType::Vibrate => {
-                            self.parsed_toy_features.features.push(VCToyFeature::new(
-                                vec![],
-                                indexer,
-                                VCFeatureType::Vibrator,
-                            ));
-
-                            indexer += 1;
-                        }
-                        ActuatorType::Constrict => {
-                            self.parsed_toy_features.features.push(VCToyFeature::new(
-                                vec![],
-                                indexer,
-                                VCFeatureType::Constrict,
-                            ));
-
-                            indexer += 1;
-                        }
-                        ActuatorType::Inflate => {
-                            self.parsed_toy_features.features.push(VCToyFeature::new(
-                                vec![],
-                                indexer,
-                                VCFeatureType::Inflate,
-                            ));
-
-                            indexer += 1;
-                        }
-                        ActuatorType::Oscillate => {
-                            self.parsed_toy_features.features.push(VCToyFeature::new(
-                                vec![],
-                                indexer,
-                                VCFeatureType::Oscillate,
-                            ));
-
-                            indexer += 1;
-                        }
-                        ActuatorType::Position => {
-                            self.parsed_toy_features.features.push(VCToyFeature::new(
-                                vec![],
-                                indexer,
-                                VCFeatureType::Position,
-                            ));
-
-                            indexer += 1;
-                        }
-                        ActuatorType::Unknown => {}
-                    }
-                });
-            info!("Populated {} scalars", indexer);
+    fn populate_scalars(&mut self, layout: &LegacyLayout) {
+        for (index, &(_, output)) in layout.scalars.iter().enumerate() {
+            let feature_type = match output {
+                OutputType::Vibrate => VCFeatureType::Vibrator,
+                OutputType::Rotate => VCFeatureType::ScalarRotator,
+                OutputType::Oscillate => VCFeatureType::Oscillate,
+                OutputType::Constrict => VCFeatureType::Constrict,
+                OutputType::Position => VCFeatureType::Position,
+                // LegacyLayout only lists the outputs above
+                _ => continue,
+            };
+            self.parsed_toy_features.features.push(VCToyFeature::new(
+                vec![],
+                index as u32,
+                feature_type,
+            ));
         }
+        info!("Populated {} scalars", layout.scalars.len());
     }
 
     // Populate if no config can be read for toy
     fn populate_routine(&mut self) {
         info!("Populating toy: {}", self.toy_id,);
 
-        let features = self.toy_features.clone();
+        let layout = self.layout.clone();
 
-        self.populate_linears(&features);
-        self.populate_rotators(&features);
-        self.populate_scalars(&features);
+        self.populate_linears(&layout);
+        self.populate_rotators(&layout);
+        self.populate_scalars(&layout);
 
         self.config = Some(VCToyConfig {
             toy_name: self.toy_name.clone(),
@@ -202,52 +122,28 @@ impl VCToy {
             Some(ref conf) => {
                 // If feature count differs the user probably swapped between connection types (This used to be a bug when LC impl in bp-rs wasnt done for the Max2. This was fixed but I am keeping the feature count check in case it happens again)
 
-                let mut conn_toy_feature_count = 0;
-
-                if self.toy_features.scalar_cmd().is_some() {
-                    debug!("Found Scalar CMD");
-                    let conf_file_scalar_count = conf.features.get_feature_scalar_count();
-                    let connected_toy_scalar_count = self
-                        .toy_features
-                        .scalar_cmd()
-                        .as_ref()
-                        .unwrap()
-                        .iter()
-                        .len();
-                    if conf_file_scalar_count == connected_toy_scalar_count {
-                        conn_toy_feature_count += connected_toy_scalar_count;
-                    }
-                }
-
-                if self.toy_features.rotate_cmd().is_some() {
-                    debug!("Found Rotate CMD");
-                    let conf_file_rotate_count = conf.features.get_feature_rotator_count();
-                    let connected_toy_rotate_count = self
-                        .toy_features
-                        .rotate_cmd()
-                        .as_ref()
-                        .unwrap()
-                        .iter()
-                        .len();
-                    if conf_file_rotate_count == connected_toy_rotate_count {
-                        conn_toy_feature_count += connected_toy_rotate_count;
-                    }
-                }
-
-                if self.toy_features.linear_cmd().is_some() {
-                    debug!("Found Linear CMD");
-                    let conf_file_linear_count = conf.features.get_feature_linear_count();
-                    let connected_toy_linear_count = self
-                        .toy_features
-                        .linear_cmd()
-                        .as_ref()
-                        .unwrap()
-                        .iter()
-                        .len();
-                    if conf_file_linear_count == connected_toy_linear_count {
-                        conn_toy_feature_count += connected_toy_linear_count;
-                    }
-                }
+                // Each kind of actuator counts only if the config has the same
+                // number of them as the toy
+                let counts = [
+                    (
+                        conf.features.get_feature_scalar_count(),
+                        self.layout.scalars.len(),
+                    ),
+                    (
+                        conf.features.get_feature_rotator_count(),
+                        self.layout.rotators.len(),
+                    ),
+                    (
+                        conf.features.get_feature_linear_count(),
+                        self.layout.linears.len(),
+                    ),
+                ];
+                let conn_toy_feature_count: usize = counts
+                    .iter()
+                    .filter(|(in_config, on_toy)| in_config == on_toy)
+                    .map(|(_, on_toy)| on_toy)
+                    .sum();
+                debug!("Feature counts (config, toy): {:?}", counts);
 
                 // If Toy has a different count of features repopulate config
                 if conn_toy_feature_count != conf.features.features.len() {
@@ -665,26 +561,6 @@ impl LevelTweaks {
             constant_level: self.constant_level,
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Scalars {
-    levels: LevelTweaks,
-    actuator_type: ActuatorType,
-    feature_id: u32,
-    osc_parameter: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum Rotators {
-    Auto(String, LevelTweaks),
-    Custom(Vec<(String, u32, LevelTweaks)>),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum Linears {
-    Auto(String, LevelTweaks),
-    Custom(Vec<(String, u32, LevelTweaks)>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, Default)]

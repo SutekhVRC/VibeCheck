@@ -1,4 +1,4 @@
-use buttplug::client::ButtplugClient;
+use buttplug_client::ButtplugClient;
 use log::{error as logerr, info, warn};
 use parking_lot::Mutex;
 use std::net::SocketAddrV4;
@@ -269,7 +269,7 @@ impl VibeCheckState {
 
         // Get ButtPlugClient with modified connection modes
 
-        let bp_client_future = bluetooth::vc_toy_client_server_init("VibeCheck", false);
+        let bp_client_future = bluetooth::vc_toy_client_server_init("VibeCheck");
 
         self.bp_client = match self.async_rt.block_on(bp_client_future) {
             Ok(bpc) => Some(bpc),

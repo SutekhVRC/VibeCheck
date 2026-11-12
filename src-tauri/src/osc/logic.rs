@@ -135,18 +135,7 @@ pub async fn toy_refresh(
         );
         sock.connect(remote).await.unwrap();
         for (.., mut toy) in toys {
-            // Can use this to differ between toys with batteries and toys without!
-            let toy_power = if toy.device_handle.has_battery_level() {
-                match toy.device_handle.battery_level().await {
-                    Ok(battery_lvl) => ToyPower::Battery(battery_lvl),
-                    Err(_e) => {
-                        warn!("Device battery_level() error: {:?}", _e);
-                        ToyPower::Pending
-                    }
-                }
-            } else {
-                ToyPower::NoBattery
-            };
+            let toy_power = ToyPower::read(&toy.device_handle).await;
 
             toy.toy_power = toy_power.clone();
 

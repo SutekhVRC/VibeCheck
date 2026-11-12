@@ -14,8 +14,16 @@ tauri-build = { version = "2.5.3", features = [] }
 
 [dependencies]
 vibecheck-core = { path = "crates/vibecheck-core" }
-buttplug = "9.0.9"
-#buttplug = {path = "../../../vibecheck-dev-buttplug/buttplug/buttplug"}
+# Buttplug 12 release. VibeCheck runs its own in-process Buttplug server
+# (see util/bluetooth.rs), so it uses the split crates rather than the
+# `buttplug` crate, which only bundles the client and a websocket transport.
+buttplug_client = "11.0.1"
+buttplug_core = "11.0.2"
+buttplug_client_in_process = { version = "12.0.4", default-features = false, features = ["tokio-runtime"] }
+buttplug_server = "12.0.2"
+buttplug_server_device_config = "12.0.1"
+buttplug_server_hwmgr_btleplug = "12.0.3"
+buttplug_server_hwmgr_lovense_dongle = "12.0.1"
 #vrcoscquery = {path = "../../../vrcoscquery-rs"}
 vrcoscquery = {git = "https://github.com/SutekhVRC/VRCOSCQuery"}
 tokio = {version = "1.17.0", features = ["rt-multi-thread", "sync", "macros", "io-std", "time"] }

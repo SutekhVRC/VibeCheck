@@ -18,7 +18,7 @@ use crate::{
         state::VibeCheckState,
     },
 };
-use buttplug::client::ButtplugClientEvent;
+use buttplug_client::ButtplugClientEvent;
 use futures::StreamExt;
 use futures_timer::Delay;
 use log::{error as logerr, info, trace, warn};
@@ -27,6 +27,7 @@ use std::sync::mpsc::Sender;
 use tauri::AppHandle;
 use tauri_plugin_notification::{Notification, NotificationExt};
 use tokio::sync::mpsc::UnboundedSender;
+use vibecheck_core::modules::buttplug::LegacyLayout;
 
 /*
     This handler will handle the adding and removal of toys
@@ -54,18 +55,7 @@ pub async fn client_event_handler(
                     info!("DeviceAdded");
                     Delay::new(Duration::from_secs(3)).await;
 
-                    // Can use this to differ between toys with batteries and toys without!
-                    let toy_power = if dev.has_battery_level() {
-                        match dev.battery_level().await {
-                            Ok(battery_lvl) => ToyPower::Battery(battery_lvl),
-                            Err(_e) => {
-                                warn!("Device battery_level() error: {:?}", _e);
-                                ToyPower::Pending
-                            }
-                        }
-                    } else {
-                        ToyPower::NoBattery
-                    };
+                    let toy_power = ToyPower::read(&dev).await;
 
                     let sub_id = {
                         let vc_lock = vibecheck_state_pointer.lock();
@@ -90,12 +80,12 @@ pub async fn client_event_handler(
                         toy_name: dev.name().clone(),
                         toy_power: toy_power.clone(),
                         toy_connected: dev.connected(),
-                        toy_features: dev.message_attributes().clone(),
+                        layout: LegacyLayout::of(&dev),
                         parsed_toy_features: VCToyFeatures::new(),
                         osc_data: false,
                         bt_update_rate: 10,
                         listening: false,
-                        device_handle: dev.clone(),
+                        device_handle: Arc::new(dev.clone()),
                         config: None,
                         sub_id,
                         app_handle: app_handle.clone(),
@@ -220,6 +210,8 @@ pub async fn client_event_handler(
                     }
                 }
                 ButtplugClientEvent::ScanningFinished => info!("Scanning finished!"),
+                // Devices already connected arrive as DeviceAdded events
+                ButtplugClientEvent::DeviceListReceived => {}
                 ButtplugClientEvent::ServerDisconnect => {
                     warn!("ServerDisconnect");
                     break;
