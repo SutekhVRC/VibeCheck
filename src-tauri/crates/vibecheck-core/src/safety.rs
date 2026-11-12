@@ -20,7 +20,10 @@
 //!   get commands while armed. Nothing is armed by default, and arming lasts
 //!   until disarmed or a panic.
 //! - **Rate limits**: a per-target minimum gap between commands.
-//! - **Causal depth**: commands caused by a long chain of events are refused.
+//! - **Feedback loops**: an action taken in response to an event is refused if
+//!   the chain behind that event is too long, or if the module asking is
+//!   already part of it, i.e. it would be reacting to the result of its own
+//!   earlier action ([`clamp_in_response`](SafetyLayer::clamp_in_response)).
 //!
 //! A [`SafetyLayer`] is cheap to clone and clones share all of this, so the
 //! app can hand one to every part of a session and change it (master intensity,
@@ -33,7 +36,10 @@ use std::time::{Duration, Instant};
 use parking_lot::Mutex;
 
 use crate::address::{ModuleInstanceId, PortId};
-use crate::event::Event;
+use crate::event::{Event, EventId, EventKind, EventPlane, Value};
+
+/// Port an `Acted` event is published from on the requesting module.
+pub const ACTED_PORT: &str = "acted";
 
 /// User-set limits applied to every command, after every rule.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -79,6 +85,9 @@ pub struct ClampedCmd {
     duration_ms: Option<u32>,
     /// Panic count when the command was made; older commands are stale.
     epoch: u64,
+    /// The `Acted` event recorded for this command, if it was a response to
+    /// an event.
+    cause: Option<EventId>,
 }
 
 impl ClampedCmd {
@@ -94,6 +103,14 @@ impl ClampedCmd {
     /// For one-shot actions (e.g. a timed vibrate). `None` for continuous outputs.
     pub fn duration_ms(&self) -> Option<u32> {
         self.duration_ms
+    }
+
+    /// For commands made by [`SafetyLayer::clamp_in_response`]: the `Acted`
+    /// event recorded for it. An output reporting what it did should publish
+    /// its event caused by this (`EventPlane::publish_caused_by_id`), so the
+    /// chain leads back through whoever asked.
+    pub fn cause(&self) -> Option<EventId> {
+        self.cause
     }
 }
 
@@ -244,12 +261,16 @@ impl SafetyLayer {
             level,
             duration_ms: duration_ms.map(|d| d.min(state.caps.max_duration_ms)),
             epoch: state.epoch,
+            cause: None,
             target,
         })
     }
 
     /// Like [`clamp`](Self::clamp) for a command requested in response to
     /// `cause`, also refusing it if the chain of events behind it is too long.
+    ///
+    /// Prefer [`clamp_in_response`](Self::clamp_in_response), which also
+    /// stops a module reacting to the result of its own action.
     pub fn clamp_caused_by(
         &self,
         cause: &Event,
@@ -261,6 +282,46 @@ impl SafetyLayer {
             return None;
         }
         self.clamp(target, level, duration_ms)
+    }
+
+    /// The loop guard for any module (a rule, a processor) that acts because
+    /// of an event. `trigger` is the event it's reacting to and `requester`
+    /// is the module asking.
+    ///
+    /// Refused (`None`) if:
+    /// - the chain behind `trigger` is already `max_event_depth` long;
+    /// - `requester` appears anywhere in that chain: it would be reacting to
+    ///   the result of its own earlier action, which is how feedback loops
+    ///   start;
+    /// - or for any reason [`clamp`](Self::clamp) refuses.
+    ///
+    /// When admitted, an [`EventKind::Acted`] event is published from
+    /// `requester` (caused by `trigger`) and the command carries it as its
+    /// [`cause`](ClampedCmd::cause). That's what lets the loop be seen later:
+    /// whatever the output reports chains back through the requester.
+    pub fn clamp_in_response(
+        &self,
+        events: &EventPlane,
+        trigger: &Event,
+        requester: &ModuleInstanceId,
+        target: PortId,
+        level: f64,
+        duration_ms: Option<u32>,
+    ) -> Option<ClampedCmd> {
+        if trigger.depth >= self.caps().max_event_depth {
+            return None;
+        }
+        if events.chain_includes(trigger.id, requester) || trigger.source.module == *requester {
+            return None;
+        }
+        let mut cmd = self.clamp(target, level, duration_ms)?;
+        cmd.cause = Some(events.publish_caused_by_id(
+            trigger.id,
+            PortId::new(requester.clone(), ACTED_PORT),
+            EventKind::Acted,
+            Value::None,
+        ));
+        Some(cmd)
     }
 
     /// Whether an output may still send `cmd` now. Outputs check this right
@@ -411,6 +472,103 @@ mod tests {
         assert!(!safety.arm(risky.clone()), "can't arm while panicked");
         safety.resume();
         assert!(!safety.is_armed(&risky), "resume doesn't re-arm");
+    }
+
+    /// The loop from the architecture notes: a toy event triggers a rule,
+    /// the rule makes an output act, the output reports it, and the rule
+    /// sees that report. The rule's second reaction must be refused.
+    #[test]
+    fn a_module_cannot_react_to_the_result_of_its_own_action() {
+        let safety = SafetyLayer::default();
+        let (events, mut rx) = EventPlane::new();
+        let rule = ModuleInstanceId::new("rule:a");
+        let other_rule = ModuleInstanceId::new("rule:b");
+        let out = PortId::new(ModuleInstanceId::new("output:0"), "vibrate");
+
+        // 1. The toy does something
+        events.publish(toy(), EventKind::Pattern, Value::None);
+        let trigger = rx.try_recv().unwrap();
+
+        // 2. The rule reacts: allowed, and an Acted event is recorded
+        let cmd = safety
+            .clamp_in_response(&events, &trigger, &rule, out.clone(), 0.3, Some(500))
+            .expect("first reaction is fine");
+        let acted = rx.try_recv().unwrap();
+        assert_eq!(acted.kind, EventKind::Acted);
+        assert_eq!(acted.source.module, rule);
+        assert_eq!(acted.cause, Some(trigger.id));
+        assert_eq!(cmd.cause(), Some(acted.id));
+
+        // 3. The output reports what it did, caused by the command
+        events.publish_caused_by_id(
+            cmd.cause().unwrap(),
+            PortId::new(ModuleInstanceId::new("output:0"), "acted"),
+            EventKind::Custom("output_acted".into()),
+            Value::None,
+        );
+        let report = rx.try_recv().unwrap();
+
+        // 4. The same rule reacting to that report is a loop: refused
+        assert!(safety
+            .clamp_in_response(&events, &report, &rule, out.clone(), 0.3, Some(500))
+            .is_none());
+        assert!(rx.try_recv().is_none(), "nothing recorded for a refusal");
+
+        // A different module may still react to it
+        assert!(safety
+            .clamp_in_response(&events, &report, &other_rule, out, 0.3, Some(500))
+            .is_some());
+    }
+
+    #[test]
+    fn a_module_cannot_react_to_its_own_event() {
+        let safety = SafetyLayer::default();
+        let (events, mut rx) = EventPlane::new();
+        let rule = ModuleInstanceId::new("rule:a");
+        events.publish(
+            PortId::new(rule.clone(), "fired"),
+            EventKind::RuleFired,
+            Value::None,
+        );
+        let own = rx.try_recv().unwrap();
+        assert!(safety
+            .clamp_in_response(&events, &own, &rule, toy(), 0.3, None)
+            .is_none());
+    }
+
+    #[test]
+    fn long_chains_are_refused_even_between_different_modules() {
+        let safety = SafetyLayer::default(); // max_event_depth 3
+        let (events, mut rx) = EventPlane::new();
+        let out = PortId::new(ModuleInstanceId::new("output:0"), "vibrate");
+
+        events.publish(toy(), EventKind::Pattern, Value::None);
+        let mut trigger = rx.try_recv().unwrap();
+        // a, b, c each react to the previous one's Acted event
+        for name in ["rule:a", "rule:b", "rule:c"] {
+            let module = ModuleInstanceId::new(name);
+            let allowed = safety
+                .clamp_in_response(&events, &trigger, &module, out.clone(), 0.3, None)
+                .is_some();
+            if trigger.depth < 3 {
+                assert!(allowed, "{name} at depth {}", trigger.depth);
+                trigger = rx.try_recv().unwrap();
+            } else {
+                assert!(!allowed);
+            }
+        }
+        // The fourth link is past the limit
+        assert_eq!(trigger.depth, 3);
+        assert!(safety
+            .clamp_in_response(
+                &events,
+                &trigger,
+                &ModuleInstanceId::new("rule:d"),
+                out,
+                0.3,
+                None
+            )
+            .is_none());
     }
 
     #[test]

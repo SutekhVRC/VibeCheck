@@ -35,6 +35,6 @@ pub use graph::{Graph, GraphBuilder};
 pub use module::{
     process_one, EventOut, Input, InputCtx, Output, PortDirection, PortKind, PortSpec, Processor,
 };
-pub use safety::{ClampedCmd, SafetyCaps, SafetyLayer, TargetPolicy};
+pub use safety::{ClampedCmd, SafetyCaps, SafetyLayer, TargetPolicy, ACTED_PORT};
 pub use signal::{Signal, SignalPlane};
 pub use slots::CommandSlots;

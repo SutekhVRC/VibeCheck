@@ -63,7 +63,13 @@ Addresses never contain Buttplug device indexes, which change between sessions a
 - `cause`: the id of the event that led to it, if any;
 - `depth`: how long the chain is so far. Root events are 0, and `publish_caused_by` sets the depth to the cause's depth + 1.
 
-The safety layer uses `depth` to stop feedback loops.
+The plane also **remembers recent events** (the last 4096), so a chain can be traced back past its direct cause:
+
+- `chain(event_id)` returns the sources of the event and every event before it, newest first, as far back as it remembers;
+- `chain_includes(event_id, module)` says whether any of them came from `module`;
+- `publish_caused_by_id(cause_id, ...)` publishes an event caused by one you only have the id of (e.g. from a command's `cause()`), working out its depth from the history.
+
+The safety layer uses the depth and the chain to stop feedback loops (see [Feedback loops](#feedback-loops)).
 
 ## Module traits
 
@@ -146,9 +152,34 @@ The intensity scales rather than clips because a ceiling flattens everything abo
 - if the target's module has a `TargetPolicy` with `requires_arming` and isn't armed;
 - if the target's `min_interval` hasn't passed since its last command (per port).
 
-`clamp_caused_by(cause, ...)` also refuses if `cause.depth` has reached `max_event_depth`.
+`clamp_caused_by(cause, ...)` also refuses if `cause.depth` has reached `max_event_depth`. Modules acting because of an event should use `clamp_in_response` instead, which also stops self-triggering (below).
 
 Every `ClampedCmd` remembers the panic count (epoch) it was made in. **Outputs must call `admits(&cmd)` right before sending**: it's false if a panic has happened since, or if the target has been disarmed. That's how commands already queued when you panic (or disarm) get dropped instead of sent.
+
+### Feedback loops
+
+A module that acts because of an event (a rule, or a processor reacting to events) should ask with:
+
+```rust
+safety.clamp_in_response(&events, &trigger, &requester, target, level, duration_ms)
+```
+
+It's refused (`None`) if:
+
+1. **the chain is too long**: `trigger.depth` has reached `max_event_depth` (3 by default), however many different modules are involved;
+2. **the requester is already in the chain**: `requester` published `trigger` or any event before it. That means it would be reacting to the result of its own earlier action, which is how a feedback loop starts, so it's stopped the first time round rather than after a few laps;
+3. or anything `clamp` refuses (panic, not armed, rate limit).
+
+When it's allowed, the safety layer publishes an **`Acted`** event from the requester (on its `acted` port, caused by `trigger`), and the command carries that event as its `cause()`. That's the trace that makes loops visible later on.
+
+**Outputs that report what they did should publish caused by `cmd.cause()`** (`publish_caused_by_id`). The chain then leads back through whoever asked:
+
+```
+toy pattern ─▶ Acted (rule A) ─▶ output reports it ─▶ rule A reacts ✗ refused
+                                                   └▶ rule B reacts ✓ allowed (depth permitting)
+```
+
+Nothing in the free app acts in response to events yet, so the guard is ready for modules that will.
 
 ### Panic stop
 
@@ -174,7 +205,7 @@ Nothing in the free app has a policy yet; this is ready for outputs that need it
 | `max_duration_ms` | 10 000 |
 | `max_event_depth` | 3 |
 
-Not here: refusing an event a rule caused for itself, and checking imported rules, both of which need the rule engine; and per-rule cooldowns, which belong to rules.
+Not here: checking imported rules and per-rule cooldowns, which belong with rules themselves.
 
 ## Command slots
 
@@ -252,6 +283,6 @@ cd src-tauri
 cargo test -p vibecheck-core
 ```
 
-Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `OutputLevels`, `ButtplugOutput`'s error events firing only on change, and the graph (publishing processor events from their node, dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, and rejecting bad wiring).
+Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, tracing event chains through the remembered history, refusing a module that reacts to the result of its own action, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `OutputLevels`, `ButtplugOutput`'s error events firing only on change, and the graph (publishing processor events from their node, dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, and rejecting bad wiring).
 
 The app's tests (`cargo test -p vibecheck`) cover the SPS/TPS routing table, `run_input_processors`, the graph runner task, and the generated toy graphs end to end: nothing before the first input, modes loaded from config, one parameter driving several motors, Range and Idle after the mode, the first matching parameter winning, disabled features, Linear speed, the f32 rounding, Smooth following over its window, Rate winding down after the input stops, and SPS/TPS output chains.
