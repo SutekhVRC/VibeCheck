@@ -133,22 +133,29 @@ Commands and signals are addressed with stable names rather than Buttplug device
 | Graph nodes | `toy:…/<Motor>/param<i>/{round,mode,levels}`, `toy:…/<Motor>/input_processor/{mode,levels}` | `toy:lovense_edge:0/Vibrator_1/param0/mode` | `build_toy_graph` |
 
 - The toy name is lowercase with spaces turned into underscores, the same as the OSC battery address.
-- Scalar features (vibrate, constrict, oscillate, inflate, position, scalar rotate) share one index space; rotators and linears each have their own. So type plus index is unique within a toy.
+- Scalar features (vibrate, constrict, oscillate, inflate, position, scalar rotate) share one index space; rotators and linears each have their own (see [Feature type → Buttplug command](#feature-type--buttplug-command)). So type plus index is unique within a toy.
 
 ## Feature type → Buttplug command
 
-| `VCFeatureType` | `Actuator` | Buttplug call |
-|---|---|---|
-| Vibrator | `Scalar` + `Vibrate` | `scalar` |
-| Oscillate | `Scalar` + `Oscillate` | `scalar` |
-| Constrict | `Scalar` + `Constrict` | `scalar` |
-| Inflate | `Scalar` + `Inflate` | `scalar` |
-| Position | `Scalar` + `Position` | `scalar` |
-| ScalarRotator | `Scalar` + `Rotate` | `scalar` |
-| Rotator | `Rotate` | `rotate` (always clockwise) |
-| Linear | `Linear` | `linear` (duration = Linear Speed, position = level) |
+VibeCheck uses Buttplug's version 12 release (message spec v4), where a device is a list of numbered **features**, each with **outputs** such as vibrate, rotate or position-with-duration. VibeCheck's toy configs predate that and number features the spec v3 way: scalars, rotators and linears each counted from 0. `LegacyLayout` (`vibecheck-core` `modules::buttplug`) rebuilds that numbering from the device's features, matching how Buttplug 9 listed devices, so saved configs keep matching their toys:
 
-The mapping lives in `actuator_for` (`toy_output.rs`).
+- **scalars**: every vibrate, rotate, oscillate, constrict and position output, in feature order, except rotators that can turn both ways. Temperature, LED and spray outputs are skipped;
+- **rotators**: features whose rotate output can turn both ways;
+- **linears**: features with a position-with-duration output.
+
+A rotate feature is a scalar *or* a rotator, never both. In Buttplug 9 every rotating device's rotate features were either scalar-only or rotate-only, and the rotate-only ones are exactly those Buttplug 12 lets turn both ways (checked device by device across both versions' device lists). Buttplug 12's own v3 compatibility layer lists two-way rotators as scalars too; following it made toys like the Lovense Nora show their rotator twice.
+
+The layout is worked out when a toy connects (`VCToy.layout`). A feature then becomes an `Actuator` (`actuator_for` in `toy_output.rs`):
+
+| `VCFeatureType` | Looked up in | `Actuator` | Sent as |
+|---|---|---|---|
+| Vibrator, Oscillate, Constrict, Position, ScalarRotator, Inflate | scalars | `Level { feature, output }` | that output, at the level |
+| Rotator | rotators | `Level { feature, output: Rotate }` | rotate, at the level (always clockwise) |
+| Linear | linears | `Position { feature }` | position with duration (position = level, duration = Linear Speed) |
+
+The output type comes from the device, not from the config, so a config's feature type is only a label. Inflate isn't an output type any more; old configs that have it still work, as whatever the device reports at that scalar index. A feature the toy doesn't have (e.g. a config saved for a different model) is logged and gets no port.
+
+Levels are sent as a percentage of the output's steps; Buttplug rounds up to the next step, as before. When a toy connects, its config is only reused if it has the same number of scalars, rotators and linears as the toy; otherwise the features are repopulated.
 
 ## Config changes and update rate
 

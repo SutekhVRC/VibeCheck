@@ -6,9 +6,9 @@
  * the slots at the toy's update rate and hands them to ButtplugOutput.
  */
 
-use buttplug::core::message::ActuatorType;
+use log::warn;
 use vibecheck_core::{
-    modules::buttplug::{Actuator, ActuatorSpec, ButtplugOutput},
+    modules::buttplug::{Actuator, ActuatorSpec, ButtplugOutput, LegacyLayout},
     ModuleInstanceId,
 };
 
@@ -31,33 +31,46 @@ pub fn feature_port_name(feature_type: VCFeatureType, feature_index: u32) -> Str
     format!("{:?}_{}", feature_type, feature_index)
 }
 
-fn actuator_for(feature_type: VCFeatureType, index: u32) -> Actuator {
-    let scalar = |actuator| Actuator::Scalar { index, actuator };
+/// The actuator a feature drives. Features are numbered like Buttplug's
+/// message spec v3 (see `LegacyLayout`): rotators and linears have their own
+/// numbering, and every other type is a scalar. `None` if the toy doesn't
+/// have it (e.g. a config saved for a different version of the toy).
+pub fn actuator_for(
+    layout: &LegacyLayout,
+    feature_type: VCFeatureType,
+    index: u32,
+) -> Option<Actuator> {
     match feature_type {
-        VCFeatureType::Vibrator => scalar(ActuatorType::Vibrate),
-        VCFeatureType::Rotator => Actuator::Rotate { index },
-        VCFeatureType::Linear => Actuator::Linear { index },
-        VCFeatureType::Oscillate => scalar(ActuatorType::Oscillate),
-        VCFeatureType::Constrict => scalar(ActuatorType::Constrict),
-        VCFeatureType::Inflate => scalar(ActuatorType::Inflate),
-        VCFeatureType::Position => scalar(ActuatorType::Position),
-        VCFeatureType::ScalarRotator => scalar(ActuatorType::Rotate),
+        VCFeatureType::Rotator => layout.rotator(index),
+        VCFeatureType::Linear => layout.linear(index),
+        VCFeatureType::Vibrator
+        | VCFeatureType::Oscillate
+        | VCFeatureType::Constrict
+        | VCFeatureType::Inflate
+        | VCFeatureType::Position
+        | VCFeatureType::ScalarRotator => layout.scalar(index),
     }
 }
 
 /// Each feature's port and how to drive it, including its Flip Input.
+/// Features the toy doesn't have are left out (and logged).
 pub fn toy_actuators(toy: &VCToy) -> Vec<(String, ActuatorSpec)> {
     toy.parsed_toy_features
         .features
         .iter()
-        .map(|f| {
-            (
-                feature_port_name(f.feature_type, f.feature_index),
+        .filter_map(|f| {
+            let port = feature_port_name(f.feature_type, f.feature_index);
+            let Some(actuator) = actuator_for(&toy.layout, f.feature_type, f.feature_index) else {
+                warn!("{}: the toy has no actuator for {}", toy.toy_name, port);
+                return None;
+            };
+            Some((
+                port,
                 ActuatorSpec {
-                    actuator: actuator_for(f.feature_type, f.feature_index),
+                    actuator,
                     flip: f.flip_input_float,
                 },
-            )
+            ))
         })
         .collect()
 }

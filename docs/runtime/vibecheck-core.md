@@ -28,7 +28,7 @@ The app only uses graphs generated from toy settings; there's no way to build gr
 | `safety.rs` | `SafetyLayer`, `SafetyCaps`, `ClampedCmd` | Yes |
 | `graph.rs` | `GraphBuilder`, `Graph` | Yes: one graph per toy |
 | `slots.rs` | `CommandSlots` | Yes |
-| `modules/buttplug.rs` | `ButtplugOutput`, `Actuator` | Yes |
+| `modules/buttplug.rs` | `ButtplugOutput`, `Actuator`, `LegacyLayout`, `send_to_actuator` | Yes |
 | `modules/osc.rs` | `OscInput` | Yes |
 | `modules/modes.rs` | `Mode`, `ModeSettings`, `RawMode`, `SmoothMode`, `RateMode`, `ConstantMode` | Yes |
 | `modules/levels.rs` | `OutputLevels` | Yes |
@@ -253,11 +253,16 @@ Flip Input isn't applied here, so levels stay intensities through the safety lay
 
 An `Output` for one Buttplug device. Each port maps to an `ActuatorSpec`: an `Actuator` plus `flip`. Flipped actuators get `1 - level` (`device_level`), applied here after the safety layer. `set_actuators` replaces the mapping, e.g. when Flip Input changes.
 
-| `Actuator` | Buttplug call | Notes |
+It uses the Buttplug 12 client (`buttplug_client` 11, message spec v4), where commands go to a numbered device **feature**:
+
+| `Actuator` | Sends | Notes |
 |---|---|---|
-| `Scalar { index, actuator }` | `scalar` | Vibrate, constrict, oscillate, inflate, position, scalar rotate |
-| `Rotate { index }` | `rotate` | Always clockwise |
-| `Linear { index }` | `linear` | The command's `duration_ms` is the movement time |
+| `Level { feature, output }` | the output (vibrate, rotate, oscillate, constrict, position) at the level | Rotation is always clockwise. The level is a percentage of the output's steps |
+| `Position { feature }` | position with duration | The command's `duration_ms` is the movement time |
+
+`send_to_actuator(device, actuator, level, duration_ms)` sends one level outside the output, e.g. for the app's Test button.
+
+`LegacyLayout::of(device)` numbers a device's actuators the way message spec v3 did (scalars, rotators and linears each from 0), which is how the app's toy configs number features; see [toy-command-path.md](toy-command-path.md#feature-type--buttplug-command). `scalar(i)`, `rotator(i)` and `linear(i)` give the `Actuator` for each.
 
 `apply` sends every command, even if one fails, and returns the first error. A command for a port the output doesn't have is an `Error::UnknownPort`.
 
@@ -283,6 +288,6 @@ cd src-tauri
 cargo test -p vibecheck-core
 ```
 
-Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, tracing event chains through the remembered history, refusing a module that reacts to the result of its own action, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `OutputLevels`, `ButtplugOutput`'s error events firing only on change, and the graph (publishing processor events from their node, dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, and rejecting bad wiring).
+Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, tracing event chains through the remembered history, refusing a module that reacts to the result of its own action, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `LegacyLayout` numbering actuators like spec v3, `OutputLevels`, `ButtplugOutput`'s error events firing only on change, and the graph (publishing processor events from their node, dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, and rejecting bad wiring).
 
 The app's tests (`cargo test -p vibecheck`) cover the SPS/TPS routing table, `run_input_processors`, the graph runner task, and the generated toy graphs end to end: nothing before the first input, modes loaded from config, one parameter driving several motors, Range and Idle after the mode, the first matching parameter winning, disabled features, Linear speed, the f32 rounding, Smooth following over its window, Rate winding down after the input stops, and SPS/TPS output chains.

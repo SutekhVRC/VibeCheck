@@ -511,6 +511,7 @@ pub fn native_simulate_device_feature(
                     debug!("Sending simulate command!");
                     vc_lock.async_rt.spawn(command_toy(
                         handle_clone,
+                        toy.layout.clone(),
                         feature.feature_type,
                         float_level,
                         feature.feature_index,

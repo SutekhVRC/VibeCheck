@@ -9,7 +9,8 @@ rust-version = "1.75"
 
 [dependencies]
 async-trait = "0.1.92"
-buttplug = "9.0.9"
+buttplug_client = "11.0.1"
+buttplug_core = "11.0.2"
 parking_lot = "0.12.5"
 rosc = "0.11.4"
 tokio = { version = "1.53.3", features = ["sync", "net"] }

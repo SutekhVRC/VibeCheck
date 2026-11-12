@@ -1,3 +1,6 @@
+use buttplug_client::ButtplugClientDevice;
+use buttplug_core::message::InputType;
+use log::warn;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -20,6 +23,21 @@ pub enum ToyPower {
 }
 
 impl ToyPower {
+    /// Reads a device's battery. Buttplug reports it as a percentage;
+    /// VibeCheck keeps it as 0.0 to 1.0.
+    pub async fn read(device: &ButtplugClientDevice) -> Self {
+        if !device.input_available(InputType::Battery) {
+            return Self::NoBattery;
+        }
+        match device.battery().await {
+            Ok(percent) => Self::Battery(f64::from(percent.min(100)) / 100.0),
+            Err(e) => {
+                warn!("Couldn't read the battery of {}: {:?}", device.name(), e);
+                Self::Pending
+            }
+        }
+    }
+
     pub fn to_float(&self) -> f64 {
         match self {
             Self::Battery(level) => *level,

@@ -1,18 +1,17 @@
+use crate::toy_handling::runtime::toy_output::actuator_for;
 use crate::toy_handling::toyops::LevelTweaks;
 use crate::toy_handling::toyops::VCFeatureType;
 
-use buttplug::client::ButtplugClientDevice;
-use buttplug::client::RotateCommand::RotateMap;
-use buttplug::client::ScalarCommand::ScalarMap;
-use buttplug::core::message::ActuatorType;
+use buttplug_client::ButtplugClientDevice;
 
-use log::{error as logerr, info};
+use log::{debug, error as logerr, warn};
 use vibecheck_core::{
-    modules::{buttplug::device_level, levels::OutputLevels},
+    modules::{
+        buttplug::{device_level, send_to_actuator, LegacyLayout},
+        levels::OutputLevels,
+    },
     SafetyLayer,
 };
-
-use std::collections::HashMap;
 
 use std::sync::Arc;
 
@@ -35,50 +34,12 @@ pub(crate) fn clamp_and_flip(
     device_level(safety.limit(level), flip)
 }
 
-// Parse scalar levels and logic for level tweaks
-#[inline]
-pub async fn scalar_parse_levels_send_toy_cmd(
-    dev: &Arc<ButtplugClientDevice>,
-    scalar_level: f64,
-    feature_index: u32,
-    actuator_type: ActuatorType,
-    flip_float: bool,
-    feature_levels: LevelTweaks,
-    safety: &SafetyLayer,
-) {
-    let new_level = clamp_and_flip(scalar_level, flip_float, feature_levels, safety);
-    #[cfg(debug_assertions)]
-    {
-        let message_prefix = if scalar_level == 0.0 {
-            "IDLE"
-        } else {
-            "SENDING"
-        };
-        info!(
-            "{} FI[{}] AT[{}] SL[{}]",
-            message_prefix, feature_index, actuator_type, new_level
-        );
-    }
-    match dev
-        .scalar(&ScalarMap(HashMap::from([(
-            feature_index,
-            (new_level, actuator_type),
-        )])))
-        .await
-    {
-        Ok(()) => {}
-        Err(e) => {
-            logerr!("Send scalar to device error: {}", e);
-        }
-    }
-}
-
-/*
- * Sends commands to toys
- */
-/// Used by the Test button. Applies the master intensity like the toy graph does.
+/// Used by the Test button: sends one level to one feature, after the same
+/// steps as the toy graph and output (Idle and Range, master intensity,
+/// Flip Input).
 pub async fn command_toy(
     dev: Arc<ButtplugClientDevice>,
+    layout: LegacyLayout,
     feature_type: VCFeatureType,
     float_level: f64,
     feature_index: u32,
@@ -86,101 +47,21 @@ pub async fn command_toy(
     feature_levels: LevelTweaks,
     safety: SafetyLayer,
 ) {
-    match feature_type {
-        VCFeatureType::Vibrator => {
-            scalar_parse_levels_send_toy_cmd(
-                &dev,
-                float_level,
-                feature_index,
-                ActuatorType::Vibrate,
-                flip_float,
-                feature_levels,
-                &safety,
-            )
-            .await;
-        }
-        // We handle Rotator differently because it is not included in the Scalar feature set
-        VCFeatureType::Rotator => {
-            let new_level = clamp_and_flip(float_level, flip_float, feature_levels, &safety);
-            let _ = dev
-                .rotate(&RotateMap(HashMap::from([(
-                    feature_index,
-                    (new_level, true),
-                )])))
-                .await;
-        }
-        VCFeatureType::Constrict => {
-            scalar_parse_levels_send_toy_cmd(
-                &dev,
-                float_level,
-                feature_index,
-                ActuatorType::Constrict,
-                flip_float,
-                feature_levels,
-                &safety,
-            )
-            .await;
-        }
-        VCFeatureType::Oscillate => {
-            scalar_parse_levels_send_toy_cmd(
-                &dev,
-                float_level,
-                feature_index,
-                ActuatorType::Oscillate,
-                flip_float,
-                feature_levels,
-                &safety,
-            )
-            .await;
-        }
-        VCFeatureType::Position => {
-            scalar_parse_levels_send_toy_cmd(
-                &dev,
-                float_level,
-                feature_index,
-                ActuatorType::Position,
-                flip_float,
-                feature_levels,
-                &safety,
-            )
-            .await;
-        }
-        VCFeatureType::Inflate => {
-            scalar_parse_levels_send_toy_cmd(
-                &dev,
-                float_level,
-                feature_index,
-                ActuatorType::Inflate,
-                flip_float,
-                feature_levels,
-                &safety,
-            )
-            .await;
-        }
-        // We handle Linear differently because it is not included in the Scalar feature set
-        VCFeatureType::Linear => {
-            let new_level = clamp_and_flip(float_level, flip_float, feature_levels, &safety);
-            let _ = dev
-                .linear(&buttplug::client::LinearCommand::LinearMap(HashMap::from(
-                    [(
-                        feature_index,
-                        (feature_levels.linear_position_speed, new_level),
-                    )],
-                )))
-                .await;
-        }
-        VCFeatureType::ScalarRotator => {
-            scalar_parse_levels_send_toy_cmd(
-                &dev,
-                float_level,
-                feature_index,
-                ActuatorType::Rotate,
-                flip_float,
-                feature_levels,
-                &safety,
-            )
-            .await;
-        }
+    let Some(actuator) = actuator_for(&layout, feature_type, feature_index) else {
+        warn!(
+            "Test: the toy has no actuator for {:?} {}",
+            feature_type, feature_index
+        );
+        return;
+    };
+    let level = clamp_and_flip(float_level, flip_float, feature_levels, &safety);
+    debug!(
+        "Test: sending {} to {:?} {}",
+        level, feature_type, feature_index
+    );
+    let duration = Some(feature_levels.linear_position_speed);
+    if let Err(e) = send_to_actuator(&dev, actuator, level, duration).await {
+        logerr!("Send to device error: {}", e);
     }
 }
 

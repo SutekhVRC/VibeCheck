@@ -4,6 +4,13 @@
 //! stable across reconnects, e.g. `Vibrator_0` or `Linear_0`; Buttplug's
 //! device index is only used internally.
 //!
+//! Buttplug (from the version 12 release, message spec v4) describes a device
+//! as numbered *features*, each with one or more *outputs* (vibrate, rotate,
+//! position with duration, ...). An [`Actuator`] names a feature and what to
+//! send it. [`LegacyLayout`] rebuilds the older view, where scalar, rotate
+//! and linear actuators were numbered separately, which is how VibeCheck's
+//! saved toy configs number their features.
+//!
 //! Commands arrive as intensities (0 = off). Actuators marked `flip` (Flip
 //! Input, for toys whose motors run backwards) get `1 - level`, applied here,
 //! after the safety layer.
@@ -17,11 +24,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use buttplug::client::{
-    ButtplugClientDevice, LinearCommand::LinearMap, RotateCommand::RotateMap,
-    ScalarCommand::ScalarMap,
-};
-use buttplug::core::message::ActuatorType;
+use buttplug_client::device::{ClientDeviceCommandValue, ClientDeviceOutputCommand};
+use buttplug_client::ButtplugClientDevice;
+use buttplug_core::message::{DeviceFeature, DeviceFeatureOutput, OutputType};
 
 use crate::address::{ModuleInstanceId, PortId};
 use crate::error::{Error, Result};
@@ -57,16 +62,144 @@ impl ErrorState {
     }
 }
 
-/// How to drive one actuator.
+/// How to drive one actuator: a Buttplug device feature, and what to send it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Actuator {
-    /// Index into the device's scalar features (vibrate, constrict, oscillate, ...).
-    Scalar { index: u32, actuator: ActuatorType },
-    /// Index into the device's rotate features. Always rotates clockwise.
-    Rotate { index: u32 },
-    /// Index into the device's linear features. The command's duration is the
-    /// requested movement time in milliseconds.
-    Linear { index: u32 },
+    /// Set a level on one of the feature's outputs (vibrate, rotate,
+    /// oscillate, constrict, position). Rotation is always clockwise.
+    Level { feature: u32, output: OutputType },
+    /// Move to a position over the command's duration, in milliseconds
+    /// (linear toys / strokers).
+    Position { feature: u32 },
+}
+
+/// Outputs VibeCheck drives with a level, in the order they're numbered
+/// within a feature. Temperature, LED and spray outputs aren't used.
+const LEVEL_OUTPUTS: [OutputType; 5] = [
+    OutputType::Vibrate,
+    OutputType::Rotate,
+    OutputType::Oscillate,
+    OutputType::Constrict,
+    OutputType::Position,
+];
+
+/// A device's actuators as Buttplug's message spec v3 numbered them: scalar,
+/// rotate and linear actuators each counted from 0. VibeCheck's toy configs
+/// number their features this way, so keeping the layout keeps saved
+/// configs matching their toys.
+///
+/// - **scalars**: every level output of every feature, in feature order,
+///   except rotators that can turn both ways;
+/// - **rotators**: features whose rotate output can turn both ways;
+/// - **linears**: features with a position-with-duration output.
+///
+/// This matches how Buttplug 9 listed devices: a rotate feature was either
+/// a scalar or a rotator, never both, and its rotators are exactly the
+/// features Buttplug 12 lets turn both ways (checked against every rotating
+/// device in both versions' device lists). Buttplug 12's own v3
+/// compatibility lists two-way rotators as scalars too, which would show
+/// one motor twice.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct LegacyLayout {
+    /// Feature and output for each scalar actuator.
+    pub scalars: Vec<(u32, OutputType)>,
+    /// Feature for each rotate actuator.
+    pub rotators: Vec<u32>,
+    /// Feature for each linear actuator.
+    pub linears: Vec<u32>,
+}
+
+impl LegacyLayout {
+    pub fn of(device: &ButtplugClientDevice) -> Self {
+        Self::from_features(device.device_features().values().map(|f| f.feature()))
+    }
+
+    /// From a device's features, in feature order.
+    pub fn from_features<'a>(features: impl IntoIterator<Item = &'a DeviceFeature>) -> Self {
+        let mut layout = Self::default();
+        for feature in features {
+            let index = feature.feature_index();
+            let two_way_rotator = matches!(
+                feature.get_output(OutputType::Rotate),
+                Some(DeviceFeatureOutput::Rotate(rotate)) if rotate.value().start() < 0
+            );
+            for output in LEVEL_OUTPUTS {
+                if output == OutputType::Rotate && two_way_rotator {
+                    continue;
+                }
+                if feature.contains_output(output) {
+                    layout.scalars.push((index, output));
+                }
+            }
+            if two_way_rotator {
+                layout.rotators.push(index);
+            }
+            if feature.contains_output(OutputType::HwPositionWithDuration) {
+                layout.linears.push(index);
+            }
+        }
+        layout
+    }
+
+    /// The actuator for scalar `index`, if the device has it.
+    pub fn scalar(&self, index: u32) -> Option<Actuator> {
+        self.scalars
+            .get(index as usize)
+            .map(|&(feature, output)| Actuator::Level { feature, output })
+    }
+
+    /// The actuator for rotator `index`, if the device has it.
+    pub fn rotator(&self, index: u32) -> Option<Actuator> {
+        self.rotators
+            .get(index as usize)
+            .map(|&feature| Actuator::Level {
+                feature,
+                output: OutputType::Rotate,
+            })
+    }
+
+    /// The actuator for linear `index`, if the device has it.
+    pub fn linear(&self, index: u32) -> Option<Actuator> {
+        self.linears
+            .get(index as usize)
+            .map(|&feature| Actuator::Position { feature })
+    }
+}
+
+/// Sends `level` (0.0 to 1.0, already flipped if needed) to one actuator.
+/// `duration_ms` is only used by [`Actuator::Position`].
+pub async fn send_to_actuator(
+    device: &ButtplugClientDevice,
+    actuator: Actuator,
+    level: f64,
+    duration_ms: Option<u32>,
+) -> Result<()> {
+    let unavailable = |e: &dyn std::fmt::Display| Error::OutputUnavailable(e.to_string());
+    let (feature, command) = match actuator {
+        Actuator::Level { feature, output } => (
+            feature,
+            ClientDeviceOutputCommand::from_command_value(
+                output,
+                &ClientDeviceCommandValue::Percent(level),
+            )
+            .map_err(|e| unavailable(&e))?,
+        ),
+        Actuator::Position { feature } => (
+            feature,
+            ClientDeviceOutputCommand::HwPositionWithDuration(
+                ClientDeviceCommandValue::Percent(level),
+                duration_ms.unwrap_or(0),
+            ),
+        ),
+    };
+    let feature = device
+        .device_features()
+        .get(&feature)
+        .ok_or_else(|| unavailable(&format!("the device has no feature {feature}")))?;
+    feature
+        .run_output(&command)
+        .await
+        .map_err(|e| unavailable(&e))
 }
 
 /// An actuator plus whether its level is flipped before sending.
@@ -128,25 +261,7 @@ impl ButtplugOutput {
 
     async fn send(&self, spec: ActuatorSpec, cmd: &ClampedCmd) -> Result<()> {
         let level = device_level(cmd.level(), spec.flip);
-        let sent = match spec.actuator {
-            Actuator::Scalar { index, actuator } => {
-                self.device
-                    .scalar(&ScalarMap(HashMap::from([(index, (level, actuator))])))
-                    .await
-            }
-            Actuator::Rotate { index } => {
-                self.device
-                    .rotate(&RotateMap(HashMap::from([(index, (level, true))])))
-                    .await
-            }
-            Actuator::Linear { index } => {
-                let duration = cmd.duration_ms().unwrap_or(0);
-                self.device
-                    .linear(&LinearMap(HashMap::from([(index, (duration, level))])))
-                    .await
-            }
-        };
-        sent.map_err(|e| Error::OutputUnavailable(e.to_string()))
+        send_to_actuator(&self.device, spec.actuator, level, cmd.duration_ms()).await
     }
 }
 
@@ -189,6 +304,70 @@ impl Output for ButtplugOutput {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use buttplug_core::message::{
+        DeviceFeatureOutputHwPositionWithDurationProperties, DeviceFeatureOutputValueProperties,
+    };
+    use buttplug_core::util::range::RangeInclusive;
+
+    fn feature(index: u32, outputs: Vec<DeviceFeatureOutput>) -> DeviceFeature {
+        use buttplug_core::util::small_vec_enum_map::SmallVecEnumMap;
+        DeviceFeature::new(
+            index,
+            "",
+            &SmallVecEnumMap(outputs.into_iter().collect()),
+            &SmallVecEnumMap(Default::default()),
+        )
+    }
+
+    fn level(start: i32, end: i32) -> DeviceFeatureOutputValueProperties {
+        DeviceFeatureOutputValueProperties::new(RangeInclusive::new(start, end))
+    }
+
+    #[test]
+    fn legacy_layout_numbers_actuators_like_spec_v3() {
+        use DeviceFeatureOutput as O;
+        let features = [
+            // A battery-only feature has no actuators
+            feature(0, vec![]),
+            feature(1, vec![O::Vibrate(level(0, 20))]),
+            feature(2, vec![O::Rotate(level(-20, 20))]),
+            feature(3, vec![O::Rotate(level(0, 20))]),
+            feature(
+                4,
+                vec![O::HwPositionWithDuration(
+                    DeviceFeatureOutputHwPositionWithDurationProperties::new(
+                        RangeInclusive::new(0, 100),
+                        RangeInclusive::new(0, 1000),
+                    ),
+                )],
+            ),
+            feature(5, vec![O::Led(level(0, 1)), O::Vibrate(level(0, 20))]),
+        ];
+        let layout = LegacyLayout::from_features(&features);
+        assert_eq!(
+            layout,
+            LegacyLayout {
+                // The two-way rotator is only a rotator, the one-way one
+                // only a scalar (as Buttplug 9 listed them)
+                scalars: vec![
+                    (1, OutputType::Vibrate),
+                    (3, OutputType::Rotate),
+                    (5, OutputType::Vibrate),
+                ],
+                rotators: vec![2],
+                linears: vec![4],
+            }
+        );
+        assert_eq!(
+            layout.scalar(2),
+            Some(Actuator::Level {
+                feature: 5,
+                output: OutputType::Vibrate
+            })
+        );
+        assert_eq!(layout.linear(0), Some(Actuator::Position { feature: 4 }));
+        assert_eq!(layout.rotator(1), None);
+    }
 
     #[test]
     fn flipped_actuators_get_the_inverted_level() {
