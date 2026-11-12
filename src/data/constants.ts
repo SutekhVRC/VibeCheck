@@ -131,7 +131,7 @@ export const TOOLTIP = {
     text: "Stop every toy right now. They stay stopped until you press Resume. Also: Ctrl+Alt+P anywhere, or the vibecheck/api/panic avatar parameter.",
     link: "",
   },
-  MasterVolume: {
+  MasterIntensity: {
     text: "Scales every toy's strength, keeping the full range: at 60%, full power becomes 60% and half power becomes 30%. Also applies to the Test button.",
     link: "",
   },

@@ -11,7 +11,7 @@
 //!
 //! What it enforces:
 //!
-//! - **Master volume** and a level cap ([`SafetyCaps`]).
+//! - **Master intensity** and a level cap ([`SafetyCaps`]).
 //! - **Panic stop**: [`panic`](SafetyLayer::panic) refuses every new command,
 //!   invalidates commands already created (outputs check
 //!   [`admits`](SafetyLayer::admits) before sending), and disarms everything,
@@ -23,7 +23,7 @@
 //! - **Causal depth**: commands caused by a long chain of events are refused.
 //!
 //! A [`SafetyLayer`] is cheap to clone and clones share all of this, so the
-//! app can hand one to every part of a session and change it (master volume,
+//! app can hand one to every part of a session and change it (master intensity,
 //! panic, arming) while toys are running.
 
 use std::collections::{HashMap, HashSet};
@@ -38,10 +38,10 @@ use crate::event::Event;
 /// User-set limits applied to every command, after every rule.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SafetyCaps {
-    /// Master volume, 0.0 to 1.0: every level is scaled by this, so the full
-    /// range is kept but quieter (0.6 turns 100% into 60% and 50% into 30%).
-    pub volume: f64,
-    /// Highest level any command may request after the volume, 0.0 to 1.0.
+    /// Master intensity, 0.0 to 1.0: every level is scaled by this, so the full
+    /// range is kept but gentler (0.6 turns 100% into 60% and 50% into 30%).
+    pub intensity: f64,
+    /// Highest level any command may request after the intensity, 0.0 to 1.0.
     pub max_level: f64,
     /// Longest duration any command may request, in milliseconds.
     pub max_duration_ms: u32,
@@ -53,7 +53,7 @@ pub struct SafetyCaps {
 impl Default for SafetyCaps {
     fn default() -> Self {
         Self {
-            volume: 1.0,
+            intensity: 1.0,
             max_level: 1.0,
             max_duration_ms: 10_000,
             max_event_depth: 3,
@@ -86,7 +86,7 @@ impl ClampedCmd {
         &self.target
     }
 
-    /// Intensity from 0.0 to the user's cap, after the master volume.
+    /// Intensity from 0.0 to the user's cap, after the master intensity.
     pub fn level(&self) -> f64 {
         self.level
     }
@@ -149,9 +149,9 @@ impl SafetyLayer {
         self.state.lock().caps = caps;
     }
 
-    /// Sets the master volume (0.0 to 1.0) for this layer and every clone.
-    pub fn set_volume(&self, volume: f64) {
-        self.state.lock().caps.volume = unit(volume);
+    /// Sets the master intensity (0.0 to 1.0) for this layer and every clone.
+    pub fn set_intensity(&self, intensity: f64) {
+        self.state.lock().caps.intensity = unit(intensity);
     }
 
     /// Panic stop: refuse every new command, make every command already
@@ -202,7 +202,7 @@ impl SafetyLayer {
     }
 
     /// The intensity allowed for a requested one: 0 while panicked; otherwise
-    /// clamped to 0..=1, scaled by the master volume, then capped at
+    /// clamped to 0..=1, scaled by the master intensity, then capped at
     /// `max_level`. Non-finite levels (NaN or infinity) become 0.0 so a bad
     /// input can never drive an output.
     pub fn limit(&self, level: f64) -> f64 {
@@ -210,7 +210,7 @@ impl SafetyLayer {
         if state.panicked {
             return 0.0;
         }
-        (unit(level) * unit(state.caps.volume)).min(unit(state.caps.max_level))
+        (unit(level) * unit(state.caps.intensity)).min(unit(state.caps.max_level))
     }
 
     /// Makes a command for `target`, or refuses it (`None`) while panicked,
@@ -300,7 +300,7 @@ mod tests {
     #[test]
     fn clamps_level_and_duration_to_caps() {
         let safety = SafetyLayer::new(SafetyCaps {
-            volume: 1.0,
+            intensity: 1.0,
             max_level: 0.5,
             max_duration_ms: 1000,
             max_event_depth: 3,
@@ -316,7 +316,7 @@ mod tests {
     }
 
     #[test]
-    fn full_volume_changes_nothing() {
+    fn full_intensity_changes_nothing() {
         let safety = SafetyLayer::default();
         for level in [0.0, 0.01, 0.37, 0.5, 0.99, 1.0] {
             assert_eq!(safety.limit(level), level);
@@ -324,24 +324,24 @@ mod tests {
     }
 
     #[test]
-    fn volume_scales_the_whole_range() {
+    fn intensity_scales_the_whole_range() {
         let safety = SafetyLayer::default();
-        safety.set_volume(0.6);
+        safety.set_intensity(0.6);
         assert!((safety.limit(1.0) - 0.6).abs() < 1e-9);
         assert!((safety.limit(0.5) - 0.3).abs() < 1e-9);
         assert_eq!(safety.limit(0.0), 0.0);
-        // Out-of-range volumes are clamped
-        safety.set_volume(3.0);
+        // Out-of-range intensities are clamped
+        safety.set_intensity(3.0);
         assert_eq!(safety.limit(0.5), 0.5);
-        safety.set_volume(f64::NAN);
+        safety.set_intensity(f64::NAN);
         assert_eq!(safety.limit(0.5), 0.0);
     }
 
     #[test]
-    fn clones_share_the_volume() {
+    fn clones_share_the_intensity() {
         let safety = SafetyLayer::default();
         let in_a_running_session = safety.clone();
-        safety.set_volume(0.5);
+        safety.set_intensity(0.5);
         assert!((in_a_running_session.limit(1.0) - 0.5).abs() < 1e-9);
     }
 

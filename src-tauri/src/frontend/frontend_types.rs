@@ -22,8 +22,8 @@ pub struct FeVibeCheckConfig {
     pub desktop_notifications: bool,
     pub show_toy_advanced: bool,
     pub show_feature_advanced: bool,
-    /// Master volume, 0.0 to 1.0.
-    pub master_volume: f64,
+    /// Master intensity, 0.0 to 1.0.
+    pub master_intensity: f64,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]

@@ -125,7 +125,7 @@ Every command that reaches an output is a `ClampedCmd`. Its fields are private a
 
 Levels in the safety layer are **intensities**: 0 is off and 1 is full power for every toy. Per-actuator Flip Input is applied after it, by the output, so the caps mean the same thing for toys whose motors run backwards.
 
-A `SafetyLayer` is cheap to clone, and **clones share all their state** (caps, panic, arming, rate-limit timers). The app keeps one in its state and hands clones to every session and the Test button, so changing it (master volume, panic, arming) affects toys that are already running.
+A `SafetyLayer` is cheap to clone, and **clones share all their state** (caps, panic, arming, rate-limit timers). The app keeps one in its state and hands clones to every session and the Test button, so changing it (master intensity, panic, arming) affects toys that are already running.
 
 ### Levels
 
@@ -133,10 +133,10 @@ A `SafetyLayer` is cheap to clone, and **clones share all their state** (caps, p
 
 1. 0 while panicked;
 2. otherwise, a non-finite level (NaN, infinity) becomes 0 and the rest is clamped to `0.0..=1.0`;
-3. scaled by the **master volume** (`volume`), keeping the full range: at 0.6, 1.0 becomes 0.6 and 0.5 becomes 0.3;
+3. scaled by the **master intensity** (`intensity`), keeping the full range: at 0.6, 1.0 becomes 0.6 and 0.5 becomes 0.3;
 4. capped at `max_level`.
 
-The volume scales rather than clips because a ceiling flattens everything above it (70% and 100% would feel the same), while scaling keeps the feel of the whole range, just quieter. Per-motor hard ceilings are what Range is for.
+The intensity scales rather than clips because a ceiling flattens everything above it (70% and 100% would feel the same), while scaling keeps the feel of the whole range, just gentler. Per-motor hard ceilings are what Range is for.
 
 ### Commands
 
@@ -169,7 +169,7 @@ Nothing in the free app has a policy yet; this is ready for outputs that need it
 
 | `SafetyCaps` | Default |
 |---|---|
-| `volume` | 1.0 (the app sets it from the saved master volume) |
+| `intensity` | 1.0 (the app sets it from the saved master intensity) |
 | `max_level` | 1.0 |
 | `max_duration_ms` | 10 000 |
 | `max_event_depth` | 3 |

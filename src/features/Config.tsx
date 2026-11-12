@@ -135,7 +135,7 @@ export default function Config({
   const [general, setGeneral] = useState(() => pickGeneral(config));
 
   // Kept locally while dragging; saved when the drag ends
-  const [volume, setVolume] = useState(config.master_volume);
+  const [intensity, setIntensity] = useState(config.master_intensity);
 
   // Address edits are a draft until applied (applying turns the app off)
   const [draft, setDraft] = useState({
@@ -166,17 +166,17 @@ export default function Config({
     }
   }
 
-  async function saveVolume(value: number) {
-    const previous = config.master_volume;
-    setVolume(value);
+  async function saveIntensity(value: number) {
+    const previous = config.master_intensity;
+    setIntensity(value);
     try {
       await invoke(INVOKE.SET_CONFIG, {
-        feVcConfig: { ...config, ...general, master_volume: value },
+        feVcConfig: { ...config, ...general, master_intensity: value },
       });
       await refreshConfig();
     } catch (e) {
-      setVolume(previous);
-      toast.error(`Could not save master volume!\n${JSON.stringify(e)}`);
+      setIntensity(previous);
+      toast.error(`Could not save master intensity!\n${JSON.stringify(e)}`);
     }
   }
 
@@ -272,26 +272,26 @@ export default function Config({
           <Section title="Toys" hint="Saves instantly">
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4">
               <TooltipLabel
-                text="Master volume"
-                tooltip={TOOLTIP.MasterVolume}
+                text="Master intensity"
+                tooltip={TOOLTIP.MasterIntensity}
               />
               <Slider
                 multiply={100}
                 min={0}
                 max={1}
                 step={0.01}
-                value={[volume]}
-                onValueChange={(v) => setVolume(v[0])}
-                onValueCommit={(v) => saveVolume(v[0])}
+                value={[intensity]}
+                onValueChange={(v) => setIntensity(v[0])}
+                onValueCommit={(v) => saveIntensity(v[0])}
               />
               <EditableNumber
-                value={volume}
+                value={intensity}
                 min={0}
                 max={1}
                 step={0.01}
                 scale={100}
-                onCommit={saveVolume}
-                label="Master volume"
+                onCommit={saveIntensity}
+                label="Master intensity"
               />
             </div>
           </Section>

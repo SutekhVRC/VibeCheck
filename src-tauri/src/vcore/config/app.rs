@@ -18,13 +18,14 @@ pub struct VibeCheckConfig {
     pub desktop_notifications: bool,
     pub show_toy_advanced: bool,
     pub show_feature_advanced: bool,
-    /// Master volume, 0.0 to 1.0: scales every toy's level. Defaults to full
-    /// volume, including for config files saved before it existed.
-    #[serde(default = "full_volume")]
-    pub master_volume: f64,
+    /// Master intensity, 0.0 to 1.0: scales every toy's level. Defaults to full
+    /// intensity, including for config files saved before it existed. Also
+    /// reads `master_volume`, its name in early development builds.
+    #[serde(default = "full_intensity", alias = "master_volume")]
+    pub master_intensity: f64,
 }
 
-fn full_volume() -> f64 {
+fn full_intensity() -> f64 {
     1.0
 }
 
@@ -37,7 +38,7 @@ impl Default for VibeCheckConfig {
             desktop_notifications: false,
             show_toy_advanced: false,
             show_feature_advanced: false,
-            master_volume: full_volume(),
+            master_intensity: full_intensity(),
         }
     }
 }
@@ -79,7 +80,7 @@ pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckC
                 desktop_notifications: false,
                 show_toy_advanced: false,
                 show_feature_advanced: false,
-                master_volume: full_volume(),
+                master_intensity: full_intensity(),
             })
             .unwrap(),
         )
@@ -129,7 +130,7 @@ pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckC
                 desktop_notifications: false,
                 show_toy_advanced: false,
                 show_feature_advanced: false,
-                master_volume: full_volume(),
+                master_intensity: full_intensity(),
             };
             fs::write(
                 &vc_config_file,
@@ -139,5 +140,32 @@ pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckC
             trace!("Wrote VibeCheck config file");
             Ok(default_conf)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn config_json_with(key: Option<(&str, f64)>) -> String {
+        let mut value = serde_json::to_value(VibeCheckConfig::default()).unwrap();
+        let map = value.as_object_mut().unwrap();
+        map.remove("master_intensity");
+        if let Some((name, level)) = key {
+            map.insert(name.to_string(), serde_json::json!(level));
+        }
+        value.to_string()
+    }
+
+    #[test]
+    fn master_intensity_loads_from_new_old_and_missing_keys() {
+        let load = |json: String| -> f64 {
+            serde_json::from_str::<VibeCheckConfig>(&json)
+                .unwrap()
+                .master_intensity
+        };
+        assert_eq!(load(config_json_with(Some(("master_intensity", 0.4)))), 0.4);
+        assert_eq!(load(config_json_with(Some(("master_volume", 0.6)))), 0.6);
+        assert_eq!(load(config_json_with(None)), 1.0);
     }
 }

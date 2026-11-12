@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 /// The level sent to the toy for one value, in the same order as the toy
-/// graph and output: Idle Speed and Range, then the master volume (safety
+/// graph and output: Idle Speed and Range, then the master intensity (safety
 /// layer), then Flip Input.
 #[inline]
 pub(crate) fn clamp_and_flip(
@@ -76,7 +76,7 @@ pub async fn scalar_parse_levels_send_toy_cmd(
 /*
  * Sends commands to toys
  */
-/// Used by the Test button. Applies the master volume like the toy graph does.
+/// Used by the Test button. Applies the master intensity like the toy graph does.
 pub async fn command_toy(
     dev: Arc<ButtplugClientDevice>,
     feature_type: VCFeatureType,
@@ -189,15 +189,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_button_level_is_range_then_volume_then_flip() {
+    fn test_button_level_is_range_then_intensity_then_flip() {
         let mut levels = LevelTweaks::default();
         levels.maximum_level = 0.8;
         let safety = SafetyLayer::default();
 
-        // Full volume, no flip: unchanged from before
+        // Full intensity, no flip: unchanged from before
         assert_eq!(clamp_and_flip(0.5, false, levels, &safety), 0.5);
-        // Range caps at 0.8 before the volume halves it, then flip
-        safety.set_volume(0.5);
+        // Range caps at 0.8 before the intensity halves it, then flip
+        safety.set_intensity(0.5);
         assert!((clamp_and_flip(1.0, false, levels, &safety) - 0.4).abs() < 1e-9);
         assert_eq!(clamp_and_flip(1.0, true, levels, &safety), 0.6);
     }

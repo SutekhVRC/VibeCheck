@@ -174,7 +174,7 @@ impl Session {
         let signals = SignalPlane::new();
         let (events, event_rx) = EventPlane::new();
         let (graphs, graphs_rx) = unbounded_channel();
-        // The app-wide safety layer, so the master volume applies here too
+        // The app-wide safety layer, so the master intensity applies here too
         let safety = app_handle.state::<VCStateMutex>().0.lock().safety.clone();
         {
             let rt_lock = async_rt.lock();

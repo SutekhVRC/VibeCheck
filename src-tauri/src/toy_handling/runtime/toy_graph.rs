@@ -10,7 +10,7 @@
  *   always has.
  * - "mode" is the parameter's (or the SPS/TPS output's) processing mode.
  * - "levels" is Idle Speed and Range. Flip Input is applied by the toy's
- *   output, after the safety layer (master volume), so the graph and the
+ *   output, after the safety layer (master intensity), so the graph and the
  *   safety layer work in intensities where 0 is always off.
  *
  * Only the first parameter with a given address counts within a feature.

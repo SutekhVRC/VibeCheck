@@ -3,6 +3,6 @@ import type { FeOSCNetworking } from "./FeOSCNetworking";
 
 export type FeVibeCheckConfig = { networking: FeOSCNetworking, scan_on_disconnect: boolean, minimize_on_exit: boolean, desktop_notifications: boolean, show_toy_advanced: boolean, show_feature_advanced: boolean, 
 /**
- * Master volume, 0.0 to 1.0.
+ * Master intensity, 0.0 to 1.0.
  */
-master_volume: number, };
+master_intensity: number, };

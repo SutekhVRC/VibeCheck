@@ -149,7 +149,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn applies_the_master_volume_even_while_running() {
+    async fn applies_the_master_intensity_even_while_running() {
         let signals = SignalPlane::new();
         let safety = SafetyLayer::default();
         let (control, control_rx) = unbounded_channel();
@@ -169,13 +169,13 @@ mod tests {
             .unwrap();
 
         let boop = PortId::new(ModuleInstanceId::new(OSC_MODULE), "/avatar/parameters/Boop");
-        safety.set_volume(0.5);
+        safety.set_intensity(0.5);
         signals.write(&boop, Signal::Float(0.8));
         sleep(Duration::from_millis(50)).await;
         assert!((slots.take_changed()[0].level() - 0.4).abs() < 1e-6);
 
-        // Changing the volume from Settings affects the running session
-        safety.set_volume(1.0);
+        // Changing the intensity from Settings affects the running session
+        safety.set_intensity(1.0);
         signals.write(&boop, Signal::Float(0.6));
         sleep(Duration::from_millis(50)).await;
         assert!((slots.take_changed()[0].level() - 0.6).abs() < 1e-6);

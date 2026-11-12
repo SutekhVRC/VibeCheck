@@ -37,7 +37,7 @@ pub struct VibeCheckState {
 
     pub config: VibeCheckConfig,
     /// Shared by every listening session and the Test button, so the master
-    /// volume applies everywhere and can change while toys are running.
+    /// intensity applies everywhere and can change while toys are running.
     pub safety: SafetyLayer,
     pub osc_query_handler: Option<OSCQuery>,
     //pub connection_modes: ConnectionModes,
@@ -94,7 +94,7 @@ impl VibeCheckState {
         ) = unbounded_channel();
 
         let safety = SafetyLayer::default();
-        safety.set_volume(config.master_volume);
+        safety.set_intensity(config.master_intensity);
 
         let state = Self {
             app_handle: None,

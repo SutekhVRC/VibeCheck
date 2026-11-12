@@ -4,7 +4,7 @@
 //! after its processing mode and before the safety layer.
 //!
 //! Flip Input is not applied here: levels stay intensities (0 = off) through
-//! the safety layer, so the master volume means the same for every toy, and
+//! the safety layer, so the master intensity means the same for every toy, and
 //! the output flips them last (see [`flip`]).
 
 use crate::module::{EventOut, PortSpec, Processor};
