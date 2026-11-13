@@ -51,7 +51,10 @@ fn main() {
 
     let app = tauri::Builder::default()
         //.plugin(tauri_plugin_os::init())
-        //.plugin(tauri_plugin_process::init())
+        // Restarts the app after an update is installed (relaunch() in
+        // UpdateButton). Linux updates install in place and need it; the
+        // Windows installer closes the app itself.
+        .plugin(tauri_plugin_process::init())
         //.plugin(tauri_plugin_fs::init())
         //.plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
