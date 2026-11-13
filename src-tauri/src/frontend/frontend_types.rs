@@ -141,7 +141,10 @@ pub struct FeLevelTweaks {
     pub idle_level: f64,
     pub smooth_rate: f64,
     pub linear_position_speed: u32,
+    /// Rate mode's wind-down speed
     pub rate_tune: f64,
+    /// Rate mode's sensitivity
+    pub rate_sensitivity: f64,
     pub constant_level: f64,
 }
 

@@ -84,7 +84,11 @@ export const TOOLTIP = {
     link: "",
   },
   Rate: {
-    text: "This uses rate mode on the float input.",
+    text: "How quickly Rate mode winds down once you stop moving. Higher stops sooner, lower lingers.",
+    link: "",
+  },
+  RateSensitivity: {
+    text: "How strongly stroke speed turns into power in Rate mode. At 1, about one full in-and-out stroke per second is full power. Raise it if you need to move faster than you'd like to reach full power.",
     link: "",
   },
   Constant: {

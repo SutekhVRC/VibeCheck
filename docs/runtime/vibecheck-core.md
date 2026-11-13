@@ -261,7 +261,7 @@ Single-input, single-output processors (`in` → `out`), meant to run on a fixed
 |---|---|---|
 | `RawMode` | passed through | 1.0 or 0.0 |
 | `SmoothMode` | time-weighted mean over the last `smooth_window` of ticks, rounded to hundredths. 0 (1 with flip) passes straight through and restarts the average | ignored (no output) |
-| `RateMode` | adds the movement since the previous tick to an internal level (capped at 1), then decays it by `rate_decay` per 150 ms of `dt`, every tick. At rest (<= 0, or >= 1 with flip) it resets and outputs 0 | ignored |
+| `RateMode` | follows stroke speed: distance moved per second, averaged over about 0.15 s, times `rate_sensitivity`, with 2 full ranges per second (about one in-and-out stroke) as full power. Movement within 0.02 of the last counted position is ignored as jitter. When the speed drops, the level eases off exponentially, falling to about a third in `0.15 / rate_wind_down` s. Reaching 0 is just a position (no reset), and the first value after creation or reset only sets the starting position | ignored |
 | `ConstantMode` | `constant_level` if >= 0.5, else 0 | `constant_level` if true, else 0 |
 
 Raw and Constant behave exactly as the app's original modes. Smooth and Rate were redefined in time when the graph moved to a fixed tick: they used to work per OSC message (average the last N messages; decay only when a message arrived), which made them depend on VRChat's send rate and let Rate stick at its last level. The tests pin each mode's behaviour.

@@ -475,8 +475,17 @@ pub struct LevelTweaks {
     pub idle_level: f64,
     pub smooth_rate: f64,
     pub linear_position_speed: u32,
+    /// Rate mode's wind-down speed (shown as "Wind-down"). Higher stops sooner.
     pub rate_tune: f64,
+    /// Rate mode's sensitivity. Missing from toy configs saved before it
+    /// existed, so it defaults to 1.
+    #[serde(default = "default_rate_sensitivity")]
+    pub rate_sensitivity: f64,
     pub constant_level: f64,
+}
+
+fn default_rate_sensitivity() -> f64 {
+    1.0
 }
 
 impl Default for LevelTweaks {
@@ -488,6 +497,7 @@ impl Default for LevelTweaks {
             smooth_rate: 2.,
             linear_position_speed: 100,
             rate_tune: 0.4,
+            rate_sensitivity: default_rate_sensitivity(),
             constant_level: 0.5,
         }
     }
@@ -501,6 +511,7 @@ impl LevelTweaks {
         self.smooth_rate = fe_lt.smooth_rate;
         self.linear_position_speed = fe_lt.linear_position_speed;
         self.rate_tune = fe_lt.rate_tune;
+        self.rate_sensitivity = fe_lt.rate_sensitivity;
         self.constant_level = fe_lt.constant_level
     }
 
@@ -512,6 +523,7 @@ impl LevelTweaks {
             smooth_rate: self.smooth_rate,
             linear_position_speed: self.linear_position_speed,
             rate_tune: self.rate_tune,
+            rate_sensitivity: self.rate_sensitivity,
             constant_level: self.constant_level,
         }
     }

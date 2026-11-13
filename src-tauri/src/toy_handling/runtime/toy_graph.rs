@@ -132,7 +132,8 @@ pub fn build_toy_graph(toy: &ModuleInstanceId, features: &VCToyFeatures) -> Resu
         let l = feature.feature_levels;
         let settings = ModeSettings {
             smooth_window: smooth_window(l.smooth_rate),
-            rate_decay: l.rate_tune,
+            rate_wind_down: l.rate_tune,
+            rate_sensitivity: l.rate_sensitivity,
             constant_level: l.constant_level,
             flip: feature.flip_input_float,
         };
@@ -373,14 +374,24 @@ mod tests {
         rate.feature_levels.idle_level = 0.05;
         let mut h = Harness::new(vec![rate]);
 
-        h.osc(BOOP, Signal::Float(0.8));
-        let first = h.tick();
-        assert!(first[0].1 > 0.7);
+        // A quick stroke from 0 to 1: a new value every 30 ms, like OSC
+        h.osc(BOOP, Signal::Float(0.0));
+        h.tick();
+        let mut peak = 0.0_f64;
+        for step in 1..=10 {
+            h.osc(BOOP, Signal::Float(step as f64 / 10.0));
+            for _ in 0..3 {
+                for (_, level, _) in h.tick() {
+                    peak = peak.max(level);
+                }
+            }
+        }
+        assert!(peak > 0.7, "peak {peak}");
 
-        // The value stays at 0.8 (VRChat sends nothing new): the level keeps
+        // The value stays at 1.0 (VRChat sends nothing new): the level keeps
         // falling and ends at Idle Speed
-        let mut last = first;
-        for _ in 0..100 {
+        let mut last = vec![];
+        for _ in 0..300 {
             let sent = h.tick();
             if !sent.is_empty() {
                 last = sent;
