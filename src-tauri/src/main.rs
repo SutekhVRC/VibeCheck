@@ -31,6 +31,14 @@ mod util;
 mod vcore;
 
 fn main() {
+    // On Wayland the taskbar finds the app's icon through its app ID, which
+    // GTK takes from the binary's name. Installed builds are called
+    // "VibeCheck", matching the VibeCheck.desktop file the packages install,
+    // but dev builds are "vibecheck" and showed a generic icon. Use the
+    // installed name everywhere.
+    #[cfg(target_os = "linux")]
+    glib::set_prgname(Some("VibeCheck"));
+
     #[cfg(debug_assertions)]
     {
         //tracing_subscriber::fmt::init();

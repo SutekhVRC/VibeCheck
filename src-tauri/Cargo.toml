@@ -1,6 +1,6 @@
 [package]
 name = "vibecheck"
-version = "0.6.1"
+version = "0.6.2"
 edition = "2021"
 authors = ["SutekhVRC"]
 rust-version = "1.57"
@@ -68,6 +68,10 @@ default = [ "custom-protocol" ]
 # this feature is used for production builds where `devPath` points to the filesystem
 # DO NOT remove this
 custom-protocol = [ "tauri/custom-protocol" ]
+
+# Linux: names the app for GTK (see main.rs). Same version Tauri's GTK uses.
+[target.'cfg(target_os = "linux")'.dependencies]
+glib = "0.18.5"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-global-shortcut = "2"
