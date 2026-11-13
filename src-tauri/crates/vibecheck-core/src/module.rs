@@ -94,6 +94,12 @@ impl InputCtx {
         self.signals.write(&self.port(port), signal);
     }
 
+    /// Forget every value this module has written, e.g. when everything it
+    /// knew is about to be replaced.
+    pub fn clear_signals(&self) {
+        self.signals.clear_module(&self.module);
+    }
+
     /// Publish a root event from one of this module's ports.
     pub fn publish(&self, port: &str, kind: EventKind, value: Value) {
         self.events.publish(self.port(port), kind, value);

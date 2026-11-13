@@ -33,12 +33,21 @@ use self::zone::{Address, Zone};
 const PARAMS: &str = "/avatar/parameters/";
 const HAPTICS_DISABLED: &str = "OGB/HapticsDisabled";
 
+/// Whether `addr` is an SPS zone setting (a plug's length, a socket's
+/// radius), which VRChat may never send over OSC.
+pub fn is_setting_address(addr: &str) -> bool {
+    addr.strip_prefix(PARAMS)
+        .and_then(Address::parse)
+        .is_some_and(|a| zone::is_setting(a.contact))
+}
+
 pub struct SPSProcessor {
     /// Whether the feature is Linear (depth only).
     linear: bool,
     zones: HashMap<String, Zone>,
     haptics_disabled: bool,
-    /// Whether any zone has sent anything yet.
+    /// Whether any zone has reported contact yet (settings such as a plug's
+    /// length don't count).
     active: bool,
 }
 
@@ -76,7 +85,10 @@ impl InputProcessor for SPSProcessor {
             .entry(address.zone.to_owned())
             .or_insert_with(|| Zone::new(address.kind, address.format))
             .set(address.contact, value);
-        self.active = true;
+        // Settings arrive when the avatar loads; Idle Speed waits for contact
+        if !zone::is_setting(address.contact) {
+            self.active = true;
+        }
     }
 
     fn tick(&mut self, _dt: f32) -> Option<f64> {
@@ -159,6 +171,61 @@ mod tests {
         assert_eq!(a.0.tick(0.01), None, "metadata isn't a zone");
         a.float("OGB/Orf/Mouth/PenOthers", 0.0);
         assert_eq!(a.0.tick(0.01), Some(0.0));
+    }
+
+    #[test]
+    fn settings_alone_dont_start_anything() {
+        let mut a = Avatar::new();
+        // What the OSCQuery lookup fills in when the avatar loads
+        a.float("OGB/Plug/Dp/LengthMult1", 0.0112)
+            .float("OGB/Plug/Dp/LengthMult2", 17.37)
+            .float("OGB/Socket/Hand_R/DepthRadius", 1.0);
+        assert_eq!(a.0.tick(0.01), None, "Idle Speed waits for contact");
+        a.float("OGB/Plug/Dp/DepthSelf", 0.3);
+        assert!(a.0.tick(0.01).is_some());
+
+        assert!(is_setting_address(
+            "/avatar/parameters/OGB/Plug/Dp/LengthMult2"
+        ));
+        assert!(is_setting_address(
+            "/avatar/parameters/VFH/Zone/Socket/Hand_R/DepthRadius"
+        ));
+        assert!(!is_setting_address(
+            "/avatar/parameters/OGB/Plug/Dp/DepthSelf"
+        ));
+        assert!(!is_setting_address("/avatar/parameters/LengthMult2"));
+    }
+
+    /// Values captured from a real SPS3 plug and hand socket in VRChat
+    /// (2026-11-12). LengthMult2 was never sent over OSC; its value is from
+    /// VRChat's OSCQuery.
+    #[test]
+    fn sps3_plug_and_hand_socket_from_a_real_capture() {
+        let mut a = Avatar::new();
+        a.float("OGB/Plug/zw_ris_sps/LengthMult1", 0.011209071)
+            .float("OGB/Plug/zw_ris_sps/DepthSelf", 0.3255276)
+            .float("OGB/Plug/zw_ris_sps/DepthSelf_PointSeparation", 0.21013895);
+        // Without LengthMult2 there's no length, so no depth
+        near(a.level(), 0.0);
+
+        // The plug is 0.195 m long and the hand 0.21 m from its base: just
+        // past the tip, so still no depth
+        a.float("OGB/Plug/zw_ris_sps/LengthMult2", 17.3739777);
+        near(a.level(), 0.0);
+        // Halfway down
+        a.float("OGB/Plug/zw_ris_sps/DepthSelf_PointSeparation", 0.0974);
+        assert!((a.level() - 0.5).abs() < 0.01);
+
+        // The hand socket's own estimate of the plug's length from its
+        // radius agrees: 0.2126 - 1.0 × (1 - 0.9821) = 0.195 m
+        let mut a = Avatar::new();
+        a.float("OGB/Socket/Hand_R/DepthRadius", 1.0)
+            .float("OGB/Socket/Hand_R/DepthSelf", 0.9821344)
+            .float("OGB/Socket/Hand_R/DepthSelf_PointSeparation", 0.21259077);
+        near(a.level(), 0.0);
+        a.float("OGB/Socket/Hand_R/DepthSelf", 1.0)
+            .float("OGB/Socket/Hand_R/DepthSelf_PointSeparation", 0.0974);
+        assert!((a.level() - 0.5).abs() < 0.01);
     }
 
     #[test]

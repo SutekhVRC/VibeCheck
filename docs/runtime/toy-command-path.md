@@ -7,7 +7,7 @@ flowchart LR
   VRC[["VRChat"]] -- "UDP OSC" --> IN["OscInput<br/>(vibecheck-core)"]
 
   IN -- "parameter values<br/>(latest wins)" --> SIG[("Signal plane")]
-  IN -- "/avatar/change<br/>AvatarChange event" --> EV["core_event_handler<br/>runtime/osc_routing.rs<br/>clears OSC values, stops all toys"]
+  IN -- "/avatar/change<br/>AvatarChange event" --> EV["core_event_handler<br/>runtime/osc_routing.rs<br/>stops all toys, resets graphs"]
   IN -- "every other message<br/>(tap, in order)" --> RT["osc_router<br/>runtime/osc_routing.rs"]
   RT -- "vibecheck/api/..." --> API["handle_api_message<br/>osc_api/mod.rs"]
 
@@ -123,13 +123,24 @@ Nothing needs routing to toys: `OscInput` writes every parameter value to the si
 
 ## Avatar change
 
-`OscInput` publishes an `AvatarChange` event (with the avatar id) on the event plane. `core_event_handler` (`osc_routing.rs`) then:
+When `/avatar/change` arrives, `OscInput` first clears every OSC value from the signal plane, before reading the next message. VRChat sends the new avatar's values right after the change, so clearing anywhere later would wipe some of them too. Then it publishes an `AvatarChange` event (with the avatar id) on the event plane, and `core_event_handler` (`osc_routing.rs`):
 
-1. clears every OSC value from the signal plane, so a graph rebuilt later doesn't replay the old avatar's parameters;
-2. tells the graph runner to reset every toy's graph (`GraphControl::ResetAll` → `Graph::reset`). Every processor forgets its state (Smooth's window, Rate's level, SPS zones and learned lengths, via `InputProcessor::reset`), and each motor forgets the last level it sent, so the new avatar's first value is sent even if it equals the old one (the toy was stopped in between);
-3. stops every device. It builds the Buttplug stop command while holding the global state lock, releases the lock, and only then waits for Buttplug. A failed stop is logged.
+1. starts the OSCQuery lookup (below);
+2. stops every device. It builds the Buttplug stop command while holding the global state lock, releases the lock, and only then waits for Buttplug. A failed stop is logged;
+3. tells the graph runner to reset every toy's graph (`GraphControl::ResetAll` → `Graph::reset`). Every processor forgets its state (Smooth's window, Rate's level, SPS zones and learned lengths, via `InputProcessor::reset`), and each motor forgets the last level it sent, so the new avatar's first value is sent even if it equals the old one. Watching nodes are given every value still on the plane again, so values the new avatar sent before the reset ran aren't lost. The reset comes after the stop, or the stop could silence the replayed values.
 
-The stop runs alongside everything else, so a parameter arriving at the same moment as an avatar change can land just before or just after it.
+### Values VRChat never sends
+
+VRChat only sends a parameter over OSC when it changes. Some are set once when the avatar loads and never change, such as an SPS plug's `LengthMult2` and a socket's `DepthRadius`. If one sits at its default, it never arrives, and it's also missed if VibeCheck starts after the avatar loaded.
+
+`AvatarQuery` (`osc/avatar_query.rs`) reads them from VRChat's OSCQuery server, which reports every parameter's current value:
+
+- **When:** once when the OSC socket is bound, and 1, 4 and 10 s after each avatar change (VRChat may still be loading). A lookup still running for the previous avatar writes nothing.
+- **Finding VRChat:** mDNS, looking for a `VRChat-Client-…` `_oscjson._tcp` service for up to 3 s. The address is remembered until a request fails.
+- **What:** `GET /avatar/parameters`. Only addresses `is_setting_address` accepts are used (SPS `LengthMult1`, `LengthMult2`, `DepthRadius`), so plain parameters don't start Idle Speed at avatar load.
+- **How:** `SignalPlane::write_if_absent`, as if the value arrived over OSC, but never over a value VRChat already sent.
+
+SPS treats these settings as not being contact, so they don't make the processor start sending (and Idle Speed start) on their own.
 
 ## OSC API
 

@@ -75,6 +75,20 @@ impl SignalPlane {
         slots.ports.insert(port.clone(), Slot { signal, seq });
     }
 
+    /// Write the value only if the port has none, e.g. to fill in a value
+    /// fetched some other way without overwriting a newer one that arrived
+    /// first. Returns whether it was written.
+    pub fn write_if_absent(&self, port: &PortId, signal: Signal) -> bool {
+        let mut slots = self.slots.write();
+        if slots.ports.contains_key(port) {
+            return false;
+        }
+        slots.seq += 1;
+        let seq = slots.seq;
+        slots.ports.insert(port.clone(), Slot { signal, seq });
+        true
+    }
+
     /// The newest value written to the port, if any.
     pub fn read(&self, port: &PortId) -> Option<Signal> {
         self.slots.read().ports.get(port).map(|slot| slot.signal)
@@ -127,6 +141,19 @@ impl SignalPlane {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn write_if_absent_never_overwrites() {
+        let plane = SignalPlane::new();
+        let port = PortId::new(ModuleInstanceId::new("osc"), "Length");
+        assert!(plane.write_if_absent(&port, Signal::Float(1.0)));
+        assert!(!plane.write_if_absent(&port, Signal::Float(2.0)));
+        assert_eq!(plane.read(&port), Some(Signal::Float(1.0)));
+
+        // It's a write like any other for watchers
+        let (changed, _) = plane.changed_since(&port.module, "", SignalSeq::default());
+        assert_eq!(changed, vec![(port, Signal::Float(1.0))]);
+    }
 
     #[test]
     fn latest_value_wins() {

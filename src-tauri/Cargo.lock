@@ -7002,6 +7002,7 @@ dependencies = [
  "futures-timer",
  "futures-util",
  "log",
+ "mdns-sd",
  "open",
  "parking_lot",
  "reqwest 0.12.28",

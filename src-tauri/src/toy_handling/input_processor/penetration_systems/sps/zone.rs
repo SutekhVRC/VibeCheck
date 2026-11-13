@@ -31,6 +31,17 @@ use super::length::{LengthLearner, TIP_INSIDE};
 /// Longest plug length estimate believed from geometry, in metres.
 const MAX_ESTIMATED_LENGTH: f64 = 3.0;
 
+/// Contacts that describe a zone rather than report contact: they're set
+/// once when the avatar loads. VRChat only sends parameters over OSC when they
+/// change, so if one sits at its default it's never sent (see
+/// osc/avatar_query.rs, which reads them from VRChat's OSCQuery instead).
+const SETTINGS: [&str; 3] = ["LengthMult1", "LengthMult2", "DepthRadius"];
+
+/// Whether a zone contact is a setting rather than a contact reading.
+pub fn is_setting(contact: &str) -> bool {
+    SETTINGS.contains(&contact)
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ZoneKind {
     Plug,

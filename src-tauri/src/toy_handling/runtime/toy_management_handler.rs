@@ -37,8 +37,9 @@ use vibecheck_core::{
 };
 
 use crate::{
-    osc::OSCNetworking,
+    osc::{avatar_query::AvatarQuery, OSCNetworking},
     toy_handling::{
+        input_processor::penetration_systems::sps::is_setting_address,
         runtime::{
             graph_runner::{graph_runner, GraphControl},
             osc_routing::{core_event_handler, osc_router},
@@ -140,6 +141,7 @@ async fn toy_task(
 struct Session {
     async_rt: ToyRuntime,
     signals: SignalPlane,
+    avatar_query: AvatarQuery,
     events: EventPlane,
     safety: SafetyLayer,
     graphs: UnboundedSender<GraphControl>,
@@ -154,6 +156,11 @@ impl Session {
         let signals = SignalPlane::new();
         let (events, event_rx) = EventPlane::new();
         let (graphs, graphs_rx) = unbounded_channel();
+        let avatar_query = AvatarQuery::new(
+            signals.clone(),
+            ModuleInstanceId::new(OSC_MODULE),
+            is_setting_address,
+        );
         // Don't lock the global state here: native_vibecheck_enable holds it
         // while waiting for this session to start listening
         {
@@ -161,7 +168,7 @@ impl Session {
             let rt = rt_lock.as_ref().unwrap();
             rt.spawn(core_event_handler(
                 event_rx,
-                signals.clone(),
+                avatar_query.clone(),
                 graphs.clone(),
                 safety.clone(),
                 app_handle.clone(),
@@ -176,6 +183,7 @@ impl Session {
         Self {
             async_rt,
             signals,
+            avatar_query,
             events,
             safety,
             graphs,
@@ -244,6 +252,7 @@ fn start_osc(
     );
     let bind = SocketAddr::V4(vc_config.bind);
     let tme_send = tme_send.clone();
+    let avatar_query = session.avatar_query.clone();
 
     let rt_lock = session.async_rt.lock();
     let rt = rt_lock.as_ref().unwrap();
@@ -254,6 +263,9 @@ fn start_osc(
             Ok(input) => {
                 let _ = tme_send.send(ToyManagementEvent::Sig(TmSig::Listening));
                 info!("Listen sock is bound {}", bind);
+                // The avatar may have loaded before VibeCheck was listening:
+                // fill in parameters VRChat won't send again
+                tokio::spawn(async move { avatar_query.fill_now().await });
                 let mut input = input.with_tap(tap_tx);
                 if let Err(e) = input.run(ctx).await {
                     logerr!("OSC input stopped with an error: {}", e);

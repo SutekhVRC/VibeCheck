@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::frontend::frontend_types::FeOSCNetworking;
 
+pub mod avatar_query;
 pub mod errors;
 pub mod logic;
 

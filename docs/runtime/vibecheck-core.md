@@ -125,7 +125,7 @@ for cmd in graph.tick(&signals, dt, &safety, &mut events) {
 
 Events processors emit during a tick are published on the `EventPlane` passed to `tick`, with the node's port as the source (e.g. `proc:avg/crossed`).
 
-**Resetting** (`Graph::reset`) starts the graph over without rebuilding it: every processor's `reset()` is called (`Processor::reset` defaults to nothing; Smooth and Rate clear their state), node outputs are cleared, and sinks forget their last value, so the next value is sent even if it repeats the old one. Watched values written before the reset aren't delivered again. The app resets every graph on avatar change.
+**Resetting** (`Graph::reset`) starts the graph over without rebuilding it: every processor's `reset()` is called (`Processor::reset` defaults to nothing; Smooth and Rate clear their state), node outputs are cleared, and sinks forget their last value, so the next value is sent even if it repeats the old one. Watching nodes are given every watched value still on the plane again on the next tick, as a new graph would be, so a reset that runs late doesn't lose values written just before it. Clear the plane first for values that should be forgotten. The app resets every graph on avatar change.
 
 ### Watching ports
 
@@ -246,6 +246,7 @@ An `Input` that listens for OSC over UDP.
 
 - `OscInput::bind(addr)` binds the socket, so a busy port is reported before anything runs.
 - `with_tap(tx)` also sends every message except avatar changes to `tx`, in arrival order. `run` returns once the tap's receiver is dropped.
+- On `/avatar/change`, it clears every value it has written (`InputCtx::clear_signals`) before publishing the event, so the clear stays in message order.
 - `/avatar/change` (any address starting with it) is published as an `AvatarChange` event on the `avatar_change` port, with the avatar id as `Value::Text` when present.
 - Any other message whose last argument is a float or bool writes it to the signal plane, on a port named after the full OSC address, e.g. `osc//avatar/parameters/Boop`.
 - Bundles are unpacked. Packets that aren't valid OSC, and per-packet receive errors, are skipped.
@@ -313,6 +314,6 @@ cd src-tauri
 cargo test -p vibecheck-core
 ```
 
-Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, tracing event chains through the remembered history, refusing a module that reacts to the result of its own action, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `LegacyLayout` numbering actuators like spec v3, `OutputLevels`, `ButtplugOutput`'s error events firing only on change, and the graph (publishing processor events from their node, dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, rejecting bad wiring, and watching nodes seeing ports that were never wired), and `changed_since` returning each new value once, in write order.
+Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, tracing event chains through the remembered history, refusing a module that reacts to the result of its own action, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `LegacyLayout` numbering actuators like spec v3, `OutputLevels`, `ButtplugOutput`'s error events firing only on change, and the graph (publishing processor events from their node, dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, rejecting bad wiring, and watching nodes seeing ports that were never wired), `changed_since` returning each new value once, in write order, `write_if_absent` never overwriting, a late reset replaying what's still on the plane, and `OscInput` clearing the old avatar's values.
 
 The app's tests (`cargo test -p vibecheck`) cover `InputProcessorNode` (reading only its prefixes, input filter tags), the graph runner task, and the generated toy graphs end to end: nothing before the first input, modes loaded from config, one parameter driving several motors, Range and Idle after the mode, the first matching parameter winning, disabled features, Linear speed, the f32 rounding, Smooth following over its window, Rate winding down after the input stops, and input processor chains next to parameter chains.

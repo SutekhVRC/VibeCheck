@@ -390,12 +390,17 @@ impl Graph {
     /// settings: every processor forgets its state, node outputs are
     /// cleared, and sinks forget the last value they sent, so the next value
     /// is sent even if it's the same as before (the device may have been
-    /// stopped in between). Watched values written before the reset aren't
-    /// delivered again.
+    /// stopped in between). Watching nodes are given every watched value
+    /// still on the plane again on the next tick, like a new graph, so a
+    /// reset that runs late doesn't lose values written just before it
+    /// (clear the plane first for values that should be forgotten).
     pub fn reset(&mut self) {
         for node in &mut self.nodes {
             node.processor.reset();
             node.outputs.iter_mut().for_each(|out| *out = None);
+            for (_, seen) in &mut node.watches {
+                *seen = SignalSeq::default();
+            }
         }
         for sink in &mut self.sinks {
             sink.last = None;
@@ -687,6 +692,9 @@ mod tests {
                 out[0] = Some(Signal::Float(self.0.values().sum()));
             }
         }
+        fn reset(&mut self) {
+            self.0.clear();
+        }
     }
 
     #[test]
@@ -719,6 +727,35 @@ mod tests {
             vec![("toy/Vibrator_0".into(), 0.75)]
         );
         assert!(tick(&mut g, &signals).is_empty());
+    }
+
+    #[test]
+    fn a_late_reset_replays_what_is_still_on_the_plane() {
+        let mut b = GraphBuilder::new();
+        b.add_processor(id("sum"), Box::<SumWatched>::default())
+            .unwrap();
+        b.add_sink(port("sum", "out"), port("toy", "Vibrator_0"), None)
+            .unwrap();
+        let mut g = b.build().unwrap();
+        let signals = SignalPlane::new();
+        let osc = |name: &str| PortId::new(ModuleInstanceId::new("osc"), name);
+
+        // The old avatar's value
+        signals.write(&osc("/sum/old"), Signal::Float(0.5));
+        tick(&mut g, &signals);
+
+        // Avatar change: the input clears the plane at once, the new avatar's
+        // value arrives and is seen, and only then does the reset run
+        signals.clear_module(&ModuleInstanceId::new("osc"));
+        signals.write(&osc("/sum/new"), Signal::Float(0.25));
+        tick(&mut g, &signals);
+        g.reset();
+
+        // The new value is given again; the cleared old one isn't
+        assert_eq!(
+            tick(&mut g, &signals),
+            vec![("toy/Vibrator_0".into(), 0.25)]
+        );
     }
 
     /// Counts its ticks; the count is its output.

@@ -12,14 +12,12 @@ use log::{debug, info, warn};
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use vibecheck_core::{
-    modules::osc::rosc::OscMessage, EventKind, EventReceiver, ModuleInstanceId, SafetyLayer,
-    SignalPlane, Value,
+    modules::osc::rosc::OscMessage, EventKind, EventReceiver, SafetyLayer, Value,
 };
 
 use crate::{
-    osc_api::handle_api_message,
-    toy_handling::runtime::{graph_runner::GraphControl, toy_graph::OSC_MODULE},
-    vcore::state::VCStateMutex,
+    osc::avatar_query::AvatarQuery, osc_api::handle_api_message,
+    toy_handling::runtime::graph_runner::GraphControl, vcore::state::VCStateMutex,
 };
 
 const API_PREFIX: &str = "/avatar/parameters/vibecheck/api/";
@@ -40,7 +38,7 @@ pub async fn osc_router(mut rx: UnboundedReceiver<OscMessage>, app_handle: AppHa
 /// Reacts to events from the event plane.
 pub async fn core_event_handler(
     mut events: EventReceiver,
-    signals: SignalPlane,
+    avatar_query: AvatarQuery,
     graphs: UnboundedSender<GraphControl>,
     safety: SafetyLayer,
     app_handle: AppHandle,
@@ -50,13 +48,17 @@ pub async fn core_event_handler(
         match event.kind {
             EventKind::AvatarChange => {
                 info!("Avatar Changed: Halting toy actions");
-                // Forget the old avatar's parameter values, so a graph rebuilt
-                // later doesn't replay them
-                signals.clear_module(&ModuleInstanceId::new(OSC_MODULE));
-                // ...and start every graph over, so no processor (Smooth,
-                // Rate, SPS zones and lengths) carries old state across
-                let _ = graphs.send(GraphControl::ResetAll);
+                // Fill in parameters VRChat won't send (e.g. SPS plug lengths)
+                let query = avatar_query.clone();
+                tokio::spawn(async move { query.fill_after_avatar_change().await });
                 stop_all_devices(&app_handle).await;
+                // OscInput has already cleared the old avatar's values, in
+                // message order. Start every graph over, so no processor
+                // (Smooth, Rate, SPS zones and lengths) carries old state
+                // across. Values the new avatar already sent are given to
+                // the graphs again after the reset, so this comes after the
+                // stop or the stop would silence them.
+                let _ = graphs.send(GraphControl::ResetAll);
             }
             EventKind::OutputError => match &event.value {
                 Value::Text(error) => {
