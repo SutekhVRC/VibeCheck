@@ -5,4 +5,8 @@ export type FeVibeCheckConfig = { networking: FeOSCNetworking, scan_on_disconnec
 /**
  * Master intensity, 0.0 to 1.0.
  */
-master_intensity: number, };
+master_intensity: number, 
+/**
+ * Bluetooth scan length in seconds; 0 scans until stopped.
+ */
+scan_length: number, };

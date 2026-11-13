@@ -10,9 +10,6 @@ import { toast } from "sonner";
 import { INVOKE, LISTEN } from "../data/constants";
 import { assertExhaustive } from "../utils";
 
-/** How long a Bluetooth scan runs before it stops itself (ms) */
-export const SCAN_LENGTH = 10000;
-
 /*
  * Frontend-only preference (saved in localStorage, not the backend config):
  * whether pressing the scan button turns VibeCheck on first.
@@ -144,11 +141,8 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  useEffect(() => {
-    if (!isScanning) return;
-    const i = setInterval(() => stopScan(), SCAN_LENGTH);
-    return () => clearInterval(i);
-  }, [isScanning]);
+  // The backend stops scans after the configured scan length and sends a
+  // Scan Stop event (handleCoreEvent), so there's no timer here
 
   function handleStateEvent(payload: FeStateEvent) {
     switch (payload) {

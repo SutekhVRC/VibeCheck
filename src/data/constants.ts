@@ -107,6 +107,10 @@ export const TOOLTIP = {
     text: "OSC Send Port (Default: 127.0.0.1:9000)",
     link: "",
   },
+  ScanLength: {
+    text: "How long looking for toys runs before it stops by itself. Toys show up as soon as they connect, so you can stop early. Also applies to Scan On Disconnect.",
+    link: "",
+  },
   ScanOnDisconnect: {
     text: "Automatically start scanning when a toy disconnects.",
     link: "",

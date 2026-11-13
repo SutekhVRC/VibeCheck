@@ -21,6 +21,16 @@ pub enum ToyPower {
 }
 
 impl ToyPower {
+    /// What to show before the battery has been read: `Pending` if the
+    /// device has a battery, `NoBattery` if it doesn't.
+    pub fn unread(device: &ButtplugClientDevice) -> Self {
+        if device.input_available(InputType::Battery) {
+            Self::Pending
+        } else {
+            Self::NoBattery
+        }
+    }
+
     /// Reads a device's battery. Buttplug reports it as a percentage;
     /// VibeCheck keeps it as 0.0 to 1.0.
     pub async fn read(device: &ButtplugClientDevice) -> Self {

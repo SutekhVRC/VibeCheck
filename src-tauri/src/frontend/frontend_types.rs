@@ -24,6 +24,8 @@ pub struct FeVibeCheckConfig {
     pub show_feature_advanced: bool,
     /// Master intensity, 0.0 to 1.0.
     pub master_intensity: f64,
+    /// Bluetooth scan length in seconds; 0 scans until stopped.
+    pub scan_length: u32,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]
@@ -48,7 +50,8 @@ pub enum FeToyEvent {
 #[ts(export)]
 pub enum FeScanEvent {
     Start,
-    //Stop
+    /// The backend stopped a scan itself (its scan length ran out)
+    Stop,
 }
 
 #[derive(Serialize, Clone, TS)]

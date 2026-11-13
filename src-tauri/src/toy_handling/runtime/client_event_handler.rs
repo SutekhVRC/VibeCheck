@@ -15,10 +15,11 @@ use crate::{
             call_plane::{ToyManagementEvent, ToyUpdate},
             emit_plane::{emit_core_event, emit_toy_event},
         },
+        scan,
         state::VibeCheckState,
     },
 };
-use buttplug_client::ButtplugClientEvent;
+use buttplug_client::{ButtplugClientDevice, ButtplugClientEvent};
 use futures::StreamExt;
 use futures_timer::Delay;
 use log::{error as logerr, info, trace, warn};
@@ -28,6 +29,64 @@ use tauri::AppHandle;
 use tauri_plugin_notification::{Notification, NotificationExt};
 use tokio::sync::mpsc::UnboundedSender;
 use vibecheck_core::modules::buttplug::LegacyLayout;
+
+/// How long a new toy gets to settle before its battery is read
+const BATTERY_SETTLE: Duration = Duration::from_secs(3);
+
+/// The toy as the frontend sees it
+fn fe_toy(toy: &VCToy) -> FeVCToy {
+    FeVCToy {
+        toy_id: Some(toy.toy_id),
+        toy_name: toy.toy_name.clone(),
+        toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
+        toy_power: toy.toy_power.clone(),
+        toy_connected: toy.toy_connected,
+        features: toy.parsed_toy_features.features.to_frontend(),
+        listening: toy.listening,
+        osc_data: toy.osc_data,
+        bt_update_rate: toy.bt_update_rate,
+        sub_id: toy.sub_id,
+    }
+}
+
+/// Reads a new toy's battery once it has settled, then updates the toy in
+/// the state and the frontend, and shows the "Toy Connected" notification.
+/// Does nothing if the toy disconnected in the meantime.
+async fn read_battery_later(
+    state: Arc<Mutex<VibeCheckState>>,
+    device: Arc<ButtplugClientDevice>,
+    app_handle: AppHandle,
+) {
+    Delay::new(BATTERY_SETTLE).await;
+    let power = ToyPower::read(&device).await;
+
+    let (toy, notify) = {
+        let mut vc_lock = state.lock();
+        let notify = vc_lock.config.desktop_notifications;
+        let toy = vc_lock
+            .core_toy_manager
+            .as_mut()
+            .and_then(|manager| manager.online_toys.get_mut(&device.index()))
+            // The same connection, not a toy that reconnected with this index
+            .filter(|toy| Arc::ptr_eq(&toy.device_handle, &device));
+        let Some(toy) = toy else {
+            return;
+        };
+        toy.toy_power = power;
+        (toy.clone(), notify)
+    };
+
+    emit_toy_event(&app_handle, FeToyEvent::Update(fe_toy(&toy)));
+
+    if notify {
+        app_handle
+            .notification()
+            .builder()
+            .title("Toy Connected")
+            .body(format!("{} ({})", toy.toy_name, toy.toy_power.to_string()).as_str())
+            .show();
+    }
+}
 
 /*
     This handler will handle the adding and removal of toys
@@ -53,9 +112,9 @@ pub async fn client_event_handler(
             match event {
                 ButtplugClientEvent::DeviceAdded(dev) => {
                     info!("DeviceAdded");
-                    Delay::new(Duration::from_secs(3)).await;
-
-                    let toy_power = ToyPower::read(&dev).await;
+                    // Shown straight away, even mid-scan. The battery is read
+                    // in the background once the toy has settled.
+                    let toy_power = ToyPower::unread(&dev);
 
                     let sub_id = {
                         let vc_lock = vibecheck_state_pointer.lock();
@@ -125,38 +184,12 @@ pub async fn client_event_handler(
                         .send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone())))
                         .unwrap();
 
-                    emit_toy_event(
-                        &app_handle,
-                        FeToyEvent::Add({
-                            FeVCToy {
-                                toy_id: Some(toy.toy_id),
-                                toy_name: toy.toy_name.clone(),
-                                toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
-                                toy_power,
-                                toy_connected: toy.toy_connected,
-                                features: toy.parsed_toy_features.features.to_frontend(),
-                                listening: toy.listening,
-                                osc_data: toy.osc_data,
-                                bt_update_rate: toy.bt_update_rate,
-                                sub_id: toy.sub_id,
-                            }
-                        }),
-                    );
+                    emit_toy_event(&app_handle, FeToyEvent::Add(fe_toy(&toy)));
 
-                    {
-                        let vc_lock = vibecheck_state_pointer.lock();
-                        if vc_lock.config.desktop_notifications {
-                            app_handle
-                                .notification()
-                                .builder()
-                                .title("Toy Connected")
-                                .body(
-                                    format!("{} ({})", toy.toy_name, toy.toy_power.to_string())
-                                        .as_str(),
-                                )
-                                .show();
-                        }
-                    }
+                    let state = vibecheck_state_pointer.clone();
+                    let device = toy.device_handle.clone();
+                    let app = app_handle.clone();
+                    tokio::spawn(async move { read_battery_later(state, device, app).await });
 
                     info!("Toy Connected: {} | {}", toy.toy_name, toy.toy_id);
                 }
@@ -203,6 +236,10 @@ pub async fn client_event_handler(
                                 vc_lock
                                     .async_rt
                                     .spawn(vc_lock.bp_client.as_ref().unwrap().start_scanning());
+                                scan::stop_after_scan_length(
+                                    &vc_lock,
+                                    vibecheck_state_pointer.clone(),
+                                );
                             }
 
                             emit_core_event(&app_handle, FeCoreEvent::Scan(FeScanEvent::Start));
