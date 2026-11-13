@@ -289,6 +289,9 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
         show_feature_advanced: config.show_feature_advanced,
         master_intensity: config.master_intensity,
         scan_length: config.scan_length,
+        theme: config.theme,
+        auto_enable_on_scan: config.auto_enable_on_scan,
+        sidebar_collapsed: config.sidebar_collapsed,
     }
 }
 
@@ -323,6 +326,9 @@ pub fn native_set_vibecheck_config(
         };
         vc_lock.config.master_intensity = master_intensity;
         vc_lock.config.scan_length = fe_vc_config.scan_length.min(MAX_SCAN_LENGTH);
+        vc_lock.config.theme = fe_vc_config.theme;
+        vc_lock.config.auto_enable_on_scan = fe_vc_config.auto_enable_on_scan;
+        vc_lock.config.sidebar_collapsed = fe_vc_config.sidebar_collapsed;
         // Applies straight away, including to toys that are already running
         vc_lock.safety.set_intensity(master_intensity);
 

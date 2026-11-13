@@ -8,11 +8,12 @@ import { ThemeProvider } from "./theme/ThemeProvider";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <ThemeProvider>
-      <CoreEventProvider>
+    {/* The theme comes from the config, so the config provider goes first */}
+    <CoreEventProvider>
+      <ThemeProvider>
         <App />
-      </CoreEventProvider>
-      <Toaster />
-    </ThemeProvider>
+        <Toaster />
+      </ThemeProvider>
+    </CoreEventProvider>
   </React.StrictMode>,
 );

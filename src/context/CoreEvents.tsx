@@ -5,16 +5,10 @@ import type { FeVibeCheckConfig } from "@bindings/FeVibeCheckConfig";
 import type { FrontendError } from "@bindings/FrontendError";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { INVOKE, LISTEN } from "../data/constants";
 import { assertExhaustive } from "../utils";
-
-/*
- * Frontend-only preference (saved in localStorage, not the backend config):
- * whether pressing the scan button turns VibeCheck on first.
- */
-const AUTO_ENABLE_ON_SCAN_KEY = "vibecheck-auto-enable-on-scan";
 
 type CoreEventContextProps = {
   isScanning: boolean;
@@ -22,7 +16,14 @@ type CoreEventContextProps = {
   toggleIsEnabled: () => Promise<void>;
   toggleScan: () => Promise<void>;
   config: FeVibeCheckConfig | undefined;
+  /** False until the first attempt to load the config has finished */
+  configLoaded: boolean;
   refreshConfig: () => Promise<void>;
+  /**
+   * Changes some config settings and saves them to Config.json. The change
+   * shows straight away and is undone if saving fails.
+   */
+  saveConfig: (changes: Partial<FeVibeCheckConfig>) => Promise<void>;
   /** Turn the app on automatically when the scan button is pressed */
   autoEnableOnScan: boolean;
   setAutoEnableOnScan: (value: boolean) => void;
@@ -38,7 +39,9 @@ const CoreEventContext = createContext<CoreEventContextProps>({
   toggleIsEnabled: () => new Promise(() => null),
   toggleScan: () => new Promise(() => null),
   config: undefined,
+  configLoaded: false,
   refreshConfig: () => new Promise(() => null),
+  saveConfig: () => new Promise(() => null),
   autoEnableOnScan: false,
   setAutoEnableOnScan: () => null,
   isPanicked: false,
@@ -60,16 +63,35 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
   // Also changed by the hotkey and OSC API, so the backend's events are the
   // source of truth; the invokes below don't set it themselves
   const [isPanicked, setIsPanicked] = useState(false);
-  const [config, setConfig] = useState<FeVibeCheckConfig | undefined>(
+  const [config, setConfigState] = useState<FeVibeCheckConfig | undefined>(
     undefined,
   );
-  const [autoEnableOnScan, setAutoEnableOnScanState] = useState(
-    () => localStorage.getItem(AUTO_ENABLE_ON_SCAN_KEY) === "true",
-  );
+  const [configLoaded, setConfigLoaded] = useState(false);
+  // The latest config, for saves that start before a re-render
+  const configRef = useRef<FeVibeCheckConfig | undefined>(undefined);
 
+  function setConfig(next: FeVibeCheckConfig | undefined) {
+    configRef.current = next;
+    setConfigState(next);
+  }
+
+  async function saveConfig(changes: Partial<FeVibeCheckConfig>) {
+    const previous = configRef.current;
+    if (!previous) return;
+    const next = { ...previous, ...changes };
+    setConfig(next);
+    try {
+      await invoke(INVOKE.SET_CONFIG, { feVcConfig: next });
+    } catch (e) {
+      setConfig(previous);
+      toast.error(`Could not save settings!\n${JSON.stringify(e)}`);
+    }
+  }
+
+  // Saved in Config.json, so it survives updates
+  const autoEnableOnScan = config?.auto_enable_on_scan ?? false;
   function setAutoEnableOnScan(value: boolean) {
-    localStorage.setItem(AUTO_ENABLE_ON_SCAN_KEY, String(value));
-    setAutoEnableOnScanState(value);
+    saveConfig({ auto_enable_on_scan: value });
   }
 
   /** Turns the app on; returns whether it worked */
@@ -259,6 +281,8 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
         setConfig(config);
       } catch {
         setConfig(undefined);
+      } finally {
+        setConfigLoaded(true);
       }
     }
     getConfig();
@@ -279,7 +303,9 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
         toggleIsEnabled,
         toggleScan,
         config,
+        configLoaded,
         refreshConfig,
+        saveConfig,
         autoEnableOnScan,
         setAutoEnableOnScan,
         isPanicked,

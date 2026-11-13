@@ -9,10 +9,10 @@
  *
  * Old cached pages and old local storage could clash with the new version's
  * frontend, so on a version change everything in that folder is deleted
- * before the window opens. Local storage only holds frontend preferences
- * (theme, Turn on when scanning, sidebar collapsed), which go back to their
- * defaults. VibeCheck's config and toy configs are in the config folder and
- * aren't touched.
+ * before the window opens. Nothing is lost: every setting, including the
+ * frontend's (theme, Turn on when scanning, sidebar collapsed), is saved in
+ * Config.json in the config folder, which isn't touched, and so are toy
+ * configs. The frontend doesn't use local storage.
  *
  * The version that last ran is kept in a small file in the same folder. If
  * it's missing but the folder has data, the data came from a version before

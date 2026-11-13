@@ -28,6 +28,21 @@ pub struct VibeCheckConfig {
     /// saved before it existed.
     #[serde(default = "default_scan_length")]
     pub scan_length: u32,
+    /// The app's theme id. An id that doesn't exist (e.g. a removed theme)
+    /// shows the default theme. Missing in older config files.
+    #[serde(default = "default_theme")]
+    pub theme: String,
+    /// Pressing the scan button turns VibeCheck on first
+    #[serde(default)]
+    pub auto_enable_on_scan: bool,
+    /// The sidebar is collapsed to icons
+    #[serde(default)]
+    pub sidebar_collapsed: bool,
+}
+
+/// The frontend's DEFAULT_THEME_ID
+fn default_theme() -> String {
+    "vibecheck".to_owned()
 }
 
 fn full_intensity() -> f64 {
@@ -53,6 +68,9 @@ impl Default for VibeCheckConfig {
             show_feature_advanced: false,
             master_intensity: full_intensity(),
             scan_length: default_scan_length(),
+            theme: default_theme(),
+            auto_enable_on_scan: false,
+            sidebar_collapsed: false,
         }
     }
 }
@@ -164,6 +182,19 @@ mod tests {
         assert_eq!(load(config_json_with(Some(("master_intensity", 0.4)))), 0.4);
         assert_eq!(load(config_json_with(Some(("master_volume", 0.6)))), 0.6);
         assert_eq!(load(config_json_with(None)), 1.0);
+    }
+
+    #[test]
+    fn frontend_preferences_default_when_missing() {
+        let mut value = serde_json::to_value(VibeCheckConfig::default()).unwrap();
+        let map = value.as_object_mut().unwrap();
+        for key in ["theme", "auto_enable_on_scan", "sidebar_collapsed"] {
+            map.remove(key);
+        }
+        let config: VibeCheckConfig = serde_json::from_value(value).unwrap();
+        assert_eq!(config.theme, "vibecheck");
+        assert!(!config.auto_enable_on_scan);
+        assert!(!config.sidebar_collapsed);
     }
 
     #[test]
