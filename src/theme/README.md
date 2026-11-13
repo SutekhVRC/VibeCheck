@@ -35,7 +35,7 @@ export default defineTheme({
     pattern: "hearts",   // see patterns.ts, e.g. "paws", "kisses", "starfield"
     icon: Rabbit,        // any lucide-react icon
     corners: "round",    // "round" | "sharp"
-    shadows: "glow",     // "glow" | "neon" | "hard" | "none"
+    shadows: "glow",     // "glow" | "neon" | "hard" | "gloss" | "none"
     font: "rounded",     // "rounded" | "mono" | "sans"
   },
 });
@@ -80,7 +80,7 @@ so they need a darker `background` behind them to stay visible.
 | `decorations.pattern` | `"none"` | Faint background pattern in `secondary` |
 | `decorations.icon` | `Sparkles` | Accent icon: toy list, switch knobs, loading, headings |
 | `decorations.corners` | `"round"` | `"sharp"` squares off every corner (switches, pills, panels) |
-| `decorations.shadows` | `"glow"` | `"glow"` soft accent glows, `"neon"` bright glows, `"hard"` solid offset shadows, `"none"` |
+| `decorations.shadows` | `"glow"` | `"glow"` soft accent glows, `"neon"` bright glows, `"hard"` solid offset shadows, `"gloss"` shiny highlights along the top edge (like latex), `"none"` |
 | `decorations.font` | `"rounded"` | `"rounded"`, `"mono"` or `"sans"` |
 | `logo.stops` | from colours | Logo recolouring (see below) |
 | `logo.glow` | `primary` | Glow behind the logo; `null` for none |
@@ -153,6 +153,7 @@ Shadow styles and font stacks live in `styles.ts`. Add an entry to
 | `fox-den.ts` | Warm palette with fox ears, leaves-and-paws pattern |
 | `hardline.ts` | Brutalist: sharp corners, hard shadows, mono font, circuit pattern, custom logo stops, no logo glow |
 | `neon-kitten.ts` | Neon glows, hearts-and-sparkles pattern, heart icon, kitten ears |
+| `latex.ts` | Glossy black with latex red and chrome silver, gloss shadows, O-rings-chains-and-padlocks pattern, dark `onAccent` for the silver half of gradients |
 | `hellfire.ts` | Crimson and pink on near-black, devil horns, flames-and-pitchforks pattern, flame icon, custom wording and `onAccent` |
 
 ## How it works

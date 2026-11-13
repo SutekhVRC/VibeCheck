@@ -8,7 +8,7 @@ export type EarStyle = "none" | "cat" | "kitten" | "fox" | "horns";
 
 export type CornerStyle = "round" | "sharp";
 
-export type ShadowStyle = "glow" | "neon" | "hard" | "none";
+export type ShadowStyle = "glow" | "neon" | "hard" | "gloss" | "none";
 
 export type FontStyle = "rounded" | "mono" | "sans";
 
@@ -48,6 +48,18 @@ export const shadowStyles: Record<ShadowStyle, ShadowSet> = {
     pop: "4px 4px 0 0 rgb(var(--theme-primary))",
     tooltip: "3px 3px 0 0 rgb(var(--theme-primary))",
     drop: "4px 4px 0 rgb(var(--theme-primary))",
+  },
+  // Shiny like latex: a bright edge and a soft sheen along the top inside,
+  // over a deep dark shadow
+  gloss: {
+    panel:
+      "inset 0 1px 0 0 rgb(255 255 255 / 0.14), inset 0 22px 28px -22px rgb(var(--theme-secondary) / 0.28), 0 12px 32px -12px rgb(0 0 0 / 0.85)",
+    button:
+      "inset 0 1px 0 0 rgb(255 255 255 / 0.45), inset 0 -6px 10px -6px rgb(0 0 0 / 0.45), 0 4px 16px -4px rgb(var(--theme-primary) / 0.65)",
+    pop: "inset 0 1px 0 0 rgb(255 255 255 / 0.16), 0 14px 34px -10px rgb(0 0 0 / 0.9)",
+    tooltip:
+      "inset 0 1px 0 0 rgb(255 255 255 / 0.18), 0 8px 22px -6px rgb(0 0 0 / 0.85)",
+    drop: "0 0 20px rgb(var(--theme-primary) / 0.45)",
   },
   none: {
     panel: NO_SHADOW,

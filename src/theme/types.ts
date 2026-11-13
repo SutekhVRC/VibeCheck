@@ -105,7 +105,7 @@ export type ThemeDefinition = {
     /**
      * Shadow look for panels, buttons, tooltips and popups:
      * "glow" (default, soft), "neon" (bright glows), "hard" (solid offset
-     * shadows) or "none"
+     * shadows), "gloss" (shiny highlights, like latex) or "none"
      */
     shadows?: ShadowStyle;
     /** "rounded" (default), "mono" or "sans" */
