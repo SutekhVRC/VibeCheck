@@ -292,10 +292,11 @@ pub fn open_default_browser(link: FeBrowserLink) {
 
 /*
  * Clears VRChat OSC avatar configs
- * Clears all folders in the OSC folder that start with 'usr_'
+ * Clears all folders in VRChat's OSC folder that start with 'usr_', on Windows
+ * and on Linux (Proton). Returns the OSC folders that were cleared.
  */
 #[tauri::command(async)]
-pub fn clear_osc_config() -> Result<(), backend::VibeCheckFSError> {
+pub fn clear_osc_config() -> Result<Vec<String>, backend::VibeCheckFSError> {
     trace!("clear_osc_config");
     call_plane::native_clear_osc_config()
 }

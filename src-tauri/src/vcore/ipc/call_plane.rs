@@ -1,9 +1,6 @@
 use log::{debug, error as logerr, info, trace, warn};
 use std::{fs, net::SocketAddrV4, str::FromStr, thread, time::Duration};
 
-#[cfg(target_os = "windows")]
-use crate::util::fs::get_user_home_dir;
-
 use crate::{
     frontend::{
         frontend_types::{FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig},
@@ -416,58 +413,10 @@ pub fn native_alter_toy(
     }
 }
 
-#[cfg(target_os = "linux")]
-pub fn native_clear_osc_config() -> Result<(), VibeCheckFSError> {
-    return Ok(());
-}
-
-#[cfg(target_os = "windows")]
-pub fn native_clear_osc_config() -> Result<(), VibeCheckFSError> {
-    let home_dir = match get_user_home_dir() {
-        Ok(hd) => hd,
-        Err(_) => return Err(VibeCheckFSError::ReadDirFailure),
-    };
-
-    let osc_dirs = match std::fs::read_dir(format!(
-        "{}\\AppData\\LocalLow\\VRChat\\VRChat\\OSC\\",
-        home_dir
-    )) {
-        Ok(dirs) => dirs,
-        Err(_e) => return Err(VibeCheckFSError::ReadDirFailure),
-    };
-
-    //info!("osc_dirs: {}", osc_dirs.count());
-
-    let usr_dirs = match osc_dirs
-        .map(|res| res.map(|e| e.path()))
-        .collect::<Result<Vec<_>, std::io::Error>>()
-    {
-        Ok(usr_dirs) => usr_dirs,
-        Err(_) => return Err(VibeCheckFSError::ReadDirPathFailure),
-    };
-
-    for dir in usr_dirs {
-        if dir.is_dir() {
-            let dir_path = dir.file_name().unwrap().to_str().unwrap();
-            info!("Got Dir: {}", dir_path);
-
-            if dir
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .starts_with("usr_")
-            {
-                let delete_dir = dir.as_path().to_str().unwrap();
-                info!("Clearing dir: {}", delete_dir);
-                match std::fs::remove_dir_all(delete_dir) {
-                    Ok(()) => {}
-                    Err(_e) => return Err(VibeCheckFSError::RemoveDirsFailure),
-                }
-            }
-        }
-    }
-    Ok(())
+/// Clears VRChat's saved avatar OSC configs. Returns the OSC folders that
+/// were cleared (see util/vrchat_osc.rs).
+pub fn native_clear_osc_config() -> Result<Vec<String>, VibeCheckFSError> {
+    crate::util::vrchat_osc::clear_osc_configs()
 }
 
 pub fn native_simulate_device_feature(
