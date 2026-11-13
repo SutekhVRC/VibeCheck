@@ -73,8 +73,10 @@ pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OS
 
             match pkt.1 {
                 OscPacket::Message(mut msg) => {
-                    if msg.addr == "/avatar/parameters/vibecheck/state" {
-                        if let Some(state_bool) = msg.args.pop().unwrap().bool() {
+                    // The same parameter turns VibeCheck off while it's on
+                    // (osc_api). A message without a value is ignored.
+                    if msg.addr == "/avatar/parameters/vibecheck/api/state" {
+                        if let Some(state_bool) = msg.args.pop().and_then(|arg| arg.bool()) {
                             if state_bool {
                                 info!("Sending EnableAndScan event");
                                 emit_core_event(&app_handle, FeCoreEvent::State(crate::frontend::frontend_types::FeStateEvent::EnableAndScan));

@@ -36,7 +36,7 @@ flowchart LR
   BCE -- "Scan(Start)<br/>scan-on-disconnect" --> ECE
   BAT -- "Update (battery level)" --> ETE
   ALT -- "Update (settings changed)" --> ETE
-  OSCL -- "State(EnableAndScan)<br/>vibecheck/state = true" --> ECE
+  OSCL -- "State(EnableAndScan)<br/>vibecheck/api/state = true" --> ECE
   API -- "State(Disable)<br/>vibecheck/api/state = false" --> ECE
   ERR -- "Error(message)" --> EER
 
