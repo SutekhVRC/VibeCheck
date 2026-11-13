@@ -31,7 +31,7 @@ export default defineTheme({
   },
   // Everything below is optional
   decorations: {
-    ears: "cat",         // "cat" | "kitten" | "fox" | "none"
+    ears: "cat",         // "cat" | "kitten" | "fox" | "horns" | "none"
     pattern: "hearts",   // see patterns.ts, e.g. "paws", "kisses", "starfield"
     icon: Rabbit,        // any lucide-react icon
     corners: "round",    // "round" | "sharp"
@@ -76,7 +76,7 @@ so they need a darker `background` behind them to stay visible.
 | Setting | Default | What it does |
 |---|---|---|
 | `scheme` | `"dark"` | How the webview draws native controls (dropdown lists, scrollbars) |
-| `decorations.ears` | `"none"` | `"cat"` (rounded, inner ear in `primary`), `"kitten"` (curved sides, `primary` inner ear) or `"fox"` (straight sides, `secondary` inner ear, `border` tip). Kitten and fox are drawn as SVG by `PanelEars.tsx`. `true` means `"cat"` |
+| `decorations.ears` | `"none"` | `"cat"` (rounded, inner ear in `primary`), `"kitten"` (curved sides, `primary` inner ear) `"fox"` (straight sides, `secondary` inner ear, `border` tip) or `"horns"` (devil horns curving outward, `primary` band and tip, mirrored on the right). Kitten, fox and horns are drawn as SVG by `PanelEars.tsx`. `true` means `"cat"` |
 | `decorations.pattern` | `"none"` | Faint background pattern in `secondary` |
 | `decorations.icon` | `Sparkles` | Accent icon: toy list, switch knobs, loading, headings |
 | `decorations.corners` | `"round"` | `"sharp"` squares off every corner (switches, pills, panels) |
@@ -153,6 +153,7 @@ Shadow styles and font stacks live in `styles.ts`. Add an entry to
 | `fox-den.ts` | Warm palette with fox ears, leaves-and-paws pattern |
 | `hardline.ts` | Brutalist: sharp corners, hard shadows, mono font, circuit pattern, custom logo stops, no logo glow |
 | `neon-kitten.ts` | Neon glows, hearts-and-sparkles pattern, heart icon, kitten ears |
+| `hellfire.ts` | Crimson and pink on near-black, devil horns, flames-and-pitchforks pattern, flame icon, custom wording and `onAccent` |
 
 ## How it works
 

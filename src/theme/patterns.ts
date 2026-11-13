@@ -23,6 +23,10 @@ const LEAF = `<path d='M-0.7-11C-6.5-6-7 5-0.7 10.5z'/><path d='M0.7-11C6.5-6 7 
 /** Crescent moon */
 const MOON = `<path d='M3-10.5A11 11 0 1 0 11 3 8.5 8.5 0 0 1 3-10.5z'/>`;
 const DOT = `<circle r='1'/>`;
+/** Flame with a side tongue and a hollow inner flame (evenodd cuts it out) */
+const FLAME = `<path fill-rule='evenodd' d='M0-13C1-8 6-7 8-2 9 1 9 4 7.5 6.5A8.5 7 0 0 1-7.5 6.5C-9 4-8.5 0-6-3-6-0.5-5 1-3.5 1.5-4.5-3-3-8 0-13zM0 9.5C-2.8 9.5-3.8 7.5-3.2 5.5-2.6 3.6-1 2.5 0 0 1 2.5 2.6 3.6 3.2 5.5 3.8 7.5 2.8 9.5 0 9.5z'/>`;
+/** Pitchfork: three pointed prongs on a crossbar, and a handle */
+const PITCHFORK = `<path d='M-7-5v-7l1.5-3 1.5 3v7z'/><path d='M-1.5-5v-8l1.5-3 1.5 3v8z'/><path d='M4-5v-7l1.5-3 1.5 3v7z'/><path d='M-7-6h14v2.2h-14z'/><path d='M-1-4h2v16h-2z'/>`;
 
 /** One placed copy of a shape: [shape, x, y, rotation in degrees, scale] */
 type Placement = [string, number, number, number, number];
@@ -133,6 +137,20 @@ export const patterns = {
     [STAR, 200, 152, 0, 0.4],
     [STAR, 122, 110, 0, 0.3],
   ]),
+
+  // Hellfire: flames and pitchforks, with hearts and sparks
+  hellfire: scatter(240, [
+    [FLAME, 38, 44, -10, 1],
+    [FLAME, 174, 96, 14, 0.85],
+    [FLAME, 70, 186, 4, 1.05],
+    [PITCHFORK, 132, 34, 28, 0.9],
+    [PITCHFORK, 206, 196, -24, 0.85],
+    [HEART, 112, 120, -12, 0.55],
+    [HEART, 24, 120, 16, 0.45],
+    [STAR, 210, 30, 0, 0.4],
+    [STAR, 150, 222, 0, 0.35],
+    [STAR, 96, 82, 0, 0.3],
+  ]),
 } as const;
 
 export type PatternName = keyof typeof patterns;
@@ -148,6 +166,7 @@ const patternOpacity: Partial<Record<PatternName, number>> = {
   // Small or dark-on-dark shapes need a little more to be noticed at all
   kisses: 0.085,
   starfield: 0.09,
+  hellfire: 0.08,
 };
 
 export function patternStrength(name: PatternName) {

@@ -4,7 +4,7 @@
  */
 
 /** Ears on top of the main panels */
-export type EarStyle = "none" | "cat" | "kitten" | "fox";
+export type EarStyle = "none" | "cat" | "kitten" | "fox" | "horns";
 
 export type CornerStyle = "round" | "sharp";
 

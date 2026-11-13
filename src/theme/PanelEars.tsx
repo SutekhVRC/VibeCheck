@@ -1,8 +1,8 @@
 import { useTheme } from "./ThemeProvider";
 
 /*
- * Ears drawn as inline SVG on top of a panel, for decorations.ears = "kitten"
- * or "fox". Place inside an element with the `theme-ears` class, which gives
+ * Ears drawn as inline SVG on top of a panel, for decorations.ears = "kitten",
+ * "fox" or "horns". Place inside an element with the `theme-ears` class, which gives
  * it its own stacking context so the ears sit above the panel's background
  * and border but below everything inside the panel.
  *
@@ -23,12 +23,16 @@ type EarShape = {
   inner: string;
   /** Optional darker tip */
   tip?: string;
+  /** Tip colour. Default: border */
+  tipFill?: string;
+  /** Draw the right-hand one mirrored (for shapes that lean to one side) */
+  mirror?: boolean;
   /** Inner ear fill and edge colours */
   innerFill: string;
   innerStroke: string;
 };
 
-const shapes: Record<"kitten" | "fox", EarShape> = {
+const shapes: Record<"kitten" | "fox" | "horns", EarShape> = {
   // Soft, curved sides
   kitten: {
     body: "M1 18 C4 10 9 3.5 12 1.2 Q13 0.5 14 1.2 C17 3.5 22 10 25 18 L25 22 L1 22 Z",
@@ -46,6 +50,18 @@ const shapes: Record<"kitten" | "fox", EarShape> = {
     tip: "M10.44 4 L12.2 1.4 Q13 0.4 13.8 1.4 L15.56 4 Z",
     innerFill: "rgb(var(--theme-secondary) / 0.28)",
     innerStroke: "rgb(var(--theme-primary) / 0.45)",
+  },
+  // Devil horns: wide base curving up and outward to a sharp tip, with a
+  // tinted band along the inside curve
+  horns: {
+    body: "M8 18 C8 12 7 7 4.5 1.2 C10.5 4.5 16.5 10 18 18 L18 22 L8 22 Z",
+    outline: "M8 19.4 L8 18 C8 12 7 7 4.5 1.2 C10.5 4.5 16.5 10 18 18 L18 19.4",
+    inner: "M11 18 C10.8 13 9.6 9 7 4.8 C10.8 7.6 13.7 12 15 18",
+    tip: "M4.5 1.2 C6.3 2.2 7.8 3.2 9 4.3 L6.3 5.6 C5.8 4.1 5.2 2.6 4.5 1.2 Z",
+    tipFill: "rgb(var(--theme-primary))",
+    innerFill: "rgb(var(--theme-primary) / 0.32)",
+    innerStroke: "rgb(var(--theme-secondary) / 0.55)",
+    mirror: true,
   },
 };
 
@@ -69,32 +85,43 @@ function Ear({ shape, side }: { shape: EarShape; side: "left" | "right" }) {
         transform: `rotate(${side === "left" ? -6 : 6}deg)`,
       }}
     >
-      <path d={shape.body} style={{ fill: "rgb(var(--theme-surface))" }} />
-      <path d={`${shape.inner} Z`} style={{ fill: shape.innerFill }} />
-      <path
-        d={shape.inner}
-        fill="none"
-        strokeWidth={0.8}
-        style={{ stroke: shape.innerStroke }}
-      />
-      {shape.tip && (
-        <path d={shape.tip} style={{ fill: "rgb(var(--theme-border))" }} />
-      )}
-      <path
-        d={shape.outline}
-        fill="none"
-        strokeWidth={1}
-        strokeLinejoin="round"
-        style={{ stroke: "rgb(var(--theme-border) / 0.7)" }}
-      />
+      <g
+        transform={
+          shape.mirror && side === "right"
+            ? "translate(26 0) scale(-1 1)"
+            : undefined
+        }
+      >
+        <path d={shape.body} style={{ fill: "rgb(var(--theme-surface))" }} />
+        <path d={`${shape.inner} Z`} style={{ fill: shape.innerFill }} />
+        <path
+          d={shape.inner}
+          fill="none"
+          strokeWidth={0.8}
+          style={{ stroke: shape.innerStroke }}
+        />
+        {shape.tip && (
+          <path
+            d={shape.tip}
+            style={{ fill: shape.tipFill ?? "rgb(var(--theme-border))" }}
+          />
+        )}
+        <path
+          d={shape.outline}
+          fill="none"
+          strokeWidth={1}
+          strokeLinejoin="round"
+          style={{ stroke: "rgb(var(--theme-border) / 0.7)" }}
+        />
+      </g>
     </svg>
   );
 }
 
-/** Renders the active theme's SVG ears, if it uses kitten or fox ears */
+/** Renders the active theme's SVG ears, if it uses kitten, fox or horns */
 export default function PanelEars() {
   const { ears } = useTheme().theme.decorations;
-  if (ears !== "kitten" && ears !== "fox") return null;
+  if (ears !== "kitten" && ears !== "fox" && ears !== "horns") return null;
   const shape = shapes[ears];
   return (
     <>
