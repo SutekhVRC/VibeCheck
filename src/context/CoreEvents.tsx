@@ -152,6 +152,13 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       case "EnableAndScan":
         enableAndStartScan();
         break;
+      // From the tray menu
+      case "Enable":
+        enable();
+        break;
+      case "Scan":
+        startScan();
+        break;
       default:
         assertExhaustive(payload);
     }

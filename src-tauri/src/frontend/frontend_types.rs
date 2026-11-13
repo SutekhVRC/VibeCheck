@@ -59,6 +59,10 @@ pub enum FeScanEvent {
 pub enum FeStateEvent {
     EnableAndScan,
     Disable,
+    /// Turn on (tray menu)
+    Enable,
+    /// Look for toys while already on (tray menu)
+    Scan,
 }
 
 #[derive(Serialize, Clone, TS, Display)]
