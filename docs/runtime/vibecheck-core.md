@@ -33,7 +33,7 @@ The app only uses graphs generated from toy settings; there's no way to build gr
 | `modules/modes.rs` | `Mode`, `ModeSettings`, `RawMode`, `SmoothMode`, `RateMode`, `ConstantMode` | Yes |
 | `modules/levels.rs` | `OutputLevels` | Yes |
 | `module.rs` | `Input`, `Processor`, `Output` traits, `PortSpec`, `InputCtx`, `process_one` | Yes |
-| `signal.rs` | `Signal`, `SignalPlane` | Yes: written by `OscInput` and SPS/TPS, read by graphs |
+| `signal.rs` | `Signal`, `SignalPlane`, `SignalSeq` | Yes: written by `OscInput`, read by graphs |
 | `event.rs` | `Event`, `EventPlane`, `EventReceiver` | Yes: avatar change |
 | `error.rs` | `Error`, `Result` | Yes |
 
@@ -58,6 +58,8 @@ Addresses never contain Buttplug device indexes, which change between sessions a
 
 **Signal plane.** `SignalPlane` holds one slot per `PortId`. `write` overwrites it, `read` returns the newest value. Clones share the same slots. `Signal` is `Float(f64)` or `Bool(bool)`.
 
+The plane also numbers its writes, so a reader can ask what changed: `changed_since(module, prefix, since)` returns the ports of `module` whose name starts with `prefix` and that were written after `since`, each once with its latest value, oldest write first, plus the `SignalSeq` to pass next time (`SignalSeq::default()` is "from the start"). Graphs use it for [watching ports](#watching-ports). It scans every slot, which is fine for the hundreds of OSC parameters an avatar sends.
+
 **Event plane.** `EventPlane::new()` returns a sender (cheap to clone, one per module) and the single `EventReceiver`. Every `Event` records:
 
 - `cause`: the id of the event that led to it, if any;
@@ -76,7 +78,7 @@ The safety layer uses the depth and the chain to stop feedback loops (see [Feedb
 | Trait | Does | Shape |
 |---|---|---|
 | `Input` | Produces signals and events | `async fn run(&mut self, ctx: InputCtx)` runs for the module's lifetime |
-| `Processor` | Transforms signals once per graph tick, may emit events | `fn tick(&mut self, ins: &[Signal], dt, out: &mut [Option<Signal>], events: &mut Vec<EventOut>)` |
+| `Processor` | Transforms signals once per graph tick, may emit events | `fn tick(&mut self, ins: &[Signal], dt, out: &mut [Option<Signal>], events: &mut Vec<EventOut>)`, plus optional `watches` / `watched` and `reset` |
 | `Output` | Acts on a device or service | `async fn apply(&mut self, cmds: &[ClampedCmd])` |
 
 Modules are ordinary Rust types compiled into the app. `async-trait` keeps `Input` and `Output` usable as trait objects.
@@ -111,17 +113,40 @@ for cmd in graph.tick(&signals, dt, &safety, &mut events) {
 **Building** (`GraphBuilder`):
 
 - `add_processor(id, processor)` adds a node; its ports are the processor's signal ports.
-- `connect(from, to)` wires a source into a node input. If `from` belongs to a node, it's that node's output; otherwise it's read from the signal plane (e.g. an OSC parameter or SPS/TPS output). Each input takes exactly one source.
+- `connect(from, to)` wires a source into a node input. If `from` belongs to a node, it's that node's output; otherwise it's read from the signal plane (e.g. an OSC parameter). Each input takes exactly one source.
 - `add_sink(from, target, duration_ms)` sends a node output to a target port, such as a motor.
 - `build()` rejects unknown nodes or ports, inputs wired twice or not at all, sinks fed from something other than a node, and cycles. It orders nodes so each runs after the nodes it reads from.
 
 **Ticking** (`Graph::tick`):
 
-1. Nodes run in dependency order, each reading the latest value of its inputs. A node only runs once **all** its inputs have a value, so nothing happens before the first input arrives.
+1. Nodes run in dependency order, each reading the latest value of its inputs. A watching node first gets its [watched](#watching-ports) changes. A node only runs once **all** its inputs have a value, so nothing happens before the first input arrives. A node with no inputs (e.g. one that only watches) runs every tick.
 2. A node output keeps its last value until the node writes a new one (`None` means unchanged).
 3. Each sink whose value **changed** since it last fired goes through `SafetyLayer::clamp` and is returned as a `ClampedCmd`, unless the safety layer refuses it. Unchanged sinks send nothing, so idle graphs don't flood outputs. A refused value still counts as the sink's last value, so it isn't retried or replayed later (after a resume or arming): the sink waits for its next change.
 
 Events processors emit during a tick are published on the `EventPlane` passed to `tick`, with the node's port as the source (e.g. `proc:avg/crossed`).
+
+**Resetting** (`Graph::reset`) starts the graph over without rebuilding it: every processor's `reset()` is called (`Processor::reset` defaults to nothing; Smooth and Rate clear their state), node outputs are cleared, and sinks forget their last value, so the next value is sent even if it repeats the old one. Watching nodes are given every watched value still on the plane again on the next tick, as a new graph would be, so a reset that runs late doesn't lose values written just before it. Clear the plane first for values that should be forgotten. The app resets every graph on avatar change.
+
+### Watching ports
+
+Some processors can't have their inputs wired when the graph is built, because they don't know them yet: an SPS processor reads one set of parameters per socket, whatever sockets the avatar has. Such a processor declares **watches** instead:
+
+```rust
+fn watches(&self) -> Vec<Watch> {
+    vec![Watch::new(ModuleInstanceId::new("osc"), "/avatar/parameters/OGB/")]
+}
+
+fn watched(&mut self, changed: &[(PortId, Signal)]) {
+    for (port, value) in changed { /* remember it */ }
+}
+```
+
+- `watches` is asked once, when the node is added. A `Watch` is a module plus a port-name prefix.
+- Each tick, before `tick`, the graph calls `watched` with every matching port written since the node's last tick: each port once, with its latest value, oldest write first (watch by watch if there are several). It isn't called when nothing changed. The first time, it gets every matching value already on the plane, so a rebuilt graph picks up current values, as wired inputs do.
+- Watched values are delivered even if the node's wired inputs aren't ready yet, so none are missed.
+- Like any latest-value input, a port written twice within one tick is seen once, with its last value.
+
+The app's input processors (SPS/TPS) run this way; see [toy-command-path.md](toy-command-path.md#input-processors).
 
 `Graph::tick` doesn't sleep or spawn anything; the caller decides the rate. The app ticks at 100 Hz (`graph_runner.rs`) and passes the real time since the last tick as `dt`, capped at 0.1 s.
 
@@ -221,6 +246,7 @@ An `Input` that listens for OSC over UDP.
 
 - `OscInput::bind(addr)` binds the socket, so a busy port is reported before anything runs.
 - `with_tap(tx)` also sends every message except avatar changes to `tx`, in arrival order. `run` returns once the tap's receiver is dropped.
+- On `/avatar/change`, it clears every value it has written (`InputCtx::clear_signals`) before publishing the event, so the clear stays in message order.
 - `/avatar/change` (any address starting with it) is published as an `AvatarChange` event on the `avatar_change` port, with the avatar id as `Value::Text` when present.
 - Any other message whose last argument is a float or bool writes it to the signal plane, on a port named after the full OSC address, e.g. `osc//avatar/parameters/Boop`.
 - Bundles are unpacked. Packets that aren't valid OSC, and per-packet receive errors, are skipped.
@@ -235,7 +261,7 @@ Single-input, single-output processors (`in` → `out`), meant to run on a fixed
 |---|---|---|
 | `RawMode` | passed through | 1.0 or 0.0 |
 | `SmoothMode` | time-weighted mean over the last `smooth_window` of ticks, rounded to hundredths. 0 (1 with flip) passes straight through and restarts the average | ignored (no output) |
-| `RateMode` | adds the movement since the previous tick to an internal level (capped at 1), then decays it by `rate_decay` per 150 ms of `dt`, every tick. At rest (<= 0, or >= 1 with flip) it resets and outputs 0 | ignored |
+| `RateMode` | follows stroke speed: distance moved per second, averaged over about 0.15 s, times `rate_sensitivity`, with 2 full ranges per second (about one in-and-out stroke) as full power. Movement within 0.02 of the last counted position is ignored as jitter. When the speed drops, the level eases off exponentially, falling to about a third in `0.15 / rate_wind_down` s. Reaching 0 is just a position (no reset), and the first value after creation or reset only sets the starting position | ignored |
 | `ConstantMode` | `constant_level` if >= 0.5, else 0 | `constant_level` if true, else 0 |
 
 Raw and Constant behave exactly as the app's original modes. Smooth and Rate were redefined in time when the graph moved to a fixed tick: they used to work per OSC message (average the last N messages; decay only when a message arrived), which made them depend on VRChat's send rate and let Rate stick at its last level. The tests pin each mode's behaviour.
@@ -274,9 +300,9 @@ With `with_events(module, events)`, it publishes `EventKind::OutputError` on its
 |---|---|
 | Workspace split, core types and traits | Done |
 | Toy commands through `ButtplugOutput` with one slot per motor | Done ([toy-command-path.md](toy-command-path.md)) |
-| OSC listener as an `Input` module, routing each message once, avatar change as an event | Done ([toy-command-path.md](toy-command-path.md#routing)) |
+| OSC listener as an `Input` module, avatar change as an event | Done ([toy-command-path.md](toy-command-path.md#routing)) |
 | Smooth, Rate, Constant and level tweaks as `Processor` modules | Done |
-| SPS/TPS as `Processor` modules | Waiting for the planned SPS/TPS rewrite; the current input processors stay in the app |
+| Input processors (SPS/TPS) as graph nodes | Done: they watch their parameters on the signal plane, and the per-toy OSC routing is gone ([toy-command-path.md](toy-command-path.md#input-processors)). SPS is rewritten for both the legacy and SPS3 formats, and TPS follows the deepest orifice or penetrator |
 | Each toy's graph generated from its existing config, ticked at a fixed rate | Done ([toy-command-path.md](toy-command-path.md#the-graph)) |
 | Output events from `ButtplugOutput` | Error and recovery done. Activity events ("motor started/stopped") wait for a design that handles Flip Input, where level 0 isn't "off" |
 | Processor events published from the graph | Done |
@@ -288,6 +314,6 @@ cd src-tauri
 cargo test -p vibecheck-core
 ```
 
-Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, tracing event chains through the remembered history, refusing a module that reacts to the result of its own action, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `LegacyLayout` numbering actuators like spec v3, `OutputLevels`, `ButtplugOutput`'s error events firing only on change, and the graph (publishing processor events from their node, dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, and rejecting bad wiring).
+Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, tracing event chains through the remembered history, refusing a module that reacts to the result of its own action, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `LegacyLayout` numbering actuators like spec v3, `OutputLevels`, `ButtplugOutput`'s error events firing only on change, and the graph (publishing processor events from their node, dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, rejecting bad wiring, and watching nodes seeing ports that were never wired), `changed_since` returning each new value once, in write order, `write_if_absent` never overwriting, a late reset replaying what's still on the plane, and `OscInput` clearing the old avatar's values.
 
-The app's tests (`cargo test -p vibecheck`) cover the SPS/TPS routing table, `run_input_processors`, the graph runner task, and the generated toy graphs end to end: nothing before the first input, modes loaded from config, one parameter driving several motors, Range and Idle after the mode, the first matching parameter winning, disabled features, Linear speed, the f32 rounding, Smooth following over its window, Rate winding down after the input stops, and SPS/TPS output chains.
+The app's tests (`cargo test -p vibecheck`) cover `InputProcessorNode` (reading only its prefixes, input filter tags), the graph runner task, and the generated toy graphs end to end: nothing before the first input, modes loaded from config, one parameter driving several motors, Range and Idle after the mode, the first matching parameter winning, disabled features, Linear speed, the f32 rounding, Smooth following over its window, Rate winding down after the input stops, and input processor chains next to parameter chains.

@@ -31,6 +31,8 @@ pub enum GraphControl {
         slots: CommandSlots,
     },
     Remove(u32),
+    /// Start every graph over (see `Graph::reset`), e.g. on avatar change.
+    ResetAll,
 }
 
 struct ToyGraph {
@@ -61,6 +63,11 @@ pub async fn graph_runner(
                 }
                 Some(GraphControl::Remove(toy_id)) => {
                     toys.remove(&toy_id);
+                }
+                Some(GraphControl::ResetAll) => {
+                    for toy in toys.values_mut() {
+                        toy.graph.reset();
+                    }
                 }
                 None => break,
             },

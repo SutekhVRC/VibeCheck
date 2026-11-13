@@ -7,11 +7,7 @@ use std::sync::Arc;
 
 use log::{error as logerr, info, trace, warn};
 use parking_lot::Mutex;
-use tauri::{
-    menu::{Menu, MenuItem},
-    tray::TrayIconBuilder,
-    Manager,
-};
+use tauri::Manager;
 
 use crate::{
     frontend::frontend_native,
@@ -27,10 +23,19 @@ mod frontend;
 mod osc;
 mod osc_api;
 mod toy_handling;
+mod tray;
 mod util;
 mod vcore;
 
 fn main() {
+    // On Wayland the taskbar finds the app's icon through its app ID, which
+    // GTK takes from the binary's name. Installed builds are called
+    // "VibeCheck", matching the VibeCheck.desktop file the packages install,
+    // but dev builds are "vibecheck" and showed a generic icon. Use the
+    // installed name everywhere.
+    #[cfg(target_os = "linux")]
+    glib::set_prgname(Some("VibeCheck"));
+
     #[cfg(debug_assertions)]
     {
         //tracing_subscriber::fmt::init();
@@ -66,41 +71,7 @@ fn main() {
             window.show().expect("Failed to show window");
         }))
         .setup(|app| {
-            // System Tray Initialization
-            //let app_handle = app.handle();
-            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>).unwrap();
-            let restart = MenuItem::with_id(app, "restart", "Restart", true, None::<&str>).unwrap();
-            let hide_app = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>).unwrap();
-            let show_app = MenuItem::with_id(app, "show", "Show", true, None::<&str>).unwrap();
-            let menu = Menu::with_items(app, &[&quit, &restart, &hide_app, &show_app]).unwrap();
-
-            TrayIconBuilder::new()
-                .menu(&menu)
-                .icon(app.default_window_icon().unwrap().clone())
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "quit" => {
-                        app.exit(0);
-                    }
-                    "restart" => {
-                        app.restart();
-                    }
-                    "hide" => {
-                        let window = app
-                            .get_webview_window("main")
-                            .expect("Failed to get window main");
-                        window.hide().expect("Failed to hide window");
-                    }
-                    "show" => {
-                        let window = app
-                            .get_webview_window("main")
-                            .expect("Failed to get window main");
-                        window.show().expect("Failed to show window");
-                    }
-                    _ => {}
-                })
-                .build(app)
-                .unwrap();
-
+            tray::build(app)?;
             Ok(())
         })
         .manage(vcore::state::VCStateMutex(vibecheck_state_pointer.clone()))

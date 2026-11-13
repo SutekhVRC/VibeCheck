@@ -13,8 +13,11 @@
     "targets": "all",
     "externalBin": [],
     "icon": [
-      "icons/vibecheck.ico",
-      "icons/vibecheck_268x268.png"
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.ico"
     ],
     "windows": {
       "wix": {
@@ -47,7 +50,7 @@
   },
   "productName": "VibeCheck",
   "mainBinaryName": "VibeCheck",
-  "version": "0.6.0",
+  "version": "0.6.2",
   "identifier": "com.vibecheck",
   "plugins": {
     "updater": {

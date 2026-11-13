@@ -88,8 +88,8 @@ export type ThemeDefinition = {
   text?: Partial<ThemeText>;
   decorations?: {
     /**
-     * Ears on top of the main panels: "cat", "kitten", "fox" or "none"
-     * (default).
+     * Ears on top of the main panels: "cat", "kitten", "fox", "horns" or
+     * "none" (default).
      * `true` means "cat", `false` means "none".
      */
     ears?: boolean | EarStyle;
@@ -105,7 +105,7 @@ export type ThemeDefinition = {
     /**
      * Shadow look for panels, buttons, tooltips and popups:
      * "glow" (default, soft), "neon" (bright glows), "hard" (solid offset
-     * shadows) or "none"
+     * shadows), "gloss" (shiny highlights, like latex) or "none"
      */
     shadows?: ShadowStyle;
     /** "rounded" (default), "mono" or "sans" */

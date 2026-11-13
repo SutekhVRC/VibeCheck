@@ -1,7 +1,7 @@
 import ExternalLogo from "@/components/ExternalLogo";
 import Loading from "@/components/Loading";
 import ThemedLogo from "@/components/ThemedLogo";
-import { SCAN_LENGTH, useCoreEventContext } from "@/context/CoreEvents";
+import { useCoreEventContext } from "@/context/CoreEvents";
 import { PANIC_HOTKEY, TOOLTIP } from "@/data/constants";
 import { toyKey } from "@/hooks/useToys";
 import Button from "@/layout/Button";
@@ -556,9 +556,13 @@ function EmptyToyList() {
   );
 }
 
-/** C: scan button with a bar that empties over the scan's duration */
+/**
+ * C: scan button with a bar that empties over the scan's length, or pulses
+ * when scanning until stopped
+ */
 function ToyListHeader({ collapsed }: { collapsed: boolean }) {
-  const { isScanning, toggleScan } = useCoreEventContext();
+  const { isScanning, toggleScan, config } = useCoreEventContext();
+  const scanSeconds = config?.scan_length ?? 30;
   const themeText = useTheme().theme.text;
 
   const progress = (
@@ -569,12 +573,15 @@ function ToyListHeader({ collapsed }: { collapsed: boolean }) {
       )}
     >
       {/* Mounted only while scanning, so the animation restarts each scan */}
-      {isScanning && (
-        <div
-          className="h-full animate-scan-progress rounded-full bg-theme-primary"
-          style={{ animationDuration: `${SCAN_LENGTH}ms` }}
-        />
-      )}
+      {isScanning &&
+        (scanSeconds > 0 ? (
+          <div
+            className="h-full animate-scan-progress rounded-full bg-theme-primary"
+            style={{ animationDuration: `${scanSeconds}s` }}
+          />
+        ) : (
+          <div className="h-full w-full animate-pulse rounded-full bg-theme-primary" />
+        ))}
     </div>
   );
 

@@ -9,12 +9,27 @@ import UpdateButton from "../components/UpdateButton";
 import { useCoreEventContext } from "../context/CoreEvents";
 import { INVOKE, TOOLTIP } from "../data/constants";
 import Button from "../layout/Button";
+import { Select } from "../layout/Select";
 import Slider from "../layout/Slider";
 import Switch from "../layout/Switch";
 import { TooltipLabel } from "../layout/Tooltip";
 import ThemePicker from "./ThemePicker";
 
 const ADDRESS_PATTERN = String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`;
+
+/** Scan length choices, in seconds (0: until stopped) */
+const SCAN_LENGTHS: [number, string][] = [
+  [10, "10 seconds"],
+  [30, "30 seconds"],
+  [60, "1 minute"],
+  [120, "2 minutes"],
+  [300, "5 minutes"],
+  [0, "Until I stop it"],
+];
+
+function scanLengthLabel(seconds: number) {
+  return SCAN_LENGTHS.find(([s]) => s === seconds)?.[1] ?? `${seconds} seconds`;
+}
 
 /** How long the reset button waits for the confirming second click */
 const CONFIRM_TIMEOUT_MS = 4000;
@@ -180,6 +195,27 @@ export default function Config({
     }
   }
 
+  async function saveScanLength(label: string) {
+    const seconds = SCAN_LENGTHS.find(([, l]) => l === label)?.[0];
+    if (seconds === undefined) return;
+    try {
+      await invoke(INVOKE.SET_CONFIG, {
+        feVcConfig: { ...config, ...general, scan_length: seconds },
+      });
+      await refreshConfig();
+    } catch (e) {
+      toast.error(`Could not save scan length!\n${JSON.stringify(e)}`);
+    }
+  }
+
+  // A length set by hand in Config.json still shows up as a choice
+  const scanLengthOptions = [
+    ...new Set([
+      ...SCAN_LENGTHS.map(([, label]) => label),
+      scanLengthLabel(config.scan_length),
+    ]),
+  ];
+
   async function applyConnection(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     try {
@@ -292,6 +328,15 @@ export default function Config({
                 scale={100}
                 onCommit={saveIntensity}
                 label="Master intensity"
+              />
+            </div>
+            <div className="mt-3 grid grid-cols-[minmax(8rem,1fr)_minmax(8rem,2fr)] items-center gap-x-4">
+              <TooltipLabel text="Scan length" tooltip={TOOLTIP.ScanLength} />
+              <Select
+                name="Scan length"
+                value={scanLengthLabel(config.scan_length)}
+                onValueChange={saveScanLength}
+                options={scanLengthOptions}
               />
             </div>
           </Section>

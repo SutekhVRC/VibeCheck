@@ -631,29 +631,54 @@ function Rate() {
     useFeatureFormContext();
   const levels = feature.feature_levels;
   return (
-    <SettingRow
-      label="Rate Level"
-      tooltip={TOOLTIP.Rate}
-      control={
-        <EditableNumber
-          value={levels.rate_tune}
+    <>
+      <SettingRow
+        label="Rate Sensitivity"
+        tooltip={TOOLTIP.RateSensitivity}
+        control={
+          <EditableNumber
+            value={levels.rate_sensitivity}
+            min={0.25}
+            max={4}
+            step={0.05}
+            onCommit={(v) => commitLevels({ rate_sensitivity: v })}
+            label="Rate sensitivity"
+          />
+        }
+      >
+        <Slider
+          min={0.25}
+          max={4}
+          step={0.05}
+          value={[levels.rate_sensitivity]}
+          onValueChange={(e) => handleLevels("rate_sensitivity", e[0])}
+          onValueCommit={() => handleFeatureAlter(feature)}
+        />
+      </SettingRow>
+      <SettingRow
+        label="Rate Wind-down"
+        tooltip={TOOLTIP.Rate}
+        control={
+          <EditableNumber
+            value={levels.rate_tune}
+            min={0.1}
+            max={2}
+            step={0.05}
+            onCommit={(v) => commitLevels({ rate_tune: v })}
+            label="Rate wind-down"
+          />
+        }
+      >
+        <Slider
           min={0.1}
           max={2}
           step={0.05}
-          onCommit={(v) => commitLevels({ rate_tune: v })}
-          label="Rate level"
+          value={[levels.rate_tune]}
+          onValueChange={(e) => handleLevels("rate_tune", e[0])}
+          onValueCommit={() => handleFeatureAlter(feature)}
         />
-      }
-    >
-      <Slider
-        min={0.1}
-        max={2}
-        step={0.05}
-        value={[levels.rate_tune]}
-        onValueChange={(e) => handleLevels("rate_tune", e[0])}
-        onValueCommit={() => handleFeatureAlter(feature)}
-      />
-    </SettingRow>
+      </SettingRow>
+    </>
   );
 }
 

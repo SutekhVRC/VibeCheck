@@ -6,7 +6,7 @@ use ts_rs::TS;
 
 use crate::{
     frontend::{frontend_types::FePenetrationSystem, FromFrontend, ToBackend, ToFrontend},
-    toy_handling::toyops::ProcessingMode,
+    toy_handling::toyops::{ProcessingMode, VCFeatureType},
 };
 
 use self::{sps::SPSProcessor, tps::TPSProcessor};
@@ -21,10 +21,22 @@ pub enum PenetrationSystemType {
     Sps,  // SPS Input Processor
 }
 
+impl PenetrationSystemType {
+    /// A new instance of this input processor for a feature of type
+    /// `feature_type`, or `None` for `None`.
+    pub fn processor(&self, feature_type: VCFeatureType) -> Option<Box<dyn InputProcessor>> {
+        match self {
+            Self::None => None,
+            Self::Sps => Some(Box::new(SPSProcessor::new(
+                feature_type == VCFeatureType::Linear,
+            ))),
+            Self::Tps => Some(Box::<TPSProcessor>::default()),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, TS)]
 pub struct PenetrationSystem {
-    #[serde(skip)]
-    pub pen_system: Option<Box<dyn InputProcessor>>,
     pub pen_system_type: PenetrationSystemType,
     pub pen_system_processing_mode: ProcessingMode,
     pub pen_system_input_filter: Option<Vec<String>>,
@@ -33,7 +45,6 @@ pub struct PenetrationSystem {
 impl Default for PenetrationSystem {
     fn default() -> Self {
         Self {
-            pen_system: None,
             pen_system_type: PenetrationSystemType::None,
             pen_system_processing_mode: ProcessingMode::Raw,
             pen_system_input_filter: None,
@@ -64,12 +75,6 @@ impl FromFrontend<FePenetrationSystem> for PenetrationSystem {
     type OutputType = ();
 
     fn from_frontend(&mut self, frontend_type: FePenetrationSystem) -> Self::OutputType {
-        // Allocate / Instantiate new Penetration system structure based on user's choice
-        match frontend_type.pen_system_type {
-            PenetrationSystemType::None => self.pen_system = None,
-            PenetrationSystemType::Sps => self.pen_system = Some(Box::<SPSProcessor>::default()),
-            PenetrationSystemType::Tps => self.pen_system = Some(Box::<TPSProcessor>::default()),
-        }
         self.pen_system_type = frontend_type.pen_system_type;
         let backend_pspm = frontend_type.pen_system_processing_mode.to_backend();
         self.pen_system_processing_mode = backend_pspm;

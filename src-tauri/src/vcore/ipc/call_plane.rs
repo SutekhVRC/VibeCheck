@@ -17,13 +17,14 @@ use crate::{
     },
     util::fs::{build_path_file, get_config_dir},
     vcore::{
-        config::app::VibeCheckConfig,
+        config::app::{VibeCheckConfig, MAX_SCAN_LENGTH},
         errors::{
             backend::{ToyAlterError, VibeCheckConfigError, VibeCheckFSError},
             frontend::VCFeError,
             VCError, VcoreError,
         },
         ipc::emit_plane::emit_toy_event,
+        scan,
         state::{RunningState, VCStateMutex},
     },
 };
@@ -74,6 +75,7 @@ pub async fn native_vibecheck_disable(
 
     let bpc = vc_lock.bp_client.as_ref().unwrap();
     let _ = bpc.stop_scanning().await;
+    scan::scan_stopped();
     let _ = bpc.stop_all_devices().await;
 
     info!("ButtplugClient stopped operations");
@@ -243,6 +245,7 @@ pub async fn native_vibecheck_start_bt_scan(
         return Err(VCFeError::StartScanFailure(e.to_string()));
     }
     info!("Started Scanning..");
+    scan::stop_after_scan_length(&vc_lock, vc_state.0.clone());
     Ok(())
 }
 
@@ -269,6 +272,7 @@ pub async fn native_vibecheck_stop_bt_scan(
         logerr!("Failed to stop scan.");
         return Err(VCFeError::StopScanFailure(e.to_string()));
     }
+    scan::scan_stopped();
     info!("Stopped Scanning..");
     Ok(())
 }
@@ -287,6 +291,7 @@ pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> 
         show_toy_advanced: config.show_toy_advanced,
         show_feature_advanced: config.show_feature_advanced,
         master_intensity: config.master_intensity,
+        scan_length: config.scan_length,
     }
 }
 
@@ -320,6 +325,7 @@ pub fn native_set_vibecheck_config(
             1.0
         };
         vc_lock.config.master_intensity = master_intensity;
+        vc_lock.config.scan_length = fe_vc_config.scan_length.min(MAX_SCAN_LENGTH);
         // Applies straight away, including to toys that are already running
         vc_lock.safety.set_intensity(master_intensity);
 

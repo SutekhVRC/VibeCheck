@@ -6,8 +6,6 @@ use ts_rs::TS;
 
 pub mod errors;
 pub mod input_processor;
-pub mod mode_processor;
-pub mod osc_processor;
 pub mod runtime;
 pub mod toy_command_processor;
 pub mod toy_manager;
@@ -23,6 +21,16 @@ pub enum ToyPower {
 }
 
 impl ToyPower {
+    /// What to show before the battery has been read: `Pending` if the
+    /// device has a battery, `NoBattery` if it doesn't.
+    pub fn unread(device: &ButtplugClientDevice) -> Self {
+        if device.input_available(InputType::Battery) {
+            Self::Pending
+        } else {
+            Self::NoBattery
+        }
+    }
+
     /// Reads a device's battery. Buttplug reports it as a percentage;
     /// VibeCheck keeps it as 0.0 to 1.0.
     pub async fn read(device: &ButtplugClientDevice) -> Self {

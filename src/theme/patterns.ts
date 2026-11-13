@@ -23,6 +23,18 @@ const LEAF = `<path d='M-0.7-11C-6.5-6-7 5-0.7 10.5z'/><path d='M0.7-11C6.5-6 7 
 /** Crescent moon */
 const MOON = `<path d='M3-10.5A11 11 0 1 0 11 3 8.5 8.5 0 0 1 3-10.5z'/>`;
 const DOT = `<circle r='1'/>`;
+/** Flame with a side tongue and a hollow inner flame (evenodd cuts it out) */
+const FLAME = `<path fill-rule='evenodd' d='M0-13C1-8 6-7 8-2 9 1 9 4 7.5 6.5A8.5 7 0 0 1-7.5 6.5C-9 4-8.5 0-6-3-6-0.5-5 1-3.5 1.5-4.5-3-3-8 0-13zM0 9.5C-2.8 9.5-3.8 7.5-3.2 5.5-2.6 3.6-1 2.5 0 0 1 2.5 2.6 3.6 3.2 5.5 3.8 7.5 2.8 9.5 0 9.5z'/>`;
+/** O-ring: a ring with the middle cut out (evenodd) */
+const O_RING = `<path fill-rule='evenodd' d='M0-10A10 10 0 1 0 0 10 10 10 0 1 0 0-10zM0-6.8A6.8 6.8 0 1 1 0 6.8 6.8 6.8 0 1 1 0-6.8z'/>`;
+/** Chain link: a long rounded loop */
+const LINK = `<path fill-rule='evenodd' d='M-6-5A6 6 0 0 1 6-5V5A6 6 0 0 1-6 5zM-3.2-5A3.2 3.2 0 0 1 3.2-5V5A3.2 3.2 0 0 1-3.2 5z'/>`;
+/** Chain seen side-on: two links face-on, joined by one edge-on through both */
+const CHAIN = `<g transform='translate(0 -13) scale(0.8)'>${LINK}</g><rect x='-1.4' y='-9' width='2.8' height='18' rx='1.4'/><g transform='translate(0 13) scale(0.8)'>${LINK}</g>`;
+/** Heart padlock: shackle on top, keyhole cut out of the heart */
+const HEART_LOCK = `<path d='M-4.6-2.5V-7A4.6 4.6 0 0 1 4.6-7v4.5H2.3V-7A2.3 2.3 0 0 0-2.3-7v4.5z'/><path fill-rule='evenodd' d='M0 12C-5 8.5-10 5-10 0.5A4.8 4.8 0 0 1 0-1.3 4.8 4.8 0 0 1 10 0.5C10 5 5 8.5 0 12zM0 1.2A1.7 1.7 0 1 0 0 4.6 1.7 1.7 0 1 0 0 1.2zM-0.7 4H0.7V7.6H-0.7z'/>`;
+/** Pitchfork: three pointed prongs on a crossbar, and a handle */
+const PITCHFORK = `<path d='M-7-5v-7l1.5-3 1.5 3v7z'/><path d='M-1.5-5v-8l1.5-3 1.5 3v8z'/><path d='M4-5v-7l1.5-3 1.5 3v7z'/><path d='M-7-6h14v2.2h-14z'/><path d='M-1-4h2v16h-2z'/>`;
 
 /** One placed copy of a shape: [shape, x, y, rotation in degrees, scale] */
 type Placement = [string, number, number, number, number];
@@ -133,6 +145,34 @@ export const patterns = {
     [STAR, 200, 152, 0, 0.4],
     [STAR, 122, 110, 0, 0.3],
   ]),
+
+  // Hellfire: flames and pitchforks, with hearts and sparks
+  hellfire: scatter(240, [
+    [FLAME, 38, 44, -10, 1],
+    [FLAME, 174, 96, 14, 0.85],
+    [FLAME, 70, 186, 4, 1.05],
+    [PITCHFORK, 132, 34, 28, 0.9],
+    [PITCHFORK, 206, 196, -24, 0.85],
+    [HEART, 112, 120, -12, 0.55],
+    [HEART, 24, 120, 16, 0.45],
+    [STAR, 210, 30, 0, 0.4],
+    [STAR, 150, 222, 0, 0.35],
+    [STAR, 96, 82, 0, 0.3],
+  ]),
+
+  // Latex: O-rings, chain links and heart padlocks, with glints of shine
+  latex: scatter(240, [
+    [O_RING, 40, 42, 0, 0.9],
+    [CHAIN, 166, 64, 32, 0.75],
+    [HEART_LOCK, 108, 136, -10, 1],
+    [O_RING, 214, 166, 0, 0.65],
+    [CHAIN, 44, 196, -28, 0.7],
+    [HEART_LOCK, 186, 222, 14, 0.7],
+    [STAR, 106, 40, 0, 0.45],
+    [STAR, 30, 120, 0, 0.35],
+    [STAR, 222, 104, 0, 0.3],
+    [STAR, 132, 214, 0, 0.35],
+  ]),
 } as const;
 
 export type PatternName = keyof typeof patterns;
@@ -148,6 +188,8 @@ const patternOpacity: Partial<Record<PatternName, number>> = {
   // Small or dark-on-dark shapes need a little more to be noticed at all
   kisses: 0.085,
   starfield: 0.09,
+  hellfire: 0.08,
+  latex: 0.08,
 };
 
 export function patternStrength(name: PatternName) {

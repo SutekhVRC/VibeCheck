@@ -23,10 +23,23 @@ pub struct VibeCheckConfig {
     /// reads `master_volume`, its name in early development builds.
     #[serde(default = "full_intensity", alias = "master_volume")]
     pub master_intensity: f64,
+    /// How long a Bluetooth scan runs before it stops itself, in seconds. 0
+    /// scans until stopped. Defaults to 30 s, including for config files
+    /// saved before it existed.
+    #[serde(default = "default_scan_length")]
+    pub scan_length: u32,
 }
 
 fn full_intensity() -> f64 {
     1.0
+}
+
+pub const DEFAULT_SCAN_LENGTH: u32 = 30;
+/// Longest scan length that can be set, in seconds (0, until stopped, aside)
+pub const MAX_SCAN_LENGTH: u32 = 600;
+
+fn default_scan_length() -> u32 {
+    DEFAULT_SCAN_LENGTH
 }
 
 impl Default for VibeCheckConfig {
@@ -39,6 +52,7 @@ impl Default for VibeCheckConfig {
             show_toy_advanced: false,
             show_feature_advanced: false,
             master_intensity: full_intensity(),
+            scan_length: default_scan_length(),
         }
     }
 }
@@ -73,16 +87,7 @@ pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckC
     if !file_exists(&vc_config_file) {
         fs::write(
             &vc_config_file,
-            serde_json::to_string(&VibeCheckConfig {
-                networking: OSCNetworking::default(),
-                scan_on_disconnect: false,
-                minimize_on_exit: false,
-                desktop_notifications: false,
-                show_toy_advanced: false,
-                show_feature_advanced: false,
-                master_intensity: full_intensity(),
-            })
-            .unwrap(),
+            serde_json::to_string(&VibeCheckConfig::default()).unwrap(),
         )
         .unwrap();
         info!("Created VibeCheck config.");
@@ -123,15 +128,7 @@ pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckC
                 _e
             );
             warn!("[*] Resetting to default config.");
-            let default_conf = VibeCheckConfig {
-                networking: OSCNetworking::default(),
-                scan_on_disconnect: false,
-                minimize_on_exit: false,
-                desktop_notifications: false,
-                show_toy_advanced: false,
-                show_feature_advanced: false,
-                master_intensity: full_intensity(),
-            };
+            let default_conf = VibeCheckConfig::default();
             fs::write(
                 &vc_config_file,
                 serde_json::to_string(&default_conf).unwrap(),
@@ -167,5 +164,13 @@ mod tests {
         assert_eq!(load(config_json_with(Some(("master_intensity", 0.4)))), 0.4);
         assert_eq!(load(config_json_with(Some(("master_volume", 0.6)))), 0.6);
         assert_eq!(load(config_json_with(None)), 1.0);
+    }
+
+    #[test]
+    fn scan_length_defaults_to_30_seconds_when_missing() {
+        let mut value = serde_json::to_value(VibeCheckConfig::default()).unwrap();
+        value.as_object_mut().unwrap().remove("scan_length");
+        let config: VibeCheckConfig = serde_json::from_value(value).unwrap();
+        assert_eq!(config.scan_length, 30);
     }
 }

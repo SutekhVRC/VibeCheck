@@ -2,8 +2,12 @@
 //!
 //! For every message received:
 //!
-//! - `/avatar/change` becomes an [`EventKind::AvatarChange`] event on the
-//!   [`AVATAR_CHANGE_PORT`] port, carrying the avatar id as text.
+//! - `/avatar/change` first clears every value this input has written (they
+//!   belonged to the old avatar), then becomes an [`EventKind::AvatarChange`]
+//!   event on the [`AVATAR_CHANGE_PORT`] port, carrying the avatar id as text.
+//!   Clearing here rather than in an event handler keeps it in message order:
+//!   VRChat sends the new avatar's values right after the change, and a
+//!   handler running later would wipe them too.
 //! - Any other message with a float or bool as its last argument writes that
 //!   value to the signal plane, on a port named after the full OSC address
 //!   (e.g. `osc//avatar/parameters/Boop`).
@@ -66,6 +70,7 @@ impl OscInput {
                 Some(OscType::String(id)) => Value::Text(id.as_str().into()),
                 _ => Value::None,
             };
+            ctx.clear_signals();
             ctx.publish(AVATAR_CHANGE_PORT, EventKind::AvatarChange, avatar);
             return true;
         }
@@ -177,6 +182,11 @@ mod tests {
         .await;
         send(
             addr,
+            &message("/avatar/parameters/Old", vec![OscType::Float(0.3)]),
+        )
+        .await;
+        send(
+            addr,
             &message("/avatar/change", vec![OscType::String("avtr_x".into())]),
         )
         .await;
@@ -195,6 +205,7 @@ mod tests {
         let wait = Duration::from_secs(2);
         // Avatar change is not tapped; the rest arrive in order.
         assert_eq!(next_addr(&mut tap).await, "/avatar/parameters/Boop");
+        assert_eq!(next_addr(&mut tap).await, "/avatar/parameters/Old");
         assert_eq!(next_addr(&mut tap).await, "/avatar/parameters/Tail");
         assert_eq!(next_addr(&mut tap).await, "/avatar/parameters/Boop");
 
@@ -215,6 +226,8 @@ mod tests {
             signals.read(&port("/avatar/parameters/Tail")),
             Some(Signal::Bool(true))
         );
+        // The old avatar's values were cleared, the new avatar's kept
+        assert_eq!(signals.read(&port("/avatar/parameters/Old")), None);
 
         // Dropping the tap's receiver ends the input on its next message.
         drop(tap);

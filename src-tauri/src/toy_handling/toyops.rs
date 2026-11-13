@@ -16,9 +16,6 @@ use crate::{
         },
         FromFrontend, ToBackend, ToFrontend,
     },
-    toy_handling::input_processor::penetration_systems::{
-        sps::SPSProcessor, tps::TPSProcessor, PenetrationSystemType,
-    },
     util::fs::{build_path_dir, build_path_file, file_exists, get_config_dir, ConfigFileType},
     vcore::errors::{
         self,
@@ -154,21 +151,6 @@ impl VCToy {
 
                 // Feature count is the same so its probably safe to assume the toy config is intact
                 self.parsed_toy_features = conf.features.clone();
-
-                // Allocate / Instantiate new Penetration system structure based on configuration data
-                for feature in &mut self.parsed_toy_features.features {
-                    match feature.penetration_system.pen_system_type {
-                        PenetrationSystemType::None => feature.penetration_system.pen_system = None,
-                        PenetrationSystemType::Sps => {
-                            feature.penetration_system.pen_system =
-                                Some(Box::<SPSProcessor>::default())
-                        }
-                        PenetrationSystemType::Tps => {
-                            feature.penetration_system.pen_system =
-                                Some(Box::<TPSProcessor>::default())
-                        }
-                    }
-                }
 
                 self.osc_data = conf.osc_data;
                 self.bt_update_rate = conf.bt_update_rate;
@@ -354,34 +336,6 @@ impl VCToyFeature {
         }
     }
 
-    /// Whether this feature's input processor (SPS/TPS) handles `param`: the
-    /// feature is enabled, has an input processor that claims the address,
-    /// and the address passes the feature's input filter, if it has one.
-    pub fn input_processor_accepts(&self, param: &str) -> bool {
-        if !self.feature_enabled {
-            return false;
-        }
-        let Some(pen_system) = self.penetration_system.pen_system.as_ref() else {
-            return false;
-        };
-        if !pen_system.is_parameter(param) {
-            return false;
-        }
-        match &self.penetration_system.pen_system_input_filter {
-            Some(input_filter) => {
-                let passes = pen_system.input_filter(param, input_filter);
-                if passes {
-                    debug!("Input Filter success for {} : {:?}", param, input_filter);
-                }
-                passes
-            }
-            None => {
-                debug!("Got None for input filter!");
-                true
-            }
-        }
-    }
-
     /*
     pub fn from_fe(&mut self, fe_feature: FeVCToyFeature) {
         self.feature_enabled = fe_feature.feature_enabled;
@@ -521,8 +475,17 @@ pub struct LevelTweaks {
     pub idle_level: f64,
     pub smooth_rate: f64,
     pub linear_position_speed: u32,
+    /// Rate mode's wind-down speed (shown as "Wind-down"). Higher stops sooner.
     pub rate_tune: f64,
+    /// Rate mode's sensitivity. Missing from toy configs saved before it
+    /// existed, so it defaults to 1.
+    #[serde(default = "default_rate_sensitivity")]
+    pub rate_sensitivity: f64,
     pub constant_level: f64,
+}
+
+fn default_rate_sensitivity() -> f64 {
+    1.0
 }
 
 impl Default for LevelTweaks {
@@ -534,6 +497,7 @@ impl Default for LevelTweaks {
             smooth_rate: 2.,
             linear_position_speed: 100,
             rate_tune: 0.4,
+            rate_sensitivity: default_rate_sensitivity(),
             constant_level: 0.5,
         }
     }
@@ -547,6 +511,7 @@ impl LevelTweaks {
         self.smooth_rate = fe_lt.smooth_rate;
         self.linear_position_speed = fe_lt.linear_position_speed;
         self.rate_tune = fe_lt.rate_tune;
+        self.rate_sensitivity = fe_lt.rate_sensitivity;
         self.constant_level = fe_lt.constant_level
     }
 
@@ -558,6 +523,7 @@ impl LevelTweaks {
             smooth_rate: self.smooth_rate,
             linear_position_speed: self.linear_position_speed,
             rate_tune: self.rate_tune,
+            rate_sensitivity: self.rate_sensitivity,
             constant_level: self.constant_level,
         }
     }

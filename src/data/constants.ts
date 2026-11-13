@@ -60,7 +60,7 @@ export const TOOLTIP = {
     link: "FeatureOptions",
   },
   InputFilter: {
-    text: "Filter what parameters VibeCheck listens to for this feature. These match if the parameter contains the given tag. If no tags are set then all SPS interaction will be used.",
+    text: "Pick which SPS sockets, plugs and touch zones drive this feature. A zone is used if its name (such as the socket's menu label) contains any of the tags. If no tags are set then all SPS interaction will be used. Tags don't apply to TPS.",
     link: "FeatureOptions",
   },
   LinearSpeed: {
@@ -84,7 +84,11 @@ export const TOOLTIP = {
     link: "",
   },
   Rate: {
-    text: "This uses rate mode on the float input.",
+    text: "How quickly Rate mode winds down once you stop moving. Higher stops sooner, lower lingers.",
+    link: "",
+  },
+  RateSensitivity: {
+    text: "How strongly stroke speed turns into power in Rate mode. At 1, about one full in-and-out stroke per second is full power. Raise it if you need to move faster than you'd like to reach full power.",
     link: "",
   },
   Constant: {
@@ -105,6 +109,10 @@ export const TOOLTIP = {
   },
   OSC_Send: {
     text: "OSC Send Port (Default: 127.0.0.1:9000)",
+    link: "",
+  },
+  ScanLength: {
+    text: "How long looking for toys runs before it stops by itself. Toys show up as soon as they connect, so you can stop early. Also applies to Scan On Disconnect.",
     link: "",
   },
   ScanOnDisconnect: {

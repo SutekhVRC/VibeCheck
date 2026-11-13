@@ -34,7 +34,8 @@ pub use event::{Event, EventId, EventKind, EventPlane, EventReceiver, Value};
 pub use graph::{Graph, GraphBuilder};
 pub use module::{
     process_one, EventOut, Input, InputCtx, Output, PortDirection, PortKind, PortSpec, Processor,
+    Watch,
 };
 pub use safety::{ClampedCmd, SafetyCaps, SafetyLayer, TargetPolicy, ACTED_PORT};
-pub use signal::{Signal, SignalPlane};
+pub use signal::{Signal, SignalPlane, SignalSeq};
 pub use slots::CommandSlots;
