@@ -7,14 +7,17 @@
  * rate.
  */
 
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use log::info;
+use parking_lot::Mutex;
 use tokio::{
     sync::mpsc::UnboundedReceiver,
     time::{interval, Instant, MissedTickBehavior},
 };
-use vibecheck_core::{graph::Graph, CommandSlots, EventPlane, SafetyLayer, SignalPlane};
+use vibecheck_core::{
+    graph::Graph, CommandSlots, Diagnostics, EventPlane, GraphSnapshot, SafetyLayer, SignalPlane,
+};
 
 /// How often graphs run.
 pub const GRAPH_TICK_HZ: u64 = 100;
@@ -22,6 +25,40 @@ pub const GRAPH_TICK_HZ: u64 = 100;
 /// Longest gap a single tick accounts for, so a stall (e.g. the machine
 /// sleeping) doesn't make time-based processors jump.
 const MAX_DT: f32 = 0.1;
+
+/// While diagnostics are on, graph values are copied out every this many
+/// ticks (10 times a second at 100 Hz), which is as often as they're shown.
+const SNAPSHOT_EVERY: u32 = 10;
+
+/// The latest values inside every toy's graph, for the diagnostics view.
+/// Only filled while diagnostics are on.
+#[derive(Clone, Default)]
+pub struct GraphValues {
+    diagnostics: Diagnostics,
+    latest: Arc<Mutex<HashMap<u32, GraphSnapshot>>>,
+}
+
+impl GraphValues {
+    pub fn new(diagnostics: Diagnostics) -> Self {
+        Self {
+            diagnostics,
+            latest: Arc::default(),
+        }
+    }
+
+    /// Each toy's latest snapshot, by toy id.
+    pub fn latest(&self) -> HashMap<u32, GraphSnapshot> {
+        self.latest.lock().clone()
+    }
+
+    fn update(&self, toys: &HashMap<u32, ToyGraph>) {
+        let mut latest = self.latest.lock();
+        latest.clear();
+        if self.diagnostics.enabled() {
+            latest.extend(toys.iter().map(|(id, toy)| (*id, toy.graph.snapshot())));
+        }
+    }
+}
 
 pub enum GraphControl {
     /// Run `graph` for this toy from now on, replacing any previous graph.
@@ -40,18 +77,21 @@ struct ToyGraph {
     slots: CommandSlots,
 }
 
-/// Events processors emit are published on `events`.
+/// Events processors emit are published on `events`. While diagnostics are
+/// on, graph values are copied into `values`.
 pub async fn graph_runner(
     mut control: UnboundedReceiver<GraphControl>,
     signals: SignalPlane,
     events: EventPlane,
     safety: SafetyLayer,
+    values: GraphValues,
 ) {
     let mut toys: HashMap<u32, ToyGraph> = HashMap::new();
 
     let mut ticker = interval(Duration::from_nanos(1_000_000_000 / GRAPH_TICK_HZ));
     ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
     let mut last_tick = Instant::now();
+    let mut ticks: u32 = 0;
 
     loop {
         tokio::select! {
@@ -79,6 +119,10 @@ pub async fn graph_runner(
                     for cmd in toy.graph.tick(&signals, dt, &safety, &events) {
                         toy.slots.write(cmd);
                     }
+                }
+                ticks = ticks.wrapping_add(1);
+                if ticks % SNAPSHOT_EVERY == 0 {
+                    values.update(&toys);
                 }
             }
         }
@@ -123,6 +167,7 @@ mod tests {
             signals.clone(),
             EventPlane::new().0,
             SafetyLayer::default(),
+            GraphValues::default(),
         ));
 
         let slots = CommandSlots::new();
@@ -156,6 +201,40 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn copies_graph_values_only_while_diagnostics_are_on() {
+        let signals = SignalPlane::new();
+        let diagnostics = Diagnostics::default();
+        let values = GraphValues::new(diagnostics.clone());
+        let (control, control_rx) = unbounded_channel();
+        tokio::spawn(graph_runner(
+            control_rx,
+            signals.clone(),
+            EventPlane::new().0,
+            SafetyLayer::default(),
+            values.clone(),
+        ));
+        control
+            .send(GraphControl::Set {
+                toy_id: 1,
+                graph: graph(),
+                slots: CommandSlots::new(),
+            })
+            .unwrap();
+        let boop = PortId::new(ModuleInstanceId::new(OSC_MODULE), "/avatar/parameters/Boop");
+        signals.write(&boop, Signal::Float(0.5));
+
+        sleep(Duration::from_millis(250)).await;
+        assert!(values.latest().is_empty());
+
+        diagnostics.set_enabled(true);
+        sleep(Duration::from_millis(250)).await;
+        let latest = values.latest();
+        let sinks = &latest[&1].sinks;
+        assert_eq!(sinks.len(), 1);
+        assert_eq!(sinks[0].last, Some(0.5));
+    }
+
+    #[tokio::test]
     async fn applies_the_master_intensity_even_while_running() {
         let signals = SignalPlane::new();
         let safety = SafetyLayer::default();
@@ -165,6 +244,7 @@ mod tests {
             signals.clone(),
             EventPlane::new().0,
             safety.clone(),
+            GraphValues::default(),
         ));
         let slots = CommandSlots::new();
         control
@@ -201,6 +281,7 @@ mod tests {
             signals.clone(),
             EventPlane::new().0,
             safety.clone(),
+            GraphValues::default(),
         ));
         let slots = CommandSlots::new();
         control

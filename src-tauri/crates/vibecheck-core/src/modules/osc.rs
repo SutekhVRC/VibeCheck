@@ -65,6 +65,10 @@ impl OscInput {
 
     /// Handles one message. Returns `false` once the tap's receiver is gone.
     fn handle(&self, ctx: &InputCtx, msg: OscMessage) -> bool {
+        // Every message, including ones nothing uses and argument types the
+        // signal plane doesn't keep
+        ctx.log(msg.addr.as_str(), || format_args(&msg.args));
+
         if msg.addr.starts_with(AVATAR_CHANGE_ADDR) {
             let avatar = match msg.args.last() {
                 Some(OscType::String(id)) => Value::Text(id.as_str().into()),
@@ -86,6 +90,23 @@ impl OscInput {
             None => true,
         }
     }
+}
+
+/// A message's arguments as text, the way `osc-tool listen` shows them:
+/// `0.5 (float)`, `true (bool)`, `"avtr_1" (string)`.
+pub fn format_args(args: &[OscType]) -> String {
+    args.iter()
+        .map(|arg| match arg {
+            OscType::Float(v) => format!("{v} (float)"),
+            OscType::Double(v) => format!("{v} (double)"),
+            OscType::Int(v) => format!("{v} (int)"),
+            OscType::Long(v) => format!("{v} (long)"),
+            OscType::Bool(v) => format!("{v} (bool)"),
+            OscType::String(v) => format!("{v:?} (string)"),
+            other => format!("{other:?}"),
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn flatten(packet: OscPacket, out: &mut Vec<OscMessage>) {
@@ -238,6 +259,62 @@ mod tests {
         .await;
         let result = timeout(wait, task).await.unwrap().unwrap();
         assert_eq!(result, Ok(()));
+    }
+
+    #[tokio::test]
+    async fn logs_every_message_while_diagnostics_are_on() {
+        let input = OscInput::bind("127.0.0.1:0".parse().unwrap())
+            .await
+            .unwrap();
+        let addr = input.local_addr().unwrap();
+        let (tap_tx, mut tap) = mpsc::unbounded_channel();
+        let mut input = input.with_tap(tap_tx);
+        let diagnostics = crate::diagnostics::Diagnostics::default();
+        diagnostics.set_enabled(true);
+        let ctx = InputCtx::new(
+            ModuleInstanceId::new("osc"),
+            SignalPlane::new(),
+            EventPlane::new().0,
+        )
+        .with_diagnostics(diagnostics.clone());
+        tokio::spawn(async move { input.run(ctx).await });
+
+        // An Int never reaches the signal plane, but it's logged
+        send(
+            addr,
+            &message("/avatar/parameters/Mode", vec![OscType::Int(3)]),
+        )
+        .await;
+        send(
+            addr,
+            &message("/avatar/parameters/Boop", vec![OscType::Float(0.5)]),
+        )
+        .await;
+        next_addr(&mut tap).await;
+        next_addr(&mut tap).await;
+
+        let logged: Vec<(String, String)> = diagnostics
+            .entries_since(0)
+            .0
+            .into_iter()
+            .map(|e| (e.label, e.value))
+            .collect();
+        assert_eq!(
+            logged,
+            vec![
+                ("/avatar/parameters/Mode".into(), "3 (int)".into()),
+                ("/avatar/parameters/Boop".into(), "0.5 (float)".into()),
+            ]
+        );
+    }
+
+    #[test]
+    fn formats_arguments_like_osc_tool() {
+        assert_eq!(
+            format_args(&[OscType::Bool(true), OscType::String("avtr_1".into())]),
+            "true (bool), \"avtr_1\" (string)"
+        );
+        assert_eq!(format_args(&[]), "");
     }
 
     #[tokio::test]

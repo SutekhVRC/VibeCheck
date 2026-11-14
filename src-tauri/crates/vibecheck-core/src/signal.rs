@@ -39,6 +39,8 @@ impl Signal {
 struct Slot {
     signal: Signal,
     seq: u64,
+    /// How many times the port has been written since it was last cleared.
+    writes: u64,
 }
 
 #[derive(Default)]
@@ -46,6 +48,33 @@ struct Slots {
     ports: HashMap<PortId, Slot>,
     /// Sequence number of the newest write.
     seq: u64,
+    /// How many times any port has been cleared.
+    clears: u64,
+}
+
+impl Slots {
+    fn put(&mut self, port: &PortId, signal: Signal) {
+        self.seq += 1;
+        let seq = self.seq;
+        let writes = self.ports.get(port).map_or(0, |slot| slot.writes) + 1;
+        self.ports.insert(
+            port.clone(),
+            Slot {
+                signal,
+                seq,
+                writes,
+            },
+        );
+    }
+}
+
+/// A port's latest value, from [`SignalPlane::changed_since_all`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct PortValue {
+    pub port: PortId,
+    pub signal: Signal,
+    /// How many times the port has been written since it was last cleared.
+    pub writes: u64,
 }
 
 /// Latest-value slots for every port, shared between writers and the graph runner.
@@ -69,10 +98,7 @@ impl SignalPlane {
 
     /// Overwrite the port's slot. Older values are discarded, never queued.
     pub fn write(&self, port: &PortId, signal: Signal) {
-        let mut slots = self.slots.write();
-        slots.seq += 1;
-        let seq = slots.seq;
-        slots.ports.insert(port.clone(), Slot { signal, seq });
+        self.slots.write().put(port, signal);
     }
 
     /// Write the value only if the port has none, e.g. to fill in a value
@@ -83,9 +109,7 @@ impl SignalPlane {
         if slots.ports.contains_key(port) {
             return false;
         }
-        slots.seq += 1;
-        let seq = slots.seq;
-        slots.ports.insert(port.clone(), Slot { signal, seq });
+        slots.put(port, signal);
         true
     }
 
@@ -123,24 +147,93 @@ impl SignalPlane {
         (changed, SignalSeq(slots.seq))
     }
 
+    /// Every port written after `since`, in any module, with its latest
+    /// value and write count, oldest write first. Also returns where to
+    /// continue from next time. For views that show everything, such as
+    /// diagnostics; graphs should use [`changed_since`](Self::changed_since).
+    pub fn changed_since_all(&self, since: SignalSeq) -> (Vec<PortValue>, SignalSeq) {
+        let slots = self.slots.read();
+        let mut changed: Vec<(u64, PortValue)> = slots
+            .ports
+            .iter()
+            .filter(|(_, slot)| slot.seq > since.0)
+            .map(|(port, slot)| {
+                (
+                    slot.seq,
+                    PortValue {
+                        port: port.clone(),
+                        signal: slot.signal,
+                        writes: slot.writes,
+                    },
+                )
+            })
+            .collect();
+        changed.sort_unstable_by_key(|(seq, _)| *seq);
+        let changed = changed.into_iter().map(|(_, value)| value).collect();
+        (changed, SignalSeq(slots.seq))
+    }
+
+    /// How many times ports have been cleared. A view that keeps its own
+    /// copy of the plane can watch this to know when to start over.
+    pub fn clears(&self) -> u64 {
+        self.slots.read().clears
+    }
+
     /// Forget a port's value, e.g. when its module is removed.
     pub fn clear(&self, port: &PortId) {
-        self.slots.write().ports.remove(port);
+        let mut slots = self.slots.write();
+        slots.ports.remove(port);
+        slots.clears += 1;
     }
 
     /// Forget every value written to `module`'s ports (e.g. all OSC parameters
     /// when the avatar changes).
     pub fn clear_module(&self, module: &ModuleInstanceId) {
-        self.slots
-            .write()
-            .ports
-            .retain(|port, _| port.module != *module);
+        let mut slots = self.slots.write();
+        slots.ports.retain(|port, _| port.module != *module);
+        slots.clears += 1;
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn changed_since_all_covers_every_module_with_write_counts() {
+        let plane = SignalPlane::new();
+        let osc = PortId::new(ModuleInstanceId::new("osc"), "/a");
+        let audio = PortId::new(ModuleInstanceId::new("audio"), "level");
+        plane.write(&osc, Signal::Float(0.1));
+        plane.write(&audio, Signal::Float(0.5));
+        plane.write(&osc, Signal::Bool(true));
+
+        let (all, seq) = plane.changed_since_all(SignalSeq::default());
+        assert_eq!(
+            all,
+            vec![
+                PortValue {
+                    port: audio.clone(),
+                    signal: Signal::Float(0.5),
+                    writes: 1
+                },
+                PortValue {
+                    port: osc.clone(),
+                    signal: Signal::Bool(true),
+                    writes: 2
+                },
+            ]
+        );
+        assert!(plane.changed_since_all(seq).0.is_empty());
+
+        // Clearing is counted and restarts the write count
+        assert_eq!(plane.clears(), 0);
+        plane.clear_module(&osc.module);
+        assert_eq!(plane.clears(), 1);
+        plane.write(&osc, Signal::Float(0.2));
+        let (after, _) = plane.changed_since_all(seq);
+        assert_eq!(after[0].writes, 1);
+    }
 
     #[test]
     fn write_if_absent_never_overwrites() {

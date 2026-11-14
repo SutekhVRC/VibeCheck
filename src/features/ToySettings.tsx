@@ -1,4 +1,5 @@
 import { SettingRow } from "@/components/SettingRow";
+import { copyText, errorText } from "@/lib/clipboard";
 import type { FeVCToy } from "@bindings/FeVCToy";
 import { ClipboardCopy } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -47,10 +48,10 @@ export default function ToySettings({ toy }: { toy: FeVCToy }) {
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(osc_data_addr);
+      await copyText(osc_data_addr);
       toast.info(`Copied to clipboard\n${osc_data_addr}`);
     } catch (e) {
-      toast.error(`Could not copy to clipboard!\n${JSON.stringify(e)}`);
+      toast.error(`Could not copy to clipboard!\n${errorText(e)}`);
     }
   }
 

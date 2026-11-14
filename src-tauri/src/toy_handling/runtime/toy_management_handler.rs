@@ -14,6 +14,8 @@
     - The graph runner ticks every toy's graph (built from its config, and
       including its SPS/TPS input processors) at a fixed rate and fills each
       toy's command slots.
+    - The diagnostics task sends live values to the diagnostics view while
+      it's open.
     - One task per toy applies config changes to its output; its emitter task
       sends the toy's commands.
 */
@@ -32,8 +34,8 @@ use tokio::{
     time::Instant,
 };
 use vibecheck_core::{
-    modules::osc::OscInput, CommandSlots, EventPlane, Input, InputCtx, ModuleInstanceId,
-    SafetyLayer, SignalPlane,
+    modules::osc::OscInput, CommandSlots, Diagnostics, EventPlane, Input, InputCtx,
+    ModuleInstanceId, SafetyLayer, SignalPlane,
 };
 
 use crate::{
@@ -41,7 +43,8 @@ use crate::{
     toy_handling::{
         input_processor::penetration_systems::sps::is_setting_address,
         runtime::{
-            graph_runner::{graph_runner, GraphControl},
+            diagnostics::diagnostics_task,
+            graph_runner::{graph_runner, GraphControl, GraphValues},
             osc_routing::{core_event_handler, osc_router},
             toy_emitter_thread::{toy_emitter_thread, EmitterThreadData, ToyEmitterThreadSignal},
             toy_graph::{build_toy_graph, OSC_MODULE},
@@ -144,14 +147,16 @@ struct Session {
     avatar_query: AvatarQuery,
     events: EventPlane,
     safety: SafetyLayer,
+    diagnostics: Diagnostics,
     graphs: UnboundedSender<GraphControl>,
 }
 
 impl Session {
     /// Creates the session runtime, and starts the core event handler and the
     /// graph runner on it. `safety` is the app-wide safety layer, so the
-    /// master intensity and panic stop apply here too.
-    fn new(app_handle: &AppHandle, safety: SafetyLayer) -> Self {
+    /// master intensity and panic stop apply here too. `diagnostics` is the
+    /// app-wide diagnostics switch and log.
+    fn new(app_handle: &AppHandle, safety: SafetyLayer, diagnostics: Diagnostics) -> Self {
         let async_rt: ToyRuntime = Arc::new(Mutex::new(Some(Runtime::new().unwrap())));
         let signals = SignalPlane::new();
         let (events, event_rx) = EventPlane::new();
@@ -160,6 +165,7 @@ impl Session {
             signals.clone(),
             ModuleInstanceId::new(OSC_MODULE),
             is_setting_address,
+            diagnostics.clone(),
         );
         // Don't lock the global state here: native_vibecheck_enable holds it
         // while waiting for this session to start listening
@@ -173,11 +179,20 @@ impl Session {
                 safety.clone(),
                 app_handle.clone(),
             ));
+            let graph_values = GraphValues::new(diagnostics.clone());
             rt.spawn(graph_runner(
                 graphs_rx,
                 signals.clone(),
                 events.clone(),
                 safety.clone(),
+                graph_values.clone(),
+            ));
+            rt.spawn(diagnostics_task(
+                diagnostics.clone(),
+                signals.clone(),
+                graph_values,
+                avatar_query.clone(),
+                app_handle.clone(),
             ));
         }
         Self {
@@ -186,6 +201,7 @@ impl Session {
             avatar_query,
             events,
             safety,
+            diagnostics,
             graphs,
         }
     }
@@ -249,7 +265,8 @@ fn start_osc(
         ModuleInstanceId::new(OSC_MODULE),
         session.signals.clone(),
         session.events.clone(),
-    );
+    )
+    .with_diagnostics(session.diagnostics.clone());
     let bind = SocketAddr::V4(vc_config.bind);
     let tme_send = tme_send.clone();
     let avatar_query = session.avatar_query.clone();
@@ -306,6 +323,7 @@ pub async fn toy_management_handler(
     mut core_toy_manager: ToyManager,
     mut vc_config: OSCNetworking,
     safety: SafetyLayer,
+    diagnostics: Diagnostics,
     app_handle: AppHandle,
 ) {
     let mut listening = false;
@@ -351,7 +369,7 @@ pub async fn toy_management_handler(
             continue;
         }
 
-        let session = Session::new(&app_handle, safety.clone());
+        let session = Session::new(&app_handle, safety.clone(), diagnostics.clone());
         info!("Started listening!");
         // Recv events (listening)
 

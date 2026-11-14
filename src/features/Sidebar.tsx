@@ -15,6 +15,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import type { FeVCToy } from "@bindings/FeVCToy";
 import type { ToyPower } from "@bindings/ToyPower";
 import {
+  Activity,
   Moon,
   OctagonX,
   PanelLeftClose,
@@ -43,6 +44,8 @@ type SidebarProps = {
   configSelected: boolean;
   onSelectToy: (toy: FeVCToy) => void;
   onToggleConfig: () => void;
+  diagnosticsSelected: boolean;
+  onToggleDiagnostics: () => void;
   canUpdate: boolean;
   version: string;
   /** Icon-only narrow bar instead of the full sidebar */
@@ -52,7 +55,8 @@ type SidebarProps = {
 
 /*
  * Left column: logo, app on/off status, panic stop, toy list with scanning,
- * Settings, and a footer with community links and the version.
+ * Settings with Diagnostics beside it, and a footer with community links and
+ * the version.
  * Collapses into a narrow icon-only bar; tooltips then carry the labels.
  */
 export default function Sidebar({
@@ -61,6 +65,8 @@ export default function Sidebar({
   configSelected,
   onSelectToy,
   onToggleConfig,
+  diagnosticsSelected,
+  onToggleDiagnostics,
   canUpdate,
   version,
   collapsed,
@@ -183,12 +189,35 @@ export default function Sidebar({
         </div>
       </div>
 
-      <SettingsRow
-        selected={configSelected}
-        canUpdate={canUpdate}
-        onClick={onToggleConfig}
-        collapsed={collapsed}
-      />
+      {/* Collapsed: two squares stacked. Full: Settings row with a
+          Diagnostics square beside it. */}
+      <div
+        className={cn(
+          "flex shrink-0 gap-2",
+          collapsed ? "flex-col items-center" : "items-stretch",
+        )}
+      >
+        {collapsed && (
+          <DiagnosticsButton
+            selected={diagnosticsSelected}
+            onClick={onToggleDiagnostics}
+            collapsed
+          />
+        )}
+        <SettingsRow
+          selected={configSelected}
+          canUpdate={canUpdate}
+          onClick={onToggleConfig}
+          collapsed={collapsed}
+        />
+        {!collapsed && (
+          <DiagnosticsButton
+            selected={diagnosticsSelected}
+            onClick={onToggleDiagnostics}
+            collapsed={false}
+          />
+        )}
+      </div>
 
       {/* Community links and version: only in the full sidebar. The
           collapsed bar keeps to the core controls; the links are one click
@@ -635,6 +664,48 @@ function ToyListHeader({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+/** Diagnostics: a square button, beside Settings or stacked above it */
+function DiagnosticsButton({
+  selected,
+  onClick,
+  collapsed,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  collapsed: boolean;
+}) {
+  return (
+    <Tooltip
+      text="Diagnostics: live values from VRChat"
+      side={collapsed ? "right" : "top"}
+    >
+      <button
+        onClick={onClick}
+        aria-pressed={selected}
+        aria-label="Diagnostics"
+        className={cn(
+          "group flex shrink-0 items-center justify-center transition-all duration-200",
+          collapsed ? ICON_SQUARE : "w-11 rounded-2xl border",
+          selected
+            ? collapsed
+              ? "bg-gradient-to-br from-theme-primary/30 to-theme-secondary/30 ring-2 ring-theme-primary"
+              : "border-theme-primary bg-gradient-to-r from-theme-primary/25 to-theme-secondary/25"
+            : collapsed
+              ? "bg-theme-raised hover:bg-theme-border"
+              : "border-theme-border/60 bg-theme-surface hover:border-theme-secondary",
+        )}
+      >
+        <Activity
+          className={cn(
+            "h-5 w-5",
+            selected ? "text-theme-primary" : "text-theme-secondary",
+          )}
+        />
+      </button>
+    </Tooltip>
+  );
+}
+
 /** D: Settings as a labelled navigation row (an icon button when collapsed) */
 function SettingsRow({
   selected,
@@ -696,7 +767,7 @@ function SettingsRow({
     <button
       onClick={onClick}
       aria-pressed={selected}
-      className={cn(rowClass, "gap-2 px-3 py-2 text-left")}
+      className={cn(rowClass, "min-w-0 flex-1 gap-2 px-3 py-2 text-left")}
     >
       {gear}
       <span className="flex-1 font-semibold">Settings</span>

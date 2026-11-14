@@ -33,6 +33,7 @@
 - **Safety controls**: a panic stop (sidebar button, **Ctrl + Alt + P**, the tray menu or an avatar parameter) and a master intensity slider for every toy.
 - **In-game control** with the [VibeCheck OSC API](https://github.com/SutekhVRC/VibeCheck/wiki/Advanced-Features): turn VibeCheck on or off, panic stop, and enable or disable toys by anatomy from your avatar menu.
 - **Battery levels sent back to VRChat** as OSC data for your avatar to use.
+- **Live diagnostics**: see every parameter VRChat sends, what each toy's settings make of it, and a log of every OSC message, without a separate OSC tool.
 - **Windows and Linux**, with in-app updates on both (AppImage, `.deb` and `.rpm` on Linux). On Linux, VRChat runs through Proton as usual.
 - **Quality of life**: themes, a tray menu with live status, a configurable scan length, scanning automatically when a toy disconnects, desktop notifications, and minimising instead of closing.
 
@@ -58,6 +59,7 @@ All guides live on the [wiki](https://github.com/SutekhVRC/VibeCheck/wiki):
 | [OSC API](https://github.com/SutekhVRC/VibeCheck/wiki/Advanced-Features) | Parameters to turn VibeCheck on and off, panic stop and toggle toys by anatomy from inside VRChat |
 | [Panic Stop](https://github.com/SutekhVRC/VibeCheck/wiki/Panic-Stop) | Stopping every toy at once |
 | [Themes](https://github.com/SutekhVRC/VibeCheck/wiki/Themes) | The app's themes |
+| [Diagnostics](https://github.com/SutekhVRC/VibeCheck/wiki/Diagnostics) | Checking what VRChat sends and what your toys make of it |
 | [FAQ](https://github.com/SutekhVRC/VibeCheck/wiki/FAQ) | App, connection and avatar configuration issues |
 
 ## Community

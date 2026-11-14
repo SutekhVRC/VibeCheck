@@ -411,6 +411,56 @@ impl Graph {
     pub fn node_ids(&self) -> impl Iterator<Item = &ModuleInstanceId> {
         self.nodes.iter().map(|n| &n.id)
     }
+
+    /// Every node output's latest value, and the last value each sink sent,
+    /// for views that show what's going on inside (diagnostics, a graph
+    /// editor). `None` means nothing yet, e.g. a node that hasn't had input.
+    pub fn snapshot(&self) -> GraphSnapshot {
+        let outputs = self
+            .nodes
+            .iter()
+            .flat_map(|node| {
+                node.output_names
+                    .iter()
+                    .zip(&node.outputs)
+                    .map(|(name, value)| (PortId::new(node.id.clone(), name), *value))
+            })
+            .collect();
+        let sinks = self
+            .sinks
+            .iter()
+            .map(|sink| {
+                let node = &self.nodes[sink.node];
+                SinkValue {
+                    from: PortId::new(node.id.clone(), &node.output_names[sink.port]),
+                    target: sink.target.clone(),
+                    last: sink.last,
+                }
+            })
+            .collect();
+        GraphSnapshot { outputs, sinks }
+    }
+}
+
+/// What [`Graph::snapshot`] returns.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct GraphSnapshot {
+    /// Each node output, in run order.
+    pub outputs: Vec<(PortId, Option<Signal>)>,
+    /// Each sink, in the order they were added.
+    pub sinks: Vec<SinkValue>,
+}
+
+/// A sink in a [`GraphSnapshot`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct SinkValue {
+    /// The node output it sends.
+    pub from: PortId,
+    /// Where it sends it, e.g. a motor. Several sinks can share a target.
+    pub target: PortId,
+    /// The last level it sent, before the safety layer (so master intensity
+    /// isn't applied yet).
+    pub last: Option<f64>,
 }
 
 #[cfg(test)]
@@ -470,6 +520,44 @@ mod tests {
             .iter()
             .map(|c| (c.target().to_string(), c.level()))
             .collect()
+    }
+
+    #[test]
+    fn snapshot_shows_node_outputs_and_what_sinks_sent() {
+        let mut b = GraphBuilder::new();
+        b.add_processor(id("add"), Box::new(Add(0.25))).unwrap();
+        b.connect(port("osc", "Boop"), port("add", "in")).unwrap();
+        b.add_sink(port("add", "out"), port("toy", "Vibrator_0"), None)
+            .unwrap();
+        let mut g = b.build().unwrap();
+
+        // Nothing yet before any input
+        assert_eq!(
+            g.snapshot(),
+            GraphSnapshot {
+                outputs: vec![(port("add", "out"), None)],
+                sinks: vec![SinkValue {
+                    from: port("add", "out"),
+                    target: port("toy", "Vibrator_0"),
+                    last: None
+                }],
+            }
+        );
+
+        let signals = SignalPlane::new();
+        signals.write(&port("osc", "Boop"), Signal::Float(0.25));
+        tick(&mut g, &signals);
+        assert_eq!(
+            g.snapshot(),
+            GraphSnapshot {
+                outputs: vec![(port("add", "out"), Some(Signal::Float(0.5)))],
+                sinks: vec![SinkValue {
+                    from: port("add", "out"),
+                    target: port("toy", "Vibrator_0"),
+                    last: Some(0.5)
+                }],
+            }
+        );
     }
 
     #[test]

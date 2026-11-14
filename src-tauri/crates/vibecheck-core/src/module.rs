@@ -14,6 +14,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use crate::address::{ModuleInstanceId, PortId};
+use crate::diagnostics::Diagnostics;
 use crate::error::Result;
 use crate::event::{EventKind, EventPlane, Value};
 use crate::safety::ClampedCmd;
@@ -69,15 +70,24 @@ pub struct InputCtx {
     module: ModuleInstanceId,
     signals: SignalPlane,
     events: EventPlane,
+    diagnostics: Diagnostics,
 }
 
 impl InputCtx {
+    /// Diagnostics start off and unconnected; see [`with_diagnostics`](Self::with_diagnostics).
     pub fn new(module: ModuleInstanceId, signals: SignalPlane, events: EventPlane) -> Self {
         Self {
             module,
             signals,
             events,
+            diagnostics: Diagnostics::default(),
         }
+    }
+
+    /// Log to `diagnostics` (shared with whatever shows it).
+    pub fn with_diagnostics(mut self, diagnostics: Diagnostics) -> Self {
+        self.diagnostics = diagnostics;
+        self
     }
 
     pub fn module(&self) -> &ModuleInstanceId {
@@ -98,6 +108,18 @@ impl InputCtx {
     /// knew is about to be replaced.
     pub fn clear_signals(&self) {
         self.signals.clear_module(&self.module);
+    }
+
+    /// Whether diagnostics are on. [`log`](Self::log) already checks; this is
+    /// for skipping work needed only to log.
+    pub fn diagnostics_enabled(&self) -> bool {
+        self.diagnostics.enabled()
+    }
+
+    /// Add a diagnostics log entry from this module, for what never reaches
+    /// the signal plane. `value` is only formatted while diagnostics are on.
+    pub fn log(&self, label: impl Into<String>, value: impl FnOnce() -> String) {
+        self.diagnostics.log(&self.module, label, value);
     }
 
     /// Publish a root event from one of this module's ports.

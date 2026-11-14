@@ -4,6 +4,7 @@ import { useState } from "react";
 import "./App.css";
 import { useCoreEventContext } from "./context/CoreEvents";
 import Config from "./features/Config";
+import Diagnostics from "./features/Diagnostics";
 import EmptyState from "./features/EmptyState";
 import Sidebar from "./features/Sidebar";
 import Toy from "./features/Toy";
@@ -12,7 +13,7 @@ import { useUpdate } from "./hooks/useUpdate";
 import { useVersion } from "./hooks/useVersion";
 import { cn } from "./lib/utils";
 
-type Selection = ToySelection | ConfigSelection | null;
+type Selection = ToySelection | ConfigSelection | DiagnosticsSelection | null;
 
 type ToySelection = {
   type: "Toy";
@@ -21,6 +22,10 @@ type ToySelection = {
 
 type ConfigSelection = {
   type: "Config";
+};
+
+type DiagnosticsSelection = {
+  type: "Diagnostics";
 };
 
 export default function App() {
@@ -64,6 +69,8 @@ export default function App() {
         version={version}
         disableOnPortChange={disableOnPortChange}
       />
+    ) : selection?.type == "Diagnostics" ? (
+      <Diagnostics toys={toysList} />
     ) : !hasOnlineToys ? (
       <EmptyState />
     ) : null;
@@ -80,6 +87,11 @@ export default function App() {
   function setConfig() {
     if (selection?.type == "Config") setSelection(null);
     else setSelection({ type: "Config" });
+  }
+
+  function setDiagnostics() {
+    if (selection?.type == "Diagnostics") setSelection(null);
+    else setSelection({ type: "Diagnostics" });
   }
 
   return (
@@ -104,6 +116,8 @@ export default function App() {
           configSelected={selection?.type == "Config"}
           onSelectToy={setToy}
           onToggleConfig={setConfig}
+          diagnosticsSelected={selection?.type == "Diagnostics"}
+          onToggleDiagnostics={setDiagnostics}
           canUpdate={canUpdate}
           version={version}
           collapsed={sidebarCollapsed}
