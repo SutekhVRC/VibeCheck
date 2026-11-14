@@ -347,6 +347,15 @@ pub fn get_panic_state(app_handle: tauri::AppHandle) -> bool {
 }
 
 /*
+ * Diagnostics view: live values are sent as fe_diagnostics events while on
+ */
+#[tauri::command]
+pub fn set_diagnostics_enabled(vc_state: tauri::State<'_, state::VCStateMutex>, enabled: bool) {
+    trace!("set_diagnostics_enabled {}", enabled);
+    vc_state.0.lock().diagnostics.set_enabled(enabled);
+}
+
+/*
  * Sends the specified OSC address / value to the app itself
  * Args: simulated_param_address, simulated_param_value
  * Removing this code for now

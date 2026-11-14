@@ -2,6 +2,7 @@ export const LISTEN = {
   CORE_EVENT: "fe_core_event",
   TOY_EVENT: "fe_toy_event",
   ERROR: "fe_error",
+  DIAGNOSTICS: "fe_diagnostics",
 } as const;
 
 export const INVOKE = {
@@ -20,6 +21,7 @@ export const INVOKE = {
   PANIC_STOP: "panic_stop",
   PANIC_RESUME: "panic_resume",
   GET_PANIC_STATE: "get_panic_state",
+  SET_DIAGNOSTICS_ENABLED: "set_diagnostics_enabled",
 } as const;
 
 /** Global hotkey for the panic stop (registered by the backend) */

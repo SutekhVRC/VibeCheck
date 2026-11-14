@@ -104,6 +104,7 @@ fn main() {
             frontend_native::panic_stop,
             frontend_native::panic_resume,
             frontend_native::get_panic_state,
+            frontend_native::set_diagnostics_enabled,
             //frontend_native::simulate_feature_osc_input,
         ])
         .build(context)

@@ -264,3 +264,86 @@ impl PartialEq<VCFeatureType> for FeVCFeatureType {
         *self as u32 == *other as u32
     }
 }
+
+/// One batch of live values for the diagnostics view, sent about 10 times a
+/// second while it's open and VibeCheck is on.
+#[derive(Serialize, Clone, Debug, TS)]
+#[ts(export)]
+pub struct FeDiagnostics {
+    /// Forget everything shown so far before applying this batch (a new
+    /// session started, or values were cleared, e.g. on avatar change).
+    pub reset: bool,
+    /// Values on the signal plane that changed since the last batch (all of
+    /// them after a reset).
+    pub signals: Vec<FeDiagSignal>,
+    /// Every running toy's graph values (always complete).
+    pub toys: Vec<FeDiagToy>,
+    /// New diagnostics log entries, oldest first.
+    pub log: Vec<FeDiagLogEntry>,
+}
+
+/// A value an input wrote to the signal plane.
+#[derive(Serialize, Clone, Debug, TS)]
+#[ts(export)]
+pub struct FeDiagSignal {
+    /// The module that wrote it, e.g. `osc`.
+    pub module: String,
+    /// Its port, e.g. an OSC address.
+    pub port: String,
+    pub value: f64,
+    pub is_bool: bool,
+    /// How many times it's been written since it was last cleared.
+    #[ts(type = "number")]
+    pub writes: u64,
+    /// Read from VRChat's OSCQuery because VRChat hasn't sent it over OSC
+    /// (yet).
+    pub from_oscquery: bool,
+}
+
+/// The values inside one toy's graph.
+#[derive(Serialize, Clone, Debug, TS)]
+#[ts(export)]
+pub struct FeDiagToy {
+    pub toy_id: u32,
+    /// Each node output, in run order: input processor, parameter modes,
+    /// levels.
+    pub ports: Vec<FeDiagPort>,
+    /// What was last sent to each motor, by each of its chains (the input
+    /// processor and every parameter have their own).
+    pub sent: Vec<FeDiagSent>,
+}
+
+#[derive(Serialize, Clone, Debug, TS)]
+#[ts(export)]
+pub struct FeDiagSent {
+    /// The node output it came from, e.g.
+    /// `toy:lush:0/Vibrator_0/param0/levels/out`.
+    pub from: String,
+    /// The motor, e.g. `toy:lush:0/Vibrator_0`.
+    pub motor: String,
+    /// Before master intensity. Nothing yet if nothing has been sent.
+    pub value: Option<f64>,
+}
+
+#[derive(Serialize, Clone, Debug, TS)]
+#[ts(export)]
+pub struct FeDiagPort {
+    /// e.g. `toy:lush:0/Vibrator_0/param0/mode/out`.
+    pub name: String,
+    /// Nothing yet, e.g. no input has arrived.
+    pub value: Option<f64>,
+}
+
+/// An entry from the diagnostics log, e.g. an OSC message.
+#[derive(Serialize, Clone, Debug, TS)]
+#[ts(export)]
+pub struct FeDiagLogEntry {
+    #[ts(type = "number")]
+    pub seq: u64,
+    /// Milliseconds since diagnostics were turned on.
+    #[ts(type = "number")]
+    pub at_ms: u64,
+    pub module: String,
+    pub label: String,
+    pub value: String,
+}

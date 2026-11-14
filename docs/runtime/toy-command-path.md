@@ -139,6 +139,7 @@ VRChat only sends a parameter over OSC when it changes. Some are set once when t
 - **Finding VRChat:** mDNS, looking for a `VRChat-Client-…` `_oscjson._tcp` service for up to 3 s. The address is remembered until a request fails.
 - **What:** `GET /avatar/parameters`. Only addresses `is_setting_address` accepts are used (SPS `LengthMult1`, `LengthMult2`, `DepthRadius`), so plain parameters don't start Idle Speed at avatar load.
 - **How:** `SignalPlane::write_if_absent`, as if the value arrived over OSC, but never over a value VRChat already sent.
+- **Diagnostics:** while the diagnostics view is open, each value filled in is logged under the `oscquery` module (`<value> from OSCQuery`), as are a found server and a failed lookup, so the view's log shows which values didn't come over OSC. `was_filled(addr)` (cleared on avatar change) lets the diagnostics task flag those values with `from_oscquery` while their write count is 1, so the Values tab tags them until VRChat sends the parameter itself.
 
 SPS treats these settings as not being contact, so they don't make the processor start sending (and Idle Speed start) on their own.
 

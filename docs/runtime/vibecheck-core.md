@@ -26,14 +26,15 @@ The app only uses graphs generated from toy settings; there's no way to build gr
 |---|---|---|
 | `address.rs` | `ModuleInstanceId`, `PortId` | Yes |
 | `safety.rs` | `SafetyLayer`, `SafetyCaps`, `ClampedCmd` | Yes |
-| `graph.rs` | `GraphBuilder`, `Graph` | Yes: one graph per toy |
+| `graph.rs` | `GraphBuilder`, `Graph`, `GraphSnapshot`, `SinkValue` | Yes: one graph per toy |
+| `diagnostics.rs` | `Diagnostics`, `LogEntry` | Yes: the diagnostics view |
 | `slots.rs` | `CommandSlots` | Yes |
 | `modules/buttplug.rs` | `ButtplugOutput`, `Actuator`, `LegacyLayout`, `send_to_actuator` | Yes |
 | `modules/osc.rs` | `OscInput` | Yes |
 | `modules/modes.rs` | `Mode`, `ModeSettings`, `RawMode`, `SmoothMode`, `RateMode`, `ConstantMode` | Yes |
 | `modules/levels.rs` | `OutputLevels` | Yes |
 | `module.rs` | `Input`, `Processor`, `Output` traits, `PortSpec`, `InputCtx`, `process_one` | Yes |
-| `signal.rs` | `Signal`, `SignalPlane`, `SignalSeq` | Yes: written by `OscInput`, read by graphs |
+| `signal.rs` | `Signal`, `SignalPlane`, `SignalSeq`, `PortValue` | Yes: written by `OscInput`, read by graphs |
 | `event.rs` | `Event`, `EventPlane`, `EventReceiver` | Yes: avatar change |
 | `error.rs` | `Error`, `Result` | Yes |
 
@@ -60,6 +61,8 @@ Addresses never contain Buttplug device indexes, which change between sessions a
 
 The plane also numbers its writes, so a reader can ask what changed: `changed_since(module, prefix, since)` returns the ports of `module` whose name starts with `prefix` and that were written after `since`, each once with its latest value, oldest write first, plus the `SignalSeq` to pass next time (`SignalSeq::default()` is "from the start"). Graphs use it for [watching ports](#watching-ports). It scans every slot, which is fine for the hundreds of OSC parameters an avatar sends.
 
+For views that show everything, `changed_since_all(since)` does the same for every module, as `PortValue { port, signal, writes }`, where `writes` counts the port's writes since it was last cleared (for an update rate). `clears()` counts how many times ports have been cleared, so a view keeping its own copy knows when to start over (e.g. after an avatar change).
+
 **Event plane.** `EventPlane::new()` returns a sender (cheap to clone, one per module) and the single `EventReceiver`. Every `Event` records:
 
 - `cause`: the id of the event that led to it, if any;
@@ -83,7 +86,7 @@ The safety layer uses the depth and the chain to stop feedback loops (see [Feedb
 
 Modules are ordinary Rust types compiled into the app. `async-trait` keeps `Input` and `Output` usable as trait objects.
 
-`InputCtx` gives an input its own module id and lets it write signals and publish events on its own ports.
+`InputCtx` gives an input its own module id and lets it write signals and publish events on its own ports. `with_diagnostics(d)` connects it to a [`Diagnostics`](#diagnostics) log, which `log(label, value)` writes to while diagnostics are on.
 
 A processor's `out` slots start as `None`. Setting one to `Some` writes a new value to that port; leaving it `None` leaves the port unchanged, e.g. while Smooth is still collecting values.
 
@@ -149,6 +152,18 @@ fn watched(&mut self, changed: &[(PortId, Signal)]) {
 The app's input processors (SPS/TPS) run this way; see [toy-command-path.md](toy-command-path.md#input-processors).
 
 `Graph::tick` doesn't sleep or spawn anything; the caller decides the rate. The app ticks at 100 Hz (`graph_runner.rs`) and passes the real time since the last tick as `dt`, capped at 0.1 s.
+
+Node outputs live inside the graph, not on the signal plane. `Graph::snapshot()` copies them out for views (diagnostics, later a graph editor): every node output with its latest value (`None` before its first), and every sink as a `SinkValue { from, target, last }`, where `last` is the level it last sent, before the safety layer.
+
+## Diagnostics
+
+`Diagnostics` is a shared on/off switch and a bounded log (2000 entries by default) for live troubleshooting views. It's for what never reaches the signal plane: `OscInput` logs every message, including ones nothing uses and argument types the plane doesn't keep (Int, String).
+
+- It's off until a view turns it on (`set_enabled`). `log(module, label, value)` checks the switch before calling `value`, so formatting costs nothing while off.
+- `entries_since(seq)` returns the entries newer than `seq` and the seq to pass next time. The oldest entry is dropped when the log is full. Turning it off or on empties it.
+- Any input can log through its `InputCtx`, so a future input gets a log in the view without any view changes.
+
+In the app, one `Diagnostics` lives in the global state and is shared with every listening session. Each session's diagnostics task (`runtime/diagnostics.rs`) sends the view a batch 10 times a second while it's on: the signal plane's changes, every toy's graph snapshot (copied by the graph runner every 10th tick), and new log entries.
 
 ## Safety layer
 
@@ -246,6 +261,7 @@ An `Input` that listens for OSC over UDP.
 
 - `OscInput::bind(addr)` binds the socket, so a busy port is reported before anything runs.
 - `with_tap(tx)` also sends every message except avatar changes to `tx`, in arrival order. `run` returns once the tap's receiver is dropped.
+- While diagnostics are on, every message (avatar changes included) is logged with its address and arguments, formatted like `osc-tool listen` (`0.5 (float)`, `3 (int)`).
 - On `/avatar/change`, it clears every value it has written (`InputCtx::clear_signals`) before publishing the event, so the clear stays in message order.
 - `/avatar/change` (any address starting with it) is published as an `AvatarChange` event on the `avatar_change` port, with the avatar id as `Value::Text` when present.
 - Any other message whose last argument is a float or bool writes it to the signal plane, on a port named after the full OSC address, e.g. `osc//avatar/parameters/Boop`.
@@ -314,6 +330,6 @@ cd src-tauri
 cargo test -p vibecheck-core
 ```
 
-Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, tracing event chains through the remembered history, refusing a module that reacts to the result of its own action, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `LegacyLayout` numbering actuators like spec v3, `OutputLevels`, `ButtplugOutput`'s error events firing only on change, and the graph (publishing processor events from their node, dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, rejecting bad wiring, and watching nodes seeing ports that were never wired), `changed_since` returning each new value once, in write order, `write_if_absent` never overwriting, a late reset replaying what's still on the plane, and `OscInput` clearing the old avatar's values.
+Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, tracing event chains through the remembered history, refusing a module that reacts to the result of its own action, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `LegacyLayout` numbering actuators like spec v3, `OutputLevels`, `ButtplugOutput`'s error events firing only on change, and the graph (publishing processor events from their node, dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, rejecting bad wiring, and watching nodes seeing ports that were never wired), `changed_since` returning each new value once, in write order, `write_if_absent` never overwriting, a late reset replaying what's still on the plane, and `OscInput` clearing the old avatar's values. Diagnostics: `changed_since_all` covering every module with write counts and counting clears, graph snapshots before and after input, the log only formatting while on, returning only newer entries and dropping the oldest when full, and `OscInput` logging every message, including an Int the plane never sees.
 
 The app's tests (`cargo test -p vibecheck`) cover `InputProcessorNode` (reading only its prefixes, input filter tags), the graph runner task, and the generated toy graphs end to end: nothing before the first input, modes loaded from config, one parameter driving several motors, Range and Idle after the mode, the first matching parameter winning, disabled features, Linear speed, the f32 rounding, Smooth following over its window, Rate winding down after the input stops, and input processor chains next to parameter chains.

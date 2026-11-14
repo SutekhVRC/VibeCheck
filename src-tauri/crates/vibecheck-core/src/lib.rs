@@ -19,6 +19,7 @@
 //! can create.
 
 pub mod address;
+pub mod diagnostics;
 pub mod error;
 pub mod event;
 pub mod graph;
@@ -29,13 +30,14 @@ pub mod signal;
 pub mod slots;
 
 pub use address::{ModuleInstanceId, PortId};
+pub use diagnostics::{Diagnostics, LogEntry};
 pub use error::{Error, Result};
 pub use event::{Event, EventId, EventKind, EventPlane, EventReceiver, Value};
-pub use graph::{Graph, GraphBuilder};
+pub use graph::{Graph, GraphBuilder, GraphSnapshot, SinkValue};
 pub use module::{
     process_one, EventOut, Input, InputCtx, Output, PortDirection, PortKind, PortSpec, Processor,
     Watch,
 };
 pub use safety::{ClampedCmd, SafetyCaps, SafetyLayer, TargetPolicy, ACTED_PORT};
-pub use signal::{Signal, SignalPlane, SignalSeq};
+pub use signal::{PortValue, Signal, SignalPlane, SignalSeq};
 pub use slots::CommandSlots;
