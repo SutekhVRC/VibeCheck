@@ -1,17 +1,10 @@
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useLayoutEffect,
-  useState,
-} from "react";
+import { useCoreEventContext } from "@/context/CoreEvents";
+import { createContext, ReactNode, useContext, useLayoutEffect } from "react";
 import { toChannels } from "./color";
 import { patternStrength, patternUrl } from "./patterns";
 import { getTheme, themes } from "./registry";
 import { fontStacks, shadowStyles } from "./styles";
 import type { Theme } from "./types";
-
-const STORAGE_KEY = "vibecheck-theme";
 
 /** "onAccent" -> "on-accent" */
 function kebab(s: string) {
@@ -62,19 +55,24 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+/*
+ * The theme is saved in Config.json (`theme`), so it survives updates. A
+ * theme id that doesn't exist shows the default theme (getTheme).
+ */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState(() =>
-    getTheme(localStorage.getItem(STORAGE_KEY)),
-  );
+  const { config, configLoaded, saveConfig } = useCoreEventContext();
+  const theme = getTheme(config?.theme);
 
   // Layout effect: applied before the first paint, so no flash of no colours
   useLayoutEffect(() => applyTheme(theme), [theme]);
 
   function setThemeId(id: string) {
-    const next = getTheme(id);
-    localStorage.setItem(STORAGE_KEY, next.id);
-    setTheme(next);
+    saveConfig({ theme: getTheme(id).id });
   }
+
+  // Wait for the config, so the saved theme shows from the first paint
+  // instead of the default flashing first
+  if (!configLoaded) return null;
 
   return (
     <ThemeContext.Provider value={{ theme, themes, setThemeId }}>

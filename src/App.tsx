@@ -23,29 +23,21 @@ type ConfigSelection = {
   type: "Config";
 };
 
-const SIDEBAR_COLLAPSED_KEY = "vibecheck-sidebar-collapsed";
-
 export default function App() {
   const [selection, setSelection] = useState<Selection>(null);
-  // Sidebar collapsed to an icon bar; remembered between launches
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(
-    () => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true",
-  );
-
-  function toggleSidebar() {
-    setSidebarCollapsed((collapsed) => {
-      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(!collapsed));
-      return !collapsed;
-    });
-  }
   const { toys, hasOnlineToys } = useToys();
   const toy =
     selection?.type == "Toy" && selection.toyKey in toys
       ? toys[selection.toyKey]
       : null;
   const toysList = Object.values(toys);
-  const { isEnabled, toggleIsEnabled, config, refreshConfig } =
+  const { isEnabled, toggleIsEnabled, config, refreshConfig, saveConfig } =
     useCoreEventContext();
+  // Sidebar collapsed to an icon bar; saved in Config.json
+  const sidebarCollapsed = config?.sidebar_collapsed ?? false;
+  function toggleSidebar() {
+    saveConfig({ sidebar_collapsed: !sidebarCollapsed });
+  }
   const { canUpdate } = useUpdate();
   const { version } = useVersion();
 

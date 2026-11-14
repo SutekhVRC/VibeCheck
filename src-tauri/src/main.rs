@@ -49,9 +49,19 @@ fn main() {
     )));
     trace!("VibeCheckState created");
 
+    let context = tauri::generate_context!();
+    // Before any window opens: start the webview fresh after an update
+    util::webview_data::reset_on_version_change(
+        &context.config().identifier,
+        &context.package_info().version.to_string(),
+    );
+
     let app = tauri::Builder::default()
         //.plugin(tauri_plugin_os::init())
-        //.plugin(tauri_plugin_process::init())
+        // Restarts the app after an update is installed (relaunch() in
+        // UpdateButton). Linux updates install in place and need it; the
+        // Windows installer closes the app itself.
+        .plugin(tauri_plugin_process::init())
         //.plugin(tauri_plugin_fs::init())
         //.plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
@@ -96,7 +106,7 @@ fn main() {
             frontend_native::get_panic_state,
             //frontend_native::simulate_feature_osc_input,
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("Failed to generate Tauri context");
 
     trace!("Tauri app built");

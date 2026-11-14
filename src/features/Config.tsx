@@ -242,12 +242,20 @@ export default function Config({
     }
     setConfirmReset(false);
     try {
-      await invoke(INVOKE.CLEAR_OSC_CONFIG);
+      const cleared = await invoke<string[]>(INVOKE.CLEAR_OSC_CONFIG);
       toast.info(
-        "Cleared avatar OSC configs\nRemoved AppData\\LocalLow\\VRChat\\VRChat\\OSC",
+        `Cleared avatar OSC configs. Reload your avatar in VRChat.\n${cleared.join("\n")}`,
       );
     } catch (e) {
-      toast.error(`Could not clear avatar OSC configs!\n${JSON.stringify(e)}`);
+      if (e === "VRChatOscNotFound") {
+        toast.error(
+          "Couldn't find VRChat's OSC folder\nIn VRChat, use Action Menu > Options > OSC > Reset Config instead",
+        );
+      } else {
+        toast.error(
+          `Could not clear avatar OSC configs!\n${JSON.stringify(e)}`,
+        );
+      }
     }
   }
 

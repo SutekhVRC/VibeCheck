@@ -26,6 +26,12 @@ pub struct FeVibeCheckConfig {
     pub master_intensity: f64,
     /// Bluetooth scan length in seconds; 0 scans until stopped.
     pub scan_length: u32,
+    /// Theme id; one that doesn't exist shows the default theme.
+    pub theme: String,
+    /// Pressing the scan button turns VibeCheck on first.
+    pub auto_enable_on_scan: bool,
+    /// The sidebar is collapsed to icons.
+    pub sidebar_collapsed: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]

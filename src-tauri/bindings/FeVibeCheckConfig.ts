@@ -9,4 +9,16 @@ master_intensity: number,
 /**
  * Bluetooth scan length in seconds; 0 scans until stopped.
  */
-scan_length: number, };
+scan_length: number, 
+/**
+ * Theme id; one that doesn't exist shows the default theme.
+ */
+theme: string, 
+/**
+ * Pressing the scan button turns VibeCheck on first.
+ */
+auto_enable_on_scan: boolean, 
+/**
+ * The sidebar is collapsed to icons.
+ */
+sidebar_collapsed: boolean, };

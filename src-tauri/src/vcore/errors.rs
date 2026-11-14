@@ -93,6 +93,9 @@ pub mod backend {
         ReadDirPathFailure,
         RemoveDirsFailure,
         FileWriteFailure,
+        /// No VRChat OSC folder was found (VRChat not installed, never
+        /// used with OSC, or installed somewhere unusual)
+        VRChatOscNotFound,
     }
 
     #[derive(Serialize, Debug)]
