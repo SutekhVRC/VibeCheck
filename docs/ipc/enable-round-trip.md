@@ -14,7 +14,7 @@ sequenceDiagram
   participant BP as Buttplug client
   participant UT as useToys.tsx
 
-  VRC->>DL: OSC /avatar/parameters/vibecheck/state = true
+  VRC->>DL: OSC /avatar/parameters/vibecheck/api/state = true
   DL-->>CE: fe_core_event State(EnableAndScan)
   CE->>CP: invoke vibecheck_enable
   CP->>DL: stop disabled listener

@@ -146,7 +146,7 @@ SPS treats these settings as not being contact, so they don't make the processor
 
 `/avatar/parameters/vibecheck/api/...` messages go to `handle_api_message` (`osc_api/mod.rs`). They never reach toys. The router runs the handler with `block_in_place`, because it locks the global state and may save config, so API messages are handled in arrival order without stalling the async workers.
 
-`/avatar/parameters/vibecheck/state` (turn on) is not on this path: it's handled by the listener that runs while VibeCheck is **off** (`vc_disabled_osc_command_listen` in `osc/logic.rs`).
+`/avatar/parameters/vibecheck/api/state = true` (turn on) is not on this path: it's handled by the listener that runs while VibeCheck is **off** (`vc_disabled_osc_command_listen` in `osc/logic.rs`). The same parameter set to false while VibeCheck is on is handled here, and turns it off.
 
 ## Session lifetime
 

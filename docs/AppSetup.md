@@ -14,7 +14,7 @@
 
 ### Enable/Disable OSC command
 
-- VibeCheck will listen for the boolean parameter 'vibecheck/state' to be true or false. If true it will enable and scan for 10 seconds. If false it will disable the app.
+- VibeCheck listens for the boolean parameter `vibecheck/api/state`. Set to true while VibeCheck is off, it turns VibeCheck on and scans for the scan length set in Settings (30 seconds by default). Set to false while VibeCheck is on, it turns VibeCheck off. Older versions used `vibecheck/state` to turn on; that no longer works.
 
 ### Toy Settings (Wrench Icon)
 

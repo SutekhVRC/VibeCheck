@@ -25,7 +25,7 @@ If you want to make your own system for VibeCheck the only requirement is just t
 
 **VibeCheck parameters**
 
-- `vibecheck/state`: (Boolean sent to VibeCheck) Enables VibeCheck and scans for 10 seconds when true and disables VibeCheck when false.
+- `vibecheck/api/state`: (Boolean sent to VibeCheck) Turns VibeCheck on and scans (for the scan length set in Settings, 30 seconds by default) when true, and turns VibeCheck off when false. Older versions used `vibecheck/state` to turn on; that no longer works.
 
 - `{toy_name}/{toy duplicate id}/battery`: (Float sent to VRChat) The battery percentage of the toy. (Will sometimes say 0 even when charged, if toy is not fully initialized. Just wait 60 seconds for the next toy update).
 

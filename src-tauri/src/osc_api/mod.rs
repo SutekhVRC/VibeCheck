@@ -36,7 +36,7 @@ impl APIProcessor {
             && api_tokenize[4] == "state"
         {
             // /avatar/parameters/vibecheck/api/state
-            let Some(false) = endpoint.args.pop().unwrap().bool() else {
+            let Some(false) = endpoint.args.pop().and_then(|arg| arg.bool()) else {
                 return;
             };
             info!("State false: Sending Disable event");
@@ -71,7 +71,7 @@ impl APIProcessor {
             let anatomy = VCToyAnatomy::get_anatomy(&api_tokenize[5]);
             let mut altered_toys = Vec::new();
 
-            if let Some(state_bool) = endpoint.args.pop().unwrap().bool() {
+            if let Some(state_bool) = endpoint.args.pop().and_then(|arg| arg.bool()) {
                 let vc_pointer = app_handle
                     .state::<crate::vcore::state::VCStateMutex>()
                     .0
