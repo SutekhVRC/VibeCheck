@@ -31,7 +31,7 @@
 - **SPS and TPS support**: SPS 3 and older SPS (including mixing the two), with depth, touch and frot, plus TPS. Input filters pick which sockets or plugs drive each toy.
 - **Fine-tuning per motor**: output range, idle speed, flip input, plus Smooth, Rate and Constant processing modes. Rate follows how fast you stroke.
 - **Safety controls**: a panic stop (sidebar button, **Ctrl + Alt + P**, the tray menu or an avatar parameter) and a master intensity slider for every toy.
-- **In-game control** with the [VibeCheck OSC API](./docs/OSCAPI.md): turn VibeCheck on or off, panic stop, and enable or disable toys by anatomy from your avatar menu.
+- **In-game control** with the [VibeCheck OSC API](https://github.com/SutekhVRC/VibeCheck/wiki/Advanced-Features): turn VibeCheck on or off, panic stop, and enable or disable toys by anatomy from your avatar menu.
 - **Battery levels sent back to VRChat** as OSC data for your avatar to use.
 - **Windows and Linux**, with in-app updates on both (AppImage, `.deb` and `.rpm` on Linux). On Linux, VRChat runs through Proton as usual.
 - **Quality of life**: themes, a tray menu with live status, a configurable scan length, scanning automatically when a toy disconnects, desktop notifications, and minimising instead of closing.
@@ -46,15 +46,19 @@
 
 ## Documentation
 
+All guides live on the [wiki](https://github.com/SutekhVRC/VibeCheck/wiki):
+
 | Guide | What it covers |
 |---|---|
-| [App Setup](./docs/AppSetup.md) | Enabling VibeCheck and toy settings |
-| [Avatar Setup](./docs/AvatarSetup.md) | OSC, premade prefabs, custom contact setups and TPS |
-| [Bluetooth](./docs/Bluetooth.md) | Requirements, getting connected and common Bluetooth issues |
-| [OSC API](./docs/OSCAPI.md) | Parameters to turn VibeCheck on and off, panic stop and toggle toys by anatomy from inside VRChat |
-| [FAQ](./docs/Faq.md) | App, connection and avatar configuration issues |
-
-More guides live on the [wiki](https://github.com/SutekhVRC/VibeCheck/wiki), including SPS setup in [Avatar Setup](https://github.com/SutekhVRC/VibeCheck/wiki/Avatar-Setup) and every option in Settings.
+| [App Setup](https://github.com/SutekhVRC/VibeCheck/wiki/VibeCheck-App-Setup) | A tour of the app and first-time setup |
+| [Connecting Toys](https://github.com/SutekhVRC/VibeCheck/wiki/Connecting-Toys) | Bluetooth requirements, finding toys and common Bluetooth issues |
+| [Avatar Setup](https://github.com/SutekhVRC/VibeCheck/wiki/Avatar-Setup) | OSC, custom setups, SPS and TPS |
+| [Toy Options](https://github.com/SutekhVRC/VibeCheck/wiki/Toy-Options-List) | Every per-toy and per-motor setting |
+| [Settings](https://github.com/SutekhVRC/VibeCheck/wiki/VibeCheck-Settings) | Every app setting |
+| [OSC API](https://github.com/SutekhVRC/VibeCheck/wiki/Advanced-Features) | Parameters to turn VibeCheck on and off, panic stop and toggle toys by anatomy from inside VRChat |
+| [Panic Stop](https://github.com/SutekhVRC/VibeCheck/wiki/Panic-Stop) | Stopping every toy at once |
+| [Themes](https://github.com/SutekhVRC/VibeCheck/wiki/Themes) | The app's themes |
+| [FAQ](https://github.com/SutekhVRC/VibeCheck/wiki/FAQ) | App, connection and avatar configuration issues |
 
 ## Community
 
