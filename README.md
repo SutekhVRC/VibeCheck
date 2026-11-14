@@ -26,19 +26,21 @@
 
 ## Features
 
-- **Bluetooth toy support** through [Buttplug.io](https://buttplug.io/): connect any [supported toy](https://iostindex.com/?filter0ButtplugSupport=4) directly, no extra app needed.
+- **Bluetooth toy support** through [Buttplug.io](https://buttplug.io/): connect any [supported toy](https://iostindex.com/?filter0ButtplugSupport=4) directly, no extra app needed. Toys show up as soon as they connect.
 - **Driven by your avatar**: map VRChat avatar parameters to each toy motor over OSC.
-- **SPS and TPS support**: react to penetration systems on your avatar, with input filters to pick which ones.
-- **Fine-tuning per motor**: output range, idle speed, flip input, plus Smooth, Rate and Constant processing modes.
-- **In-game control** with the [VibeCheck OSC API](./docs/OSCAPI.md): enable or disable toys by anatomy from your avatar menu.
+- **SPS and TPS support**: SPS 3 and older SPS (including mixing the two), with depth, touch and frot, plus TPS. Input filters pick which sockets or plugs drive each toy.
+- **Fine-tuning per motor**: output range, idle speed, flip input, plus Smooth, Rate and Constant processing modes. Rate follows how fast you stroke.
+- **Safety controls**: a panic stop (sidebar button, **Ctrl + Alt + P**, the tray menu or an avatar parameter) and a master intensity slider for every toy.
+- **In-game control** with the [VibeCheck OSC API](./docs/OSCAPI.md): turn VibeCheck on or off, panic stop, and enable or disable toys by anatomy from your avatar menu.
 - **Battery levels sent back to VRChat** as OSC data for your avatar to use.
-- **Quality of life**: scan automatically when a toy disconnects, desktop notifications, minimise instead of closing.
+- **Windows and Linux**, with in-app updates on both (AppImage, `.deb` and `.rpm` on Linux). On Linux, VRChat runs through Proton as usual.
+- **Quality of life**: themes, a tray menu with live status, a configurable scan length, scanning automatically when a toy disconnects, desktop notifications, and minimising instead of closing.
 
 ## Getting started
 
 1. **Get a toy** that [Buttplug.io supports](https://iostindex.com/?filter0ButtplugSupport=4).
 2. **Connect it**: follow [Connecting Toys](https://github.com/SutekhVRC/VibeCheck/wiki/Connecting-Toys).
-3. **Install VibeCheck** with the [latest installer](https://github.com/SutekhVRC/VibeCheck/releases/latest).
+3. **Install VibeCheck** from the [latest release](https://github.com/SutekhVRC/VibeCheck/releases/latest): the installer on Windows, or the AppImage, `.deb` or `.rpm` on Linux.
 4. **Set up your avatar** with a known system or your own: [Avatar Setup](https://github.com/SutekhVRC/VibeCheck/wiki/Avatar-Setup).
 5. **Set up the app**: [VibeCheck App Setup](https://github.com/SutekhVRC/VibeCheck/wiki/VibeCheck-App-Setup).
 
@@ -49,10 +51,10 @@
 | [App Setup](./docs/AppSetup.md) | Enabling VibeCheck and toy settings |
 | [Avatar Setup](./docs/AvatarSetup.md) | OSC, premade prefabs, custom contact setups and TPS |
 | [Bluetooth](./docs/Bluetooth.md) | Requirements, getting connected and common Bluetooth issues |
-| [OSC API](./docs/OSCAPI.md) | Endpoints for app state and anatomy toggles from inside VRChat |
+| [OSC API](./docs/OSCAPI.md) | Parameters to turn VibeCheck on and off, panic stop and toggle toys by anatomy from inside VRChat |
 | [FAQ](./docs/Faq.md) | App, connection and avatar configuration issues |
 
-More guides live on the [wiki](https://github.com/SutekhVRC/VibeCheck/wiki).
+More guides live on the [wiki](https://github.com/SutekhVRC/VibeCheck/wiki), including SPS setup in [Avatar Setup](https://github.com/SutekhVRC/VibeCheck/wiki/Avatar-Setup) and every option in Settings.
 
 ## Community
 
@@ -86,6 +88,8 @@ yarn install       # install frontend dependencies
 yarn tauri dev     # run the app in development mode
 yarn tauri build   # build an installer
 ```
+
+The Rust code is a Cargo workspace rooted at `src-tauri/`: the app, the [`vibecheck-core`](./docs/runtime/vibecheck-core.md) library that holds the module runtime, and `osc-tool`. [Toy command path](./docs/runtime/toy-command-path.md) follows an avatar parameter all the way to a toy's motor. Run the tests from `src-tauri/` with `cargo test --workspace`.
 
 ### Testing OSC without VRChat
 
