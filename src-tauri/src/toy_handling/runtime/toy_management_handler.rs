@@ -10,7 +10,9 @@
       other message to the OSC router.
     - The OSC router handles OSC API messages.
     - The core event handler reacts to events on the session's event plane
-      (avatar change stops all toys; output errors are logged).
+      (avatar change and VRChat disconnecting stop all toys; output errors
+      are logged).
+    - The presence task publishes VRChat connecting and disconnecting.
     - The graph runner ticks every toy's graph (built from its config, and
       including its SPS/TPS input processors) at a fixed rate and fills each
       toy's command slots.
@@ -45,6 +47,7 @@ use crate::{
             diagnostics::diagnostics_task,
             graph_runner::{graph_runner, GraphControl, GraphValues},
             osc_routing::{core_event_handler, osc_router},
+            presence::vrchat_presence,
             toy_emitter_thread::{toy_emitter_thread, EmitterThreadData, ToyEmitterThreadSignal},
             toy_graph::{build_toy_graph, OSC_MODULE},
             toy_output::{buttplug_output, toy_actuators, toy_module_id},
@@ -171,6 +174,7 @@ impl Session {
         let signals = SignalPlane::new();
         let (events, event_rx) = EventPlane::new();
         let (graphs, graphs_rx) = unbounded_channel();
+        let presence = avatar_catalog.presence();
         let avatar_query = AvatarQuery::new(
             signals.clone(),
             ModuleInstanceId::new(OSC_MODULE),
@@ -185,6 +189,7 @@ impl Session {
             rt.spawn(core_event_handler(
                 event_rx,
                 avatar_query.clone(),
+                signals.clone(),
                 graphs.clone(),
                 safety.clone(),
                 diagnostics.clone(),
@@ -198,6 +203,7 @@ impl Session {
                 safety.clone(),
                 graph_values.clone(),
             ));
+            rt.spawn(vrchat_presence(presence, events.clone()));
             rt.spawn(diagnostics_task(
                 diagnostics.clone(),
                 signals.clone(),

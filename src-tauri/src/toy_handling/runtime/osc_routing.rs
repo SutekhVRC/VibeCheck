@@ -13,12 +13,16 @@ use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use vibecheck_core::{
     modules::osc::rosc::OscMessage, Diagnostics, Event, EventKind, EventReceiver, ModuleInstanceId,
-    SafetyLayer, Value,
+    SafetyLayer, SignalPlane, Value,
 };
 
 use crate::{
-    osc::avatar_query::AvatarQuery, osc_api::handle_api_message,
-    toy_handling::runtime::graph_runner::GraphControl, vcore::state::VCStateMutex,
+    osc::avatar_query::AvatarQuery,
+    osc_api::handle_api_message,
+    toy_handling::runtime::{
+        graph_runner::GraphControl, presence::VRCHAT_MODULE, toy_graph::OSC_MODULE,
+    },
+    vcore::state::VCStateMutex,
 };
 
 const API_PREFIX: &str = "/avatar/parameters/vibecheck/api/";
@@ -58,9 +62,16 @@ fn describe(event: &Event) -> Option<String> {
 
 /// Reacts to events from the event plane. While diagnostics are on, they're
 /// also logged under `events` (see `describe`).
+///
+/// When VRChat disconnects (crashed or closed), OSC just stops arriving, so
+/// toys would keep their last level. Instead everything stops as on an
+/// avatar change: the old values are cleared, toys stop, graphs start over,
+/// and risky outputs are disarmed. When VRChat is back, current values are
+/// read from OSCQuery again.
 pub async fn core_event_handler(
     mut events: EventReceiver,
     avatar_query: AvatarQuery,
+    signals: SignalPlane,
     graphs: UnboundedSender<GraphControl>,
     safety: SafetyLayer,
     diagnostics: Diagnostics,
@@ -86,6 +97,20 @@ pub async fn core_event_handler(
                 // the graphs again after the reset, so this comes after the
                 // stop or the stop would silence them.
                 let _ = graphs.send(GraphControl::ResetAll);
+            }
+            EventKind::Connection if event.source.module.as_str() == VRCHAT_MODULE => {
+                if event.value == Value::Bool(false) {
+                    warn!("VRChat stopped answering: stopping toys");
+                    // No OSC is arriving, so nothing races this clear
+                    signals.clear_module(&ModuleInstanceId::new(OSC_MODULE));
+                    stop_all_devices(&app_handle).await;
+                    let _ = graphs.send(GraphControl::ResetAll);
+                    safety.disarm_all();
+                } else {
+                    info!("VRChat is running");
+                    let query = avatar_query.clone();
+                    tokio::spawn(async move { query.fill_now().await });
+                }
             }
             EventKind::OutputError => match &event.value {
                 Value::Text(error) => {
@@ -118,10 +143,10 @@ async fn stop_all_devices(app_handle: &AppHandle) {
     match stop {
         Some(stop) => {
             if let Err(e) = stop.await {
-                warn!("Failed to stop devices on avatar change: {}", e);
+                warn!("Failed to stop devices: {}", e);
             }
         }
-        None => warn!("Avatar changed but there is no Buttplug client to stop devices"),
+        None => warn!("No Buttplug client to stop devices"),
     }
 }
 
