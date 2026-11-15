@@ -12,7 +12,8 @@ use log::{debug, info, warn};
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use vibecheck_core::{
-    modules::osc::rosc::OscMessage, EventKind, EventReceiver, SafetyLayer, Value,
+    modules::osc::rosc::OscMessage, Diagnostics, Event, EventKind, EventReceiver, ModuleInstanceId,
+    SafetyLayer, Value,
 };
 
 use crate::{
@@ -21,6 +22,9 @@ use crate::{
 };
 
 const API_PREFIX: &str = "/avatar/parameters/vibecheck/api/";
+
+/// The module diagnostics log entries about events are logged under.
+pub const EVENTS_LOG_MODULE: &str = "events";
 
 /// Reads OscInput's tap until it closes and handles OSC API messages, in
 /// the order they arrived.
@@ -35,16 +39,39 @@ pub async fn osc_router(mut rx: UnboundedReceiver<OscMessage>, app_handle: AppHa
     info!("OSC router stopped");
 }
 
-/// Reacts to events from the event plane.
+/// What the diagnostics log shows for an event, if anything. Avatar changes
+/// are left out: the OSC message itself is already logged.
+fn describe(event: &Event) -> Option<String> {
+    let on_off = |on: &str, off: &str| match event.value {
+        Value::Bool(true) => Some(on.to_owned()),
+        Value::Bool(false) => Some(off.to_owned()),
+        _ => None,
+    };
+    match (&event.kind, &event.value) {
+        (EventKind::Connection, _) => on_off("connected", "disconnected"),
+        (EventKind::Activity, _) => on_off("started", "stopped"),
+        (EventKind::OutputError, Value::Text(error)) => Some(format!("failing: {error}")),
+        (EventKind::OutputError, _) => Some("working again".to_owned()),
+        _ => None,
+    }
+}
+
+/// Reacts to events from the event plane. While diagnostics are on, they're
+/// also logged under `events` (see `describe`).
 pub async fn core_event_handler(
     mut events: EventReceiver,
     avatar_query: AvatarQuery,
     graphs: UnboundedSender<GraphControl>,
     safety: SafetyLayer,
+    diagnostics: Diagnostics,
     app_handle: AppHandle,
 ) {
+    let log_module = ModuleInstanceId::new(EVENTS_LOG_MODULE);
     while let Some(event) = events.recv().await {
         debug!("Core event: {:?}", event);
+        if let Some(text) = describe(&event) {
+            diagnostics.log(&log_module, event.source.module.to_string(), || text);
+        }
         match event.kind {
             EventKind::AvatarChange => {
                 info!("Avatar Changed: Halting toy actions");
@@ -95,5 +122,51 @@ async fn stop_all_devices(app_handle: &AppHandle) {
             }
         }
         None => warn!("Avatar changed but there is no Buttplug client to stop devices"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vibecheck_core::{EventId, PortId};
+
+    fn event(kind: EventKind, value: Value) -> Event {
+        Event {
+            id: EventId(1),
+            source: PortId::new(ModuleInstanceId::new("toy:lush:0"), "activity"),
+            kind,
+            value,
+            ts_ms: 0,
+            cause: None,
+            depth: 0,
+        }
+    }
+
+    #[test]
+    fn describes_the_events_the_diagnostics_log_shows() {
+        let cases = [
+            (EventKind::Connection, Value::Bool(true), Some("connected")),
+            (
+                EventKind::Connection,
+                Value::Bool(false),
+                Some("disconnected"),
+            ),
+            (EventKind::Activity, Value::Bool(true), Some("started")),
+            (EventKind::Activity, Value::Bool(false), Some("stopped")),
+            (
+                EventKind::OutputError,
+                Value::Text("gone".into()),
+                Some("failing: gone"),
+            ),
+            (EventKind::OutputError, Value::None, Some("working again")),
+            (EventKind::AvatarChange, Value::Text("avtr_1".into()), None),
+        ];
+        for (kind, value, expected) in cases {
+            assert_eq!(
+                describe(&event(kind.clone(), value)).as_deref(),
+                expected,
+                "{kind:?}"
+            );
+        }
     }
 }

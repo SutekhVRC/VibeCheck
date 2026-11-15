@@ -187,6 +187,7 @@ impl Session {
                 avatar_query.clone(),
                 graphs.clone(),
                 safety.clone(),
+                diagnostics.clone(),
                 app_handle.clone(),
             ));
             let graph_values = GraphValues::new(diagnostics.clone());

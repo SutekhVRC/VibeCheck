@@ -44,7 +44,7 @@ impl EmitterThreadData {
 }
 
 /// Sends the latest command for every motor that changed since the last tick,
-/// at the toy's update rate.
+/// at the toy's update rate, and reports when the toy starts or stops.
 pub async fn toy_emitter_thread(mut data: EmitterThreadData) {
     loop {
         let start = Instant::now();
@@ -60,6 +60,9 @@ pub async fn toy_emitter_thread(mut data: EmitterThreadData) {
                 logerr!("Send to device error: {}", e);
             }
         }
+        // A panic stops devices directly, not through the output
+        data.output
+            .update_activity(std::time::Instant::now(), data.safety.is_panicked());
 
         // Check for incoming update messages
         match data.in_signal.try_recv() {
