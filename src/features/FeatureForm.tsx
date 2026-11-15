@@ -2,7 +2,7 @@ import AvatarStatus from "@/components/AvatarStatus";
 import { SettingRow, SettingsGroup } from "@/components/SettingRow";
 import SetupWarning from "@/components/SetupWarning";
 import { FreeTextOptions } from "@/components/ui/FreeTextOptions";
-import { useFeatureCheck } from "@/context/AvatarCatalog";
+import { useAvatarCatalog, useFeatureCheck } from "@/context/AvatarCatalog";
 import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
 import Button from "@/layout/Button";
 import { Select } from "@/layout/Select";
@@ -16,9 +16,8 @@ import { FeVCToy } from "@bindings/FeVCToy";
 import type { FeVCToyFeature } from "@bindings/FeVCToyFeature";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { DebouncedFunc, debounce } from "lodash";
-import { ChevronRight, Plus, X } from "lucide-react";
+import { ChevronRight, Info, Plus, X } from "lucide-react";
 import {
-  ChangeEvent,
   Dispatch,
   ReactNode,
   SetStateAction,
@@ -34,6 +33,7 @@ import Slider from "../layout/Slider";
 import Switch from "../layout/Switch";
 import { featureIcons } from "./featureMeta";
 import FeatureTest from "./FeatureTest";
+import ParameterField, { isPlaceholder, parameterName } from "./ParameterField";
 
 type FeatureFormContextProps = {
   feature: FeVCToyFeature;
@@ -302,8 +302,13 @@ function InputProcessor() {
 }
 
 function Parameters() {
-  const { feature, setToyFeature, handleFeatureAlter, debouncedAlter } =
+  const { feature, setToyFeature, handleFeatureAlter, debouncedAlter, check } =
     useFeatureFormContext();
+  const { catalog } = useAvatarCatalog();
+  // The row to focus (with the list open) after Add parameter
+  const [focusRow, setFocusRow] = useState<number | null>(null);
+  // Warnings wait until the field is left, so typing isn't nagged
+  const [editingRow, setEditingRow] = useState<number | null>(null);
 
   function removeParam(parameter: string) {
     setToyFeature((f) => {
@@ -345,26 +350,20 @@ function Parameters() {
           },
         ],
       };
+      setFocusRow(newF.osc_parameters.length - 1);
       handleFeatureAlter(newF);
       return newF;
     });
   }
 
-  function handleOscParam(
-    e: ChangeEvent<HTMLInputElement>,
-    paramIndex: number,
-  ) {
+  /** Sets a parameter's address; picks apply at once, typing is debounced */
+  function setParam(address: string, paramIndex: number, typed: boolean) {
     setToyFeature((f) => {
       const newParams = [...f.osc_parameters];
-      newParams[paramIndex] = {
-        ...newParams[paramIndex],
-        parameter: normalizeOscParameter(e.target.value),
-      };
-      const newF = {
-        ...f,
-        osc_parameters: newParams,
-      };
-      debouncedAlter(newF);
+      newParams[paramIndex] = { ...newParams[paramIndex], parameter: address };
+      const newF = { ...f, osc_parameters: newParams };
+      if (typed) debouncedAlter(newF);
+      else handleFeatureAlter(newF);
       return newF;
     });
   }
@@ -389,6 +388,62 @@ function Parameters() {
     return `${OSC.PARAM_PREFIX}${p.replaceAll(" ", "_")}`;
   }
 
+  /** The hint or warning under a parameter row, if it needs one */
+  function rowNote(address: string, paramIndex: number) {
+    if (editingRow === paramIndex) return null;
+    const missing = check?.missing.find((m) => m.address === address);
+    if (missing && isPlaceholder(address)) {
+      return catalog.status === "Ready" ? (
+        <div className="mt-1.5 text-xs text-theme-muted">
+          Pick one of your avatar&apos;s parameters, or type its name.
+        </div>
+      ) : null;
+    }
+    if (missing) {
+      return (
+        <SetupWarning>
+          Your current avatar has no parameter named{" "}
+          <code>{parameterName(address)}</code>.
+          {missing.suggestion && (
+            <>
+              {" "}
+              <button
+                type="button"
+                className="underline underline-offset-2 hover:text-theme-text"
+                onClick={() =>
+                  setParam(missing.suggestion as string, paramIndex, false)
+                }
+              >
+                Use <code>{parameterName(missing.suggestion)}</code>
+              </button>
+            </>
+          )}
+        </SetupWarning>
+      );
+    }
+    if (check?.unusable.some((u) => u.address === address)) {
+      return (
+        <SetupWarning>
+          <code>{parameterName(address)}</code> is a whole-number (int)
+          parameter. VibeCheck can only use float and bool parameters.
+        </SetupWarning>
+      );
+    }
+    const param = catalog.parameters.find((p) => p.address === address);
+    if (param?.group === "VrcFury") {
+      return (
+        <div className="mt-1.5 flex items-start gap-1.5 text-xs text-theme-muted">
+          <Info className="mt-px h-3.5 w-3.5 shrink-0" />
+          <span>
+            Made by VRCFury: this name can change when the avatar is rebuilt. If
+            the toy stops reacting after you update the avatar, pick it again.
+          </span>
+        </div>
+      );
+    }
+    return null;
+  }
+
   return (
     <SettingRow label="Parameters">
       <div className="flex flex-col gap-2">
@@ -400,38 +455,41 @@ function Parameters() {
         {feature.osc_parameters.map((param, paramIndex) => (
           // Keyed by index on purpose: keying by the parameter name would
           // remount the input on every keystroke and lose focus while typing
-          <div
-            key={paramIndex}
-            className="grid grid-cols-[minmax(0,1fr)_8rem_auto] items-center gap-2"
-          >
-            <div className="theme-input flex min-w-0 items-center focus-within:border-theme-primary focus-within:ring-2 focus-within:ring-theme-primary/30">
-              <span className="shrink-0 select-none text-xs text-theme-muted">
-                {OSC.PARAM_PREFIX}
-              </span>
-              <input
-                className="min-w-0 flex-1 bg-transparent outline-none"
-                name="osc_parameter"
-                aria-label="OSC parameter name"
-                value={param.parameter.replace(OSC.PARAM_PREFIX, "")}
-                onChange={(e) => handleOscParam(e, paramIndex)}
+          <div key={paramIndex}>
+            <div className="grid grid-cols-[minmax(0,1fr)_8rem_auto] items-center gap-2">
+              <ParameterField
+                value={param.parameter}
+                usedElsewhere={feature.osc_parameters
+                  .filter((_, i) => i !== paramIndex)
+                  .map((p) => p.parameter)}
+                autoFocus={focusRow === paramIndex}
+                onType={(name) =>
+                  setParam(normalizeOscParameter(name), paramIndex, true)
+                }
+                onPick={(address) => setParam(address, paramIndex, false)}
+                onFocusChange={(focused) => {
+                  setEditingRow(focused ? paramIndex : null);
+                  if (!focused) setFocusRow(null);
+                }}
               />
+              <Select
+                name="osc_parameter_mode"
+                value={param.processing_mode}
+                onValueChange={(mode) => handleOscParamMode(mode, paramIndex)}
+                options={ProcessingModes}
+              />
+              <Tooltip text="Remove parameter">
+                <button
+                  type="button"
+                  aria-label="Remove parameter"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-theme-muted transition-colors hover:bg-theme-danger/15 hover:text-theme-danger"
+                  onClick={() => removeParam(param.parameter)}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </Tooltip>
             </div>
-            <Select
-              name="osc_parameter_mode"
-              value={param.processing_mode}
-              onValueChange={(mode) => handleOscParamMode(mode, paramIndex)}
-              options={ProcessingModes}
-            />
-            <Tooltip text="Remove parameter">
-              <button
-                type="button"
-                aria-label="Remove parameter"
-                className="flex h-7 w-7 items-center justify-center rounded-full text-theme-muted transition-colors hover:bg-theme-danger/15 hover:text-theme-danger"
-                onClick={() => removeParam(param.parameter)}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </Tooltip>
+            {rowNote(param.parameter, paramIndex)}
           </div>
         ))}
         <div>
