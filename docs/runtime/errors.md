@@ -62,6 +62,29 @@ state is created. A panic in a background task only ends that task, so the
 hook reports it like any other problem (code `panic`), with the message and
 where it happened, then runs the default hook.
 
+## The log file
+
+`util/log_file.rs` sends the `log` crate's output to `VibeCheck.log` in the
+app's log folder (`~/.local/share/com.vibecheck/logs` on Linux,
+`%LOCALAPPDATA%\com.vibecheck\logs` on Windows). Settings > Troubleshooting
+has an **Open log folder** button for bug reports.
+
+- **Levels:** VibeCheck's own crates at info, everything else (Buttplug,
+  mDNS, Tauri) at warning. Debug builds log everything at debug and also
+  print to stderr. Don't log at info or above for every OSC message or tick:
+  use `debug!`/`trace!` for anything per packet.
+- **Performance:** logging formats the line and queues it; a background
+  thread writes and flushes. A full queue drops lines (and notes how many)
+  instead of blocking. The panic hook flushes before reporting.
+- **Size:** `VibeCheck.log` is this session, `VibeCheck.old.log` the one
+  before; past 5 MB the current file becomes the old one.
+- **Privacy:** every line is redacted before it's written: the home folder
+  (to `~`), the computer and account names, VRChat `usr_`/`avtr_`/`wrld_`
+  ids, Bluetooth addresses, and IP addresses other than loopback and
+  `0.0.0.0`. Times are UTC. On Linux the file is readable by the user only.
+  Redaction is a safety net: never log credentials, tokens or keys (PiShock's
+  included) at any level.
+
 ## unwrap and expect
 
 Use `unwrap` only in tests. In app code:

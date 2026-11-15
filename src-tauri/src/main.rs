@@ -16,7 +16,6 @@ use crate::{
         app::{config_load, VibeCheckConfig},
     },
 };
-//use env_logger;
 
 mod error_signal_handler;
 mod frontend;
@@ -36,13 +35,10 @@ fn main() {
     #[cfg(target_os = "linux")]
     glib::set_prgname(Some("VibeCheck"));
 
-    #[cfg(debug_assertions)]
-    {
-        //tracing_subscriber::fmt::init();
-        let mut log_builder = env_logger::builder();
-        log_builder.filter(None, log::LevelFilter::Debug);
-        log_builder.init();
-    }
+    let context = tauri::generate_context!();
+    // First, so everything after is in the log file (and stderr in debug
+    // builds); see util/log_file.rs for what's kept out of it
+    util::log_file::init(&context.config().identifier);
 
     let vibecheck_state_pointer = Arc::new(Mutex::new(vcore::state::VibeCheckState::new(
         VibeCheckConfig::default(),
@@ -51,7 +47,6 @@ fn main() {
     // From here on, panics are shown in the app instead of silently ending a task
     error_signal_handler::panic_hook::install(vibecheck_state_pointer.lock().reporter.clone());
 
-    let context = tauri::generate_context!();
     // Before any window opens: start the webview fresh after an update
     util::webview_data::reset_on_version_change(
         &context.config().identifier,
@@ -107,6 +102,7 @@ fn main() {
             frontend_native::panic_resume,
             frontend_native::get_panic_state,
             frontend_native::set_diagnostics_enabled,
+            frontend_native::open_log_folder,
             //frontend_native::simulate_feature_osc_input,
         ])
         .build(context)

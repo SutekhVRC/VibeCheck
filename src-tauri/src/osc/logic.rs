@@ -1,5 +1,5 @@
 use futures_timer::Delay;
-use log::{error as logerr, info, trace, warn};
+use log::{debug, error as logerr, info, trace, warn};
 use parking_lot::Mutex;
 use rosc::encoder;
 use rosc::OscType;
@@ -76,8 +76,9 @@ pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OS
         } else {
             let pkt = match rosc::decoder::decode_udp(&buf) {
                 Ok(pkt) => pkt,
-                Err(_e) => {
-                    logerr!("Failed to parse OSC packet");
+                Err(e) => {
+                    // Per packet: debug only, so a bad sender can't flood the log
+                    debug!("Failed to parse OSC packet: {:?}", e);
                     continue;
                 }
             };
@@ -96,7 +97,7 @@ pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OS
                     }
                 }
                 _ => {
-                    info!("Didn't get OscPacket::Message, skipping..");
+                    trace!("Didn't get OscPacket::Message, skipping..");
                 }
             }
         }

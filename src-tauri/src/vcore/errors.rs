@@ -93,6 +93,8 @@ pub mod frontend {
         SaveOfflineToyConfig,
         #[error("Couldn't open your web browser. The link is {0}")]
         OpenBrowserFailure(String),
+        #[error("Couldn't open the log folder. VibeCheck may not have been able to create its log file.")]
+        NoLogFolder,
         //InvalidIpv4Host,
         #[error("VibeCheck's toy list isn't ready yet. Try again in a moment.")]
         ToyManagerNotReady,

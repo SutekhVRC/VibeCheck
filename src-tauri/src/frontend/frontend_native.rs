@@ -288,6 +288,18 @@ pub fn open_default_browser(link: FeBrowserLink) -> Result<(), VCFeError> {
 }
 
 /*
+ * Opens the folder with VibeCheck's log files, for bug reports
+ */
+#[tauri::command(async)]
+pub fn open_log_folder() -> Result<(), VCFeError> {
+    let dir = crate::util::log_file::log_dir().ok_or(VCFeError::NoLogFolder)?;
+    open::that(dir).map_err(|e| {
+        logerr!("Couldn't open the log folder: {}", e);
+        VCFeError::NoLogFolder
+    })
+}
+
+/*
  * Clears VRChat OSC avatar configs
  * Clears all folders in VRChat's OSC folder that start with 'usr_', on Windows
  * and on Linux (Proton). Returns the OSC folders that were cleared.

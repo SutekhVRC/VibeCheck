@@ -24,6 +24,8 @@ pub fn install(reporter: ErrorReporter) {
     std::panic::set_hook(Box::new(move |info| {
         let what = describe(info.payload(), info.location());
         logerr!("VibeCheck panicked: {}", what);
+        // So the panic is in the log file even if the app goes down with it
+        log::logger().flush();
         if let Some(reporter) = REPORTER.get() {
             reporter.error(
                 "app",

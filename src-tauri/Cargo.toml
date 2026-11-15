@@ -45,7 +45,9 @@ parking_lot = "0.12.5"
 btleplug = "0.11.8"
 ts-rs = {version = "11.1.0", features = ["serde-compat"] }
 log = "0.4.17"
-env_logger = "0.11.8"
+# The log file (util/log_file.rs): redaction and UTC timestamps
+regex = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 open = "5.3.3"
 dyn-clone = "1.0.20"
 tauri-plugin-single-instance = { version = "2" }

@@ -406,6 +406,14 @@ export default function Config({
 
   // Every app setting back to its default; toy settings stay. Turns
   // VibeCheck off first, since the connection settings reset too.
+  async function openLogFolder() {
+    try {
+      await invoke(INVOKE.OPEN_LOG_FOLDER);
+    } catch (e) {
+      toast.error(`Could not open the log folder\n${errorText(e)}`);
+    }
+  }
+
   async function resetSettings() {
     if (!confirmSettingsReset) {
       setConfirmSettingsReset(true);
@@ -602,6 +610,23 @@ export default function Config({
               </div>
               <Button variant="danger" className="m-0" onClick={resetSettings}>
                 {confirmSettingsReset ? "Click again to confirm" : "Reset"}
+              </Button>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-[12rem] flex-1">
+                <div className="text-theme-text">Log files</div>
+                <div className="text-xs text-theme-muted">
+                  Attach VibeCheck.log to bug reports (VibeCheck.old.log is the
+                  session before). Your home folder, computer name, IP and
+                  Bluetooth addresses and VRChat IDs are left out.
+                </div>
+              </div>
+              <Button
+                variant="secondary"
+                className="m-0"
+                onClick={openLogFolder}
+              >
+                Open log folder
               </Button>
             </div>
           </Section>

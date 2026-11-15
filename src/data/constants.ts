@@ -25,6 +25,7 @@ export const INVOKE = {
   GET_PANIC_STATE: "get_panic_state",
   SET_DIAGNOSTICS_ENABLED: "set_diagnostics_enabled",
   GET_OSCQUERY_STATUS: "get_oscquery_status",
+  OPEN_LOG_FOLDER: "open_log_folder",
 } as const;
 
 /** Global hotkey for the panic stop (registered by the backend) */
