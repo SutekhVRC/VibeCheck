@@ -37,9 +37,39 @@ pub struct FeVibeCheckConfig {
 #[derive(Deserialize, Serialize, Debug, Clone, TS)]
 #[ts(export)]
 pub struct FeOSCNetworking {
+    /// Manual mode: where VibeCheck listens.
     pub bind: String,
+    /// Manual mode: where VibeCheck sends.
     pub remote: String,
-    pub osc_query_enabled: bool,
+    pub mode: FeOscMode,
+    /// OSCQuery mode: the port VibeCheck listens on (picked once, kept).
+    /// Read-only: the backend picks it.
+    pub oscquery_port: Option<u16>,
+}
+
+/// How VibeCheck and VRChat find each other.
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq, Eq, TS)]
+#[ts(export)]
+pub enum FeOscMode {
+    /// Automatic: VibeCheck advertises its own port over OSCQuery.
+    OscQuery,
+    /// The bind and remote addresses set by hand.
+    Manual,
+}
+
+/// What OSCQuery mode is doing, for Settings > Connection.
+#[derive(Serialize, Debug, Clone, TS)]
+#[ts(export)]
+pub struct FeOscQueryStatus {
+    /// The port being advertised, once advertising started.
+    pub advertising: Option<u16>,
+    /// Where VRChat receives OSC (e.g. `127.0.0.1:9000`), while it's found.
+    pub vrchat: Option<String>,
+    /// Why advertising failed, if it did.
+    pub error: Option<String>,
+    /// Whether VibeCheck holds VRChat's default port (9001) so VRChat's sends
+    /// there don't fail. False while another app has it.
+    pub holding_default_port: bool,
 }
 
 #[derive(Serialize, Clone, TS, Display)]

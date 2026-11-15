@@ -3,10 +3,12 @@ use std::{fs, net::SocketAddrV4, str::FromStr, thread, time::Duration};
 
 use crate::{
     frontend::{
-        frontend_types::{FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig},
+        frontend_types::{
+            FeOscMode, FeOscQueryStatus, FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig,
+        },
         ToFrontend,
     },
-    osc::OSCNetworking,
+    osc::{OSCNetworking, OscMode},
     toy_handling::{
         errors::HandlerErr,
         toy_command_processor::command_toy,
@@ -156,54 +158,15 @@ pub async fn native_vibecheck_enable(
     }
 }
 
-pub fn native_osc_query_start(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), VCFeError> {
-    let mut vc_lock = vc_state.0.lock();
-
-    if vc_lock.osc_query_handler.is_none() {
-        vc_lock.osc_query_init();
+/// What OSCQuery mode is doing, for Settings > Connection.
+pub fn native_get_oscquery_status(vc_state: tauri::State<'_, VCStateMutex>) -> FeOscQueryStatus {
+    let status = vc_state.0.lock().oscquery.status();
+    FeOscQueryStatus {
+        advertising: status.advertising,
+        vrchat: status.vrchat.map(|addr| addr.to_string()),
+        error: status.error,
+        holding_default_port: status.holding_default_port,
     }
-
-    vc_lock
-        .osc_query_handler
-        .as_mut()
-        .unwrap()
-        .start_http_json();
-    vc_lock
-        .osc_query_handler
-        .as_ref()
-        .unwrap()
-        .register_mdns_service();
-    // This is only to attempt to auto-induce an mDNS response with separated answers.
-    vc_lock.osc_query_associate();
-
-    Ok(())
-}
-
-pub fn native_osc_query_stop(vc_state: tauri::State<'_, VCStateMutex>) -> Result<(), VCFeError> {
-    let mut vc_lock = vc_state.0.lock();
-
-    if vc_lock.osc_query_handler.is_none() {
-        return Err(VCFeError::OSCQueryFailure("OSCQuery is not initialized"));
-    }
-
-    vc_lock.osc_query_fini();
-
-    Ok(())
-}
-
-pub fn native_osc_query_attempt_force(
-    vc_state: tauri::State<'_, VCStateMutex>,
-) -> Result<(), VCFeError> {
-    let vc_lock = vc_state.0.lock();
-
-    if vc_lock.osc_query_handler.is_none() {
-        return Err(VCFeError::OSCQueryFailure("OSCQuery is not initialized"));
-    }
-
-    // This is only to attempt to auto-induce an mDNS response with separated answers.
-    vc_lock.osc_query_associate();
-
-    Ok(())
 }
 
 pub async fn native_vibecheck_start_bt_scan(
@@ -310,10 +273,30 @@ pub fn native_set_vibecheck_config(
         Err(_e) => return Err(VCFeError::InvalidRemoteEndpoint),
     };
 
+    let mode = match fe_vc_config.networking.mode {
+        FeOscMode::OscQuery => OscMode::OscQuery,
+        FeOscMode::Manual => OscMode::Manual,
+    };
+
     let config = {
         let mut vc_lock = vc_state.0.lock();
+        let old_listen = vc_lock.config.networking.listen_addr();
+        let old_mode = vc_lock.config.networking.mode();
         vc_lock.config.networking.bind = bind;
         vc_lock.config.networking.remote = remote;
+        vc_lock.config.networking.mode = Some(mode);
+        // Switching to OSCQuery picks its port the first time
+        vc_lock.config.networking.settle();
+        // Applies straight away: OSCQuery advertising starts or stops, and
+        // the off-state listener moves to the new address (while on, the
+        // frontend turns VibeCheck off first, so the next session uses it)
+        let new_listen = vc_lock.config.networking.listen_addr();
+        if vc_lock.config.networking.mode() != old_mode || new_listen != old_listen {
+            vc_lock.apply_oscquery();
+        }
+        if new_listen != old_listen {
+            vc_lock.restart_disabled_listener();
+        }
         vc_lock.config.scan_on_disconnect = fe_vc_config.scan_on_disconnect;
         vc_lock.config.minimize_on_exit = fe_vc_config.minimize_on_exit;
         vc_lock.config.desktop_notifications = fe_vc_config.desktop_notifications;
@@ -350,7 +333,7 @@ pub fn native_set_vibecheck_config(
     }
 }
 
-fn save_config(
+pub(crate) fn save_config(
     config: VibeCheckConfig,
     app_handle: &tauri::AppHandle,
 ) -> Result<(), VibeCheckConfigError> {

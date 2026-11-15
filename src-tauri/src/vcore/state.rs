@@ -1,22 +1,21 @@
 use buttplug_client::ButtplugClient;
 use log::{error as logerr, info, warn};
 use parking_lot::Mutex;
-use std::net::SocketAddrV4;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tokio::runtime::Runtime;
 use tokio::sync::{mpsc::unbounded_channel, mpsc::UnboundedReceiver, mpsc::UnboundedSender};
 use tokio::task::JoinHandle;
-use vrcoscquery::OSCQuery;
 
 use crate::error_signal_handler::state_comm::error_message_handler;
 use crate::error_signal_handler::{ErrorSource, VibeCheckError};
 use crate::osc::logic::{toy_refresh, vc_disabled_osc_command_listen};
+use crate::osc::oscquery::OscQuery;
+use crate::osc::OscMode;
 use crate::toy_handling::runtime::client_event_handler::client_event_handler;
 use crate::toy_handling::runtime::toy_management_handler::toy_management_handler;
 use crate::toy_handling::toy_manager::ToyManager;
 use crate::util::bluetooth;
-use crate::util::net::{find_available_tcp_port, find_available_udp_port};
 use crate::vcore::errors::VcoreError;
 
 use super::config::app::VibeCheckConfig;
@@ -41,7 +40,8 @@ pub struct VibeCheckState {
     pub safety: SafetyLayer,
     /// Diagnostics switch and log, shared with every listening session.
     pub diagnostics: Diagnostics,
-    pub osc_query_handler: Option<OSCQuery>,
+    /// OSCQuery mode's advertising and VRChat lookup (see osc/oscquery.rs).
+    pub oscquery: OscQuery,
     //pub connection_modes: ConnectionModes,
     pub bp_client: Option<ButtplugClient>,
 
@@ -104,7 +104,7 @@ impl VibeCheckState {
             config,
             safety,
             diagnostics: Diagnostics::default(),
-            osc_query_handler: None,
+            oscquery: OscQuery::default(),
             //connection_modes,
             bp_client: None,
             running: RunningState::Stopped,
@@ -352,43 +352,35 @@ impl VibeCheckState {
         }
     }
 
-    pub fn osc_query_init(&mut self) {
-        let available_tcp_port =
-            find_available_tcp_port(self.config.networking.bind.ip().to_string());
-        let available_udp_port =
-            find_available_udp_port(self.config.networking.bind.ip().to_string());
-
-        let http_net = SocketAddrV4::new(
-            *self.config.networking.bind.ip(),
-            available_tcp_port.unwrap(),
-        );
-        let osc_net = SocketAddrV4::new(
-            *self.config.networking.bind.ip(),
-            available_udp_port.unwrap(),
-        );
-
-        self.osc_query_handler = Some(OSCQuery::new("VibeCheck".to_string(), http_net, osc_net));
-        self.config
-            .networking
-            .bind
-            .set_port(available_udp_port.unwrap());
-    }
-
-    pub fn osc_query_fini(&mut self) {
-        if self.osc_query_handler.is_some() {
-            let mut h = self.osc_query_handler.take().unwrap();
-            h.stop_http_json();
-            h.unregister_mdns_service();
-            h.shutdown_mdns();
+    /// Starts OSCQuery mode's advertising if the config is in OSCQuery mode,
+    /// or stops it otherwise. Runs for the life of the app, whether
+    /// VibeCheck is on or off.
+    pub fn apply_oscquery(&self) {
+        let networking = &self.config.networking;
+        match (networking.mode(), networking.oscquery_port) {
+            (OscMode::OscQuery, Some(port)) => {
+                self.oscquery
+                    .start(self.async_rt.handle(), port, self.diagnostics.clone())
+            }
+            _ => self.oscquery.stop(),
         }
     }
 
-    pub fn osc_query_associate(&self) {
-        if self.osc_query_handler.is_some() {
-            self.osc_query_handler
-                .as_ref()
-                .unwrap()
-                .attempt_force_vrc_response_detect(10);
+    /// Where VibeCheck sends OSC to VRChat right now: the manual remote
+    /// address, or in OSCQuery mode the port VRChat advertises.
+    pub fn osc_remote(&self) -> std::net::SocketAddrV4 {
+        self.config.networking.remote_addr(self.oscquery.vrchat())
+    }
+
+    /// Restarts the off-state listener (if it's running) so it listens on
+    /// the current address, e.g. after the connection settings changed. The
+    /// new listener retries binding while the old one lets go of the port.
+    pub fn restart_disabled_listener(&mut self) {
+        if let Some(listener) = self.disabled_osc_listener_h_thread.take() {
+            listener.abort();
+            if let Err(e) = self.start_disabled_listener() {
+                logerr!("Couldn't restart the off-state OSC listener: {:?}", e);
+            }
         }
     }
 }
