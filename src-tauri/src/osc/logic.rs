@@ -118,35 +118,28 @@ pub async fn toy_refresh(
     loop {
         Delay::new(Duration::from_secs(15)).await;
 
-        let (toys, remote) = {
+        let (toys, remote, reporter) = {
             let vc_lock = vibecheck_state_pointer.lock();
-            if !vc_lock
-                .core_toy_manager
-                .as_ref()
-                .unwrap()
-                .online_toys
-                .is_empty()
-            {
-                (
-                    vc_lock
-                        .core_toy_manager
-                        .as_ref()
-                        .unwrap()
-                        .online_toys
-                        .clone(),
-                    vc_lock.osc_remote(),
-                )
-            } else {
+            let toys = &vc_lock.toy_manager().online_toys;
+            if toys.is_empty() {
                 continue;
             }
+            (toys.clone(), vc_lock.osc_remote(), vc_lock.reporter.clone())
         };
 
-        let sock = tUdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await.unwrap();
-        info!(
-            "Bound toy_refresh sender sock to {}",
-            sock.local_addr().unwrap()
-        );
-        sock.connect(remote).await.unwrap();
+        // Battery levels for VRChat. If this fails, toys still update in the
+        // app; the next round tries again.
+        let sock = match battery_socket(remote).await {
+            Ok(sock) => Some(sock),
+            Err(e) => {
+                reporter.warning(
+                    "toys",
+                    "battery_socket",
+                    format!("Couldn't send battery levels to VRChat at {remote}: {e}"),
+                );
+                None
+            }
+        };
         for (.., mut toy) in toys {
             let toy_power = ToyPower::read(&toy.device_handle).await;
 
@@ -158,7 +151,7 @@ pub async fn toy_refresh(
                     FeVCToy {
                         toy_id: Some(toy.toy_id),
                         toy_name: toy.toy_name.clone(),
-                        toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
+                        toy_anatomy: toy.anatomy(),
                         toy_power: toy_power.clone(),
                         toy_connected: toy.toy_connected,
                         features: toy.parsed_toy_features.features.to_frontend(),
@@ -170,18 +163,29 @@ pub async fn toy_refresh(
                 }),
             );
 
+            let Some(sock) = sock.as_ref() else {
+                continue;
+            };
             if toy.osc_data {
                 trace!("Sending OSC data for toy: {}", toy.toy_name);
 
-                let battery_level_msg = encoder::encode(&OscPacket::Message(OscMessage {
+                let battery_level_msg = match encoder::encode(&OscPacket::Message(OscMessage {
                     addr: format!(
                         "/avatar/parameters/vibecheck/osc_data/{}/{}/battery",
                         toy.toy_name.replace(" ", "_").to_lowercase(),
                         toy.sub_id
                     ),
                     args: vec![OscType::Float(toy_power.to_float() as f32)],
-                }))
-                .unwrap();
+                })) {
+                    Ok(msg) => msg,
+                    Err(e) => {
+                        warn!(
+                            "Couldn't encode the battery level for {}: {}",
+                            toy.toy_name, e
+                        );
+                        continue;
+                    }
+                };
 
                 let batt_send_err = sock.send(&battery_level_msg).await;
                 if batt_send_err.is_err() {
@@ -198,4 +202,14 @@ pub async fn toy_refresh(
             }
         }
     }
+}
+
+/// A socket for sending battery levels to `remote`.
+async fn battery_socket(remote: std::net::SocketAddrV4) -> std::io::Result<tUdpSocket> {
+    let sock = tUdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).await?;
+    sock.connect(remote).await?;
+    if let Ok(local) = sock.local_addr() {
+        info!("Bound toy_refresh sender sock to {}", local);
+    }
+    Ok(sock)
 }

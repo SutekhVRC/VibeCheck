@@ -76,9 +76,7 @@ impl APIProcessor {
                 let mut vc_lock = vc_pointer.lock();
 
                 vc_lock
-                    .core_toy_manager
-                    .as_mut()
-                    .unwrap()
+                    .toy_manager_mut()
                     .online_toys
                     .iter_mut()
                     .for_each(|toy| {

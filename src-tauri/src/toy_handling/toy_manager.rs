@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use crate::error_signal_handler::{ErrorSource, VibeCheckError};
 use crate::frontend::ToFrontend;
 use crate::util::fs::build_path_dir;
 use crate::{
@@ -24,7 +23,10 @@ pub struct ToyManager {
 }
 
 impl ToyManager {
-    pub fn new(app_handle: AppHandle) -> Result<Self, VibeCheckError> {
+    /// The toy manager, with the saved toys loaded. If they can't be read
+    /// it starts with none and returns the error too, so startup can carry
+    /// on and tell the user.
+    pub fn new(app_handle: AppHandle) -> (Self, Option<ToyHandlingError>) {
         /*
          * Read all toy configs
          * Send update to frontend
@@ -45,12 +47,9 @@ impl ToyManager {
         match ot.populate_configs() {
             Ok(()) => {
                 trace!("ToyManager config population complete!");
-                Ok(ot)
+                (ot, None)
             }
-            Err(e) => Err(VibeCheckError::new(
-                ErrorSource::ToyHandling(e),
-                Some("Config population failure"),
-            )),
+            Err(e) => (ot, Some(e)),
         }
     }
 

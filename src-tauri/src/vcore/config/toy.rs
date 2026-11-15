@@ -161,7 +161,13 @@ impl VCToyConfig {
         if !file_exists(&config_path) {
             Err(errors::backend::VibeCheckToyConfigError::OfflineToyConfigNotFound)
         } else {
-            let con = std::fs::read_to_string(config_path).unwrap();
+            let con = match std::fs::read_to_string(&config_path) {
+                Ok(con) => con,
+                Err(e) => {
+                    warn!("Couldn't read toy config {}: {}", config_path, e);
+                    return Err(VibeCheckToyConfigError::ReadFailure);
+                }
+            };
 
             let config: VCToyConfig = match serde_json::from_str(&con) {
                 Ok(vc_toy_config) => vc_toy_config,

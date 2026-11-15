@@ -46,6 +46,23 @@ pub struct VCToy {
 }
 
 impl VCToy {
+    /// The toy's settings. Every connected toy has them: they're loaded or
+    /// created (`populate_toy_config`) before the toy is added.
+    pub fn config_mut(&mut self) -> &mut VCToyConfig {
+        self.config
+            .as_mut()
+            .expect("a connected toy's config is loaded or created when it connects")
+    }
+
+    /// The toy's anatomy tag for the frontend (the default before its config
+    /// is loaded).
+    pub fn anatomy(&self) -> crate::frontend::frontend_types::FeVCToyAnatomy {
+        self.config
+            .as_ref()
+            .map(|c| c.anatomy.to_fe())
+            .unwrap_or_else(|| VCToyAnatomy::default().to_fe())
+    }
+
     fn populate_linears(&mut self, layout: &LegacyLayout) {
         for index in 0..layout.linears.len() as u32 {
             self.parsed_toy_features.features.push(VCToyFeature::new(
@@ -110,7 +127,9 @@ impl VCToy {
         });
         info!("Set toy config populate defaults");
         // Save toy on first time add
-        self.save_toy_config();
+        if let Err(e) = self.save_toy_config() {
+            warn!("Couldn't save {}'s new settings: {}", self.toy_name, e);
+        }
     }
 
     pub fn populate_toy_config(&mut self) {
@@ -179,7 +198,14 @@ impl VCToy {
             debug!("Attempted to load toy config file: {}", config_path);
             Ok(())
         } else {
-            let con = fs::read_to_string(config_path).unwrap();
+            let con = match fs::read_to_string(&config_path) {
+                Ok(con) => con,
+                Err(e) => {
+                    warn!("Couldn't read toy config {}: {}", config_path, e);
+                    self.config = None;
+                    return Err(errors::backend::VibeCheckToyConfigError::ReadFailure);
+                }
+            };
 
             let config: VCToyConfig = match serde_json::from_str(&con) {
                 Ok(vc_toy_config) => vc_toy_config,
@@ -219,6 +245,7 @@ impl VCToy {
                 }
             } else {
                 warn!("Failed to serialize config to json");
+                return Err(VibeCheckToyConfigError::SerializeError);
             }
         } else {
             warn!("save_toy_config() called while toy config is None");
@@ -227,7 +254,11 @@ impl VCToy {
     }
 
     pub fn mutate_state_by_anatomy(&mut self, anatomy_type: &VCToyAnatomy, value: bool) -> bool {
-        if self.config.as_ref().unwrap().anatomy == *anatomy_type {
+        if self
+            .config
+            .as_ref()
+            .is_some_and(|c| c.anatomy == *anatomy_type)
+        {
             self.parsed_toy_features
                 .features
                 .iter_mut()

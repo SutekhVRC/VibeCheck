@@ -169,25 +169,19 @@ pub fn alter_toy(
                     fe_toy.toy_name
                 );
 
+                let Some(toy_id) = fe_toy.toy_id else {
+                    return Err(VCFeError::AlterToyFailure(ToyAlterError::NoToyIndex));
+                };
                 let altered = {
                     let mut vc_lock = vc_state.0.lock();
-                    if let Some(toy) = vc_lock
-                        .core_toy_manager
-                        .as_mut()
-                        .unwrap()
-                        .online_toys
-                        .get_mut(&fe_toy.toy_id.unwrap())
-                    {
+                    if let Some(toy) = vc_lock.toy_manager_mut().online_toys.get_mut(&toy_id) {
                         toy.osc_data = fe_toy.osc_data;
                         toy.bt_update_rate = fe_toy.bt_update_rate;
 
-                        toy.config.as_mut().unwrap().osc_data = fe_toy.osc_data;
-                        toy.config.as_mut().unwrap().bt_update_rate = fe_toy.bt_update_rate;
-                        toy.config
-                            .as_mut()
-                            .unwrap()
-                            .anatomy
-                            .from_fe(fe_toy.toy_anatomy);
+                        let config = toy.config_mut();
+                        config.osc_data = fe_toy.osc_data;
+                        config.bt_update_rate = fe_toy.bt_update_rate;
+                        config.anatomy.from_fe(fe_toy.toy_anatomy);
 
                         // Overwrite all features in the state handled toy.
                         for fe_feature in fe_toy.features {
@@ -198,8 +192,7 @@ pub fn alter_toy(
                                 ));
                             } else {
                                 // If altering feature map succeeds write the data to the config
-                                toy.config.as_mut().unwrap().features =
-                                    toy.parsed_toy_features.clone();
+                                toy.config_mut().features = toy.parsed_toy_features.clone();
                             }
                         }
 

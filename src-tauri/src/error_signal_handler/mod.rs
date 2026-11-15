@@ -1,8 +1,7 @@
 use thiserror::Error;
 
 use crate::{
-    osc::errors::OscError, toy_handling::errors::ToyHandlingError, util::errors::UtilError,
-    vcore::errors::VcoreError,
+    util::errors::UtilError, vcore::errors::VcoreError,
 };
 
 pub mod reporter;
@@ -29,10 +28,6 @@ impl VibeCheckError {
 #[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum ErrorSource {
-    #[error(transparent)]
-    Osc(OscError),
-    #[error(transparent)]
-    ToyHandling(ToyHandlingError),
     #[error(transparent)]
     Util(UtilError),
     #[error(transparent)]

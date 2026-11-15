@@ -55,7 +55,6 @@ impl Default for PenetrationSystem {
 impl ToFrontend<FePenetrationSystem> for PenetrationSystem {
     type OutputType = FePenetrationSystem;
     fn to_frontend(&self) -> Self::OutputType {
-
         // Frontend expects empty Vec if no tags (In the future make tuti send null for input filter from frontend)
         let pen_system_input_filter = if self.pen_system_input_filter.as_ref().is_some() {
             self.pen_system_input_filter.clone()
@@ -80,7 +79,11 @@ impl FromFrontend<FePenetrationSystem> for PenetrationSystem {
         self.pen_system_processing_mode = backend_pspm;
 
         // Backend expects None if no tags (In the future make tuti send null for input filter from frontend)
-        if frontend_type.pen_system_input_filter.as_ref().is_some_and(|v| v.is_empty()) {
+        if frontend_type
+            .pen_system_input_filter
+            .as_ref()
+            .is_some_and(|v| v.is_empty())
+        {
             self.pen_system_input_filter = None;
         } else {
             self.pen_system_input_filter = frontend_type.pen_system_input_filter.clone();

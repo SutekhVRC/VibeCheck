@@ -16,7 +16,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use log::{error as logerr, info, warn};
+use log::{error as logerr, warn};
 use tauri::AppHandle;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use vibecheck_core::{Diagnostics, ModuleInstanceId};
@@ -31,7 +31,6 @@ const REPEAT_WINDOW: Duration = Duration::from_secs(30);
 pub enum Severity {
     Error,
     Warning,
-    Info,
 }
 
 impl Severity {
@@ -39,7 +38,6 @@ impl Severity {
         match self {
             Self::Error => "error",
             Self::Warning => "warning",
-            Self::Info => "info",
         }
     }
 }
@@ -78,7 +76,6 @@ impl ErrorReporter {
         match notice.severity {
             Severity::Error => logerr!("{}", line),
             Severity::Warning => warn!("{}", line),
-            Severity::Info => info!("{}", line),
         }
         // Only fails once the app is shutting down
         let _ = self.tx.send(notice);
@@ -92,9 +89,6 @@ impl ErrorReporter {
         self.notice(Severity::Warning, module, code, message.into());
     }
 
-    pub fn info(&self, module: &'static str, code: &'static str, message: impl Into<String>) {
-        self.notice(Severity::Info, module, code, message.into());
-    }
 
     fn notice(
         &self,
@@ -152,7 +146,6 @@ pub async fn notice_handler(
         let shown = match notice.severity {
             Severity::Error => FrontendError::Error(notice.message),
             Severity::Warning => FrontendError::Warning(notice.message),
-            Severity::Info => FrontendError::Info(notice.message),
         };
         emit_error(&app_handle, shown);
     }

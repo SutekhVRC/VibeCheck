@@ -75,6 +75,16 @@ impl Default for VibeCheckConfig {
     }
 }
 
+/// Writes the default config. A failure is only logged: VibeCheck runs on
+/// the defaults anyway, and saving settings later reports its own error.
+fn write_default_config(path: &str) {
+    let json = serde_json::to_string(&VibeCheckConfig::default())
+        .expect("the default config always serializes");
+    if let Err(e) = fs::write(path, json) {
+        logerr!("Couldn't write the default config to {}: {}", path, e);
+    }
+}
+
 pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckConfigError> {
     let vc_root_dir = match get_config_dir(app_handle) {
         Ok(d) => d,
@@ -88,7 +98,10 @@ pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckC
     info!("vc_toy_config_dir: {}", vc_toy_config_dir);
 
     if !path_exists(&vc_root_dir) {
-        fs::create_dir_all(&vc_root_dir).expect("[-] Cannot create VibeCheck root directory.");
+        if let Err(e) = fs::create_dir_all(&vc_root_dir) {
+            logerr!("Cannot create VibeCheck root directory: {}", e);
+            return Err(VibeCheckConfigError::ConfigDirFail);
+        }
         info!("Created VibeCheck root directory.");
     } else {
         info!("VibeCheck root directory exists.");
@@ -96,18 +109,17 @@ pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckC
 
     info!("Attempting creation of : {}", vc_toy_config_dir);
     if !path_exists(&vc_toy_config_dir) {
-        fs::create_dir(&vc_toy_config_dir).expect("[-] Cannot create VibeCheck toy directory.");
+        if let Err(e) = fs::create_dir(&vc_toy_config_dir) {
+            logerr!("Cannot create VibeCheck toy directory: {}", e);
+            return Err(VibeCheckConfigError::ConfigDirFail);
+        }
         info!("Created VibeCheck toy config directory.");
     } else {
         info!("VibeCheck toy config directory.");
     }
 
     if !file_exists(&vc_config_file) {
-        fs::write(
-            &vc_config_file,
-            serde_json::to_string(&VibeCheckConfig::default()).unwrap(),
-        )
-        .unwrap();
+        write_default_config(&vc_config_file);
         info!("Created VibeCheck config.");
     } else {
         info!("VibeCheck config exists.");
@@ -129,11 +141,7 @@ pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckC
 
                 let default_conf = VibeCheckConfig::default();
 
-                fs::write(
-                    &vc_config_file,
-                    serde_json::to_string(&default_conf).unwrap(),
-                )
-                .unwrap();
+                write_default_config(&vc_config_file);
                 trace!("Wrote VibeCheck config file");
                 // If fail to parse config overwrite with new default
                 Ok(default_conf)
@@ -147,11 +155,7 @@ pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckC
             );
             warn!("[*] Resetting to default config.");
             let default_conf = VibeCheckConfig::default();
-            fs::write(
-                &vc_config_file,
-                serde_json::to_string(&default_conf).unwrap(),
-            )
-            .unwrap();
+            write_default_config(&vc_config_file);
             trace!("Wrote VibeCheck config file");
             Ok(default_conf)
         }

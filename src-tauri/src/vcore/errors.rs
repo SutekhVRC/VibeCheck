@@ -69,6 +69,8 @@ pub mod frontend {
         EnableBindFailure,
         #[error("VibeCheck is already off.")]
         DisableFailure,
+        #[error("VibeCheck's toy connection service didn't start, so toys can't connect. Restart VibeCheck.")]
+        ToyServiceNotRunning,
         #[error("Couldn't start looking for toys: {0}")]
         StartScanFailure(String),
         #[error("Couldn't stop looking for toys: {0}")]
@@ -140,7 +142,8 @@ pub mod backend {
 
     #[derive(Serialize, Debug, Error, IntoStaticStr)]
     pub enum VibeCheckToyConfigError {
-        //ReadFailure,
+        #[error("The toy's saved settings file couldn't be opened.")]
+        ReadFailure,
         #[error("The toy's saved settings couldn't be read.")]
         DeserializeError,
         #[error("This toy has no saved settings.")]

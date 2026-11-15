@@ -56,6 +56,10 @@ use crate::{
     vcore::ipc::call_plane::{TmSig, ToyManagementEvent, ToyUpdate},
 };
 
+/// The session runtime is only taken out by `stop_listening`, which ends
+/// the session.
+const SESSION_RUNNING: &str = "the session runtime runs until stop_listening";
+
 type ToyRuntime = Arc<Mutex<RawMutex, Option<Runtime>>>;
 
 /* https://github.com/snd/hertz/issues/2#issuecomment-850859904
@@ -122,7 +126,7 @@ async fn toy_task(
     async_rt
         .lock()
         .as_ref()
-        .unwrap()
+        .expect(SESSION_RUNNING)
         .spawn(async move { toy_emitter_thread(tet_data).await });
 
     while dev.connected() {
@@ -157,7 +161,9 @@ impl Session {
     /// master intensity and panic stop apply here too. `diagnostics` is the
     /// app-wide diagnostics switch and log.
     fn new(app_handle: &AppHandle, safety: SafetyLayer, diagnostics: Diagnostics) -> Self {
-        let async_rt: ToyRuntime = Arc::new(Mutex::new(Some(Runtime::new().unwrap())));
+        let async_rt: ToyRuntime = Arc::new(Mutex::new(Some(
+            Runtime::new().expect("couldn't start the toy session's async runtime"),
+        )));
         let signals = SignalPlane::new();
         let (events, event_rx) = EventPlane::new();
         let (graphs, graphs_rx) = unbounded_channel();
@@ -171,7 +177,7 @@ impl Session {
         // while waiting for this session to start listening
         {
             let rt_lock = async_rt.lock();
-            let rt = rt_lock.as_ref().unwrap();
+            let rt = rt_lock.as_ref().expect(SESSION_RUNNING);
             rt.spawn(core_event_handler(
                 event_rx,
                 avatar_query.clone(),
@@ -236,14 +242,19 @@ fn start_toy(session: &Session, toy: VCToy) -> RunningToy {
 
     session.set_graph(&toy, &slots);
 
-    let handle = session.async_rt.lock().as_ref().unwrap().spawn(toy_task(
-        session.async_rt.clone(),
-        control_rx,
-        toy,
-        slots.clone(),
-        session.events.clone(),
-        session.safety.clone(),
-    ));
+    let handle = session
+        .async_rt
+        .lock()
+        .as_ref()
+        .expect(SESSION_RUNNING)
+        .spawn(toy_task(
+            session.async_rt.clone(),
+            control_rx,
+            toy,
+            slots.clone(),
+            session.events.clone(),
+            session.safety.clone(),
+        ));
     info!("Toy: {} started listening..", toy_id);
 
     RunningToy {
@@ -272,7 +283,7 @@ fn start_osc(
     let avatar_query = session.avatar_query.clone();
 
     let rt_lock = session.async_rt.lock();
-    let rt = rt_lock.as_ref().unwrap();
+    let rt = rt_lock.as_ref().expect(SESSION_RUNNING);
 
     info!("Spawning OSC listener..");
     rt.spawn(async move {
@@ -313,7 +324,7 @@ async fn stop_listening(running_toys: &mut HashMap<u32, RunningToy>, session: &S
         .async_rt
         .lock()
         .take()
-        .unwrap()
+        .expect(SESSION_RUNNING)
         .shutdown_background();
 }
 

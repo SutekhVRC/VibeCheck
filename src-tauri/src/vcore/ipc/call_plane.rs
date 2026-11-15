@@ -63,26 +63,34 @@ pub async fn native_vibecheck_disable(
     }
 
     if vc_lock.bp_client.is_none() {
-        info!("ButtPlugClient is None");
-        return Err(VCFeError::DisableFailure);
+        return Err(VCFeError::ToyServiceNotRunning);
     }
 
     trace!("Calling destroy_toy_update_handler()");
     vc_lock.destroy_toy_update_handler().await;
     trace!("TUH destroyed");
 
-    let bpc = vc_lock.bp_client.as_ref().unwrap();
+    // Checked above
+    let bpc = vc_lock.bp_client.as_ref().expect("checked above");
     let _ = bpc.stop_scanning().await;
     scan::scan_stopped();
-    let _ = bpc.stop_all_devices().await;
+    if let Err(e) = bpc.stop_all_devices().await {
+        warn!("Couldn't stop every toy while turning off: {}", e);
+    }
 
     info!("ButtplugClient stopped operations");
 
-    vc_lock
+    // Only fails if the toy runtime task has stopped, in which case nothing
+    // is running to reset
+    if vc_lock
         .tme_send_tx
         .send(ToyManagementEvent::Sig(TmSig::TMHReset))
-        .unwrap();
-    info!("Sent TMHReset signal");
+        .is_err()
+    {
+        logerr!("Couldn't send TMHReset: the toy runtime task has stopped");
+    } else {
+        info!("Sent TMHReset signal");
+    }
 
     vc_lock.running = RunningState::Stopped;
 
@@ -109,18 +117,22 @@ pub async fn native_vibecheck_enable(
     }
 
     if vc_lock.bp_client.is_none() {
-        return Err(VCFeError::EnableFailure);
+        return Err(VCFeError::ToyServiceNotRunning);
     }
 
     info!("Stopping DOL");
     vc_lock.stop_disabled_listener().await;
 
-    vc_lock
+    if vc_lock
         .tme_send_tx
         .send(ToyManagementEvent::Sig(TmSig::StartListening(
             vc_lock.config.networking.clone(),
         )))
-        .unwrap();
+        .is_err()
+    {
+        logerr!("Couldn't send StartListening: the toy runtime task has stopped");
+        return Err(VCFeError::EnableFailure);
+    }
 
     match vc_lock.tme_recv_rx.recv().await {
         Some(tme) => match tme {
@@ -133,10 +145,9 @@ pub async fn native_vibecheck_enable(
                 TmSig::BindError => {
                     logerr!("Bind Error in TME sig: Sending shutdown signal!");
 
-                    vc_lock
+                    let _ = vc_lock
                         .tme_send_tx
-                        .send(ToyManagementEvent::Sig(TmSig::StopListening))
-                        .unwrap();
+                        .send(ToyManagementEvent::Sig(TmSig::StopListening));
                     vc_lock.running = RunningState::Stopped;
                     Err(VCFeError::EnableBindFailure)
                 }
@@ -174,9 +185,7 @@ pub async fn native_vibecheck_start_bt_scan(
     let vc_lock = vc_state.0.lock();
 
     if vc_lock.bp_client.is_none() {
-        return Err(VCFeError::StartScanFailure(
-            "ButtplugClient is None".to_string(),
-        ));
+        return Err(VCFeError::ToyServiceNotRunning);
     }
 
     if let Err(e) = vc_lock
@@ -191,7 +200,13 @@ pub async fn native_vibecheck_start_bt_scan(
 
     info!("StartListening sent to TMH. Trying to start scanning..");
 
-    if let Err(e) = vc_lock.bp_client.as_ref().unwrap().start_scanning().await {
+    if let Err(e) = vc_lock
+        .bp_client
+        .as_ref()
+        .expect("checked above")
+        .start_scanning()
+        .await
+    {
         logerr!("Failed to scan for bluetooth devices: {}", e);
         return Err(VCFeError::StartScanFailure(e.to_string()));
     }
@@ -206,12 +221,16 @@ pub async fn native_vibecheck_stop_bt_scan(
     let vc_lock = vc_state.0.lock();
 
     if vc_lock.bp_client.is_none() {
-        return Err(VCFeError::StopScanFailure(
-            "ButtPlugClient is None".to_string(),
-        ));
+        return Err(VCFeError::ToyServiceNotRunning);
     }
 
-    if let Err(e) = vc_lock.bp_client.as_ref().unwrap().stop_scanning().await {
+    if let Err(e) = vc_lock
+        .bp_client
+        .as_ref()
+        .expect("checked above")
+        .stop_scanning()
+        .await
+    {
         logerr!("Failed to stop scan for bluetooth devices: {}", e);
         return Err(VCFeError::StopScanFailure(e.to_string()));
     }
@@ -219,6 +238,9 @@ pub async fn native_vibecheck_stop_bt_scan(
     info!("Stopped Scanning..");
     Ok(())
 }
+
+/// main.rs sets the app handle before the window opens, so before any command.
+const APP_HANDLE_SET: &str = "the app handle is set at startup, before any command";
 
 pub fn native_get_vibecheck_config(vc_state: tauri::State<'_, VCStateMutex>) -> FeVibeCheckConfig {
     let config = {
@@ -303,7 +325,7 @@ pub fn native_set_vibecheck_config(
 
     let app_handle = {
         let vc_lock = vc_state.0.lock();
-        vc_lock.app_handle.clone().unwrap()
+        vc_lock.app_handle.clone().expect(APP_HANDLE_SET)
     };
 
     match save_config(config, &app_handle) {
@@ -344,7 +366,10 @@ pub fn native_reset_vibecheck_config(
         let intensity = vc_lock.config.master_intensity;
         vc_lock.safety.set_intensity(intensity);
 
-        (vc_lock.config.clone(), vc_lock.app_handle.clone().unwrap())
+        (
+            vc_lock.config.clone(),
+            vc_lock.app_handle.clone().expect(APP_HANDLE_SET),
+        )
     };
 
     save_config(config, &app_handle).map_err(|e| match e {
@@ -398,7 +423,17 @@ pub fn native_alter_toy(
     altered: VCToy,
 ) -> Result<(), ToyAlterError> {
     let alter_clone = altered.clone();
-    altered.save_toy_config();
+    // The change still reaches the running toy; it just won't survive a restart
+    if let Err(e) = altered.save_toy_config() {
+        vc_state.0.lock().reporter.warning(
+            "toys",
+            "save_toy_config",
+            format!(
+                "Couldn't save {}'s settings: {e} The change applies until VibeCheck restarts.",
+                altered.toy_name
+            ),
+        );
+    }
     debug!("Altered toy config: {:#?}", altered);
 
     let send_res = {
@@ -411,8 +446,8 @@ pub fn native_alter_toy(
             FeToyEvent::Update({
                 FeVCToy {
                     toy_id: Some(alter_clone.toy_id),
+                    toy_anatomy: alter_clone.anatomy(),
                     toy_name: alter_clone.toy_name,
-                    toy_anatomy: alter_clone.config.as_ref().unwrap().anatomy.to_fe(),
                     toy_power: alter_clone.toy_power,
                     toy_connected: alter_clone.toy_connected,
                     features: alter_clone.parsed_toy_features.features.to_frontend(),
@@ -448,12 +483,7 @@ pub fn native_simulate_device_feature(
 ) {
     let vc_toys = {
         let vc_lock = vc_state.0.lock();
-        vc_lock
-            .core_toy_manager
-            .as_ref()
-            .unwrap()
-            .online_toys
-            .clone()
+        vc_lock.toy_manager().online_toys.clone()
     };
 
     let toy = match vc_toys.get(&toy_id) {

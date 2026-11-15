@@ -38,7 +38,7 @@ fn fe_toy(toy: &VCToy) -> FeVCToy {
     FeVCToy {
         toy_id: Some(toy.toy_id),
         toy_name: toy.toy_name.clone(),
-        toy_anatomy: toy.config.as_ref().unwrap().anatomy.to_fe(),
+        toy_anatomy: toy.anatomy(),
         toy_power: toy.toy_power.clone(),
         toy_connected: toy.toy_connected,
         features: toy.parsed_toy_features.features.to_frontend(),
@@ -79,12 +79,15 @@ async fn read_battery_later(
     emit_toy_event(&app_handle, FeToyEvent::Update(fe_toy(&toy)));
 
     if notify {
-        app_handle
+        if let Err(e) = app_handle
             .notification()
             .builder()
             .title("Toy Connected")
             .body(format!("{} ({})", toy.toy_name, toy.toy_power.to_string()).as_str())
-            .show();
+            .show()
+        {
+            warn!("Couldn't show a desktop notification: {}", e);
+        }
     }
 }
 
@@ -101,7 +104,7 @@ pub async fn client_event_handler(
     identifier: String,
     app_handle: AppHandle,
     tme_send: UnboundedSender<ToyManagementEvent>,
-    _reporter: ErrorReporter,
+    reporter: ErrorReporter,
 ) {
     // Listen for toys and add them if it connects send add update
     // If a toy disconnects send remove update
@@ -119,17 +122,11 @@ pub async fn client_event_handler(
                     let sub_id = {
                         let vc_lock = vibecheck_state_pointer.lock();
                         let mut toy_dup_count = 0;
-                        vc_lock
-                            .core_toy_manager
-                            .as_ref()
-                            .unwrap()
-                            .online_toys
-                            .iter()
-                            .for_each(|toy| {
-                                if &toy.1.toy_name == dev.name() {
-                                    toy_dup_count += 1;
-                                }
-                            });
+                        vc_lock.toy_manager().online_toys.iter().for_each(|toy| {
+                            if &toy.1.toy_name == dev.name() {
+                                toy_dup_count += 1;
+                            }
+                        });
                         toy_dup_count
                     };
 
@@ -160,11 +157,13 @@ pub async fn client_event_handler(
                         // First time toy load
                         toy.populate_toy_config();
                         let mut vc_lock = vibecheck_state_pointer.lock();
-                        vc_lock
-                            .core_toy_manager
-                            .as_mut()
-                            .unwrap()
-                            .populate_configs();
+                        if let Err(e) = vc_lock.toy_manager_mut().populate_configs() {
+                            reporter.warning(
+                                "toys",
+                                "reload_saved_toys",
+                                format!("{e} The saved toys list may be out of date."),
+                            );
+                        }
                     } else {
                         toy.populate_toy_config();
                     }
@@ -172,17 +171,18 @@ pub async fn client_event_handler(
                     {
                         let mut vc_lock = vibecheck_state_pointer.lock();
                         vc_lock
-                            .core_toy_manager
-                            .as_mut()
-                            .unwrap()
+                            .toy_manager_mut()
                             .online_toys
                             .insert(toy.toy_id, toy.clone());
                     }
                     trace!("Toy inserted into VibeCheckState toys");
 
-                    tme_send
+                    if tme_send
                         .send(ToyManagementEvent::Tu(ToyUpdate::AddToy(toy.clone())))
-                        .unwrap();
+                        .is_err()
+                    {
+                        report_runtime_stopped(&reporter, &toy.toy_name);
+                    }
 
                     emit_toy_event(&app_handle, FeToyEvent::Add(fe_toy(&toy)));
 
@@ -199,33 +199,34 @@ pub async fn client_event_handler(
                         let mut vc_lock = vibecheck_state_pointer.lock();
                         (
                             vc_lock.config.scan_on_disconnect,
-                            vc_lock
-                                .core_toy_manager
-                                .as_mut()
-                                .unwrap()
-                                .online_toys
-                                .remove(&dev.index()),
+                            vc_lock.toy_manager_mut().online_toys.remove(&dev.index()),
                         )
                     };
 
                     // Check if toy is valid
                     if let Some(toy) = toy {
                         trace!("Removed toy from VibeCheckState toys");
-                        tme_send
+                        if tme_send
                             .send(ToyManagementEvent::Tu(ToyUpdate::RemoveToy(dev.index())))
-                            .unwrap();
+                            .is_err()
+                        {
+                            report_runtime_stopped(&reporter, &toy.toy_name);
+                        }
 
                         emit_toy_event(&app_handle, FeToyEvent::Remove(dev.index()));
 
                         {
                             let vc_lock = vibecheck_state_pointer.lock();
                             if vc_lock.config.desktop_notifications {
-                                app_handle
+                                if let Err(e) = app_handle
                                     .notification()
                                     .builder()
                                     .title("Toy Disconnected")
                                     .body(toy.toy_name.to_string())
-                                    .show();
+                                    .show()
+                                {
+                                    warn!("Couldn't show a desktop notification: {}", e);
+                                }
                             }
                         }
 
@@ -233,9 +234,13 @@ pub async fn client_event_handler(
                             info!("Scan on disconnect is enabled.. Starting scan.");
                             let vc_lock = vibecheck_state_pointer.lock();
                             if vc_lock.bp_client.is_some() && vc_lock.config.scan_on_disconnect {
-                                vc_lock
-                                    .async_rt
-                                    .spawn(vc_lock.bp_client.as_ref().unwrap().start_scanning());
+                                vc_lock.async_rt.spawn(
+                                    vc_lock
+                                        .bp_client
+                                        .as_ref()
+                                        .expect("checked above")
+                                        .start_scanning(),
+                                );
                                 scan::stop_after_scan_length(
                                     &vc_lock,
                                     vibecheck_state_pointer.clone(),
@@ -269,4 +274,14 @@ pub async fn client_event_handler(
         }
     }
     info!("Event handler returning!");
+}
+
+/// The toy runtime task (toy_management_handler) has stopped, so toys can't
+/// be started or stopped until VibeCheck restarts.
+fn report_runtime_stopped(reporter: &ErrorReporter, toy_name: &str) {
+    reporter.error(
+        "toys",
+        "toy_runtime_stopped",
+        format!("VibeCheck's toy runtime has stopped, so {toy_name} can't be updated. Restart VibeCheck."),
+    );
 }

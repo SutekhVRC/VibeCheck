@@ -120,10 +120,17 @@ fn main() {
         let mut vc_state = vibecheck_state_pointer.lock();
 
         vc_state.config = match config_load(app.app_handle()) {
-            Ok(config_dir) => config_dir,
+            Ok(config) => config,
             Err(e) => {
-                logerr!("Failed config_load(): {:?}", e);
-                std::process::exit(-1);
+                // Run on the defaults rather than not at all
+                vc_state.reporter.error(
+                    "config",
+                    "config_folder",
+                    format!(
+                        "{e} VibeCheck is using its default settings, and changes won't be saved."
+                    ),
+                );
+                VibeCheckConfig::default()
             }
         };
         // Older configs get a connection mode, and OSCQuery mode a port. The
@@ -145,18 +152,37 @@ fn main() {
         trace!("State pointer set");
         vc_state.set_app_handle(app.app_handle());
         trace!("App handle set");
-        vc_state.notice_handler_start().unwrap();
+        vc_state
+            .notice_handler_start()
+            .expect("the app handle is set just above");
         trace!("Global message handler started");
-        vc_state.init_toy_manager().unwrap();
+        vc_state
+            .init_toy_manager()
+            .expect("the app handle is set just above");
         trace!("ToyManager initialized");
         vc_state.identifier = identifier;
         trace!("App Identifier set");
 
-        vc_state.start_tmh().unwrap();
+        vc_state
+            .start_tmh()
+            .expect("the app handle and toy manager are set just above");
         trace!("Started TMH");
-        vc_state.init_ceh().unwrap();
-        trace!("Started CEH");
-        vc_state.start_disabled_listener().unwrap();
+        // Without the toy service VibeCheck still runs (OSC, settings); the
+        // toy commands check for it and say it isn't running
+        match vc_state.init_ceh() {
+            Ok(()) => trace!("Started CEH"),
+            Err(e) => {
+                let reporter = vc_state.reporter.clone();
+                reporter.error(
+                    "bluetooth",
+                    "toy_service",
+                    format!("{e} Toys can't connect until VibeCheck restarts."),
+                )
+            }
+        }
+        vc_state
+            .start_disabled_listener()
+            .expect("nothing has started the off-state listener yet");
         trace!("Started DOL");
         // OSCQuery mode: advertise VibeCheck for as long as the app runs
         vc_state.apply_oscquery();

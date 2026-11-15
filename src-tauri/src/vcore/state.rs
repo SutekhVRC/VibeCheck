@@ -85,7 +85,7 @@ impl VibeCheckState {
         //let core_toy_manager = ToyHandler::new();
 
         // Create async runtime for toy handling routines
-        let async_rt = Runtime::new().unwrap();
+        let async_rt = Runtime::new().expect("couldn't start VibeCheck's async runtime");
 
         // Setup channels
         let (tme_recv_tx, tme_recv_rx): (
@@ -151,6 +151,21 @@ impl VibeCheckState {
         state
     }
 
+    /// The toy manager. main.rs creates it at startup, before the window
+    /// opens and before any task or command runs.
+    pub fn toy_manager(&self) -> &ToyManager {
+        self.core_toy_manager
+            .as_ref()
+            .expect("the toy manager is created at startup, before anything uses it")
+    }
+
+    /// See [`toy_manager`](Self::toy_manager).
+    pub fn toy_manager_mut(&mut self) -> &mut ToyManager {
+        self.core_toy_manager
+            .as_mut()
+            .expect("the toy manager is created at startup, before anything uses it")
+    }
+
     /// Starts showing reported problems in the app. Needs the app handle.
     pub fn notice_handler_start(&mut self) -> Result<(), VibeCheckError> {
         let Some(app_handle) = self.app_handle.clone() else {
@@ -189,15 +204,21 @@ impl VibeCheckState {
             ));
         }
 
-        self.toy_management_h_thread = Some(self.async_rt.spawn(toy_management_handler(
-            self.tme_recv_tx.take().unwrap(),
-            self.tme_send_rx.take().unwrap(),
-            self.core_toy_manager.as_ref().unwrap().clone(),
-            self.config.networking.clone(),
-            self.safety.clone(),
-            self.diagnostics.clone(),
-            self.app_handle.as_ref().unwrap().clone(),
-        )));
+        self.toy_management_h_thread = Some(
+            self.async_rt.spawn(toy_management_handler(
+                self.tme_recv_tx
+                    .take()
+                    .expect("start_tmh runs once, at startup"),
+                self.tme_send_rx
+                    .take()
+                    .expect("start_tmh runs once, at startup"),
+                self.toy_manager().clone(),
+                self.config.networking.clone(),
+                self.safety.clone(),
+                self.diagnostics.clone(),
+                self.app_handle.clone().expect("checked above"),
+            )),
+        );
         info!("TMH started");
         Ok(())
     }
@@ -210,20 +231,21 @@ impl VibeCheckState {
             ));
         }
 
-        self.disabled_osc_listener_h_thread =
-            Some(self.async_rt.spawn(vc_disabled_osc_command_listen(
-                self.app_handle.as_ref().unwrap().clone(),
+        self.disabled_osc_listener_h_thread = Some(
+            self.async_rt.spawn(vc_disabled_osc_command_listen(
+                self.app_handle
+                    .clone()
+                    .expect("the app handle is set at startup, before the listener starts"),
                 self.config.networking.clone(),
-            )));
+            )),
+        );
         Ok(())
     }
 
     pub async fn stop_disabled_listener(&mut self) {
-        if self.disabled_osc_listener_h_thread.is_none() {
+        let Some(dol_thread) = self.disabled_osc_listener_h_thread.take() else {
             return;
-        }
-
-        let dol_thread = self.disabled_osc_listener_h_thread.take().unwrap();
+        };
         dol_thread.abort();
         match dol_thread.await {
             Ok(()) => info!("DOL thread finished"),
@@ -239,18 +261,24 @@ impl VibeCheckState {
         self.app_handle = Some(app_handle.clone());
     }
 
+    /// Creates the toy manager. If the saved toys can't be read, VibeCheck
+    /// starts without them and says so.
     pub fn init_toy_manager(&mut self) -> Result<(), VibeCheckError> {
-        let toy_manager = ToyManager::new(
-            self.app_handle
-                .as_ref()
-                .expect("Failed to get app handle")
-                .clone(),
-        );
-
-        match toy_manager {
-            Ok(tm) => self.core_toy_manager = Some(tm),
-            Err(e) => return Err(e),
+        let Some(app_handle) = self.app_handle.clone() else {
+            return Err(VibeCheckError::new(
+                ErrorSource::Vcore(VcoreError::NoAppHandle),
+                None,
+            ));
+        };
+        let (toy_manager, error) = ToyManager::new(app_handle);
+        if let Some(e) = error {
+            self.reporter.warning(
+                "toys",
+                "load_saved_toys",
+                format!("{e} Toys you connected before won't show under Saved until VibeCheck can read its ToyConfigs folder."),
+            );
         }
+        self.core_toy_manager = Some(toy_manager);
         Ok(())
     }
 
@@ -292,14 +320,18 @@ impl VibeCheckState {
         info!("Buttplug Client Initialized.");
 
         // Get event stream
-        let event_stream = self.bp_client.as_ref().unwrap().event_stream();
+        let event_stream = self
+            .bp_client
+            .as_ref()
+            .expect("set just above")
+            .event_stream();
 
         // Start CEH
         self.client_eh_thread = Some(self.async_rt.spawn(client_event_handler(
             event_stream,
-            self.vibecheck_state_pointer.as_ref().unwrap().clone(),
+            self.vibecheck_state_pointer.clone().expect("checked above"),
             self.identifier.clone(),
-            self.app_handle.as_ref().unwrap().clone(),
+            self.app_handle.clone().expect("checked above"),
             self.tme_send_tx.clone(),
             self.reporter.clone(),
         )));
@@ -337,18 +369,16 @@ impl VibeCheckState {
         }
 
         self.toy_update_h_thread = Some(self.async_rt.spawn(toy_refresh(
-            self.vibecheck_state_pointer.as_ref().unwrap().clone(),
-            self.app_handle.as_ref().unwrap().clone(),
+            self.vibecheck_state_pointer.clone().expect("checked above"),
+            self.app_handle.clone().expect("checked above"),
         )));
         info!("TUH thread started");
     }
 
     pub async fn destroy_toy_update_handler(&mut self) {
-        if self.toy_update_h_thread.is_none() {
+        let Some(tuh_thread) = self.toy_update_h_thread.take() else {
             return;
-        }
-
-        let tuh_thread = self.toy_update_h_thread.take().unwrap();
+        };
         tuh_thread.abort();
         match tuh_thread.await {
             Ok(()) => info!("TUH thread finished"),

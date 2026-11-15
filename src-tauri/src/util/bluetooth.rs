@@ -22,14 +22,17 @@ pub async fn detect_btle_adapter() -> bool {
         warn!("No btle adapters detected");
         return false;
     };
-    if adapters.is_empty() {
+    let Some(central) = adapters.into_iter().next() else {
         return false;
+    };
+    match central.adapter_info().await {
+        Ok(info) => info!("[+] BTLE: {}", info),
+        Err(e) => warn!(
+            "Found a Bluetooth adapter but couldn't read its details: {}",
+            e
+        ),
     }
-
-    let adapter = manager.adapters().await.unwrap();
-    let central = adapter.into_iter().next().unwrap();
-    info!("[+] BTLE: {}", central.adapter_info().await.unwrap());
-    !adapters.is_empty() // TODO is this always true?
+    true
 }
 
 /// Starts VibeCheck's own Buttplug server in-process (Bluetooth LE, plus the
