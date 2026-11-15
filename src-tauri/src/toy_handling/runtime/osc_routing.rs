@@ -112,6 +112,14 @@ pub async fn core_event_handler(
                     tokio::spawn(async move { query.fill_now().await });
                 }
             }
+            // Anything else disconnecting must be re-armed on purpose once
+            // it's back (no-op for toys)
+            EventKind::Connection if event.value == Value::Bool(false) => {
+                if safety.is_armed(&event.source.module) {
+                    safety.disarm(&event.source.module);
+                    warn!("Disarmed {} because it disconnected", event.source.module);
+                }
+            }
             EventKind::OutputError => match &event.value {
                 Value::Text(error) => {
                     warn!("{} is failing: {}", event.source.module, error);

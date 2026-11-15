@@ -47,7 +47,7 @@ use crate::{
             diagnostics::diagnostics_task,
             graph_runner::{graph_runner, GraphControl, GraphValues},
             osc_routing::{core_event_handler, osc_router},
-            presence::vrchat_presence,
+            presence::{publish_connection, vrchat_presence},
             toy_emitter_thread::{toy_emitter_thread, EmitterThreadData, ToyEmitterThreadSignal},
             toy_graph::{build_toy_graph, OSC_MODULE},
             toy_output::{buttplug_output, toy_actuators, toy_module_id},
@@ -242,10 +242,14 @@ struct RunningToy {
     handle: JoinHandle<()>,
     control: UnboundedSender<VCToy>,
     slots: CommandSlots,
+    module: ModuleInstanceId,
 }
 
-/// Starts the toy's graph and its task.
+/// Starts the toy's graph and its task, and publishes that it connected
+/// (also for toys already connected when listening starts).
 fn start_toy(session: &Session, toy: VCToy) -> RunningToy {
+    let module = toy_module_id(&toy);
+    publish_connection(&session.events, module.clone(), true);
     let (control_tx, control_rx) = unbounded_channel();
     // One latest-command slot per motor: filled by the graph, drained by the emitter
     let slots = CommandSlots::new();
@@ -272,6 +276,7 @@ fn start_toy(session: &Session, toy: VCToy) -> RunningToy {
         handle,
         control: control_tx,
         slots,
+        module,
     }
 }
 
@@ -424,6 +429,8 @@ pub async fn toy_management_handler(
                     }
                     ToyUpdate::RemoveToy(id) => {
                         if let Some(toy) = running_toys.remove(&id) {
+                            // Its activity ends here too: no "stopped" follows
+                            publish_connection(&session.events, toy.module.clone(), false);
                             let _ = session.graphs.send(GraphControl::Remove(id));
                             toy.handle.abort();
                             match toy.handle.await {

@@ -6,6 +6,11 @@
  *   osc/avatar_catalog.rs). Each session publishes "connected" when it
  *   starts if VRChat is already running, then every change. The source is
  *   VRCHAT_MODULE's `connection` port.
+ * - Toys: the session publishes "connected" when it starts a toy (also for
+ *   toys already connected when listening starts) and "disconnected" when
+ *   the toy goes away, from the toy's module (e.g. `toy:lovense_lush:0`).
+ *   A toy that disconnects while running gets no activity "stopped" event:
+ *   the disconnect ends its activity.
  *
  * The core event handler reacts to VRChat disconnecting (see osc_routing.rs).
  */
