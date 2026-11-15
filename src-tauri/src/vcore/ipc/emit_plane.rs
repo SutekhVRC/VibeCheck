@@ -4,7 +4,7 @@ use tauri::{AppHandle, Emitter};
 
 use crate::frontend::{
     error::FrontendError,
-    frontend_types::{FeCoreEvent, FeToyEvent},
+    frontend_types::{FeAvatarCatalog, FeCoreEvent, FeToyEvent},
 };
 
 pub fn emit_toy_event(app_handle: &AppHandle, event: FeToyEvent) {
@@ -25,5 +25,11 @@ pub fn emit_error(app_handle: &AppHandle, event: FrontendError) {
     match app_handle.emit("fe_error", &event) {
         Ok(()) => (),
         Err(e) => logerr!("Emit Error Event [{}] failed: {}", event, e),
+    }
+}
+
+pub fn emit_avatar_event(app_handle: &AppHandle, catalog: &FeAvatarCatalog) {
+    if let Err(e) = app_handle.emit("fe_avatar_event", catalog) {
+        logerr!("Emit Avatar Event failed: {}", e);
     }
 }

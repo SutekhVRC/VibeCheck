@@ -39,9 +39,8 @@ use vibecheck_core::{
 };
 
 use crate::{
-    osc::{avatar_query::AvatarQuery, OSCNetworking},
+    osc::{avatar_catalog::AvatarCatalog, avatar_query::AvatarQuery, OSCNetworking},
     toy_handling::{
-        input_processor::penetration_systems::sps::is_setting_address,
         runtime::{
             diagnostics::diagnostics_task,
             graph_runner::{graph_runner, GraphControl, GraphValues},
@@ -160,7 +159,12 @@ impl Session {
     /// graph runner on it. `safety` is the app-wide safety layer, so the
     /// master intensity and panic stop apply here too. `diagnostics` is the
     /// app-wide diagnostics switch and log.
-    fn new(app_handle: &AppHandle, safety: SafetyLayer, diagnostics: Diagnostics) -> Self {
+    fn new(
+        app_handle: &AppHandle,
+        safety: SafetyLayer,
+        diagnostics: Diagnostics,
+        avatar_catalog: AvatarCatalog,
+    ) -> Self {
         let async_rt: ToyRuntime = Arc::new(Mutex::new(Some(
             Runtime::new().expect("couldn't start the toy session's async runtime"),
         )));
@@ -170,7 +174,7 @@ impl Session {
         let avatar_query = AvatarQuery::new(
             signals.clone(),
             ModuleInstanceId::new(OSC_MODULE),
-            is_setting_address,
+            avatar_catalog,
             diagnostics.clone(),
         );
         // Don't lock the global state here: native_vibecheck_enable holds it
@@ -335,6 +339,7 @@ pub async fn toy_management_handler(
     mut vc_config: OSCNetworking,
     safety: SafetyLayer,
     diagnostics: Diagnostics,
+    avatar_catalog: AvatarCatalog,
     app_handle: AppHandle,
 ) {
     let mut listening = false;
@@ -380,7 +385,12 @@ pub async fn toy_management_handler(
             continue;
         }
 
-        let session = Session::new(&app_handle, safety.clone(), diagnostics.clone());
+        let session = Session::new(
+            &app_handle,
+            safety.clone(),
+            diagnostics.clone(),
+            avatar_catalog.clone(),
+        );
         info!("Started listening!");
         // Recv events (listening)
 

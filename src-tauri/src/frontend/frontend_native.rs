@@ -432,3 +432,45 @@ pub fn remove_offline_toy(
 pub fn get_oscquery_status(vc_state: tauri::State<'_, state::VCStateMutex>) -> FeOscQueryStatus {
     call_plane::native_get_oscquery_status(vc_state)
 }
+
+/*
+ * The current avatar's parameters, for the parameter picker
+ */
+#[tauri::command]
+pub fn get_avatar_catalog(
+    vc_state: tauri::State<'_, state::VCStateMutex>,
+) -> crate::frontend::frontend_types::FeAvatarCatalog {
+    let catalog = vc_state.0.lock().avatar_catalog.clone();
+    (&catalog.state()).into()
+}
+
+/*
+ * Reads the current avatar from VRChat again now
+ */
+#[tauri::command]
+pub fn refresh_avatar_catalog(vc_state: tauri::State<'_, state::VCStateMutex>) {
+    vc_state.0.lock().avatar_catalog.refresh();
+}
+
+/*
+ * What a feature's settings miss on the current avatar. None while the
+ * avatar isn't known (VRChat not found yet), so nothing is flagged.
+ */
+#[tauri::command]
+pub fn check_feature(
+    vc_state: tauri::State<'_, state::VCStateMutex>,
+    feature: crate::frontend::frontend_types::FeVCToyFeature,
+) -> Option<crate::frontend::frontend_types::FeFeatureCheck> {
+    let avatar = vc_state.0.lock().avatar_catalog.avatar()?;
+    let parameters: Vec<String> = feature
+        .osc_parameters
+        .iter()
+        .map(|p| p.parameter.clone())
+        .collect();
+    let system = feature.penetration_system.pen_system_type;
+    let tags = feature
+        .penetration_system
+        .pen_system_input_filter
+        .unwrap_or_default();
+    Some(crate::osc::avatar_catalog::check_feature(&avatar, &parameters, system, &tags).into())
+}

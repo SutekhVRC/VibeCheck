@@ -1,10 +1,11 @@
 # osc-tool
 
-A debug tool for VibeCheck's OSC input. It can:
+A debug tool for VibeCheck's OSC input, and for reading an avatar's parameters from VRChat. It can:
 
 - **listen**: print the OSC arriving on a port, to check VRChat is actually sending to VibeCheck;
 - **send**: send a message to VibeCheck as if VRChat sent it, to test toy parameters and the OSC API without VRChat;
-- **sweep**: ramp a float parameter from one value to another, to test Range, Smooth and Rate mode.
+- **sweep**: ramp a float parameter from one value to another, to test Range, Smooth and Rate mode;
+- **avatar**: save the current avatar's parameters from VRChat's OSCQuery server to a file, e.g. as a test fixture.
 
 Run it from `src-tauri/`:
 
@@ -12,6 +13,7 @@ Run it from `src-tauri/`:
 cargo run -p osc-tool -- listen
 cargo run -p osc-tool -- send Boop 0.5
 cargo run -p osc-tool -- sweep Boop 0 1 --back
+cargo run -p osc-tool -- avatar --out sps3.json
 cargo run -p osc-tool -- COMMAND --help
 ```
 
@@ -110,6 +112,19 @@ osc-tool sweep Boop 1 0 --seconds 5 --rate 10        # slow fade out
 | `--to ADDRESS` | Where to send (default `127.0.0.1:9001`) |
 
 Values are rounded to hundredths, the same as VibeCheck does when it receives them, so what's printed is what VibeCheck sees. The ramp always ends exactly on `TO` (and on `FROM` with `--back`).
+
+## avatar
+
+Saves the current avatar's parameter tree from VRChat's OSCQuery server (`/avatar/parameters`), exactly as VRChat sends it: every parameter's name, type and current value. It doesn't include the avatar's id.
+
+```
+osc-tool avatar                       # writes avatar-parameters.json
+osc-tool avatar --out legacy_sps.json
+```
+
+It only reads from VRChat (an mDNS lookup and one HTTP request), so it's safe to run while VRChat and VibeCheck are open: it doesn't advertise anything or open an OSC port. VRChat must be running with OSC on.
+
+VibeCheck's tests use trees saved this way (`src/osc/fixtures/`). Names can give away the avatar or its assets (VRCFury builds some parameter names from GameObject names, including the avatar's root object), so replace those before committing a file.
 
 ## When nothing happens
 

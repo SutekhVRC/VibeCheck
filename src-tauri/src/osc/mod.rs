@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use crate::frontend::frontend_types::{FeOSCNetworking, FeOscMode};
 use crate::util::net::{find_available_udp_port, udp_port_available};
 
+pub mod avatar_catalog;
 pub mod avatar_query;
-pub mod errors;
 pub mod logic;
 pub mod oscquery;
 

@@ -26,6 +26,12 @@ use crate::toy_handling::input_processor::InputProcessor;
 const PREFIX: &str = "/avatar/parameters/TPS_Internal/";
 const DEPTH_PARAMETERS: [&str; 2] = ["Depth_In", "RootRoot"];
 
+/// Whether `param` (an address after `/avatar/parameters/`) is a TPS
+/// parameter.
+pub fn is_tps_parameter(param: &str) -> bool {
+    param.starts_with(&PREFIX["/avatar/parameters/".len()..])
+}
+
 #[derive(Default)]
 pub struct TPSProcessor {
     /// Latest depth per orifice or penetrator, keyed by `<Type>/<Id>`.

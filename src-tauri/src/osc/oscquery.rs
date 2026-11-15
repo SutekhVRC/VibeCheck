@@ -6,8 +6,9 @@
  * task:
  * - advertises VibeCheck's OSC port over OSCQuery (mDNS + HTTP), so VRChat
  *   finds it and sends avatar parameters there;
- * - looks for VRChat's own OSCQuery service every few seconds and reads the
- *   port VRChat receives OSC on, for sending battery levels.
+ * - reads the port VRChat receives OSC on every few seconds, for sending
+ *   battery levels (VRChat's OSCQuery service is the one the avatar catalog
+ *   found, see avatar_catalog.rs).
  *
  * The UDP port itself is held by VibeCheck's OSC listeners (the session's
  * OSC input while on, the off-state listener while off), on every interface:
@@ -38,15 +39,17 @@ use tokio::task::JoinHandle;
 use vibecheck_core::{Diagnostics, ModuleInstanceId};
 use vrcoscquery::{discovery, OscQueryService};
 
+use super::avatar_catalog::AvatarCatalog;
 use super::DEFAULT_BIND;
 
 /// The name VibeCheck advertises.
 const SERVICE_NAME: &str = "VibeCheck";
 
-/// How long one look for VRChat may take.
+/// How long reading VRChat's HOST_INFO may take.
 const LOOKUP_TIMEOUT: Duration = Duration::from_secs(3);
 
-/// How often to look for VRChat (and notice it closing or restarting).
+/// How often to read where VRChat receives OSC (and notice it closing or
+/// restarting).
 const LOOKUP_EVERY: Duration = Duration::from_secs(10);
 
 /// The diagnostics log module (shared with the avatar parameter lookup).
@@ -76,11 +79,17 @@ pub struct OscQuery {
 
 impl OscQuery {
     /// Starts advertising `osc_port` (replacing anything running) on
-    /// `runtime`.
-    pub fn start(&self, runtime: &tokio::runtime::Handle, osc_port: u16, diagnostics: Diagnostics) {
+    /// `runtime`. VRChat is looked up through `catalog`.
+    pub fn start(
+        &self,
+        runtime: &tokio::runtime::Handle,
+        osc_port: u16,
+        diagnostics: Diagnostics,
+        catalog: AvatarCatalog,
+    ) {
         self.stop();
         let status = self.status.clone();
-        let task = runtime.spawn(run(osc_port, status, diagnostics));
+        let task = runtime.spawn(run(osc_port, status, diagnostics, catalog));
         *self.task.lock() = Some(task);
     }
 
@@ -104,7 +113,12 @@ impl OscQuery {
     }
 }
 
-async fn run(osc_port: u16, status: Arc<Mutex<OscQueryStatus>>, diagnostics: Diagnostics) {
+async fn run(
+    osc_port: u16,
+    status: Arc<Mutex<OscQueryStatus>>,
+    diagnostics: Diagnostics,
+    catalog: AvatarCatalog,
+) {
     let module = ModuleInstanceId::new(LOG_MODULE);
     let log = |message: String| diagnostics.log(&module, LOG_LABEL, move || message);
 
@@ -144,7 +158,7 @@ async fn run(osc_port: u16, status: Arc<Mutex<OscQueryStatus>>, diagnostics: Dia
             }
         }
 
-        let found = find_vrchat_osc().await;
+        let found = find_vrchat_osc(&catalog).await;
         let previous = std::mem::replace(&mut status.lock().vrchat, found);
         if found != previous {
             match found {
@@ -162,9 +176,10 @@ async fn run(osc_port: u16, status: Arc<Mutex<OscQueryStatus>>, diagnostics: Dia
     }
 }
 
-/// Where VRChat receives OSC, from its OSCQuery `HOST_INFO`.
-async fn find_vrchat_osc() -> Option<SocketAddrV4> {
-    let vrchat = discovery::find_vrchat(LOOKUP_TIMEOUT).await.ok()??;
+/// Where VRChat receives OSC, from its OSCQuery `HOST_INFO`. VRChat's
+/// server is the one the avatar catalog found, so it isn't looked up twice.
+async fn find_vrchat_osc(catalog: &AvatarCatalog) -> Option<SocketAddrV4> {
+    let vrchat = catalog.vrchat()?;
     let info = discovery::host_info(&vrchat, LOOKUP_TIMEOUT).await.ok()?;
     // VRChat advertises 127.0.0.1 for itself; fall back to the address it
     // was found on if OSC_IP isn't a usable IPv4 address

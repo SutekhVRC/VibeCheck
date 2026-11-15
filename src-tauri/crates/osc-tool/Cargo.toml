@@ -4,8 +4,12 @@ version = "0.1.0"
 edition = "2021"
 authors = ["SutekhVRC"]
 license = "Apache-2.0"
-description = "Debug tool: watch OSC arriving on a port, or send OSC to test VibeCheck inputs"
+description = "Debug tool: watch OSC arriving on a port, send OSC to test VibeCheck inputs, or save an avatar's parameters from OSCQuery"
 publish = false
 
 [dependencies]
 rosc = "0.11.4"
+# `avatar`: reads VRChat's OSCQuery server
+vrcoscquery = { git = "https://github.com/SutekhVRC/VRCOSCQuery", tag = "v0.2.0" }
+tokio = { version = "1.17.0", features = ["rt", "time"] }
+serde_json = "1.0.85"
