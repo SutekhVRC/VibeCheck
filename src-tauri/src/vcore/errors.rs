@@ -27,10 +27,6 @@ impl fmt::Display for VcoreError {
     }
 }
 
-pub enum VCError {
-    HandlingErr(crate::toy_handling::errors::HandlerErr),
-}
-
 pub mod frontend {
     use serde::Serialize;
 

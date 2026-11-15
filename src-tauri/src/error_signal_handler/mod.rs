@@ -6,7 +6,7 @@ use crate::{
     toy_handling::errors::ToyHandlingError, util::errors::UtilError, vcore::errors::VcoreError,
 };
 
-pub mod state_comm;
+pub mod reporter;
 
 #[derive(Debug)]
 pub struct VibeCheckError {

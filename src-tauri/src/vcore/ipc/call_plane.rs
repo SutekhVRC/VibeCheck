@@ -10,7 +10,6 @@ use crate::{
     },
     osc::{OSCNetworking, OscMode},
     toy_handling::{
-        errors::HandlerErr,
         toy_command_processor::command_toy,
         toyops::{VCFeatureType, VCToy},
     },
@@ -20,7 +19,7 @@ use crate::{
         errors::{
             backend::{ToyAlterError, VibeCheckConfigError, VibeCheckFSError},
             frontend::VCFeError,
-            VCError, VcoreError,
+            VcoreError,
         },
         ipc::emit_plane::emit_toy_event,
         scan,
@@ -193,15 +192,7 @@ pub async fn native_vibecheck_start_bt_scan(
     info!("StartListening sent to TMH. Trying to start scanning..");
 
     if let Err(e) = vc_lock.bp_client.as_ref().unwrap().start_scanning().await {
-        let _ = vc_lock
-            .error_comm_tx
-            .as_ref()
-            .unwrap()
-            .send(VCError::HandlingErr(HandlerErr {
-                id: -2,
-                msg: format!("Failed to scan for bluetooth devices. {}", e),
-            }));
-        logerr!("Failed to scan.");
+        logerr!("Failed to scan for bluetooth devices: {}", e);
         return Err(VCFeError::StartScanFailure(e.to_string()));
     }
     info!("Started Scanning..");
@@ -221,15 +212,7 @@ pub async fn native_vibecheck_stop_bt_scan(
     }
 
     if let Err(e) = vc_lock.bp_client.as_ref().unwrap().stop_scanning().await {
-        let _ = vc_lock
-            .error_comm_tx
-            .as_ref()
-            .unwrap()
-            .send(VCError::HandlingErr(HandlerErr {
-                id: -2,
-                msg: format!("Failed to stop scan for bluetooth devices. {}", e),
-            }));
-        logerr!("Failed to stop scan.");
+        logerr!("Failed to stop scan for bluetooth devices: {}", e);
         return Err(VCFeError::StopScanFailure(e.to_string()));
     }
     scan::scan_stopped();

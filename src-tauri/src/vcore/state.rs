@@ -7,7 +7,7 @@ use tokio::runtime::Runtime;
 use tokio::sync::{mpsc::unbounded_channel, mpsc::UnboundedReceiver, mpsc::UnboundedSender};
 use tokio::task::JoinHandle;
 
-use crate::error_signal_handler::state_comm::error_message_handler;
+use crate::error_signal_handler::reporter::{notice_handler, ErrorReporter, Notice};
 use crate::error_signal_handler::{ErrorSource, VibeCheckError};
 use crate::osc::logic::{toy_refresh, vc_disabled_osc_command_listen};
 use crate::osc::oscquery::OscQuery;
@@ -19,7 +19,6 @@ use crate::util::bluetooth;
 use crate::vcore::errors::VcoreError;
 
 use super::config::app::VibeCheckConfig;
-use super::errors::VCError;
 use super::ipc::call_plane::ToyManagementEvent;
 use vibecheck_core::{Diagnostics, SafetyLayer};
 
@@ -48,10 +47,13 @@ pub struct VibeCheckState {
     pub running: RunningState,
     pub core_toy_manager: Option<ToyManager>,
 
-    pub error_comm_tx: Option<UnboundedSender<VCError>>,
-
-    // Message handler (Handles Messages from other threads. For now just error aggregator)
-    pub global_message_handler_thread: Option<JoinHandle<()>>,
+    /// Reports problems from background work to the user (see
+    /// error_signal_handler/reporter.rs). Usable from startup; notices wait
+    /// until the handler starts.
+    pub reporter: ErrorReporter,
+    /// Taken by `notice_handler_start`.
+    notices: Option<UnboundedReceiver<Notice>>,
+    pub notice_handler_thread: Option<JoinHandle<()>>,
     // Client Event Handler
     pub client_eh_thread: Option<JoinHandle<()>>,
     //Toy update handler
@@ -98,6 +100,8 @@ impl VibeCheckState {
         let safety = SafetyLayer::default();
         safety.set_intensity(config.master_intensity);
 
+        let (reporter, notices) = ErrorReporter::channel();
+
         let state = Self {
             app_handle: None,
             identifier: String::new(),
@@ -110,8 +114,10 @@ impl VibeCheckState {
             running: RunningState::Stopped,
             core_toy_manager: None,
             //======================================
-            // Error channels
-            error_comm_tx: None,
+            // Problems reported by background work
+            reporter,
+            notices: Some(notices),
+            notice_handler_thread: None,
 
             //======================================
             // Disabled listener thread
@@ -135,9 +141,6 @@ impl VibeCheckState {
             tme_recv_tx: Some(tme_recv_tx),
             tme_send_rx: Some(tme_send_rx),
 
-            //================================================
-            // Message handler (Handles Messages from other threads. For now just error aggregator)
-            global_message_handler_thread: None,
             vibecheck_state_pointer: None,
 
             //======================================
@@ -148,22 +151,23 @@ impl VibeCheckState {
         state
     }
 
-    pub fn global_msg_handler_start(&mut self) -> Result<(), VibeCheckError> {
-        if self.app_handle.is_none() {
-            logerr!("global_msg_handler_start() called but no app_handle was set");
+    /// Starts showing reported problems in the app. Needs the app handle.
+    pub fn notice_handler_start(&mut self) -> Result<(), VibeCheckError> {
+        let Some(app_handle) = self.app_handle.clone() else {
+            logerr!("notice_handler_start() called but no app_handle was set");
             return Err(VibeCheckError::new(
                 ErrorSource::Vcore(VcoreError::NoAppHandle),
                 None,
             ));
-        }
-
-        // Create error handling/passig channels
-        let (error_comm_tx, error_comm_rx): (UnboundedSender<VCError>, UnboundedReceiver<VCError>) =
-            unbounded_channel();
-        self.error_comm_tx = Some(error_comm_tx);
-        self.global_message_handler_thread = Some(self.async_rt.spawn(error_message_handler(
-            self.app_handle.as_ref().unwrap().clone(),
-            error_comm_rx,
+        };
+        let Some(notices) = self.notices.take() else {
+            warn!("notice_handler_start() called twice");
+            return Ok(());
+        };
+        self.notice_handler_thread = Some(self.async_rt.spawn(notice_handler(
+            app_handle,
+            notices,
+            self.diagnostics.clone(),
         )));
         Ok(())
     }
@@ -297,7 +301,7 @@ impl VibeCheckState {
             self.identifier.clone(),
             self.app_handle.as_ref().unwrap().clone(),
             self.tme_send_tx.clone(),
-            self.error_comm_tx.as_ref().unwrap().clone(),
+            self.reporter.clone(),
         )));
         Ok(())
     }

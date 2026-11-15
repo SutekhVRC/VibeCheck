@@ -1,6 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use crate::{
+    error_signal_handler::reporter::ErrorReporter,
     frontend::{
         frontend_types::{FeCoreEvent, FeScanEvent, FeToyEvent, FeVCToy},
         ToFrontend,
@@ -10,7 +11,6 @@ use crate::{
         ToyPower,
     },
     vcore::{
-        errors::VCError,
         ipc::{
             call_plane::{ToyManagementEvent, ToyUpdate},
             emit_plane::{emit_core_event, emit_toy_event},
@@ -101,7 +101,7 @@ pub async fn client_event_handler(
     identifier: String,
     app_handle: AppHandle,
     tme_send: UnboundedSender<ToyManagementEvent>,
-    _error_tx: UnboundedSender<VCError>,
+    _reporter: ErrorReporter,
 ) {
     // Listen for toys and add them if it connects send add update
     // If a toy disconnects send remove update

@@ -145,7 +145,7 @@ fn main() {
         trace!("State pointer set");
         vc_state.set_app_handle(app.app_handle());
         trace!("App handle set");
-        vc_state.global_msg_handler_start().unwrap();
+        vc_state.notice_handler_start().unwrap();
         trace!("Global message handler started");
         vc_state.init_toy_manager().unwrap();
         trace!("ToyManager initialized");
