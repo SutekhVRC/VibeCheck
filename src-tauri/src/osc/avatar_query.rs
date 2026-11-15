@@ -1,24 +1,27 @@
 /*
- * Fills in avatar parameters that VRChat never sends over OSC.
+ * Fills in the avatar's current parameter values when VibeCheck starts
+ * listening and after each avatar change.
  *
- * VRChat only sends a parameter over OSC when its value changes. Some
- * parameters are set once when the avatar loads and never change (an SPS
- * plug's LengthMult2, a socket's DepthRadius). If one sits at its default,
- * VibeCheck never hears it, and it's also missed if VibeCheck starts after
- * the avatar loaded.
+ * VRChat only sends a parameter over OSC when its value changes. So when
+ * VibeCheck turns on mid-session, or a new avatar loads, toys would wait
+ * for the next change; and some parameters are set once when the avatar
+ * loads and never change at all (an SPS plug's LengthMult2, a socket's
+ * DepthRadius), so they'd never arrive.
  *
- * VRChat's OSCQuery server reports every parameter's current value, so the
- * ones that matter are read from there: when listening starts, and a few
- * times after each avatar change (VRChat may still be loading the avatar).
- * VRChat's server is found with VRCOSCQuery's discovery (mDNS).
+ * VRChat's OSCQuery server reports every parameter's current value, so every
+ * float and bool is read from there: when listening starts, and a few times
+ * after each avatar change (VRChat may still be loading the avatar). Toys
+ * then match the avatar straight away. VRChat's server is the one the
+ * avatar catalog found (osc/avatar_catalog.rs), or looked up here if the
+ * catalog hasn't found it yet.
  *
  * Values are written to the signal plane as if they had arrived over OSC,
  * but only where nothing has arrived yet, so a value VRChat sends always
  * wins.
  *
- * While diagnostics are on, every value filled in, and every failed lookup,
- * is logged under the `oscquery` module, so the diagnostics view can tell
- * them apart from values VRChat sent over OSC.
+ * While diagnostics are on, SPS settings filled in are logged one by one
+ * under the `oscquery` module, with one summary line for the rest, and the
+ * diagnostics view tags every filled-in value (see `was_filled`).
  */
 
 use std::collections::HashSet;
@@ -29,8 +32,11 @@ use std::time::{Duration, Instant};
 use log::{debug, info};
 use parking_lot::Mutex;
 use vibecheck_core::{Diagnostics, ModuleInstanceId, PortId, Signal, SignalPlane};
+use vrcoscquery::discovery;
 use vrcoscquery::node::{OSCQueryNode, OSCQueryValue};
-use vrcoscquery::{discovery, Endpoint};
+
+use crate::osc::avatar_catalog::AvatarCatalog;
+use crate::toy_handling::input_processor::penetration_systems::sps::is_setting_address;
 
 const PARAMETERS_PATH: &str = "/avatar/parameters";
 
@@ -53,17 +59,13 @@ const AFTER_AVATAR_CHANGE: [Duration; 3] = [
     Duration::from_secs(10),
 ];
 
-/// Which parameters to fill in, by full OSC address.
-pub type Wanted = fn(&str) -> bool;
-
 #[derive(Clone)]
 pub struct AvatarQuery {
     signals: SignalPlane,
     /// The OSC input's module: values are written as if it received them.
     module: ModuleInstanceId,
-    wanted: Wanted,
-    /// VRChat's OSCQuery server, once found.
-    endpoint: Arc<Mutex<Option<Endpoint>>>,
+    /// Finds VRChat's OSCQuery server.
+    catalog: AvatarCatalog,
     /// Bumped on every avatar change, so a lookup still running for the
     /// previous avatar doesn't write anything.
     avatar: Arc<AtomicU64>,
@@ -77,14 +79,13 @@ impl AvatarQuery {
     pub fn new(
         signals: SignalPlane,
         module: ModuleInstanceId,
-        wanted: Wanted,
+        catalog: AvatarCatalog,
         diagnostics: Diagnostics,
     ) -> Self {
         Self {
             signals,
             module,
-            wanted,
-            endpoint: Arc::default(),
+            catalog,
             avatar: Arc::default(),
             diagnostics,
             log_module: ModuleInstanceId::new(LOG_MODULE),
@@ -139,55 +140,49 @@ impl AvatarQuery {
         }
     }
 
-    /// Writes the wanted values that haven't arrived over OSC yet. Returns
-    /// how many were written.
+    /// Writes the values that haven't arrived over OSC yet. Returns how many
+    /// were written.
     fn apply(&self, values: Vec<(String, Signal)>) -> usize {
         let mut filled = 0;
         for (addr, value) in values {
-            if (self.wanted)(&addr)
-                && self
-                    .signals
-                    .write_if_absent(&PortId::new(self.module.clone(), addr.as_str()), value)
+            if !self
+                .signals
+                .write_if_absent(&PortId::new(self.module.clone(), addr.as_str()), value)
             {
-                debug!("OSCQuery filled in {} = {:?}", addr, value);
+                continue;
+            }
+            // SPS settings one by one (they're what to check when an SPS
+            // toy misbehaves); everything else in the summary below
+            if is_setting_address(&addr) {
                 self.diagnostics.log(&self.log_module, addr.as_str(), || {
                     format!("{} from OSCQuery", format_signal(value))
                 });
-                self.filled.lock().insert(addr);
-                filled += 1;
             }
+            self.filled.lock().insert(addr);
+            filled += 1;
+        }
+        if filled > 0 {
+            self.log(|| format!("Filled in {filled} current values from OSCQuery"));
         }
         filled
     }
 
-    /// Every avatar parameter's current value, or `None` if VRChat's
-    /// OSCQuery server can't be reached.
     async fn fetch(&self) -> Option<Vec<(String, Signal)>> {
-        let known = self.endpoint.lock().clone();
-        let endpoint = match known {
+        let endpoint = match self.catalog.vrchat() {
             Some(endpoint) => endpoint,
-            None => {
-                let found = discovery::find_vrchat(DISCOVERY_TIMEOUT).await.ok()??;
-                info!("Found VRChat's OSCQuery server at {}", found.addr);
-                self.log(|| format!("Found VRChat's OSCQuery server at {}", found.addr));
-                *self.endpoint.lock() = Some(found.clone());
-                found
-            }
+            // Just started: the catalog may not have found VRChat yet
+            None => discovery::find_vrchat(DISCOVERY_TIMEOUT).await.ok()??,
         };
         match discovery::node(&endpoint, PARAMETERS_PATH, REQUEST_TIMEOUT).await {
             Ok(tree) => Some(leaves(&tree)),
             Err(e) => {
-                // VRChat restarted (new port) or closed: look again next time
                 debug!("OSCQuery request to {} failed: {}", endpoint.addr, e);
-                *self.endpoint.lock() = None;
                 None
             }
         }
     }
 }
 
-/// A value the way the diagnostics log shows OSC arguments, e.g.
-/// `17.373978 (float)`. VRChat's values are 32-bit, so they're shown as such.
 fn format_signal(value: Signal) -> String {
     match value {
         Signal::Float(v) => format!("{} (float)", v as f32),
@@ -217,14 +212,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn logs_each_value_it_fills_in_but_not_ones_that_already_arrived() {
+    fn fills_in_every_value_that_hasnt_arrived_and_logs_sps_settings() {
         let signals = SignalPlane::new();
         let diagnostics = Diagnostics::default();
         diagnostics.set_enabled(true);
         let query = AvatarQuery::new(
             signals.clone(),
             ModuleInstanceId::new("osc"),
-            |addr| addr.ends_with("LengthMult2") || addr.ends_with("DepthRadius"),
+            AvatarCatalog::default(),
             diagnostics.clone(),
         );
         let plug = "/avatar/parameters/OGB/Plug/Test/LengthMult2";
@@ -240,10 +235,15 @@ mod tests {
             (socket.to_owned(), Signal::Float(1.0)),
             ("/avatar/parameters/Other".to_owned(), Signal::Bool(true)),
         ]);
-        assert_eq!(filled, 1);
+        // The plug's length and Other; the socket's value already arrived
+        assert_eq!(filled, 2);
         assert!(query.was_filled(plug));
+        assert!(query.was_filled("/avatar/parameters/Other"));
         assert!(!query.was_filled(socket));
+        let other = PortId::new(ModuleInstanceId::new("osc"), "/avatar/parameters/Other");
+        assert_eq!(signals.read(&other), Some(Signal::Bool(true)));
 
+        // The SPS setting one by one, the rest in a summary
         let logged: Vec<(String, String, String)> = diagnostics
             .entries_since(0)
             .0
@@ -252,11 +252,18 @@ mod tests {
             .collect();
         assert_eq!(
             logged,
-            vec![(
-                "oscquery".to_owned(),
-                plug.to_owned(),
-                "17.373978 (float) from OSCQuery".to_owned()
-            )]
+            vec![
+                (
+                    "oscquery".to_owned(),
+                    plug.to_owned(),
+                    "17.373978 (float) from OSCQuery".to_owned()
+                ),
+                (
+                    "oscquery".to_owned(),
+                    "OSCQuery".to_owned(),
+                    "Filled in 2 current values from OSCQuery".to_owned()
+                ),
+            ]
         );
     }
 

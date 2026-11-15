@@ -233,6 +233,7 @@ impl VibeCheckState {
                 self.config.networking.clone(),
                 self.safety.clone(),
                 self.diagnostics.clone(),
+                self.avatar_catalog.clone(),
                 self.app_handle.clone().expect("checked above"),
             )),
         );
@@ -409,10 +410,12 @@ impl VibeCheckState {
     pub fn apply_oscquery(&self) {
         let networking = &self.config.networking;
         match (networking.mode(), networking.oscquery_port) {
-            (OscMode::OscQuery, Some(port)) => {
-                self.oscquery
-                    .start(self.async_rt.handle(), port, self.diagnostics.clone())
-            }
+            (OscMode::OscQuery, Some(port)) => self.oscquery.start(
+                self.async_rt.handle(),
+                port,
+                self.diagnostics.clone(),
+                self.avatar_catalog.clone(),
+            ),
             _ => self.oscquery.stop(),
         }
     }
