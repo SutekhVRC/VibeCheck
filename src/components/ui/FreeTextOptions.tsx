@@ -17,6 +17,10 @@ export interface FreeTextOptionProps extends Omit<
     message: string;
   };
   disabled?: boolean;
+  /** Values to mark with a warning colour, e.g. ones that match nothing */
+  warnValues?: string[];
+  /** Tooltip for a marked value */
+  warnTooltip?: string;
 }
 
 export const FreeTextOptions = React.forwardRef<
@@ -31,6 +35,8 @@ export const FreeTextOptions = React.forwardRef<
       transform,
       validator,
       disabled = false,
+      warnValues = [],
+      warnTooltip,
       className,
       ...props
     },
@@ -83,7 +89,15 @@ export const FreeTextOptions = React.forwardRef<
         {...props}
       >
         {values.map((v) => (
-          <Badge key={v} className="inline-flex items-center gap-2">
+          <Badge
+            key={v}
+            className={cn(
+              "inline-flex items-center gap-2",
+              warnValues.includes(v) &&
+                "bg-theme-warning/20 text-theme-warning ring-1 ring-theme-warning/60",
+            )}
+            title={warnValues.includes(v) ? warnTooltip : undefined}
+          >
             <span className="max-w-[200px] truncate">{v}</span>
             <button
               type="button"

@@ -1,11 +1,14 @@
 import AvatarStatus from "@/components/AvatarStatus";
 import { SettingRow, SettingsGroup } from "@/components/SettingRow";
+import SetupWarning from "@/components/SetupWarning";
 import { FreeTextOptions } from "@/components/ui/FreeTextOptions";
+import { useFeatureCheck } from "@/context/AvatarCatalog";
 import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
 import Button from "@/layout/Button";
 import { Select } from "@/layout/Select";
 import Tooltip from "@/layout/Tooltip";
 import { cn } from "@/lib/utils";
+import type { FeFeatureCheck } from "@bindings/FeFeatureCheck";
 import { FeLevelTweaks } from "@bindings/FeLevelTweaks";
 import { FeProcessingMode } from "@bindings/FeProcessingMode";
 import { FeToyParameter } from "@bindings/FeToyParameter";
@@ -40,6 +43,8 @@ type FeatureFormContextProps = {
   handleBool: (checked: boolean, name: keyof FeVCToyFeature) => void;
   handleLevels: (key: keyof FeLevelTweaks, value: number) => void;
   commitLevels: (levels: Partial<FeLevelTweaks>) => void;
+  /** What the settings miss on the current avatar; null while unknown */
+  check: FeFeatureCheck | null;
 };
 
 const FeatureFormContext = createContext<FeatureFormContextProps>({
@@ -50,6 +55,7 @@ const FeatureFormContext = createContext<FeatureFormContextProps>({
   handleBool: () => null,
   handleLevels: () => null,
   commitLevels: () => null,
+  check: null,
 });
 
 const useFeatureFormContext = () => {
@@ -130,6 +136,7 @@ export default function FeatureForm({
   );
 
   const Icon = featureIcons[feature.feature_type];
+  const check = useFeatureCheck(feature);
 
   return (
     <FeatureFormContext.Provider
@@ -141,6 +148,7 @@ export default function FeatureForm({
         handleBool,
         handleLevels,
         commitLevels,
+        check,
       }}
     >
       <div className="mt-1 flex min-h-0 flex-1 flex-col rounded-2xl border border-theme-border/60 bg-theme-raised">
@@ -234,7 +242,7 @@ export default function FeatureForm({
 }
 
 function InputProcessor() {
-  const { feature, setToyFeature, handleFeatureAlter } =
+  const { feature, setToyFeature, handleFeatureAlter, check } =
     useFeatureFormContext();
 
   function handleInputProcessor<
@@ -277,6 +285,18 @@ function InputProcessor() {
           />
         </label>
       </div>
+      {check?.system_missing === "Sps" && (
+        <SetupWarning>
+          Your current avatar has no SPS zones, so this processor won&apos;t
+          react. Choose the system your avatar uses.
+        </SetupWarning>
+      )}
+      {check?.system_missing === "Tps" && (
+        <SetupWarning>
+          Your current avatar has no TPS parameters, so this processor
+          won&apos;t react. Choose the system your avatar uses.
+        </SetupWarning>
+      )}
     </SettingRow>
   );
 }
@@ -431,8 +451,9 @@ function Parameters() {
 }
 
 function InputFilter() {
-  const { feature, setToyFeature, handleFeatureAlter } =
+  const { feature, setToyFeature, handleFeatureAlter, check } =
     useFeatureFormContext();
+  const unmatched = check?.unmatched_tags ?? [];
 
   function handleInputProcessor(items: string[]) {
     setToyFeature((f) => {
@@ -459,7 +480,17 @@ function InputFilter() {
           re: /^[\w\/]+$/,
           message: "Only alphanumeric characters and slashes allowed",
         }}
+        warnValues={unmatched}
+        warnTooltip="No zone on your current avatar has this in its name"
       />
+      {unmatched.length > 0 && (
+        <SetupWarning>
+          {unmatched.length === 1 ? "This tag matches" : "These tags match"} no
+          zone on your current avatar: {unmatched.join(", ")}. A tag has to be
+          part of a zone&apos;s name, like the name of a socket in your SPS menu
+          (capitals count).
+        </SetupWarning>
+      )}
     </SettingRow>
   );
 }

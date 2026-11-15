@@ -9,6 +9,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { INVOKE, LISTEN } from "../data/constants";
@@ -77,6 +78,15 @@ export function useFeatureCheck(feature: FeVCToyFeature) {
   const { catalog } = useAvatarCatalog();
   const [check, setCheck] = useState<FeFeatureCheck | null>(null);
 
+  // Only what the check looks at, so dragging a slider doesn't recheck
+  const latest = useRef(feature);
+  latest.current = feature;
+  const checked = JSON.stringify([
+    feature.osc_parameters.map((p) => p.parameter),
+    feature.penetration_system.pen_system_type,
+    feature.penetration_system.pen_system_input_filter,
+  ]);
+
   useEffect(() => {
     if (catalog.status !== "Ready") {
       setCheck(null);
@@ -84,7 +94,9 @@ export function useFeatureCheck(feature: FeVCToyFeature) {
     }
     let cancelled = false;
     const timer = setTimeout(() => {
-      invoke<FeFeatureCheck | null>(INVOKE.CHECK_FEATURE, { feature })
+      invoke<FeFeatureCheck | null>(INVOKE.CHECK_FEATURE, {
+        feature: latest.current,
+      })
         .then((result) => {
           if (!cancelled) setCheck(result);
         })
@@ -96,7 +108,7 @@ export function useFeatureCheck(feature: FeVCToyFeature) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [feature, catalog]);
+  }, [checked, catalog]);
 
   return check;
 }
