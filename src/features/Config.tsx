@@ -1,3 +1,5 @@
+import type { FeOscMode } from "@bindings/FeOscMode";
+import type { FeOscQueryStatus } from "@bindings/FeOscQueryStatus";
 import type { FeVibeCheckConfig } from "@bindings/FeVibeCheckConfig";
 import { invoke } from "@tauri-apps/api/core";
 import { Settings } from "lucide-react";
@@ -30,6 +32,9 @@ const SCAN_LENGTHS: [number, string][] = [
 function scanLengthLabel(seconds: number) {
   return SCAN_LENGTHS.find(([s]) => s === seconds)?.[1] ?? `${seconds} seconds`;
 }
+
+/** How often the OSCQuery status refreshes while Settings is open */
+const OSCQUERY_STATUS_MS = 3000;
 
 /** How long the reset button waits for the confirming second click */
 const CONFIRM_TIMEOUT_MS = 4000;
@@ -83,6 +88,110 @@ function pickGeneral(config: FeVibeCheckConfig): GeneralSettings {
     show_toy_advanced: config.show_toy_advanced,
     show_feature_advanced: config.show_feature_advanced,
   };
+}
+
+/** Polls OSCQuery mode's status while `enabled` */
+function useOscQueryStatus(enabled: boolean) {
+  const [status, setStatus] = useState<FeOscQueryStatus | null>(null);
+  useEffect(() => {
+    if (!enabled) {
+      setStatus(null);
+      return;
+    }
+    let cancelled = false;
+    async function refresh() {
+      try {
+        const s = await invoke<FeOscQueryStatus>(INVOKE.GET_OSCQUERY_STATUS);
+        if (!cancelled) setStatus(s);
+      } catch {
+        // Keep the last status; it refreshes again shortly
+      }
+    }
+    refresh();
+    const timer = setInterval(refresh, OSCQUERY_STATUS_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [enabled]);
+  return status;
+}
+
+function ModeButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={
+        active
+          ? "rounded-full bg-theme-primary/20 px-3 py-1 text-sm font-semibold text-theme-primary ring-1 ring-theme-primary/60"
+          : "rounded-full px-3 py-1 text-sm text-theme-muted transition-colors hover:text-theme-text"
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+/** What automatic mode is doing: VibeCheck's port, and whether VRChat was found */
+function OscQueryPanel({
+  status,
+  port,
+}: {
+  status: FeOscQueryStatus | null;
+  port: number | null;
+}) {
+  const listening = status?.error
+    ? `Couldn't advertise VibeCheck: ${status.error}`
+    : status?.advertising
+      ? `Port ${status.advertising}, on all network interfaces`
+      : port
+        ? `Port ${port} (starting…)`
+        : "Starting…";
+  const vrchat = status?.vrchat
+    ? `Found. Battery levels go to ${status.vrchat}`
+    : "Not found yet. Is VRChat running with OSC on?";
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-[minmax(8rem,1fr)_minmax(8rem,2fr)] items-center gap-x-4 gap-y-2">
+        <span className="text-theme-text">VibeCheck listens on</span>
+        <span
+          className={status?.error ? "text-theme-danger" : "text-theme-text"}
+        >
+          {listening}
+        </span>
+        <span className="text-theme-text">Port 9001</span>
+        <span className="text-theme-muted">
+          {!status?.advertising
+            ? "…"
+            : status.holding_default_port
+              ? "Held by VibeCheck, so VRChat's default sends don't fail"
+              : "In use by another app"}
+        </span>
+        <span className="text-theme-text">VRChat</span>
+        <span
+          className={status?.vrchat ? "text-theme-success" : "text-theme-muted"}
+        >
+          {vrchat}
+        </span>
+      </div>
+      <p className="text-xs text-theme-muted">
+        VRChat finds VibeCheck on its own and sends to this port, so it
+        doesn&rsquo;t clash with other OSC apps. The port is reachable from your
+        local network. If VRChat doesn&rsquo;t send anything, turn OSC off and
+        on again in VRChat&rsquo;s Action Menu, or use Manual.
+      </p>
+    </div>
+  );
 }
 
 function Section({
@@ -216,6 +325,33 @@ export default function Config({
     ]),
   ];
 
+  const mode = config.networking.mode;
+  const oscQueryStatus = useOscQueryStatus(mode === "OscQuery");
+
+  // Switching mode applies straight away (it turns VibeCheck off, like
+  // changing the addresses does)
+  async function switchMode(next: FeOscMode) {
+    if (next === mode) return;
+    try {
+      await disableOnPortChange();
+      await invoke(INVOKE.SET_CONFIG, {
+        feVcConfig: {
+          ...config,
+          ...general,
+          networking: { ...config.networking, mode: next },
+        },
+      });
+      await refreshConfig();
+      toast.info(
+        next === "OscQuery"
+          ? "Switched to automatic (OSCQuery). Turn VibeCheck back on."
+          : "Switched to manual addresses. Turn VibeCheck back on.",
+      );
+    } catch (e) {
+      toast.error(`Could not switch connection mode!\n${JSON.stringify(e)}`);
+    }
+  }
+
   async function applyConnection(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     try {
@@ -224,7 +360,7 @@ export default function Config({
         feVcConfig: {
           ...config,
           ...general,
-          // Spread keeps fields we don't edit here (osc_query_enabled)
+          // Spread keeps fields we don't edit here (mode, oscquery_port)
           networking: { ...config.networking, ...draft },
         },
       });
@@ -272,45 +408,75 @@ export default function Config({
       <div className="scrollbar min-h-0 w-full flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 px-2 pb-4 pt-3">
           <Section title="Connection">
-            <form onSubmit={applyConnection}>
-              <div className="grid grid-cols-[minmax(8rem,1fr)_minmax(8rem,2fr)] items-center gap-x-4 gap-y-2">
-                <TooltipLabel text="OSC Bind" tooltip={TOOLTIP.OSC_Bind} />
-                <AddressInput
-                  name="bind"
-                  value={draft.bind}
-                  onChange={(bind) => setDraft((d) => ({ ...d, bind }))}
-                />
-                <TooltipLabel text="OSC Remote" tooltip={TOOLTIP.OSC_Remote} />
-                <AddressInput
-                  name="remote"
-                  value={draft.remote}
-                  onChange={(remote) => setDraft((d) => ({ ...d, remote }))}
-                />
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <TooltipLabel
+                text="Connect to VRChat"
+                tooltip={TOOLTIP.OscMode}
+              />
+              <div className="ml-auto flex gap-1 rounded-full border border-theme-border bg-theme-surface p-0.5">
+                <ModeButton
+                  active={mode === "OscQuery"}
+                  onClick={() => switchMode("OscQuery")}
+                >
+                  Automatic (OSCQuery)
+                </ModeButton>
+                <ModeButton
+                  active={mode === "Manual"}
+                  onClick={() => switchMode("Manual")}
+                >
+                  Manual
+                </ModeButton>
               </div>
-              {connectionDirty && (
-                <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-                  <span className="mr-auto text-xs text-theme-muted">
-                    Applying turns VibeCheck off. Turn it back on afterwards.
-                  </span>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="m-0"
-                    onClick={() =>
-                      setDraft({
-                        bind: config.networking.bind,
-                        remote: config.networking.remote,
-                      })
-                    }
-                  >
-                    Revert
-                  </Button>
-                  <Button type="submit" className="m-0">
-                    Apply
-                  </Button>
+            </div>
+            {mode === "OscQuery" ? (
+              <OscQueryPanel
+                status={oscQueryStatus}
+                port={config.networking.oscquery_port}
+              />
+            ) : (
+              <form onSubmit={applyConnection}>
+                <div className="grid grid-cols-[minmax(8rem,1fr)_minmax(8rem,2fr)] items-center gap-x-4 gap-y-2">
+                  <TooltipLabel text="OSC Bind" tooltip={TOOLTIP.OSC_Bind} />
+                  <AddressInput
+                    name="bind"
+                    value={draft.bind}
+                    onChange={(bind) => setDraft((d) => ({ ...d, bind }))}
+                  />
+                  <TooltipLabel
+                    text="OSC Remote"
+                    tooltip={TOOLTIP.OSC_Remote}
+                  />
+                  <AddressInput
+                    name="remote"
+                    value={draft.remote}
+                    onChange={(remote) => setDraft((d) => ({ ...d, remote }))}
+                  />
                 </div>
-              )}
-            </form>
+                {connectionDirty && (
+                  <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                    <span className="mr-auto text-xs text-theme-muted">
+                      Applying turns VibeCheck off. Turn it back on afterwards.
+                    </span>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="m-0"
+                      onClick={() =>
+                        setDraft({
+                          bind: config.networking.bind,
+                          remote: config.networking.remote,
+                        })
+                      }
+                    >
+                      Revert
+                    </Button>
+                    <Button type="submit" className="m-0">
+                      Apply
+                    </Button>
+                  </div>
+                )}
+              </form>
+            )}
           </Section>
 
           <Section title="Toys" hint="Saves instantly">

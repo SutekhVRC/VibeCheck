@@ -98,9 +98,7 @@ fn main() {
             frontend_native::clear_osc_config,
             frontend_native::simulate_device_feature,
             frontend_native::sync_offline_toys,
-            frontend_native::osc_query_start,
-            frontend_native::osc_query_stop,
-            frontend_native::osc_query_attempt_force_connect,
+            frontend_native::get_oscquery_status,
             frontend_native::panic_stop,
             frontend_native::panic_resume,
             frontend_native::get_panic_state,
@@ -126,6 +124,17 @@ fn main() {
                 std::process::exit(-1);
             }
         };
+        // Older configs get a connection mode, and OSCQuery mode a port. The
+        // saved port is kept unless another app has it (VRChat remembers it)
+        let settled = vc_state.config.networking.settle();
+        let moved = vc_state.config.networking.claim_saved_port();
+        if settled || moved {
+            if let Err(e) =
+                vcore::ipc::call_plane::save_config(vc_state.config.clone(), app.app_handle())
+            {
+                logerr!("Couldn't save the connection settings: {:?}", e);
+            }
+        }
         // The state was created with a default config; apply the saved intensity
         let master_intensity = vc_state.config.master_intensity;
         vc_state.safety.set_intensity(master_intensity);
@@ -147,6 +156,8 @@ fn main() {
         trace!("Started CEH");
         vc_state.start_disabled_listener().unwrap();
         trace!("Started DOL");
+        // OSCQuery mode: advertise VibeCheck for as long as the app runs
+        vc_state.apply_oscquery();
     }
 
     register_panic_hotkey(app.app_handle());

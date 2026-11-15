@@ -9,7 +9,8 @@ use crate::{
     config::toy::VCToyConfig,
     frontend::{
         frontend_types::{
-            FeBrowserLink, FeToyAlter, FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig,
+            FeBrowserLink, FeOscQueryStatus, FeToyAlter, FeToyEvent, FeVCFeatureType, FeVCToy,
+            FeVibeCheckConfig,
         },
         FromFrontend, ToFrontend,
     },
@@ -390,22 +391,10 @@ pub fn sync_offline_toys(
     }
 }
 
-#[tauri::command(async)]
-pub fn osc_query_start(vc_state: tauri::State<'_, state::VCStateMutex>) -> Result<(), VCFeError> {
-    trace!("osc_query_start");
-    call_plane::native_osc_query_start(vc_state)
-}
-
-#[tauri::command(async)]
-pub fn osc_query_stop(vc_state: tauri::State<'_, state::VCStateMutex>) -> Result<(), VCFeError> {
-    trace!("osc_query_stop");
-    call_plane::native_osc_query_stop(vc_state)
-}
-
-#[tauri::command(async)]
-pub fn osc_query_attempt_force_connect(
-    vc_state: tauri::State<'_, state::VCStateMutex>,
-) -> Result<(), VCFeError> {
-    trace!("osc_query_attempt_force_connect");
-    call_plane::native_osc_query_attempt_force(vc_state)
+/*
+ * OSCQuery mode's status: the advertised port, and where VRChat listens
+ */
+#[tauri::command]
+pub fn get_oscquery_status(vc_state: tauri::State<'_, state::VCStateMutex>) -> FeOscQueryStatus {
+    call_plane::native_get_oscquery_status(vc_state)
 }

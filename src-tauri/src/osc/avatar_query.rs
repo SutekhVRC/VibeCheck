@@ -10,7 +10,7 @@
  * VRChat's OSCQuery server reports every parameter's current value, so the
  * ones that matter are read from there: when listening starts, and a few
  * times after each avatar change (VRChat may still be loading the avatar).
- * VRChat's server is found over mDNS like any OSCQuery service.
+ * VRChat's server is found with VRCOSCQuery's discovery (mDNS).
  *
  * Values are written to the signal plane as if they had arrived over OSC,
  * but only where nothing has arrived yet, so a value VRChat sends always
@@ -22,19 +22,16 @@
  */
 
 use std::collections::HashSet;
-use std::net::IpAddr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use log::{debug, info};
-use mdns_sd::{ServiceDaemon, ServiceEvent};
 use parking_lot::Mutex;
-use serde_json::Value as Json;
 use vibecheck_core::{Diagnostics, ModuleInstanceId, PortId, Signal, SignalPlane};
+use vrcoscquery::node::{OSCQueryNode, OSCQueryValue};
+use vrcoscquery::{discovery, Endpoint};
 
-const OSCJSON_SERVICE: &str = "_oscjson._tcp.local.";
-const VRCHAT_SERVICE_PREFIX: &str = "VRChat-Client-";
 const PARAMETERS_PATH: &str = "/avatar/parameters";
 
 /// The module diagnostics log entries are logged under.
@@ -65,8 +62,8 @@ pub struct AvatarQuery {
     /// The OSC input's module: values are written as if it received them.
     module: ModuleInstanceId,
     wanted: Wanted,
-    /// VRChat's OSCQuery server (`http://host:port`), once found.
-    endpoint: Arc<Mutex<Option<String>>>,
+    /// VRChat's OSCQuery server, once found.
+    endpoint: Arc<Mutex<Option<Endpoint>>>,
     /// Bumped on every avatar change, so a lookup still running for the
     /// previous avatar doesn't write anything.
     avatar: Arc<AtomicU64>,
@@ -170,22 +167,18 @@ impl AvatarQuery {
         let endpoint = match known {
             Some(endpoint) => endpoint,
             None => {
-                let found = tokio::task::spawn_blocking(find_vrchat).await.ok()??;
-                info!("Found VRChat's OSCQuery server at {}", found);
-                self.log(|| format!("Found VRChat's OSCQuery server at {found}"));
+                let found = discovery::find_vrchat(DISCOVERY_TIMEOUT).await.ok()??;
+                info!("Found VRChat's OSCQuery server at {}", found.addr);
+                self.log(|| format!("Found VRChat's OSCQuery server at {}", found.addr));
                 *self.endpoint.lock() = Some(found.clone());
                 found
             }
         };
-        match get_tree(&endpoint).await {
-            Ok(tree) => {
-                let mut values = Vec::new();
-                leaves(&tree, &mut values);
-                Some(values)
-            }
+        match discovery::node(&endpoint, PARAMETERS_PATH, REQUEST_TIMEOUT).await {
+            Ok(tree) => Some(leaves(&tree)),
             Err(e) => {
                 // VRChat restarted (new port) or closed: look again next time
-                debug!("OSCQuery request to {} failed: {}", endpoint, e);
+                debug!("OSCQuery request to {} failed: {}", endpoint.addr, e);
                 *self.endpoint.lock() = None;
                 None
             }
@@ -202,82 +195,21 @@ fn format_signal(value: Signal) -> String {
     }
 }
 
-/// Finds VRChat's OSCQuery server over mDNS. Blocking.
-fn find_vrchat() -> Option<String> {
-    let mdns = ServiceDaemon::new().ok()?;
-    let found = mdns.browse(OSCJSON_SERVICE).ok().and_then(|events| {
-        let deadline = Instant::now() + DISCOVERY_TIMEOUT;
-        loop {
-            match events.recv_deadline(deadline) {
-                Ok(ServiceEvent::ServiceResolved(service))
-                    if service.get_fullname().starts_with(VRCHAT_SERVICE_PREFIX) =>
-                {
-                    // Prefer this machine's address if it's advertised
-                    let addresses = service.get_addresses();
-                    let host = addresses
-                        .iter()
-                        .find(|a| a.is_loopback())
-                        .or_else(|| addresses.iter().find(|a| matches!(a, IpAddr::V4(_))))
-                        .or_else(|| addresses.iter().next())?;
-                    let host = match host {
-                        IpAddr::V6(v6) => format!("[{v6}]"),
-                        IpAddr::V4(v4) => v4.to_string(),
-                    };
-                    break Some(format!("http://{}:{}", host, service.get_port()));
-                }
-                Ok(_) => continue,
-                Err(_) => {
-                    debug!("VRChat's OSCQuery server wasn't found over mDNS");
-                    break None;
-                }
-            }
-        }
-    });
-    let _ = mdns.shutdown();
-    found
-}
-
-async fn get_tree(endpoint: &str) -> Result<Json, String> {
-    let text = reqwest::Client::builder()
-        .timeout(REQUEST_TIMEOUT)
-        .build()
-        .map_err(|e| e.to_string())?
-        .get(format!("{endpoint}{PARAMETERS_PATH}"))
-        .send()
-        .await
-        .and_then(|r| r.error_for_status())
-        .map_err(|e| e.to_string())?
-        .text()
-        .await
-        .map_err(|e| e.to_string())?;
-    serde_json::from_str(&text).map_err(|e| e.to_string())
-}
-
-/// Collects every float or bool value in an OSCQuery node tree, by full
-/// path. Other types are skipped, as the OSC input skips them.
-fn leaves(node: &Json, out: &mut Vec<(String, Signal)>) {
-    if let Some(contents) = node.get("CONTENTS").and_then(Json::as_object) {
-        for child in contents.values() {
-            leaves(child, out);
-        }
-        return;
-    }
-    let path = node.get("FULL_PATH").and_then(Json::as_str);
-    let value = node
-        .get("VALUE")
-        .and_then(Json::as_array)
-        .and_then(|v| v.first());
-    let (Some(path), Some(value)) = (path, value) else {
-        return;
-    };
-    let signal = match (node.get("TYPE").and_then(Json::as_str), value) {
-        (Some("f"), Json::Number(n)) => n.as_f64().map(Signal::Float),
-        (_, Json::Bool(b)) => Some(Signal::Bool(*b)),
-        _ => None,
-    };
-    if let Some(signal) = signal {
-        out.push((path.to_owned(), signal));
-    }
+/// Every float or bool value in an OSCQuery node tree, by full path. Other
+/// types are skipped, as the OSC input skips them. Floats are checked by
+/// their type tag: an Int parameter's value would read as a number too.
+fn leaves(tree: &OSCQueryNode) -> Vec<(String, Signal)> {
+    tree.leaves()
+        .into_iter()
+        .filter_map(|leaf| {
+            let signal = match (leaf.type_tag(), leaf.value()?.first()?) {
+                (Some("f"), OSCQueryValue::FLOAT(v)) => Signal::Float(*v as f64),
+                (_, OSCQueryValue::BOOLEAN(b)) => Signal::Bool(*b),
+                _ => return None,
+            };
+            Some((leaf.full_path.clone(), signal))
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -331,7 +263,7 @@ mod tests {
     #[test]
     fn leaves_reads_floats_and_bools_from_a_node_tree() {
         // Shaped like VRChat's reply, with values from a real avatar
-        let tree: Json = serde_json::from_str(
+        let tree: OSCQueryNode = serde_json::from_str(
             r#"{
               "FULL_PATH": "/avatar/parameters", "ACCESS": 0,
               "CONTENTS": {
@@ -350,15 +282,15 @@ mod tests {
             }"#,
         )
         .unwrap();
-        let mut values = Vec::new();
-        leaves(&tree, &mut values);
+        let mut values = leaves(&tree);
         values.sort_by(|a, b| a.0.cmp(&b.0));
         assert_eq!(
             values,
             vec![
                 (
                     "/avatar/parameters/OGB/Plug/zw_ris_sps/LengthMult2".to_owned(),
-                    Signal::Float(17.3739777)
+                    // VRChat's values are 32-bit floats
+                    Signal::Float(17.3739777_f32 as f64)
                 ),
                 ("/avatar/parameters/Toggle".to_owned(), Signal::Bool(true)),
             ]

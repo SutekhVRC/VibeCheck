@@ -23,28 +23,39 @@ use crate::vcore::state::VibeCheckState;
 
 use super::OSCNetworking;
 
+/// How often, and how many times, the off-state listener retries binding
+/// while the port is still held (about 5 seconds in all).
+const BIND_RETRY_EVERY: Duration = Duration::from_millis(100);
+const BIND_RETRIES: u32 = 50;
+
 pub async fn vc_disabled_osc_command_listen(app_handle: AppHandle, vc_config: OSCNetworking) {
     info!("Listening for OSC commands while disabled");
-    let mut retries = 3;
+    // Bind straight away: while nothing holds the port, VRChat's sends to it
+    // fail, and through Proton enough failures make VRChat stop sending OSC
+    // for the session. If the session's OSC input is still letting go of the
+    // port, retry quickly so the gap stays short.
+    let mut retries = BIND_RETRIES;
     let sock;
     loop {
-        Delay::new(Duration::from_secs(1)).await;
-        match tUdpSocket::bind(format!("{}:{}", vc_config.bind.ip(), vc_config.bind.port())).await {
+        // The same address the session listens on (all interfaces in
+        // OSCQuery mode), so the port stays held while VibeCheck is off
+        match tUdpSocket::bind(vc_config.listen_addr()).await {
             Ok(s) => {
-                info!("Listening while disabled");
+                info!("Listening while disabled on {}", vc_config.listen_addr());
                 sock = s;
                 break;
             }
-            Err(_e) => {
-                logerr!(
-                    "Failed to bind UDP socket for disabled cmd listening.. Retries remaining: {}",
-                    retries
-                );
+            Err(e) => {
                 if retries == 0 {
+                    logerr!(
+                        "Couldn't bind {} for listening while disabled: {}",
+                        vc_config.listen_addr(),
+                        e
+                    );
                     return;
                 }
                 retries -= 1;
-                continue;
+                Delay::new(BIND_RETRY_EVERY).await;
             }
         };
     }
@@ -123,7 +134,7 @@ pub async fn toy_refresh(
                         .unwrap()
                         .online_toys
                         .clone(),
-                    vc_lock.config.networking.remote,
+                    vc_lock.osc_remote(),
                 )
             } else {
                 continue;

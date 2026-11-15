@@ -1,23 +1,18 @@
-use std::net::{TcpListener, UdpSocket};
+use std::net::{Ipv4Addr, UdpSocket};
 
-pub enum InterfaceL4Proto {
-    Udp(String),
-    Tcp(String),
+/// Ports VibeCheck picks from for OSCQuery mode. Below the ephemeral ranges
+/// (Linux 32768+, Windows 49152+), so the OS won't hand the port out for
+/// outgoing traffic later.
+const PORT_RANGE: std::ops::Range<u16> = 10000..11000;
+
+/// Whether a UDP port can be bound on `ip` right now.
+pub fn udp_port_available(ip: Ipv4Addr, port: u16) -> bool {
+    UdpSocket::bind((ip, port)).is_ok()
 }
 
-fn is_port_available(interface_proto: InterfaceL4Proto, port: u16) -> bool {
-    match interface_proto {
-        InterfaceL4Proto::Tcp(interface) => TcpListener::bind((interface, port)).is_ok(),
-        InterfaceL4Proto::Udp(interface) => UdpSocket::bind((interface, port)).is_ok(),
-    }
-}
-
-pub fn find_available_tcp_port(interface_addr: String) -> Option<u16> {
-    (10000..11000)
-        .find(|port| is_port_available(InterfaceL4Proto::Tcp(interface_addr.to_owned()), *port))
-}
-
-pub fn find_available_udp_port(interface_addr: String) -> Option<u16> {
-    (10000..11000)
-        .find(|port| is_port_available(InterfaceL4Proto::Udp(interface_addr.to_owned()), *port))
+/// A UDP port in [`PORT_RANGE`] that can be bound on `ip` right now.
+pub fn find_available_udp_port(ip: Ipv4Addr) -> Option<u16> {
+    PORT_RANGE
+        .clone()
+        .find(|port| udp_port_available(ip, *port))
 }

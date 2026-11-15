@@ -267,7 +267,7 @@ fn start_osc(
         session.events.clone(),
     )
     .with_diagnostics(session.diagnostics.clone());
-    let bind = SocketAddr::V4(vc_config.bind);
+    let bind = SocketAddr::V4(vc_config.listen_addr());
     let tme_send = tme_send.clone();
     let avatar_query = session.avatar_query.clone();
 

@@ -22,6 +22,7 @@ export const INVOKE = {
   PANIC_RESUME: "panic_resume",
   GET_PANIC_STATE: "get_panic_state",
   SET_DIAGNOSTICS_ENABLED: "set_diagnostics_enabled",
+  GET_OSCQUERY_STATUS: "get_oscquery_status",
 } as const;
 
 /** Global hotkey for the panic stop (registered by the backend) */
@@ -102,11 +103,11 @@ export const TOOLTIP = {
     link: "FeatureOptions",
   },
   OSC_Bind: {
-    text: "OSC Receive Port (Default: 127.0.0.1:9001)",
+    text: "Where VibeCheck listens for VRChat's OSC (Default: 127.0.0.1:9001)",
     link: "",
   },
   OSC_Remote: {
-    text: "OSC Receive Port (Default: 127.0.0.1:9001)",
+    text: "Where VibeCheck sends OSC to VRChat, e.g. battery levels (Default: 127.0.0.1:9000)",
     link: "",
   },
   OSC_Send: {
@@ -139,6 +140,10 @@ export const TOOLTIP = {
   },
   PanicStop: {
     text: "Stop every toy right now. They stay stopped until you press Resume. Also: Ctrl+Alt+P anywhere, or the vibecheck/api/panic avatar parameter.",
+    link: "",
+  },
+  OscMode: {
+    text: "Automatic: VibeCheck picks its own port and VRChat finds it over OSCQuery, so it doesn't clash with other OSC apps. Manual: set the addresses yourself (9001 and 9000 by default).",
     link: "",
   },
   MasterIntensity: {

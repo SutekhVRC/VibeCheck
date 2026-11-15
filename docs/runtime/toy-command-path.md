@@ -136,12 +136,32 @@ VRChat only sends a parameter over OSC when it changes. Some are set once when t
 `AvatarQuery` (`osc/avatar_query.rs`) reads them from VRChat's OSCQuery server, which reports every parameter's current value:
 
 - **When:** once when the OSC socket is bound, and 1, 4 and 10 s after each avatar change (VRChat may still be loading). A lookup still running for the previous avatar writes nothing.
-- **Finding VRChat:** mDNS, looking for a `VRChat-Client-…` `_oscjson._tcp` service for up to 3 s. The address is remembered until a request fails.
-- **What:** `GET /avatar/parameters`. Only addresses `is_setting_address` accepts are used (SPS `LengthMult1`, `LengthMult2`, `DepthRadius`), so plain parameters don't start Idle Speed at avatar load.
+- **Finding VRChat:** VRCOSCQuery's `discovery::find_vrchat` (mDNS, a `VRChat-Client-…` `_oscjson._tcp` service, up to 3 s). The endpoint is remembered until a request fails.
+- **What:** `GET /avatar/parameters` (`discovery::node`); float leaves (by type tag `f`) and bools are used. Only addresses `is_setting_address` accepts are used (SPS `LengthMult1`, `LengthMult2`, `DepthRadius`), so plain parameters don't start Idle Speed at avatar load.
 - **How:** `SignalPlane::write_if_absent`, as if the value arrived over OSC, but never over a value VRChat already sent.
 - **Diagnostics:** while the diagnostics view is open, each value filled in is logged under the `oscquery` module (`<value> from OSCQuery`), as are a found server and a failed lookup, so the view's log shows which values didn't come over OSC. `was_filled(addr)` (cleared on avatar change) lets the diagnostics task flag those values with `from_oscquery` while their write count is 1, so the Values tab tags them until VRChat sends the parameter itself.
 
 SPS treats these settings as not being contact, so they don't make the processor start sending (and Idle Speed start) on their own.
+
+## Connection modes
+
+`OSCNetworking` (`osc/mod.rs`) has a `mode`:
+
+- **Manual:** VibeCheck listens on `bind` and sends to `remote` (127.0.0.1:9001 and :9000 by default), as before.
+- **OscQuery** (the default): VibeCheck listens on `0.0.0.0:<oscquery_port>` and advertises that port over OSCQuery, so VRChat sends to it alongside its usual 9001. Battery levels go to the port VRChat advertises (`HOST_INFO`), or 127.0.0.1:9000 until VRChat is found.
+
+`listen_addr()` is what both the session's `OscInput` and the off-state listener bind, and `remote_addr()` (via `VibeCheckState::osc_remote`) is where `toy_refresh` sends battery levels.
+
+Why OSCQuery mode works the way it does (tested against VRChat on Linux/Proton; details in VRCOSCQuery's `VRChatOSCQueryBugs.md`):
+
+- **Every interface:** VRChat ignores the OSC address in `HOST_INFO` and sends to the machine's LAN address on the advertised port, so a socket on 127.0.0.1 only would get nothing.
+- **A kept port:** VRChat ignores the mDNS goodbye and keeps sending to a port it has found, so the port is picked once (10000–10999, below the ephemeral ranges) and saved in `Config.json`, and it's held for the whole run: by `OscInput` while on, by the off-state listener while off. `settle()` (also run on every settings save) never changes a saved port, since VibeCheck may be holding it itself. Only at startup, `claim_saved_port()` checks it: if it's busy it waits up to 5 s (a previous VibeCheck still closing), and moves to a new port only if another app keeps it.
+- **9001 held too:** VRChat keeps sending to its default 127.0.0.1:9001 whatever it finds over OSCQuery. With nothing there those sends fail, which through Proton makes VRChat stop sending OSC for the session. So the OSCQuery task holds 9001 while it's free (bound, never read; the OS drops the data, VRChat doesn't notice), retrying every 10 s if another app has it.
+- **The fixed mdns-sd:** VRChat browses with ANY questions and only accepts the PTR in Answers with SRV/TXT/A in Additionals. VRCOSCQuery uses mdns-sd from the SutekhVRC fork, which answers those questions.
+
+`OscQuery` (`osc/oscquery.rs`) runs for the life of the app in OSCQuery mode: it holds the `OscQueryService` (mDNS + HTTP) and looks for VRChat every 10 s, logging changes to diagnostics under `oscquery`. `apply_oscquery()` starts or stops it at startup and when the mode changes; the off-state listener is restarted when the listen address changes.
+
+Older configs have no `mode`: `settle()` keeps them on Manual if `bind` or `remote` was changed from the defaults, otherwise moves them to OscQuery.
 
 ## OSC API
 

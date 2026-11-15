@@ -28,6 +28,7 @@
 
 - **Bluetooth toy support** through [Buttplug.io](https://buttplug.io/): connect any [supported toy](https://iostindex.com/?filter0ButtplugSupport=4) directly, no extra app needed. Toys show up as soon as they connect.
 - **Driven by your avatar**: map VRChat avatar parameters to each toy motor over OSC.
+- **Connects automatically** over OSCQuery on its own port, so it works alongside other OSC apps. Manual ports are still an option.
 - **SPS and TPS support**: SPS 3 and older SPS (including mixing the two), with depth, touch and frot, plus TPS. Input filters pick which sockets or plugs drive each toy.
 - **Fine-tuning per motor**: output range, idle speed, flip input, plus Smooth, Rate and Constant processing modes. Rate follows how fast you stroke.
 - **Safety controls**: a panic stop (sidebar button, **Ctrl + Alt + P**, the tray menu or an avatar parameter) and a master intensity slider for every toy.

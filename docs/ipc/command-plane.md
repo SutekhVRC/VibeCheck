@@ -30,7 +30,7 @@ flowchart LR
     c_sync["sync_offline_toys<br/>(inline)"]
     c_ver["vibecheck_version<br/>(inline)"]
     c_br["open_default_browser<br/>(inline)"]
-    c_oq["osc_query_start / stop /<br/>attempt_force_connect"]
+    c_oq["get_oscquery_status<br/>native_get_oscquery_status"]
   end
 
   subgraph CORE["Backend core"]
@@ -40,11 +40,11 @@ flowchart LR
     DL["Disabled OSC listener"]
     FS[("Config files on disk")]
     DH["Toy device handles"]
-    OQ["OSCQuery"]
+    OQ["OSCQuery mode<br/>(osc/oscquery.rs)"]
   end
 
   CE --> c_en & c_dis & c_ss & c_st & c_gc
-  CF --> c_sc & c_clr
+  CF --> c_sc & c_clr & c_oq
   UT --> c_at & c_sync
   US --> c_sim
   UV --> c_ver
@@ -67,12 +67,12 @@ flowchart LR
   c_sim -- "feature level / stop" --> DH
   c_clr -- "delete VRChat OSC configs" --> FS
   c_sync -- "core_toy_manager.sync_frontend" --> ST
-  c_oq --> OQ
+  c_sc -- "mode change: apply_oscquery,<br/>restart off listener" --> OQ
+  c_oq -- "status: port, VRChat found" --> OQ
 
   classDef inline stroke-dasharray: 5 5
   classDef unused fill:#444,color:#aaa
   class c_sync,c_ver,c_br inline
-  class c_oq unused
 ```
 
 See also: [emit plane](emit-plane.md), [VRChat enable round trip](enable-round-trip.md).
