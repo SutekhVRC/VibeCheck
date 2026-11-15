@@ -6,7 +6,7 @@ import ThemeIcon from "@/theme/ThemeIcon";
 import { FeVCToy } from "@bindings/FeVCToy";
 import { FeVCToyFeature } from "@bindings/FeVCToyFeature";
 import { ToyPower } from "@bindings/ToyPower";
-import { Settings2 } from "lucide-react";
+import { Settings2, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import lovenseLogo from "../assets/Lovense.png";
 import Tooltip from "../layout/Tooltip";
@@ -15,7 +15,16 @@ import FeatureForm from "./FeatureForm";
 import { featureIcons, featureLabel } from "./featureMeta";
 import ToySettings from "./ToySettings";
 
-export default function Toy({ toy }: { toy: FeVCToy }) {
+/** How long the remove button waits for the confirming second click */
+const CONFIRM_TIMEOUT_MS = 4000;
+
+export default function Toy({
+  toy,
+  onRemove,
+}: {
+  toy: FeVCToy;
+  onRemove: (toy: FeVCToy) => Promise<void>;
+}) {
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
   const nameInfo = NameInfo(toy);
 
@@ -66,6 +75,13 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
               <Settings2 className="h-4 w-4" />
               Toy settings
             </Button>
+            {!toy.toy_connected && (
+              <RemoveToyButton
+                key={toy.toy_name}
+                toy={toy}
+                onRemove={onRemove}
+              />
+            )}
             <ToyInfo nameInfo={nameInfo} toyPower={toy.toy_power} />
           </div>
         }
@@ -106,6 +122,62 @@ export default function Toy({ toy }: { toy: FeVCToy }) {
         )}
       </div>
     </div>
+  );
+}
+
+/** Forgets an offline toy. A trash icon that opens to "Delete Toy?" on the
+ * first click; the second click deletes. */
+function RemoveToyButton({
+  toy,
+  onRemove,
+}: {
+  toy: FeVCToy;
+  onRemove: (toy: FeVCToy) => Promise<void>;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  useEffect(() => {
+    if (!confirming) return;
+    const t = setTimeout(() => setConfirming(false), CONFIRM_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, [confirming]);
+
+  async function handleClick() {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    setConfirming(false);
+    setRemoving(true);
+    await onRemove(toy);
+    setRemoving(false);
+  }
+
+  return (
+    <Tooltip text="Forget this toy and delete its saved settings. It comes back with default settings if it connects again.">
+      <Button
+        variant="danger"
+        onClick={handleClick}
+        disabled={removing}
+        aria-label={confirming ? "Delete toy? Click to confirm" : "Delete toy"}
+        className={cn(
+          "m-0 flex items-center py-1 text-sm",
+          confirming ? "gap-1.5 px-3" : "px-1.5",
+        )}
+      >
+        <Trash2 className="h-4 w-4 shrink-0" />
+        {/* The label slides open on the first click */}
+        <span
+          className={cn(
+            "overflow-hidden whitespace-nowrap transition-[max-width] duration-200",
+            confirming ? "max-w-[7rem]" : "max-w-0",
+          )}
+        >
+          Delete Toy?
+        </span>
+      </Button>
+    </Tooltip>
   );
 }
 

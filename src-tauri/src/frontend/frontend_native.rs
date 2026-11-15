@@ -136,6 +136,17 @@ pub fn set_vibecheck_config(
 }
 
 /*
+ * Puts every app setting back to its default (toy settings are untouched)
+ */
+#[tauri::command]
+pub fn reset_vibecheck_config(
+    vc_state: tauri::State<'_, state::VCStateMutex>,
+) -> Result<(), VCFeError> {
+    trace!("reset_vibecheck_config");
+    call_plane::native_reset_vibecheck_config(vc_state)
+}
+
+/*
  * alter_toy
  * Alters a toy state
  * Args: toy_id, FeToyAlter
@@ -389,6 +400,26 @@ pub fn sync_offline_toys(
     } else {
         Err(VCFeError::ToyManagerNotReady)
     }
+}
+
+/*
+ * Forgets an offline toy: deletes its saved settings
+ * Args: toy_name
+ */
+#[tauri::command]
+pub fn remove_offline_toy(
+    vc_state: tauri::State<'_, state::VCStateMutex>,
+    toy_name: String,
+) -> Result<(), VCFeError> {
+    trace!("remove_offline_toy");
+
+    let mut vc_lock = vc_state.0.lock();
+    let Some(toy_manager) = vc_lock.core_toy_manager.as_mut() else {
+        return Err(VCFeError::ToyManagerNotReady);
+    };
+    toy_manager
+        .remove_offline_toy(&toy_name)
+        .map_err(VCFeError::ToyManager)
 }
 
 /*

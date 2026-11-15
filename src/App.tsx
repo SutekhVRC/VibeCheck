@@ -30,7 +30,7 @@ type DiagnosticsSelection = {
 
 export default function App() {
   const [selection, setSelection] = useState<Selection>(null);
-  const { toys, hasOnlineToys } = useToys();
+  const { toys, hasOnlineToys, removeOfflineToy } = useToys();
   const toy =
     selection?.type == "Toy" && selection.toyKey in toys
       ? toys[selection.toyKey]
@@ -60,7 +60,7 @@ export default function App() {
 
   const mainPanel =
     selection?.type == "Toy" && toy != null ? (
-      <Toy toy={toy} />
+      <Toy toy={toy} onRemove={removeOfflineToy} />
     ) : selection?.type == "Config" && config != null ? (
       <Config
         config={config}
