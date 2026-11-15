@@ -6,7 +6,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { INVOKE, LISTEN } from "../data/constants";
-import { errorText } from "../lib/clipboard";
+import { errorText } from "../lib/errors";
 import { assertExhaustive } from "../utils";
 
 type ToyMap = {
@@ -27,7 +27,7 @@ export async function handleToyAlter(newToy: FeVCToy) {
       });
     }
   } catch (e) {
-    toast.error(`Could not alter toy!\n${JSON.stringify(e)}`);
+    toast.error(`Could not alter toy!\n${errorText(e)}`);
   }
 }
 
@@ -54,14 +54,6 @@ export async function handleFeatureAlter(
   if (newFeatureArrayIndex == null) return; // newFeature [type + index] does not exist in feature array
   newFeatures[newFeatureArrayIndex] = newFeature;
   await handleToyAlter({ ...newToy, features: newFeatures });
-}
-
-function removeErrorText(e: unknown) {
-  const reason =
-    e && typeof e === "object" && "ToyManager" in e ? e.ToyManager : null;
-  if (reason === "ToyOnline") return "It's connected. Disconnect it first.";
-  if (reason === "ToyNotFound") return "It has no saved settings.";
-  return errorText(e);
 }
 
 export function toyKey(t: FeVCToy) {
@@ -93,7 +85,7 @@ export function useToys() {
         }, {} as ToyMap),
       );
     } catch (e) {
-      toast.error(`Could not load offline toys\n${JSON.stringify(e)}`);
+      toast.error(`Could not load offline toys\n${errorText(e)}`);
     }
   }
 
@@ -107,7 +99,7 @@ export function useToys() {
       await invoke(INVOKE.REMOVE_OFFLINE_TOY, { toyName: toy.toy_name });
       toast.success(`Removed ${toy.toy_name}`);
     } catch (e) {
-      toast.error(`Could not remove ${toy.toy_name}\n${removeErrorText(e)}`);
+      toast.error(`Could not remove ${toy.toy_name}\n${errorText(e)}`);
     }
     await syncOfflineToys();
   }

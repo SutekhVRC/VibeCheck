@@ -1,3 +1,4 @@
+import { errorCode, errorText } from "@/lib/errors";
 import type { FeOscMode } from "@bindings/FeOscMode";
 import type { FeOscQueryStatus } from "@bindings/FeOscQueryStatus";
 import type { FeVibeCheckConfig } from "@bindings/FeVibeCheckConfig";
@@ -296,7 +297,7 @@ export default function Config({
       await refreshConfig();
     } catch (e) {
       setGeneral((g) => ({ ...g, [key]: !value }));
-      toast.error(`Could not save setting!\n${JSON.stringify(e)}`);
+      toast.error(`Could not save setting!\n${errorText(e)}`);
     }
   }
 
@@ -310,7 +311,7 @@ export default function Config({
       await refreshConfig();
     } catch (e) {
       setIntensity(previous);
-      toast.error(`Could not save master intensity!\n${JSON.stringify(e)}`);
+      toast.error(`Could not save master intensity!\n${errorText(e)}`);
     }
   }
 
@@ -323,7 +324,7 @@ export default function Config({
       });
       await refreshConfig();
     } catch (e) {
-      toast.error(`Could not save scan length!\n${JSON.stringify(e)}`);
+      toast.error(`Could not save scan length!\n${errorText(e)}`);
     }
   }
 
@@ -358,7 +359,7 @@ export default function Config({
           : "Switched to manual addresses. Turn VibeCheck back on.",
       );
     } catch (e) {
-      toast.error(`Could not switch connection mode!\n${JSON.stringify(e)}`);
+      toast.error(`Could not switch connection mode!\n${errorText(e)}`);
     }
   }
 
@@ -377,7 +378,7 @@ export default function Config({
       await refreshConfig();
       toast.info("Connection settings applied");
     } catch (e) {
-      toast.error(`Could not save connection settings!\n${JSON.stringify(e)}`);
+      toast.error(`Could not save connection settings!\n${errorText(e)}`);
     }
   }
 
@@ -393,14 +394,12 @@ export default function Config({
         `Cleared avatar OSC configs. Reload your avatar in VRChat.\n${cleared.join("\n")}`,
       );
     } catch (e) {
-      if (e === "VRChatOscNotFound") {
+      if (errorCode(e) === "VRChatOscNotFound") {
         toast.error(
           "Couldn't find VRChat's OSC folder\nIn VRChat, use Action Menu > Options > OSC > Reset Config instead",
         );
       } else {
-        toast.error(
-          `Could not clear avatar OSC configs!\n${JSON.stringify(e)}`,
-        );
+        toast.error(`Could not clear avatar OSC configs!\n${errorText(e)}`);
       }
     }
   }
@@ -427,7 +426,7 @@ export default function Config({
       await refreshConfig();
       toast.info("Settings reset to defaults. Turn VibeCheck back on.");
     } catch (e) {
-      toast.error(`Could not reset settings!\n${JSON.stringify(e)}`);
+      toast.error(`Could not reset settings!\n${errorText(e)}`);
     }
   }
 

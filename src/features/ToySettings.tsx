@@ -1,5 +1,6 @@
 import { SettingRow } from "@/components/SettingRow";
-import { copyText, errorText } from "@/lib/clipboard";
+import { copyText } from "@/lib/clipboard";
+import { errorText } from "@/lib/errors";
 import type { FeVCToy } from "@bindings/FeVCToy";
 import { ClipboardCopy } from "lucide-react";
 import { useEffect, useState } from "react";

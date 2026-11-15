@@ -1,4 +1,5 @@
 import { INVOKE, TOOLTIP } from "@/data/constants";
+import { errorText } from "@/lib/errors";
 import { ObjectValues } from "@/utils";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { invoke } from "@tauri-apps/api/core";
@@ -60,7 +61,7 @@ export function TooltipLabel({ text, tooltip }: TooltipProps) {
     try {
       await invoke(INVOKE.OPEN_BROWSER, { link });
     } catch (e) {
-      toast.error(`Could not open browser\n${JSON.stringify(e)}`);
+      toast.error(`Could not open browser\n${errorText(e)}`);
     }
   }
 

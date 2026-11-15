@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check } from "@tauri-apps/plugin-updater";
 import { useState } from "react";
@@ -19,7 +20,7 @@ export default function UpdateButton({ enabled }: { enabled: boolean }) {
         toast(`No update available`);
       }
     } catch (e) {
-      toast.error(`Could not update!\n${JSON.stringify(e)}`);
+      toast.error(`Could not update!\n${errorText(e)}`);
     } finally {
       setUpdating(false);
     }

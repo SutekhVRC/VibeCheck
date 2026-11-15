@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { FeVCToyFeature } from "@bindings/FeVCToyFeature";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
@@ -57,7 +58,7 @@ export default function useSimulate(
         stop: isEnableDisable,
       });
     } catch (e) {
-      toast.error(`Could not simulate device feature!\n${JSON.stringify(e)}`);
+      toast.error(`Could not simulate device feature!\n${errorText(e)}`);
     }
   }
 

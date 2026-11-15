@@ -10,9 +10,6 @@ use crate::{
     vcore::ipc::{call_plane::native_alter_toy, emit_plane::emit_core_event},
 };
 
-#[derive(Debug)]
-pub struct OscApiError {}
-
 /// Handles a VibeCheck OSC API message (`/avatar/parameters/vibecheck/api/...`).
 pub fn handle_api_message(msg: OscMessage, app_handle: &AppHandle) {
     trace!("[*] VibeCheck API: {:?}", msg);

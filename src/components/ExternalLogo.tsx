@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { ObjectValues } from "@/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
@@ -19,7 +20,7 @@ export default function ExternalLogo({
     try {
       await invoke(INVOKE.OPEN_BROWSER, { link: tooltip.link });
     } catch (e) {
-      toast.error(`Could not open browser\n${JSON.stringify(e)}`);
+      toast.error(`Could not open browser\n${errorText(e)}`);
     }
   }
   return (

@@ -2,6 +2,7 @@ import { useCoreEventContext } from "@/context/CoreEvents";
 import { INVOKE } from "@/data/constants";
 import Button from "@/layout/Button";
 import Switch from "@/layout/Switch";
+import { errorText } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 import ThemeIcon from "@/theme/ThemeIcon";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -184,7 +185,7 @@ function GuidesButton() {
       const link: FeBrowserLink = "GithubWiki";
       await invoke(INVOKE.OPEN_BROWSER, { link });
     } catch (e) {
-      toast.error(`Could not open browser\n${JSON.stringify(e)}`);
+      toast.error(`Could not open browser\n${errorText(e)}`);
     }
   }
   return (

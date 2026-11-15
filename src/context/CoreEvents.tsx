@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import type { FeCoreEvent } from "@bindings/FeCoreEvent";
 import type { FeSafetyEvent } from "@bindings/FeSafetyEvent";
 import { FeStateEvent } from "@bindings/FeStateEvent";
@@ -84,7 +85,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.SET_CONFIG, { feVcConfig: next });
     } catch (e) {
       setConfig(previous);
-      toast.error(`Could not save settings!\n${JSON.stringify(e)}`);
+      toast.error(`Could not save settings!\n${errorText(e)}`);
     }
   }
 
@@ -101,7 +102,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       setIsEnabled(true);
       return true;
     } catch (e) {
-      toast.error(`Could not enable!\n${JSON.stringify(e)}`);
+      toast.error(`Could not enable!\n${errorText(e)}`);
       return false;
     }
   }
@@ -112,7 +113,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.DISABLE);
       setIsEnabled(false);
     } catch (e) {
-      toast.error(`Could not disable!\n${JSON.stringify(e)}`);
+      toast.error(`Could not disable!\n${errorText(e)}`);
     }
   }
 
@@ -129,7 +130,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.START_SCAN);
       setIsScanning(true);
     } catch (e) {
-      toast.error(`Could not start scan!\n${JSON.stringify(e)}`);
+      toast.error(`Could not start scan!\n${errorText(e)}`);
     }
   }
 
@@ -143,7 +144,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
       await invoke(INVOKE.STOP_SCAN);
       setIsScanning(false);
     } catch (e) {
-      toast.error(`Could not stop scan!\n${JSON.stringify(e)}`);
+      toast.error(`Could not stop scan!\n${errorText(e)}`);
     }
   }
 
@@ -203,7 +204,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
     try {
       await invoke(INVOKE.PANIC_STOP);
     } catch (e) {
-      toast.error(`Could not stop toys!\n${JSON.stringify(e)}`);
+      toast.error(`Could not stop toys!\n${errorText(e)}`);
     }
   }
 
@@ -211,7 +212,7 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
     try {
       await invoke(INVOKE.PANIC_RESUME);
     } catch (e) {
-      toast.error(`Could not resume!\n${JSON.stringify(e)}`);
+      toast.error(`Could not resume!\n${errorText(e)}`);
     }
   }
 

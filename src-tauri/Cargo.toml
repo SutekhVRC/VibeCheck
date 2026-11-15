@@ -50,6 +50,7 @@ open = "5.3.3"
 dyn-clone = "1.0.20"
 tauri-plugin-single-instance = { version = "2" }
 strum = { version="0.27.2", features = ["derive"] }
+thiserror = "2"
 # Tauri dependencies
 tauri = { version = "2.9.5", features = ["tray-icon"] }
 tauri-plugin-dialog = "2"

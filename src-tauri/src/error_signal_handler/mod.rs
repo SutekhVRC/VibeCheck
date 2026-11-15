@@ -1,17 +1,23 @@
-use core::fmt;
-use std::error::Error;
+use thiserror::Error;
 
 use crate::{
-    frontend::error::FrontendError, osc::errors::OscError, osc_api::OscApiError,
-    toy_handling::errors::ToyHandlingError, util::errors::UtilError, vcore::errors::VcoreError,
+    osc::errors::OscError, toy_handling::errors::ToyHandlingError, util::errors::UtilError,
+    vcore::errors::VcoreError,
 };
 
 pub mod reporter;
 
-#[derive(Debug)]
+/// An error from starting up a part of VibeCheck, with what was being done
+/// when it happened.
+#[derive(Debug, Error)]
+#[error("{}{source}", context(message))]
 pub struct VibeCheckError {
     source: ErrorSource,
     message: Option<&'static str>,
+}
+
+fn context(message: &Option<&'static str>) -> String {
+    message.map(|m| format!("{m}: ")).unwrap_or_default()
 }
 
 impl VibeCheckError {
@@ -20,33 +26,34 @@ impl VibeCheckError {
     }
 }
 
-impl Error for VibeCheckError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        Some(&self.source)
-    }
-}
-
-impl fmt::Display for VibeCheckError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "VibeCheckError")
-    }
-}
-
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ErrorSource {
-    Frontend(FrontendError),
+    #[error(transparent)]
     Osc(OscError),
-    OscApi(OscApiError),
+    #[error(transparent)]
     ToyHandling(ToyHandlingError),
+    #[error(transparent)]
     Util(UtilError),
+    #[error(transparent)]
     Vcore(VcoreError),
 }
 
-impl Error for ErrorSource {}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-impl fmt::Display for ErrorSource {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "VibeCheckError")
+    #[test]
+    fn says_what_went_wrong() {
+        let e = VibeCheckError::new(
+            ErrorSource::Util(UtilError::BPIOInit),
+            Some("Failed to initialize bpio"),
+        );
+        assert_eq!(
+            e.to_string(),
+            "Failed to initialize bpio: Couldn't start the toy connection service (Buttplug)."
+        );
+        let e = VibeCheckError::new(ErrorSource::Vcore(VcoreError::NoAppHandle), None);
+        assert_eq!(e.to_string(), VcoreError::NoAppHandle.to_string());
     }
 }
