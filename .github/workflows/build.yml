@@ -1,22 +1,68 @@
 name: build
 
+# Builds every installer into one draft release:
+# 1. create-release makes the draft once, so parallel builds can't each
+#    create their own and split the assets between them.
+# 2. build-tauri builds Windows and Linux in parallel and uploads to that
+#    draft. Linux builds all three bundles in one job, so one run writes all
+#    of Linux's latest.json entries.
+# 3. check-updater-json fails the run if latest.json is missing a platform
+#    (two jobs updating it at the same moment can drop one's entry).
+
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create-release.outputs.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: read the app version
+        run: echo "APP_VERSION=$(jq -r .version src-tauri/tauri.conf.json)" >> "$GITHUB_ENV"
+      - name: create the draft release
+        id: create-release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = process.env.APP_VERSION;
+            const { owner, repo } = context.repo;
+            const releases = await github.paginate(github.rest.repos.listReleases, { owner, repo });
+            const existing = releases.find((r) => r.tag_name === version || r.name === version);
+            if (existing) {
+              core.setFailed(
+                `A release for ${version} already exists (${existing.draft ? "draft" : "published"}): ${existing.html_url}\n` +
+                  "Delete it, or bump the version, then run this again.",
+              );
+              return;
+            }
+            const { data } = await github.rest.repos.createRelease({
+              owner,
+              repo,
+              tag_name: version,
+              target_commitish: context.sha,
+              name: version,
+              body: "See the assets to download this version and install.",
+              draft: true,
+              prerelease: false,
+            });
+            core.info(`Created draft ${version}: ${data.html_url}`);
+            return data.id;
+
   build-tauri:
+    needs: create-release
     environment: TauriReleaseBuildSecrets
     strategy:
       matrix:
         include:
           - os: windows-latest
-            bundle: msi
+            bundles: msi
           - os: ubuntu-latest
-            bundle: deb
-          - os: ubuntu-latest
-            bundle: rpm
-          - os: ubuntu-latest
-            bundle: appimage
+            bundles: deb,rpm,appimage
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
@@ -44,17 +90,56 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: "./src-tauri -> target"
-      - name: build ${{ matrix.bundle }} and create release
+      - name: build ${{ matrix.bundles }} into the draft release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          # the action automatically replaces __VERSION__ with the app version
-          tagName: __VERSION__
-          releaseName: "__VERSION__"
-          releaseBody: "See the assets to download this version and install."
-          releaseDraft: true
-          prerelease: false
-          args: "-b ${{ matrix.bundle }}"
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          args: "-b ${{ matrix.bundles }}"
+
+  check-updater-json:
+    needs: [create-release, build-tauri]
+    runs-on: ubuntu-latest
+    steps:
+      - name: check latest.json lists every installer
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const release_id = Number("${{ needs.create-release.outputs.release_id }}");
+            const assets = await github.paginate(github.rest.repos.listReleaseAssets, { owner, repo, release_id });
+            const asset = assets.find((a) => a.name === "latest.json");
+            if (!asset) {
+              core.setFailed("The release has no latest.json, so the in-app updater won't find this version.");
+              return;
+            }
+            const { data } = await github.rest.repos.getReleaseAsset({
+              owner,
+              repo,
+              asset_id: asset.id,
+              headers: { accept: "application/octet-stream" },
+            });
+            const json = JSON.parse(Buffer.from(data).toString("utf8"));
+            const platforms = json.platforms ?? {};
+            core.info(`latest.json platforms: ${Object.keys(platforms).join(", ")}`);
+
+            // Checked by download link, whatever the platform keys are called
+            const urls = Object.values(platforms).map((p) => p.url ?? "");
+            const expected = {
+              "Windows msi": /\.msi(\.zip)?$/i,
+              "Linux deb": /\.deb$/i,
+              "Linux rpm": /\.rpm$/i,
+              "Linux AppImage": /\.AppImage(\.tar\.gz)?$/i,
+            };
+            const missing = Object.entries(expected)
+              .filter(([, pattern]) => !urls.some((url) => pattern.test(url)))
+              .map(([name]) => name);
+            if (missing.length > 0) {
+              core.setFailed(
+                `latest.json is missing: ${missing.join(", ")}. ` +
+                  "Re-run the build job for that platform (it replaces its files and adds its entry).",
+              );
+            }
