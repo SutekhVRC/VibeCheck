@@ -293,6 +293,12 @@ pub fn open_default_browser(link: FeBrowserLink) -> Result<(), VCFeError> {
 #[tauri::command(async)]
 pub fn open_log_folder() -> Result<(), VCFeError> {
     let dir = crate::util::log_file::log_dir().ok_or(VCFeError::NoLogFolder)?;
+    // It may have been deleted while VibeCheck was running; the file manager
+    // would show its own error for a missing folder
+    std::fs::create_dir_all(dir).map_err(|e| {
+        logerr!("Couldn't recreate the log folder: {}", e);
+        VCFeError::NoLogFolder
+    })?;
     open::that(dir).map_err(|e| {
         logerr!("Couldn't open the log folder: {}", e);
         VCFeError::NoLogFolder
