@@ -146,6 +146,9 @@ pub mod backend {
         ReadFailure,
         #[error("The toy's saved settings couldn't be read.")]
         DeserializeError,
+        /// Like DeserializeError, and the file was renamed to `.json.bad`
+        #[error("The toy's saved settings couldn't be read. The old file was kept with .bad on the end.")]
+        CorruptSetAside,
         #[error("This toy has no saved settings.")]
         OfflineToyConfigNotFound,
         #[error("The toy's settings couldn't be converted for saving.")]

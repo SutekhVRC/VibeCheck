@@ -121,11 +121,12 @@ fn main() {
     {
         let mut vc_state = vibecheck_state_pointer.lock();
 
-        vc_state.config = match config_load(app.app_handle()) {
+        let reporter = vc_state.reporter.clone();
+        vc_state.config = match config_load(app.app_handle(), &reporter) {
             Ok(config) => config,
             Err(e) => {
                 // Run on the defaults rather than not at all
-                vc_state.reporter.error(
+                reporter.error(
                     "config",
                     "config_folder",
                     format!(

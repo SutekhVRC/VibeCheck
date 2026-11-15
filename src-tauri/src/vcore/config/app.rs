@@ -1,11 +1,15 @@
 use log::{error as logerr, info, trace, warn};
 use serde::{Deserialize, Serialize};
-use std::fs;
+use std::{fs, path::Path};
 use tauri::AppHandle;
 
 use crate::{
+    error_signal_handler::reporter::ErrorReporter,
     osc::OSCNetworking,
-    util::fs::{build_path_dir, build_path_file, file_exists, get_config_dir, path_exists},
+    util::fs::{
+        build_path_dir, build_path_file, file_exists, get_config_dir, path_exists,
+        set_aside_bad_file,
+    },
     vcore::errors::backend::VibeCheckConfigError,
 };
 
@@ -85,7 +89,14 @@ fn write_default_config(path: &str) {
     }
 }
 
-pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckConfigError> {
+/// Loads VibeCheck's settings, creating its folders and a default config the
+/// first time. Problems with the file itself are reported through
+/// `reporter`, and VibeCheck runs on the defaults; only a missing config
+/// folder is an error.
+pub fn config_load(
+    app_handle: &AppHandle,
+    reporter: &ErrorReporter,
+) -> Result<VibeCheckConfig, VibeCheckConfigError> {
     let vc_root_dir = match get_config_dir(app_handle) {
         Ok(d) => d,
         Err(_) => return Err(VibeCheckConfigError::ConfigDirFail),
@@ -125,39 +136,52 @@ pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckC
         info!("VibeCheck config exists.");
     }
 
-    match fs::read_to_string(&vc_config_file) {
-        Ok(fc) => match serde_json::from_str::<VibeCheckConfig>(&fc) {
-            Ok(o) => {
-                info!("Config Loaded Successfully!");
-                Ok(o)
-            }
-            Err(_e) => {
-                logerr!(
-                    "Failed to parse json from file: {} [{}]",
-                    vc_config_file,
-                    _e
-                );
-                warn!("Resetting to default config.");
+    Ok(load_config_file(Path::new(&vc_config_file), reporter))
+}
 
-                let default_conf = VibeCheckConfig::default();
-
-                write_default_config(&vc_config_file);
-                trace!("Wrote VibeCheck config file");
-                // If fail to parse config overwrite with new default
-                Ok(default_conf)
-            }
-        },
-        Err(_e) => {
-            logerr!(
-                "Could not parse bytes from file: {} [{}].. Skipping..",
-                vc_config_file,
-                _e
+/// Reads the config at `path`. If it can't be used, VibeCheck runs on the
+/// defaults and says so:
+/// - a file that isn't valid settings is renamed to `Config.json.bad` and
+///   replaced with the defaults, so the user can still look at it;
+/// - a file that can't be read is left alone (it may be a passing problem,
+///   like permissions), but the next settings change will overwrite it.
+fn load_config_file(path: &Path, reporter: &ErrorReporter) -> VibeCheckConfig {
+    let contents = match fs::read_to_string(path) {
+        Ok(contents) => contents,
+        Err(e) => {
+            reporter.warning(
+                "config",
+                "config_unreadable",
+                format!(
+                    "Couldn't open your settings ({e}), so VibeCheck is using its defaults. Changing a setting will replace the file at {}.",
+                    path.display()
+                ),
             );
-            warn!("[*] Resetting to default config.");
-            let default_conf = VibeCheckConfig::default();
-            write_default_config(&vc_config_file);
-            trace!("Wrote VibeCheck config file");
-            Ok(default_conf)
+            return VibeCheckConfig::default();
+        }
+    };
+
+    match serde_json::from_str::<VibeCheckConfig>(&contents) {
+        Ok(config) => {
+            info!("Config Loaded Successfully!");
+            config
+        }
+        Err(e) => {
+            logerr!("Failed to parse {}: {}", path.display(), e);
+            let kept = match set_aside_bad_file(path) {
+                Ok(bad) => format!(" The old file was kept as {}.", bad.display()),
+                Err(e) => {
+                    warn!("Couldn't keep the unreadable config: {}", e);
+                    String::new()
+                }
+            };
+            write_default_config(&path.to_string_lossy());
+            reporter.warning(
+                "config",
+                "config_corrupt",
+                format!("Your settings file couldn't be read, so VibeCheck went back to its default settings.{kept}"),
+            );
+            VibeCheckConfig::default()
         }
     }
 }
@@ -165,6 +189,50 @@ pub fn config_load(app_handle: &AppHandle) -> Result<VibeCheckConfig, VibeCheckC
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn temp_config(name: &str, contents: &str) -> std::path::PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("vibecheck-config-{}-{}", name, std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("Config.json");
+        fs::write(&path, contents).unwrap();
+        path
+    }
+
+    #[test]
+    fn a_corrupt_config_is_kept_and_replaced_with_defaults() {
+        let path = temp_config("corrupt", "{ not json");
+        let (reporter, mut notices) = ErrorReporter::channel();
+
+        let config = load_config_file(&path, &reporter);
+        assert_eq!(config.theme, VibeCheckConfig::default().theme);
+
+        let bad = path.with_file_name("Config.json.bad");
+        assert_eq!(fs::read_to_string(&bad).unwrap(), "{ not json");
+        let rewritten: VibeCheckConfig =
+            serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(rewritten.theme, VibeCheckConfig::default().theme);
+
+        let notice = notices.try_recv().unwrap();
+        assert_eq!(notice.code, "config_corrupt");
+        assert!(notice.message.contains("Config.json.bad"));
+
+        fs::remove_dir_all(path.parent().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn a_good_config_loads_without_a_notice() {
+        let mut saved = VibeCheckConfig::default();
+        saved.theme = "other".to_owned();
+        let path = temp_config("good", &serde_json::to_string(&saved).unwrap());
+        let (reporter, mut notices) = ErrorReporter::channel();
+
+        assert_eq!(load_config_file(&path, &reporter).theme, "other");
+        assert!(notices.try_recv().is_err());
+
+        fs::remove_dir_all(path.parent().unwrap()).unwrap();
+    }
 
     fn config_json_with(key: Option<(&str, f64)>) -> String {
         let mut value = serde_json::to_value(VibeCheckConfig::default()).unwrap();

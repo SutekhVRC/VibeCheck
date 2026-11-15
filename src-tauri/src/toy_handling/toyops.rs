@@ -3,6 +3,7 @@ use buttplug_core::message::OutputType;
 use core::fmt;
 use log::{debug, error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use std::{collections::HashMap, fs, sync::Arc};
 use tauri::AppHandle;
 use ts_rs::TS;
@@ -16,7 +17,7 @@ use crate::{
         },
         FromFrontend, ToBackend, ToFrontend,
     },
-    util::fs::{build_path_dir, build_path_file, file_exists, get_config_dir, ConfigFileType},
+    util::fs::{build_path_dir, build_path_file, file_exists, get_config_dir, set_aside_bad_file},
     vcore::errors::{
         self,
         backend::{VibeCheckFSError, VibeCheckToyConfigError},
@@ -209,9 +210,18 @@ impl VCToy {
 
             let config: VCToyConfig = match serde_json::from_str(&con) {
                 Ok(vc_toy_config) => vc_toy_config,
-                Err(_) => {
+                Err(e) => {
+                    warn!("Couldn't parse toy config {}: {}", config_path, e);
                     self.config = None;
-                    return Err(errors::backend::VibeCheckToyConfigError::DeserializeError);
+                    // The toy is about to be saved with defaults: keep the
+                    // old file rather than overwrite it
+                    return Err(match set_aside_bad_file(Path::new(&config_path)) {
+                        Ok(_) => errors::backend::VibeCheckToyConfigError::CorruptSetAside,
+                        Err(e) => {
+                            warn!("Couldn't keep the unreadable toy config: {}", e);
+                            errors::backend::VibeCheckToyConfigError::DeserializeError
+                        }
+                    });
                 }
             };
             debug!("Loaded & parsed toy config successfully!");

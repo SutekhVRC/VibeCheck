@@ -10,6 +10,7 @@ use crate::{
         toyops::{VCToy, VCToyFeatures},
         ToyPower,
     },
+    vcore::errors::backend::VibeCheckToyConfigError,
     vcore::{
         ipc::{
             call_plane::{ToyManagementEvent, ToyUpdate},
@@ -150,6 +151,17 @@ pub async fn client_event_handler(
                     // Load config with existing toy name
                     match toy.load_toy_config() {
                         Ok(()) => info!("Toy config loaded successfully."),
+                        // The toy starts on defaults, which are saved over
+                        // the file (a corrupt one was kept as .bad first)
+                        Err(
+                            e @ (VibeCheckToyConfigError::CorruptSetAside
+                            | VibeCheckToyConfigError::DeserializeError
+                            | VibeCheckToyConfigError::ReadFailure),
+                        ) => reporter.warning(
+                            "toys",
+                            "toy_config_unreadable",
+                            format!("{}: {e} It starts with default settings.", toy.toy_name),
+                        ),
                         Err(e) => warn!("Toy config failed to load: {:?}", e),
                     }
 
