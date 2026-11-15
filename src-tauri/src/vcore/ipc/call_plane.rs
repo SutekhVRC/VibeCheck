@@ -333,6 +333,53 @@ pub fn native_set_vibecheck_config(
     }
 }
 
+/// Puts every app setting back to its default and saves. Toy settings are
+/// separate and untouched.
+///
+/// The OSCQuery port is kept: VRChat ignores mDNS goodbyes and keeps sending
+/// to a port it has found, so moving it would leave VRChat sending to a
+/// closed port. The frontend turns VibeCheck off first, like a port change.
+pub fn native_reset_vibecheck_config(
+    vc_state: tauri::State<'_, VCStateMutex>,
+) -> Result<(), VCFeError> {
+    info!("Resetting VibeCheck settings to defaults");
+    let (config, app_handle) = {
+        let mut vc_lock = vc_state.0.lock();
+        let old_listen = vc_lock.config.networking.listen_addr();
+        let old_mode = vc_lock.config.networking.mode();
+
+        let config = reset_config(&vc_lock.config);
+        vc_lock.config = config;
+
+        let new_listen = vc_lock.config.networking.listen_addr();
+        if vc_lock.config.networking.mode() != old_mode || new_listen != old_listen {
+            vc_lock.apply_oscquery();
+        }
+        if new_listen != old_listen {
+            vc_lock.restart_disabled_listener();
+        }
+        let intensity = vc_lock.config.master_intensity;
+        vc_lock.safety.set_intensity(intensity);
+
+        (vc_lock.config.clone(), vc_lock.app_handle.clone().unwrap())
+    };
+
+    save_config(config, &app_handle).map_err(|e| match e {
+        VibeCheckConfigError::SerializeError => VCFeError::SerializeFailure,
+        VibeCheckConfigError::WriteFailure => VCFeError::WriteFailure,
+        VibeCheckConfigError::ConfigDirFail => VCFeError::ConfigDirFailure,
+    })
+}
+
+/// The default config, keeping `current`'s OSCQuery port (and picking one if
+/// there's none yet)
+fn reset_config(current: &VibeCheckConfig) -> VibeCheckConfig {
+    let mut config = VibeCheckConfig::default();
+    config.networking.oscquery_port = current.networking.oscquery_port;
+    config.networking.settle();
+    config
+}
+
 pub(crate) fn save_config(
     config: VibeCheckConfig,
     app_handle: &tauri::AppHandle,
@@ -507,3 +554,31 @@ pub fn native_simulate_feature_osc_input(vc_state: tauri::State<'_, VCStateMutex
 }
  *
  */
+
+#[cfg(test)]
+mod reset_tests {
+    use super::*;
+    use crate::osc::OscMode;
+
+    #[test]
+    fn reset_restores_defaults_but_keeps_the_oscquery_port() {
+        let mut current = VibeCheckConfig::default();
+        current.networking.mode = Some(OscMode::Manual);
+        current.networking.bind = "127.0.0.1:9101".parse().unwrap();
+        current.networking.oscquery_port = Some(10042);
+        current.master_intensity = 0.3;
+        current.theme = "other".to_owned();
+        current.sidebar_collapsed = true;
+
+        let reset = reset_config(&current);
+        assert_eq!(reset.networking.mode(), OscMode::OscQuery);
+        assert_eq!(
+            reset.networking.bind,
+            VibeCheckConfig::default().networking.bind
+        );
+        assert_eq!(reset.networking.oscquery_port, Some(10042));
+        assert_eq!(reset.master_intensity, 1.0);
+        assert_eq!(reset.theme, VibeCheckConfig::default().theme);
+        assert!(!reset.sidebar_collapsed);
+    }
+}

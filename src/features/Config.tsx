@@ -36,7 +36,7 @@ function scanLengthLabel(seconds: number) {
 /** How often the OSCQuery status refreshes while Settings is open */
 const OSCQUERY_STATUS_MS = 3000;
 
-/** How long the reset button waits for the confirming second click */
+/** How long the reset buttons wait for the confirming second click */
 const CONFIRM_TIMEOUT_MS = 4000;
 
 type GeneralKey =
@@ -277,6 +277,16 @@ export default function Config({
     return () => clearTimeout(t);
   }, [confirmReset]);
 
+  const [confirmSettingsReset, setConfirmSettingsReset] = useState(false);
+  useEffect(() => {
+    if (!confirmSettingsReset) return;
+    const t = setTimeout(
+      () => setConfirmSettingsReset(false),
+      CONFIRM_TIMEOUT_MS,
+    );
+    return () => clearTimeout(t);
+  }, [confirmSettingsReset]);
+
   async function saveToggle(key: GeneralKey, value: boolean) {
     const next = { ...general, [key]: value };
     setGeneral(next);
@@ -392,6 +402,32 @@ export default function Config({
           `Could not clear avatar OSC configs!\n${JSON.stringify(e)}`,
         );
       }
+    }
+  }
+
+  // Every app setting back to its default; toy settings stay. Turns
+  // VibeCheck off first, since the connection settings reset too.
+  async function resetSettings() {
+    if (!confirmSettingsReset) {
+      setConfirmSettingsReset(true);
+      return;
+    }
+    setConfirmSettingsReset(false);
+    try {
+      await disableOnPortChange();
+      await invoke(INVOKE.RESET_CONFIG);
+      const fresh = await invoke<FeVibeCheckConfig>(INVOKE.GET_CONFIG);
+      // The page keeps its own copies of these, so bring them back in line
+      setGeneral(pickGeneral(fresh));
+      setIntensity(fresh.master_intensity);
+      setDraft({
+        bind: fresh.networking.bind,
+        remote: fresh.networking.remote,
+      });
+      await refreshConfig();
+      toast.info("Settings reset to defaults. Turn VibeCheck back on.");
+    } catch (e) {
+      toast.error(`Could not reset settings!\n${JSON.stringify(e)}`);
     }
   }
 
@@ -555,6 +591,18 @@ export default function Config({
               </div>
               <Button variant="danger" className="m-0" onClick={resetOsc}>
                 {confirmReset ? "Click again to confirm" : "Reset"}
+              </Button>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-[12rem] flex-1">
+                <div className="text-theme-text">Reset VibeCheck settings</div>
+                <div className="text-xs text-theme-muted">
+                  Puts every setting on this page back to its default and turns
+                  VibeCheck off. Your toys&apos; settings are kept.
+                </div>
+              </div>
+              <Button variant="danger" className="m-0" onClick={resetSettings}>
+                {confirmSettingsReset ? "Click again to confirm" : "Reset"}
               </Button>
             </div>
           </Section>

@@ -5,6 +5,11 @@ use serde::Serialize;
 #[derive(Debug, Serialize)]
 pub enum ToyHandlingError {
     PopulateConfigFailure,
+    /// The toy is connected, so its settings are in use
+    ToyOnline,
+    /// No saved settings for that toy
+    ToyNotFound,
+    RemoveFailure,
 }
 
 impl Error for ToyHandlingError {

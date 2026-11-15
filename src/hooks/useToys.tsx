@@ -6,6 +6,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { INVOKE, LISTEN } from "../data/constants";
+import { errorText } from "../lib/clipboard";
 import { assertExhaustive } from "../utils";
 
 type ToyMap = {
@@ -55,6 +56,14 @@ export async function handleFeatureAlter(
   await handleToyAlter({ ...newToy, features: newFeatures });
 }
 
+function removeErrorText(e: unknown) {
+  const reason =
+    e && typeof e === "object" && "ToyManager" in e ? e.ToyManager : null;
+  if (reason === "ToyOnline") return "It's connected. Disconnect it first.";
+  if (reason === "ToyNotFound") return "It has no saved settings.";
+  return errorText(e);
+}
+
 export function toyKey(t: FeVCToy) {
   return `${t.toy_name} ${t.sub_id}`;
 }
@@ -91,6 +100,17 @@ export function useToys() {
   useEffect(() => {
     syncOfflineToys();
   }, []);
+
+  /** Forgets an offline toy: deletes its saved settings */
+  async function removeOfflineToy(toy: FeVCToy) {
+    try {
+      await invoke(INVOKE.REMOVE_OFFLINE_TOY, { toyName: toy.toy_name });
+      toast.success(`Removed ${toy.toy_name}`);
+    } catch (e) {
+      toast.error(`Could not remove ${toy.toy_name}\n${removeErrorText(e)}`);
+    }
+    await syncOfflineToys();
+  }
 
   async function handleToyEvent(payload: FeToyEvent) {
     switch (payload.kind) {
@@ -147,5 +167,9 @@ export function useToys() {
     };
   }, []);
 
-  return { toys, hasOnlineToys: Object.values(onlineToys).length > 0 };
+  return {
+    toys,
+    hasOnlineToys: Object.values(onlineToys).length > 0,
+    removeOfflineToy,
+  };
 }
