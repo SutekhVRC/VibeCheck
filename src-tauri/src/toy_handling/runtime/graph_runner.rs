@@ -7,7 +7,11 @@
  * rate.
  */
 
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+    time::Duration,
+};
 
 use log::info;
 use parking_lot::Mutex;
@@ -16,7 +20,8 @@ use tokio::{
     time::{interval, Instant, MissedTickBehavior},
 };
 use vibecheck_core::{
-    graph::Graph, CommandSlots, Diagnostics, EventPlane, GraphSnapshot, SafetyLayer, SignalPlane,
+    graph::Graph, CommandSlots, Diagnostics, EventPlane, GraphSnapshot, PortId, SafetyLayer,
+    SignalPlane,
 };
 
 /// How often graphs run.
@@ -77,6 +82,22 @@ struct ToyGraph {
     slots: CommandSlots,
 }
 
+/// Sends 0 to every output `old` drove that `new` doesn't, e.g. a feature
+/// that was just disabled. Nothing drives those outputs any more, so without
+/// this they'd keep their last level.
+fn stop_dropped_outputs(old: &ToyGraph, new: &ToyGraph, safety: &SafetyLayer) {
+    let kept: HashSet<&PortId> = new.graph.sink_targets().map(|(t, _)| t).collect();
+    let mut stopped = HashSet::new();
+    for (target, duration_ms) in old.graph.sink_targets() {
+        if kept.contains(target) || !stopped.insert(target) {
+            continue;
+        }
+        if let Some(cmd) = safety.clamp(target.clone(), 0.0, duration_ms) {
+            new.slots.write(cmd);
+        }
+    }
+}
+
 /// Events processors emit are published on `events`. While diagnostics are
 /// on, graph values are copied into `values`.
 pub async fn graph_runner(
@@ -99,7 +120,10 @@ pub async fn graph_runner(
             biased;
             change = control.recv() => match change {
                 Some(GraphControl::Set { toy_id, graph, slots }) => {
-                    toys.insert(toy_id, ToyGraph { graph, slots });
+                    let old = toys.insert(toy_id, ToyGraph { graph, slots });
+                    if let Some(old) = old {
+                        stop_dropped_outputs(&old, &toys[&toy_id], &safety);
+                    }
                 }
                 Some(GraphControl::Remove(toy_id)) => {
                     toys.remove(&toy_id);
@@ -138,10 +162,14 @@ mod tests {
         toyops::{ProcessingMode, ToyParameter, VCFeatureType, VCToyFeature, VCToyFeatures},
     };
     use tokio::{sync::mpsc::unbounded_channel, time::sleep};
-    use vibecheck_core::{ModuleInstanceId, PortId, Signal};
+    use vibecheck_core::{ModuleInstanceId, Signal};
 
     fn graph() -> Graph {
-        let feature = VCToyFeature::new(
+        graph_with(true)
+    }
+
+    fn graph_with(enabled: bool) -> Graph {
+        let mut feature = VCToyFeature::new(
             vec![ToyParameter {
                 parameter: "/avatar/parameters/Boop".into(),
                 processing_mode: ProcessingMode::Raw,
@@ -149,6 +177,7 @@ mod tests {
             0,
             VCFeatureType::Vibrator,
         );
+        feature.feature_enabled = enabled;
         build_toy_graph(
             &ModuleInstanceId::new("toy:test:0"),
             &VCToyFeatures {
@@ -198,6 +227,41 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
+    }
+
+    #[tokio::test]
+    async fn disabling_a_feature_stops_its_output() {
+        let signals = SignalPlane::new();
+        let (control, control_rx) = unbounded_channel();
+        tokio::spawn(graph_runner(
+            control_rx,
+            signals.clone(),
+            EventPlane::new().0,
+            SafetyLayer::default(),
+            GraphValues::default(),
+        ));
+        let slots = CommandSlots::new();
+        let set = |graph| GraphControl::Set {
+            toy_id: 1,
+            graph,
+            slots: slots.clone(),
+        };
+
+        control.send(set(graph_with(true))).unwrap();
+        let boop = PortId::new(ModuleInstanceId::new(OSC_MODULE), "/avatar/parameters/Boop");
+        signals.write(&boop, Signal::Float(0.5));
+        sleep(Duration::from_millis(50)).await;
+        assert_eq!(slots.take_changed()[0].level(), 0.5);
+
+        // The rebuilt graph no longer has the motor: it gets one 0, then nothing
+        control.send(set(graph_with(false))).unwrap();
+        sleep(Duration::from_millis(50)).await;
+        let sent = slots.take_changed();
+        assert_eq!(sent.len(), 1);
+        assert_eq!(sent[0].level(), 0.0);
+        signals.write(&boop, Signal::Float(0.9));
+        sleep(Duration::from_millis(50)).await;
+        assert!(slots.take_changed().is_empty());
     }
 
     #[tokio::test]

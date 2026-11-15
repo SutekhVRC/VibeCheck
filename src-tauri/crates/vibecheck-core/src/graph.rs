@@ -407,6 +407,12 @@ impl Graph {
         }
     }
 
+    /// Every port the graph sends commands to, with the duration its
+    /// commands carry. A port fed by several chains appears once per chain.
+    pub fn sink_targets(&self) -> impl Iterator<Item = (&PortId, Option<u32>)> {
+        self.sinks.iter().map(|s| (&s.target, s.duration_ms))
+    }
+
     /// Node ids in run order.
     pub fn node_ids(&self) -> impl Iterator<Item = &ModuleInstanceId> {
         self.nodes.iter().map(|n| &n.id)
