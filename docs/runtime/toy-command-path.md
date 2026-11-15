@@ -125,23 +125,37 @@ Nothing needs routing to toys: `OscInput` writes every parameter value to the si
 
 When `/avatar/change` arrives, `OscInput` first clears every OSC value from the signal plane, before reading the next message. VRChat sends the new avatar's values right after the change, so clearing anywhere later would wipe some of them too. Then it publishes an `AvatarChange` event (with the avatar id) on the event plane, and `core_event_handler` (`osc_routing.rs`):
 
-1. starts the OSCQuery lookup (below);
+1. starts the starting-state lookup (below);
 2. stops every device. It builds the Buttplug stop command while holding the global state lock, releases the lock, and only then waits for Buttplug. A failed stop is logged;
 3. tells the graph runner to reset every toy's graph (`GraphControl::ResetAll` → `Graph::reset`). Every processor forgets its state (Smooth's window, Rate's level, SPS zones and learned lengths, via `InputProcessor::reset`), and each motor forgets the last level it sent, so the new avatar's first value is sent even if it equals the old one. Watching nodes are given every value still on the plane again, so values the new avatar sent before the reset ran aren't lost. The reset comes after the stop, or the stop could silence the replayed values.
 
-### Values VRChat never sends
+### Starting state
 
-VRChat only sends a parameter over OSC when it changes. Some are set once when the avatar loads and never change, such as an SPS plug's `LengthMult2` and a socket's `DepthRadius`. If one sits at its default, it never arrives, and it's also missed if VibeCheck starts after the avatar loaded.
+VRChat only sends a parameter over OSC when it changes. So when VibeCheck turns on mid-session, or a new avatar loads, toys would wait for the next change; and some parameters are set once when the avatar loads and never change at all, such as an SPS plug's `LengthMult2` and a socket's `DepthRadius`, so they would never arrive.
 
-`AvatarQuery` (`osc/avatar_query.rs`) reads them from VRChat's OSCQuery server, which reports every parameter's current value:
+`AvatarQuery` (`osc/avatar_query.rs`) reads every parameter's current value from VRChat's OSCQuery server:
 
 - **When:** once when the OSC socket is bound, and 1, 4 and 10 s after each avatar change (VRChat may still be loading). A lookup still running for the previous avatar writes nothing.
-- **Finding VRChat:** VRCOSCQuery's `discovery::find_vrchat` (mDNS, a `VRChat-Client-…` `_oscjson._tcp` service, up to 3 s). The endpoint is remembered until a request fails.
-- **What:** `GET /avatar/parameters` (`discovery::node`); float leaves (by type tag `f`) and bools are used. Only addresses `is_setting_address` accepts are used (SPS `LengthMult1`, `LengthMult2`, `DepthRadius`), so plain parameters don't start Idle Speed at avatar load.
+- **Finding VRChat:** the endpoint the avatar catalog found (see [Avatar catalog](#avatar-catalog)), or VRCOSCQuery's `discovery::find_vrchat` if the catalog hasn't found VRChat yet (just after launch).
+- **What:** `GET /avatar/parameters` (`discovery::node`); every float leaf (type tag `f`) and bool. Ints are skipped, as the OSC input doesn't read them either.
 - **How:** `SignalPlane::write_if_absent`, as if the value arrived over OSC, but never over a value VRChat already sent.
-- **Diagnostics:** while the diagnostics view is open, each value filled in is logged under the `oscquery` module (`<value> from OSCQuery`), as are a found server and a failed lookup, so the view's log shows which values didn't come over OSC. `was_filled(addr)` (cleared on avatar change) lets the diagnostics task flag those values with `from_oscquery` while their write count is 1, so the Values tab tags them until VRChat sends the parameter itself.
+- **Effect:** toys match the avatar straight away. A feature whose parameter is at 0 starts at its Idle Speed, and one whose contact is already active starts moving, as if VRChat had just sent the value.
+- **Diagnostics:** while the diagnostics view is open, SPS settings filled in (`is_setting_address`) are logged one by one under the `oscquery` module (`<value> from OSCQuery`), with one summary line for the rest, as are failed lookups. `was_filled(addr)` (cleared on avatar change) lets the diagnostics task flag every filled-in value with `from_oscquery` while its write count is 1, so the Values tab tags them until VRChat sends the parameter itself.
 
-SPS treats these settings as not being contact, so they don't make the processor start sending (and Idle Speed start) on their own.
+SPS treats its settings as not being contact, so they don't make the processor start sending on their own.
+
+## Avatar catalog
+
+`AvatarCatalog` (`osc/avatar_catalog.rs`) keeps the current avatar's parameters for setup help (the parameter picker and the warnings in a feature's settings). It runs for the life of the app, also while VibeCheck is off, and only reads from VRChat (mDNS lookup and HTTP); it never advertises or opens an OSC port.
+
+- **Finding VRChat:** `discovery::find_vrchat` every 10 s while it isn't found. It's the one place that looks VRChat up: `AvatarQuery` and OSCQuery mode use `AvatarCatalog::vrchat()`.
+- **Noticing avatar changes:** `GET /avatar/change` every 3 s. On a change it reads `/avatar/parameters`, and again 1, 4 and 10 s later while the avatar loads. `refresh_avatar_catalog` reads it again at once. The avatar id is only compared, never shown or logged.
+- **What it keeps:** each parameter's address, type (`ParamKind`: floats and bools are usable, ints aren't) and group (`ParamGroup`: the avatar's own, SPS, TPS, VRCFury-generated `VF12_…` names, VRChat built-ins), plus the SPS zones, parsed with the SPS processor's own `Address::parse`.
+- **Leftovers:** VRChat's tree keeps empty nodes from avatars worn earlier. They have no value, so `leaves()` skips them; an avatar without SPS never shows SPS zones (tested with `src/osc/fixtures/no_system.json`).
+- **Frontend:** `get_avatar_catalog`, and `fe_avatar_event` with the whole catalog on every change (`AvatarCatalogProvider` in `src/context/AvatarCatalog.tsx`).
+- **Checks:** `check_feature` compares one feature with the avatar: parameters it doesn't have (with a suggestion when exactly one parameter is the same name in other capitals or a letter or two off), int parameters, input filter tags that match no zone (`sps::tag_matches_zone`, the same rule the SPS processor filters with), and a processor system the avatar doesn't have. It returns nothing while the avatar isn't known. The frontend shows the result and never applies a rule of its own.
+
+The fixtures in `src-tauri/src/osc/fixtures/` are real trees captured with `osc-tool avatar` (asset and avatar names replaced). Capture new ones the same way when VRChat or a penetration system changes its parameters.
 
 ## Connection modes
 
@@ -159,7 +173,7 @@ Why OSCQuery mode works the way it does (tested against VRChat on Linux/Proton; 
 - **9001 held too:** VRChat keeps sending to its default 127.0.0.1:9001 whatever it finds over OSCQuery. With nothing there those sends fail, which through Proton makes VRChat stop sending OSC for the session. So the OSCQuery task holds 9001 while it's free (bound, never read; the OS drops the data, VRChat doesn't notice), retrying every 10 s if another app has it.
 - **The fixed mdns-sd:** VRChat browses with ANY questions and only accepts the PTR in Answers with SRV/TXT/A in Additionals. VRCOSCQuery uses mdns-sd from the SutekhVRC fork, which answers those questions.
 
-`OscQuery` (`osc/oscquery.rs`) runs for the life of the app in OSCQuery mode: it holds the `OscQueryService` (mDNS + HTTP) and looks for VRChat every 10 s, logging changes to diagnostics under `oscquery`. `apply_oscquery()` starts or stops it at startup and when the mode changes; the off-state listener is restarted when the listen address changes.
+`OscQuery` (`osc/oscquery.rs`) runs for the life of the app in OSCQuery mode: it holds the `OscQueryService` (mDNS + HTTP) and reads where VRChat receives OSC (`HOST_INFO`, from the server the avatar catalog found) every 10 s, logging changes to diagnostics under `oscquery`. `apply_oscquery()` starts or stops it at startup and when the mode changes; the off-state listener is restarted when the listen address changes.
 
 Older configs have no `mode`: `settle()` keeps them on Manual if `bind` or `remote` was changed from the defaults, otherwise moves them to OscQuery.
 

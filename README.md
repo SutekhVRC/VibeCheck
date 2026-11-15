@@ -100,12 +100,13 @@ The Rust code is a Cargo workspace rooted at `src-tauri/`: the app, the [`vibech
 
 ### Testing OSC without VRChat
 
-The workspace includes [`osc-tool`](./src-tauri/crates/osc-tool/README.md), a small command-line tool for checking VibeCheck's OSC input. Run it from `src-tauri/`:
+The workspace includes [`osc-tool`](./src-tauri/crates/osc-tool/README.md), a small command-line tool for checking VibeCheck's OSC input and reading an avatar's parameters from VRChat. Run it from `src-tauri/`:
 
 ```bash
 cargo run -p osc-tool -- listen                       # is VRChat sending? (close VibeCheck first)
 cargo run -p osc-tool -- send Boop 0.5                # send a parameter to VibeCheck as if VRChat did
 cargo run -p osc-tool -- sweep Boop 0 1 --back        # ramp a parameter up and back down
+cargo run -p osc-tool -- avatar --out avatar.json     # save the avatar's parameters from VRChat
 ```
 
 ## License
