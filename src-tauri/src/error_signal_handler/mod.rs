@@ -1,9 +1,8 @@
 use thiserror::Error;
 
-use crate::{
-    util::errors::UtilError, vcore::errors::VcoreError,
-};
+use crate::{util::errors::UtilError, vcore::errors::VcoreError};
 
+pub mod panic_hook;
 pub mod reporter;
 
 /// An error from starting up a part of VibeCheck, with what was being done

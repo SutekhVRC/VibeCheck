@@ -89,7 +89,6 @@ impl ErrorReporter {
         self.notice(Severity::Warning, module, code, message.into());
     }
 
-
     fn notice(
         &self,
         severity: Severity,

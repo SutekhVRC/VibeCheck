@@ -48,6 +48,8 @@ fn main() {
         VibeCheckConfig::default(),
     )));
     trace!("VibeCheckState created");
+    // From here on, panics are shown in the app instead of silently ending a task
+    error_signal_handler::panic_hook::install(vibecheck_state_pointer.lock().reporter.clone());
 
     let context = tauri::generate_context!();
     // Before any window opens: start the webview fresh after an update
