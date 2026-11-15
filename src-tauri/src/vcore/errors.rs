@@ -91,6 +91,8 @@ pub mod frontend {
         ConfigDirFailure,
         #[error("Couldn't save this toy's settings.")]
         SaveOfflineToyConfig,
+        #[error("Couldn't open your web browser. The link is {0}")]
+        OpenBrowserFailure(String),
         //InvalidIpv4Host,
         #[error("VibeCheck's toy list isn't ready yet. Try again in a moment.")]
         ToyManagerNotReady,

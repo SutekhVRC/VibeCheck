@@ -14,7 +14,7 @@ flowchart LR
     BAT["Battery refresh<br/>(osc/logic.rs)"]
     API["OSC API<br/>(osc_api/mod.rs)"]
     ALT["alter_toy<br/>(call_plane.rs + offline path in frontend_native.rs)"]
-    ERR["Error signal handler<br/>(error_signal_handler/state_comm.rs)"]
+    ERR["Notice handler<br/>(error_signal_handler/reporter.rs)"]
   end
 
   subgraph EP["Emit plane (vcore/ipc/emit_plane.rs)"]
@@ -38,7 +38,7 @@ flowchart LR
   ALT -- "Update (settings changed)" --> ETE
   OSCL -- "State(EnableAndScan)<br/>vibecheck/api/state = true" --> ECE
   API -- "State(Disable)<br/>vibecheck/api/state = false" --> ECE
-  ERR -- "Error(message)" --> EER
+  ERR -- "Error / Warning<br/>(repeats skipped)" --> EER
 
   ETE --> UT
   ECE --> CE
@@ -56,5 +56,7 @@ flowchart LR
 | `fe_toy_event` | `FeToyEvent` | `Add(FeVCToy)`, `Remove(u32)`, `Update(FeVCToy)` |
 | `fe_core_event` | `FeCoreEvent` | `Scan(Start)`, `State(EnableAndScan \| Disable)` |
 | `fe_error` | `FrontendError` | `Error(String)`, `Warning(String)`, `Info(String)` |
+
+`fe_error` carries problems found by background work; see [Errors](../runtime/errors.md).
 
 See also: [command plane](command-plane.md), [VRChat enable round trip](enable-round-trip.md).

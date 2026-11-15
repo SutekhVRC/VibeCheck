@@ -90,13 +90,22 @@ impl APIProcessor {
                     });
             }
 
-            altered_toys.iter().for_each(|toy| {
-                let _ = native_alter_toy(
+            for toy in altered_toys {
+                let name = toy.toy_name.clone();
+                if let Err(e) = native_alter_toy(
                     app_handle.state::<crate::vcore::state::VCStateMutex>(),
                     app_handle.clone(),
-                    toy.clone(),
-                );
-            });
+                    toy,
+                ) {
+                    let vc_state = app_handle.state::<crate::vcore::state::VCStateMutex>();
+                    let reporter = vc_state.0.lock().reporter.clone();
+                    reporter.warning(
+                        "osc_api",
+                        "anatomy_toggle",
+                        format!("Couldn't turn {name}'s motors on or off from VRChat: {e}"),
+                    );
+                }
+            }
         }
     }
 }

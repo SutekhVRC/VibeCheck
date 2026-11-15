@@ -96,7 +96,7 @@ yarn tauri dev     # run the app in development mode
 yarn tauri build   # build an installer
 ```
 
-The Rust code is a Cargo workspace rooted at `src-tauri/`: the app, the [`vibecheck-core`](./docs/runtime/vibecheck-core.md) library that holds the module runtime, and `osc-tool`. [Toy command path](./docs/runtime/toy-command-path.md) follows an avatar parameter all the way to a toy's motor. Run the tests from `src-tauri/` with `cargo test --workspace`.
+The Rust code is a Cargo workspace rooted at `src-tauri/`: the app, the [`vibecheck-core`](./docs/runtime/vibecheck-core.md) library that holds the module runtime, and `osc-tool`. [Toy command path](./docs/runtime/toy-command-path.md) follows an avatar parameter all the way to a toy's motor, and [Errors](./docs/runtime/errors.md) covers how problems reach the user. Run the tests from `src-tauri/` with `cargo test --workspace`.
 
 ### Testing OSC without VRChat
 

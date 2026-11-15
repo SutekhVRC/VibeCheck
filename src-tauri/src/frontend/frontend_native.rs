@@ -268,31 +268,23 @@ pub fn alter_toy(
  * Opens the social link specified
  */
 #[tauri::command(async)]
-pub fn open_default_browser(link: FeBrowserLink) {
-    match link {
-        FeBrowserLink::Discord => {
-            let _ = open::that("https://discord.gg/C8ACSGSyfq");
-        }
-        FeBrowserLink::Github => {
-            let _ = open::that("https://github.com/SutekhVRC/VibeCheck");
-        }
-        FeBrowserLink::GithubWiki => {
-            let _ = open::that("https://github.com/SutekhVRC/VibeCheck/wiki");
-        }
-        FeBrowserLink::VRChatGroup => {
-            let _ = open::that("https://vrc.group/VIBE.9503");
-        }
+pub fn open_default_browser(link: FeBrowserLink) -> Result<(), VCFeError> {
+    let url = match link {
+        FeBrowserLink::Discord => "https://discord.gg/C8ACSGSyfq",
+        FeBrowserLink::Github => "https://github.com/SutekhVRC/VibeCheck",
+        FeBrowserLink::GithubWiki => "https://github.com/SutekhVRC/VibeCheck/wiki",
+        FeBrowserLink::VRChatGroup => "https://vrc.group/VIBE.9503",
         FeBrowserLink::ToyOptions => {
-            let _ = open::that(
-                "https://github.com/SutekhVRC/VibeCheck/wiki/Toy-Options-List#toy-options",
-            );
+            "https://github.com/SutekhVRC/VibeCheck/wiki/Toy-Options-List#toy-options"
         }
         FeBrowserLink::FeatureOptions => {
-            let _ = open::that(
-                "https://github.com/SutekhVRC/VibeCheck/wiki/Toy-Options-List#toy-feature-options",
-            );
+            "https://github.com/SutekhVRC/VibeCheck/wiki/Toy-Options-List#toy-feature-options"
         }
     };
+    open::that(url).map_err(|e| {
+        logerr!("Couldn't open {} in the browser: {}", url, e);
+        VCFeError::OpenBrowserFailure(url.to_owned())
+    })
 }
 
 /*
