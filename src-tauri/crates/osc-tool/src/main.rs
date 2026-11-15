@@ -5,13 +5,17 @@
 //!   same port.
 //! - `send` / `sweep`: send OSC to VibeCheck as if VRChat sent it, to test
 //!   toy parameters and the OSC API without VRChat.
+//! - `avatar`: save the current avatar's parameters from VRChat's OSCQuery
+//!   server, e.g. as a test fixture.
 //!
 //! ```text
 //! cargo run -p osc-tool -- listen --filter Boop
 //! cargo run -p osc-tool -- send Boop 0.5
 //! cargo run -p osc-tool -- sweep Boop 0 1 --back
+//! cargo run -p osc-tool -- avatar --out sps3.json
 //! ```
 
+mod avatar;
 mod format;
 mod listen;
 mod send;
@@ -25,11 +29,13 @@ USAGE:
     osc-tool listen [ADDRESS] [--filter TEXT]... [--stats]
     osc-tool send PARAM VALUE... [--to ADDRESS] [--repeat N] [--every MS]
     osc-tool sweep PARAM FROM TO [--seconds S] [--rate HZ] [--back] [--to ADDRESS]
+    osc-tool avatar [--out FILE]
 
 COMMANDS:
     listen    Print OSC arriving on a port (default 127.0.0.1:9001). Close VibeCheck first.
     send      Send a message to VibeCheck as if VRChat sent it.
     sweep     Ramp a float parameter, e.g. to test Smooth or Rate mode.
+    avatar    Save the current avatar's parameters from VRChat's OSCQuery to a file.
 
 Run osc-tool COMMAND --help for details. With no command, osc-tool listens.";
 
@@ -64,6 +70,10 @@ fn main() -> ExitCode {
     let command = args.first().map(String::as_str);
 
     match command {
+        Some("avatar") => {
+            args.remove(0);
+            dispatch(args, avatar::USAGE, avatar::parse_args, avatar::run)
+        }
         Some("listen") | Some("send") | Some("sweep") => {
             let command = args.remove(0);
             match command.as_str() {

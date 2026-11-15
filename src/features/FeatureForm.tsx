@@ -1,3 +1,4 @@
+import AvatarStatus from "@/components/AvatarStatus";
 import { SettingRow, SettingsGroup } from "@/components/SettingRow";
 import { FreeTextOptions } from "@/components/ui/FreeTextOptions";
 import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
@@ -175,7 +176,14 @@ export default function FeatureForm({
 
         <FeatureScrollArea>
           <div className="flex flex-col gap-4 px-4 pb-4 pt-2">
-            <SettingsGroup title="Input">
+            <SettingsGroup
+              title={
+                <div className="flex items-center justify-between gap-3">
+                  <span>Input</span>
+                  <AvatarStatus />
+                </div>
+              }
+            >
               <Parameters />
               <InputProcessor />
               <InputFilter />

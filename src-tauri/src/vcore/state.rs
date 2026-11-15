@@ -9,6 +9,7 @@ use tokio::task::JoinHandle;
 
 use crate::error_signal_handler::reporter::{notice_handler, ErrorReporter, Notice};
 use crate::error_signal_handler::{ErrorSource, VibeCheckError};
+use crate::osc::avatar_catalog::AvatarCatalog;
 use crate::osc::logic::{toy_refresh, vc_disabled_osc_command_listen};
 use crate::osc::oscquery::OscQuery;
 use crate::osc::OscMode;
@@ -41,6 +42,9 @@ pub struct VibeCheckState {
     pub diagnostics: Diagnostics,
     /// OSCQuery mode's advertising and VRChat lookup (see osc/oscquery.rs).
     pub oscquery: OscQuery,
+    /// The current avatar's parameters from VRChat's OSCQuery, for setup
+    /// help (see osc/avatar_catalog.rs). Runs for the life of the app.
+    pub avatar_catalog: AvatarCatalog,
     //pub connection_modes: ConnectionModes,
     pub bp_client: Option<ButtplugClient>,
 
@@ -109,6 +113,7 @@ impl VibeCheckState {
             safety,
             diagnostics: Diagnostics::default(),
             oscquery: OscQuery::default(),
+            avatar_catalog: AvatarCatalog::default(),
             //connection_modes,
             bp_client: None,
             running: RunningState::Stopped,
@@ -164,6 +169,18 @@ impl VibeCheckState {
         self.core_toy_manager
             .as_mut()
             .expect("the toy manager is created at startup, before anything uses it")
+    }
+
+    /// Starts reading the current avatar from VRChat, sending changes to the
+    /// frontend. Needs the app handle.
+    pub fn start_avatar_catalog(&self) {
+        let Some(app_handle) = self.app_handle.clone() else {
+            return;
+        };
+        self.avatar_catalog
+            .start(self.async_rt.handle(), move |state| {
+                crate::vcore::ipc::emit_plane::emit_avatar_event(&app_handle, &state.into());
+            });
     }
 
     /// Starts showing reported problems in the app. Needs the app handle.

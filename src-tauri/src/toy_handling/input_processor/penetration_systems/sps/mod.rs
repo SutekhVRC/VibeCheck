@@ -29,6 +29,7 @@ use vibecheck_core::Signal;
 use crate::toy_handling::input_processor::InputProcessor;
 
 use self::zone::{Address, Zone};
+pub use self::zone::{Format, ZoneKind};
 
 const PARAMS: &str = "/avatar/parameters/";
 const HAPTICS_DISABLED: &str = "OGB/HapticsDisabled";
@@ -39,6 +40,41 @@ pub fn is_setting_address(addr: &str) -> bool {
     addr.strip_prefix(PARAMS)
         .and_then(Address::parse)
         .is_some_and(|a| zone::is_setting(a.contact))
+}
+
+/// Whether an input filter tag matches a zone: the zone's name contains it.
+/// The one rule for both the input filter and setup warnings.
+pub fn tag_matches_zone(tag: &str, zone_name: &str) -> bool {
+    zone_name.contains(tag)
+}
+
+/// An SPS zone found among an avatar's parameters.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ZoneInfo {
+    /// The zone's name, e.g. a socket's menu label. What filter tags match.
+    pub name: String,
+    pub kind: ZoneKind,
+    pub format: Format,
+}
+
+/// The SPS zones among `params` (addresses after `/avatar/parameters/`),
+/// each once, in the order first seen.
+pub fn zones<'a>(params: impl IntoIterator<Item = &'a str>) -> Vec<ZoneInfo> {
+    let mut seen = std::collections::HashSet::new();
+    let mut zones = Vec::new();
+    for param in params {
+        let Some(address) = Address::parse(param) else {
+            continue;
+        };
+        if seen.insert(address.zone) {
+            zones.push(ZoneInfo {
+                name: address.id.to_owned(),
+                kind: address.kind,
+                format: address.format,
+            });
+        }
+    }
+    zones
 }
 
 pub struct SPSProcessor {
@@ -120,7 +156,7 @@ impl InputProcessor for SPSProcessor {
     fn input_filter(&self, addr: &str, tags: &[String]) -> bool {
         let zone = addr.strip_prefix(PARAMS).and_then(Address::parse);
         match zone {
-            Some(zone) => tags.iter().any(|tag| zone.id.contains(tag.as_str())),
+            Some(zone) => tags.iter().any(|tag| tag_matches_zone(tag, zone.id)),
             None => true,
         }
     }
@@ -363,6 +399,32 @@ mod tests {
         near(a.level(), 0.0);
         a.float(HAPTICS_DISABLED, 0.0);
         near(a.level(), 0.6);
+    }
+
+    #[test]
+    fn zones_lists_each_zone_once() {
+        let found = zones([
+            "OGB/Socket/Mouth/DepthOthers",
+            "OGB/Socket/Mouth/DepthSelf",
+            "OGB/Orf/Hips/PenOthers",
+            "VFH/Zone/Plug/Main/LengthMult2",
+            "OGB/Touch/Hand/TouchOthers",
+            "OGB/HapticsDisabled",
+            "Boop",
+        ]);
+        let summary: Vec<(&str, ZoneKind, Format)> = found
+            .iter()
+            .map(|z| (z.name.as_str(), z.kind, z.format))
+            .collect();
+        assert_eq!(
+            summary,
+            vec![
+                ("Mouth", ZoneKind::Socket, Format::Sps3),
+                ("Hips", ZoneKind::Socket, Format::Legacy),
+                ("Main", ZoneKind::Plug, Format::Sps3),
+                ("Hand", ZoneKind::Touch, Format::Legacy),
+            ]
+        );
     }
 
     #[test]

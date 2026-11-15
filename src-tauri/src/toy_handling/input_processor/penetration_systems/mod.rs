@@ -13,7 +13,7 @@ use self::{sps::SPSProcessor, tps::TPSProcessor};
 
 use super::InputProcessor;
 
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub enum PenetrationSystemType {
     None, // No Input Processor

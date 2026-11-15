@@ -103,6 +103,9 @@ fn main() {
             frontend_native::get_panic_state,
             frontend_native::set_diagnostics_enabled,
             frontend_native::open_log_folder,
+            frontend_native::get_avatar_catalog,
+            frontend_native::refresh_avatar_catalog,
+            frontend_native::check_feature,
             //frontend_native::simulate_feature_osc_input,
         ])
         .build(context)
@@ -185,6 +188,8 @@ fn main() {
         trace!("Started DOL");
         // OSCQuery mode: advertise VibeCheck for as long as the app runs
         vc_state.apply_oscquery();
+        // Setup help: the current avatar's parameters, also while off
+        vc_state.start_avatar_catalog();
     }
 
     register_panic_hotkey(app.app_handle());

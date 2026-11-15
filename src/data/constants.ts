@@ -3,6 +3,7 @@ export const LISTEN = {
   TOY_EVENT: "fe_toy_event",
   ERROR: "fe_error",
   DIAGNOSTICS: "fe_diagnostics",
+  AVATAR: "fe_avatar_event",
 } as const;
 
 export const INVOKE = {
@@ -26,6 +27,9 @@ export const INVOKE = {
   SET_DIAGNOSTICS_ENABLED: "set_diagnostics_enabled",
   GET_OSCQUERY_STATUS: "get_oscquery_status",
   OPEN_LOG_FOLDER: "open_log_folder",
+  GET_AVATAR_CATALOG: "get_avatar_catalog",
+  REFRESH_AVATAR_CATALOG: "refresh_avatar_catalog",
+  CHECK_FEATURE: "check_feature",
 } as const;
 
 /** Global hotkey for the panic stop (registered by the backend) */
