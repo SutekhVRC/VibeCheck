@@ -24,10 +24,12 @@ flowchart LR
     c_st["vibecheck_stop_bt_scan<br/>native_vibecheck_stop_bt_scan"]
     c_gc["get_vibecheck_config<br/>native_get_vibecheck_config"]
     c_sc["set_vibecheck_config<br/>native_set_vibecheck_config"]
+    c_rc["reset_vibecheck_config<br/>native_reset_vibecheck_config"]
     c_at["alter_toy<br/>native_alter_toy (online toys)"]
     c_sim["simulate_device_feature<br/>native_simulate_device_feature"]
     c_clr["clear_osc_config<br/>native_clear_osc_config"]
     c_sync["sync_offline_toys<br/>(inline)"]
+    c_rm["remove_offline_toy<br/>(inline)"]
     c_ver["vibecheck_version<br/>(inline)"]
     c_br["open_default_browser<br/>(inline)"]
     c_oq["get_oscquery_status<br/>native_get_oscquery_status"]
@@ -44,8 +46,8 @@ flowchart LR
   end
 
   CE --> c_en & c_dis & c_ss & c_st & c_gc
-  CF --> c_sc & c_clr & c_oq
-  UT --> c_at & c_sync
+  CF --> c_sc & c_rc & c_clr & c_oq
+  UT --> c_at & c_sync & c_rm
   US --> c_sim
   UV --> c_ver
   TL --> c_br
@@ -67,12 +69,17 @@ flowchart LR
   c_sim -- "feature level / stop" --> DH
   c_clr -- "delete VRChat OSC configs" --> FS
   c_sync -- "core_toy_manager.sync_frontend" --> ST
+  c_rm -- "remove_offline_toy:<br/>refused while connected" --> ST
+  c_rm -- "delete ToyConfigs files<br/>with that toy_name" --> FS
+  c_rc -- "defaults, keeping oscquery_port" --> ST
+  c_rc -- "save_config" --> FS
+  c_rc -- "listen change: apply_oscquery,<br/>restart off listener" --> OQ
   c_sc -- "mode change: apply_oscquery,<br/>restart off listener" --> OQ
   c_oq -- "status: port, VRChat found" --> OQ
 
   classDef inline stroke-dasharray: 5 5
   classDef unused fill:#444,color:#aaa
-  class c_sync,c_ver,c_br inline
+  class c_sync,c_rm,c_ver,c_br inline
 ```
 
 See also: [emit plane](emit-plane.md), [VRChat enable round trip](enable-round-trip.md).

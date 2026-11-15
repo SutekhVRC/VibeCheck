@@ -60,7 +60,7 @@ Rules:
 - Nothing is sent before a source has a value, so Idle Speed only starts after the first input.
 - A chain only sends when its result **changes**. A steady value costs nothing; time-based modes (Smooth catching up, Rate winding down) send while they move.
 
-The graph is built when the toy starts, so saved modes apply straight away, and **rebuilt on every config change**, which resets processor state (Smooth's window, Rate's level). A rebuilt graph reads the current values straight away, so a new Range or mode applies immediately rather than waiting for the next OSC message.
+The graph is built when the toy starts, so saved modes apply straight away, and **rebuilt on every config change**, which resets processor state (Smooth's window, Rate's level). A rebuilt graph reads the current values straight away, so a new Range or mode applies immediately rather than waiting for the next OSC message. A disabled feature has no chain in the rebuilt graph, so when the runner replaces a toy's graph (`GraphControl::Set`) it sends a single 0 (through `SafetyLayer::clamp`, with the sink's duration for linears) to every motor the old graph drove and the new one doesn't (`Graph::sink_targets`). Otherwise those motors would keep their last level.
 
 ### Fixed tick
 
