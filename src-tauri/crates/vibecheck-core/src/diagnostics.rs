@@ -79,6 +79,7 @@ impl Diagnostics {
         }
     }
 
+    /// Whether diagnostics are on. [`log`](Self::log) already checks.
     pub fn enabled(&self) -> bool {
         self.inner.enabled.load(Ordering::Relaxed)
     }

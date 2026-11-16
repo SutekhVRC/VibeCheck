@@ -18,6 +18,7 @@ use std::time::Duration;
 use crate::module::{EventOut, PortSpec, Processor};
 use crate::signal::Signal;
 
+/// A feature's processing mode.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mode {
     /// The motor follows the value. Booleans become 0 or 1.
@@ -71,6 +72,7 @@ fn is_rest(value: f64, flip: bool) -> bool {
     !flip && value == 0.0 || flip && value == 1.0
 }
 
+/// [`Mode::Raw`]: passes floats through; booleans become 0 or 1.
 pub struct RawMode;
 
 impl Processor for RawMode {
@@ -89,6 +91,7 @@ impl Processor for RawMode {
     }
 }
 
+/// [`Mode::Smooth`]: the time-weighted mean of float values over a window.
 pub struct SmoothMode {
     window: Duration,
     flip: bool,
@@ -97,6 +100,8 @@ pub struct SmoothMode {
 }
 
 impl SmoothMode {
+    /// Averages over `window`. With `flip`, 1.0 is the rest value that
+    /// passes straight through and restarts the average (otherwise 0.0).
     pub fn new(window: Duration, flip: bool) -> Self {
         Self {
             window,
@@ -190,6 +195,9 @@ pub struct RateMode {
 }
 
 impl RateMode {
+    /// `sensitivity` scales speed into level (1 = full power at about one
+    /// in-and-out stroke per second); `wind_down` is how quickly the level
+    /// falls once movement stops (higher stops sooner).
     pub fn new(sensitivity: f64, wind_down: f64) -> Self {
         Self {
             sensitivity: if sensitivity.is_finite() {
@@ -256,11 +264,13 @@ impl Processor for RateMode {
     }
 }
 
+/// [`Mode::Constant`]: a fixed level while on (true, or 0.5 and up).
 pub struct ConstantMode {
     level: f64,
 }
 
 impl ConstantMode {
+    /// Outputs `level` while on, 0 while off.
     pub fn new(level: f64) -> Self {
         Self { level }
     }

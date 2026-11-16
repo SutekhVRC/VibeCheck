@@ -37,6 +37,7 @@ pub const AVATAR_CHANGE_PORT: &str = "avatar_change";
 
 const AVATAR_CHANGE_ADDR: &str = "/avatar/change";
 
+/// An [`Input`] that receives OSC over UDP (see the module docs).
 pub struct OscInput {
     socket: UdpSocket,
     tap: Option<UnboundedSender<OscMessage>>,
@@ -52,6 +53,7 @@ impl OscInput {
         })
     }
 
+    /// The address the socket is bound to (useful after binding port 0).
     pub fn local_addr(&self) -> io::Result<SocketAddr> {
         self.socket.local_addr()
     }

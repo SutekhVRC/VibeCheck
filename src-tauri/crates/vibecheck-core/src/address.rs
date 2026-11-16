@@ -13,10 +13,13 @@ use std::sync::Arc;
 pub struct ModuleInstanceId(Arc<str>);
 
 impl ModuleInstanceId {
+    /// An id from any string. Ids are compared as text, so keep them stable
+    /// across restarts (no device indexes).
     pub fn new(id: impl AsRef<str>) -> Self {
         Self(Arc::from(id.as_ref()))
     }
 
+    /// The id as text.
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -31,11 +34,14 @@ impl fmt::Display for ModuleInstanceId {
 /// One named port on a module instance, e.g. `toy:lovense_lush:0/vibrate_0`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct PortId {
+    /// The module instance the port belongs to.
     pub module: ModuleInstanceId,
+    /// The port's name, unique within its module instance.
     pub port: Arc<str>,
 }
 
 impl PortId {
+    /// The port named `port` on `module`.
     pub fn new(module: ModuleInstanceId, port: impl AsRef<str>) -> Self {
         Self {
             module,

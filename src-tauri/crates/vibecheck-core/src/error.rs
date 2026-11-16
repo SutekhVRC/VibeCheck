@@ -1,7 +1,10 @@
+//! The error type modules and the runtime return.
+
 use std::fmt;
 
 use crate::address::PortId;
 
+/// What went wrong in a module or the runtime.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Error {
     /// A module referred to a port that does not exist.
@@ -27,4 +30,5 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
+/// A `Result` with [`Error`] as the default error.
 pub type Result<T, E = Error> = std::result::Result<T, E>;

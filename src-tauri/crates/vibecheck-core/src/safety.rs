@@ -91,6 +91,7 @@ pub struct ClampedCmd {
 }
 
 impl ClampedCmd {
+    /// The port the command is for, e.g. a toy's motor.
     pub fn target(&self) -> &PortId {
         &self.target
     }
@@ -151,12 +152,14 @@ fn unit(value: f64) -> f64 {
 }
 
 impl SafetyLayer {
+    /// A layer with `caps`, not panicked, nothing armed.
     pub fn new(caps: SafetyCaps) -> Self {
         let layer = Self::default();
         layer.set_caps(caps);
         layer
     }
 
+    /// The current caps.
     pub fn caps(&self) -> SafetyCaps {
         self.state.lock().caps
     }
@@ -187,6 +190,7 @@ impl SafetyLayer {
         self.state.lock().panicked = false;
     }
 
+    /// Whether a panic stop is in effect.
     pub fn is_panicked(&self) -> bool {
         self.state.lock().panicked
     }
@@ -206,14 +210,18 @@ impl SafetyLayer {
         true
     }
 
+    /// Disarms a module. Commands already made for it are dropped by
+    /// [`admits`](Self::admits).
     pub fn disarm(&self, module: &ModuleInstanceId) {
         self.state.lock().armed.remove(module);
     }
 
+    /// Disarms every module.
     pub fn disarm_all(&self) {
         self.state.lock().armed.clear();
     }
 
+    /// Whether `module` is armed.
     pub fn is_armed(&self, module: &ModuleInstanceId) -> bool {
         self.state.lock().armed.contains(module)
     }

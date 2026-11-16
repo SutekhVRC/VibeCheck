@@ -57,6 +57,8 @@ struct SinkSpec {
     duration_ms: Option<u32>,
 }
 
+/// Builds a [`Graph`]: add processors, wire them, add sinks, then
+/// [`build`](GraphBuilder::build). See the module docs for an example.
 #[derive(Default)]
 pub struct GraphBuilder {
     nodes: Vec<NodeSpec>,
@@ -69,6 +71,7 @@ fn graph_err(why: impl Into<String>) -> Error {
 }
 
 impl GraphBuilder {
+    /// An empty graph.
     pub fn new() -> Self {
         Self::default()
     }

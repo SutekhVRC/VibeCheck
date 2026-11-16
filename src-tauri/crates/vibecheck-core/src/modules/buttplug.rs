@@ -128,10 +128,18 @@ impl ErrorState {
 pub enum Actuator {
     /// Set a level on one of the feature's outputs (vibrate, rotate,
     /// oscillate, constrict, position). Rotation is always clockwise.
-    Level { feature: u32, output: OutputType },
+    Level {
+        /// The device feature's index.
+        feature: u32,
+        /// Which of its outputs.
+        output: OutputType,
+    },
     /// Move to a position over the command's duration, in milliseconds
     /// (linear toys / strokers).
-    Position { feature: u32 },
+    Position {
+        /// The device feature's index.
+        feature: u32,
+    },
 }
 
 /// Outputs VibeCheck drives with a level, in the order they're numbered
@@ -171,6 +179,7 @@ pub struct LegacyLayout {
 }
 
 impl LegacyLayout {
+    /// The layout of a connected device.
     pub fn of(device: &ButtplugClientDevice) -> Self {
         Self::from_features(device.device_features().values().map(|f| f.feature()))
     }
@@ -266,7 +275,9 @@ pub async fn send_to_actuator(
 /// An actuator plus whether its level is flipped before sending.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ActuatorSpec {
+    /// What to drive.
     pub actuator: Actuator,
+    /// Flip Input: send `1 - level`, for motors that run backwards.
     pub flip: bool,
 }
 
@@ -279,6 +290,8 @@ pub fn device_level(level: f64, flipped: bool) -> f64 {
     }
 }
 
+/// An [`Output`] for one Buttplug device: one signal-in port per actuator
+/// (see the module docs).
 pub struct ButtplugOutput {
     device: Arc<ButtplugClientDevice>,
     actuators: HashMap<Arc<str>, ActuatorSpec>,

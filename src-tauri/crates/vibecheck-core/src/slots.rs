@@ -29,6 +29,7 @@ pub struct CommandSlots {
 }
 
 impl CommandSlots {
+    /// Empty slots.
     pub fn new() -> Self {
         Self::default()
     }

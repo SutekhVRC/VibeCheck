@@ -24,11 +24,15 @@ const HISTORY_LEN: usize = 4096;
 /// Longest chain [`EventPlane::chain`] will walk, as a backstop.
 const MAX_CHAIN_WALK: usize = 64;
 
+/// Identifies one event. Ids go up in publish order, starting at 1, and are
+/// unique within one [`EventPlane`] and its clones.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct EventId(pub u64);
 
+/// What kind of thing happened. The [`Value`] an event carries depends on it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EventKind {
+    /// The avatar changed (value: the avatar id as `Text`, when known).
     AvatarChange,
     /// Something connected (value: `Bool(true)`) or disconnected
     /// (`Bool(false)`). The source says what: e.g. VRChat, or a toy.
@@ -36,10 +40,15 @@ pub enum EventKind {
     /// An output started acting (value: `Bool(true)`), e.g. a toy's motors
     /// went above 0, or stopped (`Bool(false)`).
     Activity,
+    /// An output pattern played. Reserved: nothing publishes it yet.
     Pattern,
+    /// A value crossed a threshold, e.g. from a processor watching a level.
     Threshold,
+    /// A rule's conditions were met. Reserved: nothing publishes it yet.
     RuleFired,
+    /// An output was armed or disarmed. Reserved: nothing publishes it yet.
     Arming,
+    /// A panic stop or resume. Reserved: nothing publishes it yet.
     Panic,
     /// A module acted in response to an event (published by the safety
     /// layer when it admits the action, from the module that asked).
@@ -51,20 +60,31 @@ pub enum EventKind {
     Custom(Arc<str>),
 }
 
+/// The data an event carries. What it means depends on the [`EventKind`].
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {
+    /// No data.
     None,
+    /// A number, e.g. the level that crossed a threshold.
     Float(f64),
+    /// On or off, e.g. connected or not.
     Bool(bool),
+    /// Text, e.g. an avatar id or an error message.
     Text(Arc<str>),
 }
 
+/// Something that happened, as published on the [`EventPlane`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct Event {
+    /// Unique within the plane; set by the plane when published.
     pub id: EventId,
+    /// The module port that published it, e.g. `vrchat/connection`.
     pub source: PortId,
+    /// What happened.
     pub kind: EventKind,
+    /// Its data; what it means depends on `kind`.
     pub value: Value,
+    /// When it was published, in milliseconds since the Unix epoch.
     pub ts_ms: u64,
     /// The event that led to this one, if any.
     pub cause: Option<EventId>,
@@ -112,6 +132,8 @@ pub struct EventReceiver {
 }
 
 impl EventPlane {
+    /// A new plane: the sender (clone it for every module) and the single
+    /// receiver.
     pub fn new() -> (Self, EventReceiver) {
         let (tx, rx) = mpsc::unbounded_channel();
         (

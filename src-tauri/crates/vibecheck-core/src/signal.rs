@@ -11,9 +11,12 @@ use parking_lot::RwLock;
 
 use crate::address::{ModuleInstanceId, PortId};
 
+/// A value on the signal plane.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Signal {
+    /// A number; levels are 0.0 to 1.0.
     Float(f64),
+    /// On or off.
     Bool(bool),
 }
 
@@ -71,7 +74,9 @@ impl Slots {
 /// A port's latest value, from [`SignalPlane::changed_since_all`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct PortValue {
+    /// The port.
     pub port: PortId,
+    /// Its latest value.
     pub signal: Signal,
     /// How many times the port has been written since it was last cleared.
     pub writes: u64,
@@ -92,6 +97,7 @@ pub struct SignalPlane {
 pub struct SignalSeq(u64);
 
 impl SignalPlane {
+    /// An empty plane.
     pub fn new() -> Self {
         Self::default()
     }
