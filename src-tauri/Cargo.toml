@@ -1,9 +1,13 @@
 [package]
 name = "vibecheck"
-version = "0.7.2"
+version = "0.7.3"
 edition = "2021"
 authors = ["SutekhVRC"]
 rust-version = "1.57"
+
+[lib]
+name = "vibecheck_lib"
+path = "src/lib.rs"
 
 [workspace]
 members = [".", "crates/vibecheck-core", "crates/osc-tool"]
