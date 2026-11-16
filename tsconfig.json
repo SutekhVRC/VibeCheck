@@ -16,6 +16,7 @@
     "jsx": "react-jsx",
     "paths": {
       "@/*": ["./src/*"],
+      "@extensions": ["./src/extensions/none.ts"],
       "@bindings/*": ["./src-tauri/bindings/*"]
     }
   },

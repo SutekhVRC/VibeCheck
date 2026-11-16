@@ -31,6 +31,13 @@ use log::{error as logerr, trace};
  * Args: None
  * Return: String
  */
+/// Whether this build checks for updates. The updater is only registered
+/// when the app's tauri.conf.json configures it (see lib.rs).
+#[tauri::command]
+pub fn vibecheck_updater_enabled(app_handle: tauri::AppHandle) -> bool {
+    app_handle.config().plugins.0.contains_key("updater")
+}
+
 #[tauri::command]
 pub fn vibecheck_version(app_handle: tauri::AppHandle) -> String {
     #[cfg(target_os = "windows")]

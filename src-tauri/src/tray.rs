@@ -64,10 +64,12 @@ struct TrayMenu {
 
 pub fn build(app: &tauri::App) -> tauri::Result<()> {
     let version = app.package_info().version.to_string();
+    // The app's product name from its tauri.conf.json
+    let name = app.package_info().name.clone();
     let header = MenuItem::with_id(
         app,
         "header",
-        format!("VibeCheck {version}"),
+        format!("{name} {version}"),
         false,
         None::<&str>,
     )?;
@@ -77,7 +79,7 @@ pub fn build(app: &tauri::App) -> tauri::Result<()> {
     let scan = MenuItem::with_id(app, "scan", "Look for toys", true, None::<&str>)?;
     let window = MenuItem::with_id(app, "window", "Hide window", true, None::<&str>)?;
     let restart = MenuItem::with_id(app, "restart", "Restart", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit VibeCheck", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", format!("Quit {name}"), true, None::<&str>)?;
 
     let menu = Menu::with_items(
         app,
@@ -106,7 +108,7 @@ pub fn build(app: &tauri::App) -> tauri::Result<()> {
 
     TrayIconBuilder::new()
         .menu(&menu)
-        .tooltip("VibeCheck")
+        .tooltip(&name)
         // A simpler version of the app icon that stays readable at tray size
         // (icons/source/app-icon-small.svg)
         .icon(tauri::include_image!("icons/tray.png"))

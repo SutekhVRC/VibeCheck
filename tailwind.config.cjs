@@ -9,6 +9,10 @@ module.exports = {
 		'./components/**/*.{ts,tsx}',
 		'./app/**/*.{ts,tsx}',
 		'./src/**/*.{ts,tsx}',
+		// Classes used by the extensions module (see vite.config.ts)
+		...(process.env.VIBECHECK_EXTENSIONS
+			? [require('path').dirname(require('path').resolve(process.env.VIBECHECK_EXTENSIONS)) + '/**/*.{ts,tsx}']
+			: []),
 	],
 	theme: {
 		container: {

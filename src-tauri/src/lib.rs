@@ -107,6 +107,7 @@ pub fn run(context: tauri::Context<tauri::Wry>, extensions: Extensions) {
     let vibecheck_commands: Box<dyn Fn(tauri::ipc::Invoke) -> bool + Send + Sync> =
         Box::new(tauri::generate_handler![
             frontend_native::vibecheck_version,
+            frontend_native::vibecheck_updater_enabled,
             frontend_native::vibecheck_enable,
             frontend_native::vibecheck_disable,
             frontend_native::get_vibecheck_config,
