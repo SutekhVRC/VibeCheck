@@ -30,7 +30,12 @@ pub struct EventId(pub u64);
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EventKind {
     AvatarChange,
+    /// Something connected (value: `Bool(true)`) or disconnected
+    /// (`Bool(false)`). The source says what: e.g. VRChat, or a toy.
     Connection,
+    /// An output started acting (value: `Bool(true)`), e.g. a toy's motors
+    /// went above 0, or stopped (`Bool(false)`).
+    Activity,
     Pattern,
     Threshold,
     RuleFired,

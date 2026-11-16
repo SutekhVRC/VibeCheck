@@ -29,13 +29,13 @@ The app only uses graphs generated from toy settings; there's no way to build gr
 | `graph.rs` | `GraphBuilder`, `Graph`, `GraphSnapshot`, `SinkValue` | Yes: one graph per toy |
 | `diagnostics.rs` | `Diagnostics`, `LogEntry` | Yes: the diagnostics view |
 | `slots.rs` | `CommandSlots` | Yes |
-| `modules/buttplug.rs` | `ButtplugOutput`, `Actuator`, `LegacyLayout`, `send_to_actuator` | Yes |
+| `modules/buttplug.rs` | `ButtplugOutput` (with `OutputError` and `Activity` events), `Actuator`, `LegacyLayout`, `send_to_actuator` | Yes |
 | `modules/osc.rs` | `OscInput` | Yes |
 | `modules/modes.rs` | `Mode`, `ModeSettings`, `RawMode`, `SmoothMode`, `RateMode`, `ConstantMode` | Yes |
 | `modules/levels.rs` | `OutputLevels` | Yes |
 | `module.rs` | `Input`, `Processor`, `Output` traits, `PortSpec`, `InputCtx`, `process_one` | Yes |
 | `signal.rs` | `Signal`, `SignalPlane`, `SignalSeq`, `PortValue` | Yes: written by `OscInput`, read by graphs |
-| `event.rs` | `Event`, `EventPlane`, `EventReceiver` | Yes: avatar change |
+| `event.rs` | `Event`, `EventPlane`, `EventReceiver` | Yes: avatar change, VRChat and toy connections, toy activity, output errors |
 | `error.rs` | `Error`, `Result` | Yes |
 
 ## Addressing

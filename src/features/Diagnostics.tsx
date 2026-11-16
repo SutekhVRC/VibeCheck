@@ -28,6 +28,9 @@ const OSC_MODULE = "osc";
 /** Log entries from the OSCQuery lookup (src-tauri osc/avatar_query.rs) */
 const OSCQUERY_MODULE = "oscquery";
 
+/** Log entries about events (src-tauri runtime/osc_routing.rs EVENTS_LOG_MODULE) */
+const EVENTS_MODULE = "events";
+
 /** Most log lines rendered at once (newest first) */
 const LOG_ROWS = 500;
 
@@ -384,7 +387,8 @@ function LogTab({ log }: { log: FeDiagLogEntry[] }) {
         <p className="text-theme-muted">
           Nothing yet. Every OSC message VibeCheck receives shows up here,
           including ones no toy uses. Values VibeCheck reads from VRChat&rsquo;s
-          OSCQuery show up here too, marked OSCQuery.
+          OSCQuery show up here too, marked OSCQuery, and so do events such as
+          VRChat or a toy connecting, or a toy starting and stopping.
         </p>
       </Section>
     );
@@ -403,11 +407,14 @@ function LogTab({ log }: { log: FeDiagLogEntry[] }) {
               "grid grid-cols-[4.5rem_minmax(0,1fr)_auto] gap-x-3 py-0.5",
               e.label.startsWith("/avatar/change") && "text-theme-secondary",
               e.module === OSCQUERY_MODULE && "text-theme-primary",
+              e.module === EVENTS_MODULE && "italic text-theme-secondary",
             )}
             title={
               e.module === OSCQUERY_MODULE
                 ? "Read from VRChat's OSCQuery: VRChat never sent it over OSC"
-                : undefined
+                : e.module === EVENTS_MODULE
+                  ? "An event: something VibeCheck noticed, not an OSC message"
+                  : undefined
             }
           >
             <span className="text-right tabular-nums text-theme-muted">

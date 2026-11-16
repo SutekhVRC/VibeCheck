@@ -19,9 +19,19 @@
 //! [`EventKind::OutputError`] event on its `error` port when sending starts
 //! failing (value: the error as text) and again when it works again (value:
 //! `None`). It only fires when that state changes, not on every failed send.
+//!
+//! It also publishes [`EventKind::Activity`] on its `activity` port: `true`
+//! as soon as any actuator is sent a level above 0, `false` once every
+//! actuator has been at 0 for [`STOP_AFTER`]. The delay keeps patterns that
+//! pulse through 0 from firing on every pulse. Call
+//! [`update_activity`](ButtplugOutput::update_activity) regularly (the
+//! emitter does it every tick) so the stop is noticed even when nothing
+//! new is sent. Levels are intensities, before Flip Input, so 0 is off
+//! whichever way the motor runs.
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use buttplug_client::device::{ClientDeviceCommandValue, ClientDeviceOutputCommand};
@@ -37,6 +47,57 @@ use crate::safety::ClampedCmd;
 
 /// Event port for send failures and recoveries.
 pub const ERROR_PORT: &str = "error";
+
+/// Event port for the toy starting and stopping.
+pub const ACTIVITY_PORT: &str = "activity";
+
+/// How long every actuator must be at 0 before the toy counts as stopped.
+pub const STOP_AFTER: Duration = Duration::from_secs(1);
+
+/// Tracks whether any actuator is running, so activity events fire only
+/// when that changes (see the module docs).
+#[derive(Default)]
+struct ActivityState {
+    /// The last intensity sent to each actuator.
+    levels: HashMap<Arc<str>, f64>,
+    active: bool,
+    /// When every actuator went to 0, while still counted as active.
+    zero_since: Option<Instant>,
+}
+
+impl ActivityState {
+    fn record(&mut self, port: &Arc<str>, level: f64) {
+        self.levels.insert(port.clone(), level);
+    }
+
+    /// Forget every level, e.g. after a panic stopped the device outside
+    /// this output. The toy then counts as stopped.
+    fn clear(&mut self) {
+        self.levels.clear();
+    }
+
+    /// The event value to publish at `now`, if the state changed.
+    fn update(&mut self, now: Instant) -> Option<bool> {
+        if self.levels.values().any(|level| *level > 0.0) {
+            self.zero_since = None;
+            if !self.active {
+                self.active = true;
+                return Some(true);
+            }
+            return None;
+        }
+        if !self.active {
+            return None;
+        }
+        let since = *self.zero_since.get_or_insert(now);
+        if now.duration_since(since) >= STOP_AFTER {
+            self.active = false;
+            self.zero_since = None;
+            return Some(false);
+        }
+        None
+    }
+}
 
 /// Tracks whether an output is failing, so error events fire only when that
 /// changes.
@@ -221,8 +282,9 @@ pub fn device_level(level: f64, flipped: bool) -> f64 {
 pub struct ButtplugOutput {
     device: Arc<ButtplugClientDevice>,
     actuators: HashMap<Arc<str>, ActuatorSpec>,
-    events: Option<(PortId, EventPlane)>,
+    events: Option<(ModuleInstanceId, EventPlane)>,
     error_state: ErrorState,
+    activity: ActivityState,
 }
 
 impl ButtplugOutput {
@@ -236,6 +298,7 @@ impl ButtplugOutput {
             actuators: Self::actuator_map(actuators),
             events: None,
             error_state: ErrorState::default(),
+            activity: ActivityState::default(),
         }
     }
 
@@ -253,10 +316,29 @@ impl ButtplugOutput {
         self.actuators = Self::actuator_map(actuators);
     }
 
-    /// Publish error and recovery events as `module`, on `events`.
+    /// Publish error, recovery and activity events as `module`, on `events`.
     pub fn with_events(mut self, module: ModuleInstanceId, events: EventPlane) -> Self {
-        self.events = Some((PortId::new(module, ERROR_PORT), events));
+        self.events = Some((module, events));
         self
+    }
+
+    fn publish(&self, port: &str, kind: EventKind, value: Value) {
+        if let Some((module, events)) = &self.events {
+            events.publish(PortId::new(module.clone(), port), kind, value);
+        }
+    }
+
+    /// Publishes an activity event if the toy started or stopped. Call
+    /// regularly. `stopped_outside` means the device was stopped without
+    /// going through this output (a panic stop): the levels it was last
+    /// sent no longer apply.
+    pub fn update_activity(&mut self, now: Instant, stopped_outside: bool) {
+        if stopped_outside {
+            self.activity.clear();
+        }
+        if let Some(active) = self.activity.update(now) {
+            self.publish(ACTIVITY_PORT, EventKind::Activity, Value::Bool(active));
+        }
     }
 
     async fn send(&self, spec: ActuatorSpec, cmd: &ClampedCmd) -> Result<()> {
@@ -275,6 +357,7 @@ impl Output for ButtplugOutput {
             .collect();
         ports.sort_by(|a, b| a.name.cmp(&b.name));
         ports.push(PortSpec::event_out(ERROR_PORT));
+        ports.push(PortSpec::event_out(ACTIVITY_PORT));
         ports
     }
 
@@ -283,8 +366,12 @@ impl Output for ButtplugOutput {
     async fn apply(&mut self, cmds: &[ClampedCmd]) -> Result<()> {
         let mut first_error = None;
         for cmd in cmds {
-            let result = match self.actuators.get(&cmd.target().port) {
-                Some(&spec) => self.send(spec, cmd).await,
+            let port = &cmd.target().port;
+            let result = match self.actuators.get(port) {
+                Some(&spec) => {
+                    self.activity.record(port, cmd.level());
+                    self.send(spec, cmd).await
+                }
                 None => Err(Error::UnknownPort(cmd.target().clone())),
             };
             if let Err(e) = result {
@@ -292,10 +379,8 @@ impl Output for ButtplugOutput {
             }
         }
         let result = first_error.map_or(Ok(()), Err);
-        if let Some((port, events)) = &self.events {
-            if let Some(value) = self.error_state.update(&result) {
-                events.publish(port.clone(), EventKind::OutputError, value);
-            }
+        if let Some(value) = self.error_state.update(&result) {
+            self.publish(ERROR_PORT, EventKind::OutputError, value);
         }
         result
     }
@@ -389,5 +474,55 @@ mod tests {
         assert_eq!(state.update(&failed()), None, "still failing");
         assert_eq!(state.update(&Ok(())), Some(Value::None), "recovered");
         assert_eq!(state.update(&Ok(())), None);
+    }
+
+    #[test]
+    fn activity_starts_at_once_and_stops_after_a_second_at_zero() {
+        let mut state = ActivityState::default();
+        let (a, b): (Arc<str>, Arc<str>) = ("Vibrator_0".into(), "Vibrator_1".into());
+        let t0 = Instant::now();
+        let at = |ms: u64| t0 + Duration::from_millis(ms);
+
+        assert_eq!(state.update(at(0)), None, "nothing sent yet");
+        state.record(&a, 0.0);
+        assert_eq!(state.update(at(0)), None, "0 is off");
+        state.record(&a, 0.4);
+        assert_eq!(state.update(at(10)), Some(true), "started at once");
+        state.record(&b, 0.2);
+        assert_eq!(state.update(at(20)), None, "already started");
+
+        // A pulse through 0 shorter than STOP_AFTER isn't a stop
+        state.record(&a, 0.0);
+        state.record(&b, 0.0);
+        assert_eq!(state.update(at(100)), None);
+        assert_eq!(state.update(at(600)), None);
+        state.record(&b, 0.3);
+        assert_eq!(state.update(at(700)), None, "back on before a second");
+
+        // One actuator still running keeps it active
+        state.record(&a, 0.0);
+        assert_eq!(state.update(at(5000)), None);
+
+        state.record(&b, 0.0);
+        assert_eq!(state.update(at(5100)), None, "the second starts now");
+        assert_eq!(state.update(at(6099)), None);
+        assert_eq!(state.update(at(6100)), Some(false), "stopped");
+        assert_eq!(state.update(at(9000)), None, "already stopped");
+    }
+
+    #[test]
+    fn a_stop_from_outside_counts_as_stopped() {
+        let mut state = ActivityState::default();
+        let port: Arc<str> = "Vibrator_0".into();
+        let t0 = Instant::now();
+        state.record(&port, 0.8);
+        assert_eq!(state.update(t0), Some(true));
+
+        // Panic: the device was stopped without a 0 being sent through here
+        state.clear();
+        assert_eq!(state.update(t0), None);
+        assert_eq!(state.update(t0 + STOP_AFTER), Some(false));
+        // After resume nothing is replayed, so it stays stopped
+        assert_eq!(state.update(t0 + STOP_AFTER * 3), None);
     }
 }

@@ -8,6 +8,7 @@ flowchart LR
 
   IN -- "parameter values<br/>(latest wins)" --> SIG[("Signal plane")]
   IN -- "/avatar/change<br/>AvatarChange event" --> EV["core_event_handler<br/>runtime/osc_routing.rs<br/>stops all toys, resets graphs"]
+  CAT["AvatarCatalog<br/>(is VRChat running?)"] -- "Connection event<br/>runtime/presence.rs" --> EV
   IN -- "every other message<br/>(tap, in order)" --> RT["osc_router<br/>runtime/osc_routing.rs"]
   RT -- "vibecheck/api/..." --> API["handle_api_message<br/>osc_api/mod.rs"]
 
@@ -127,7 +128,7 @@ When `/avatar/change` arrives, `OscInput` first clears every OSC value from the 
 
 1. starts the starting-state lookup (below);
 2. stops every device. It builds the Buttplug stop command while holding the global state lock, releases the lock, and only then waits for Buttplug. A failed stop is logged;
-3. tells the graph runner to reset every toy's graph (`GraphControl::ResetAll` → `Graph::reset`). Every processor forgets its state (Smooth's window, Rate's level, SPS zones and learned lengths, via `InputProcessor::reset`), and each motor forgets the last level it sent, so the new avatar's first value is sent even if it equals the old one. Watching nodes are given every value still on the plane again, so values the new avatar sent before the reset ran aren't lost. The reset comes after the stop, or the stop could silence the replayed values.
+3. tells the graph runner to reset every toy's graph (`GraphControl::ResetAll` → `Graph::reset`). Every processor forgets its state (Smooth's window, Rate's level, SPS zones and learned lengths, via `InputProcessor::reset`), and each motor forgets the last level it sent, so the new avatar's first value is sent even if it equals the old one. The runner also writes 0 to every motor's slot, so a command still waiting there isn't sent after the stop, and each toy's output sees its toy stop (see [Activity](#connection-and-activity-events)). Watching nodes are given every value still on the plane again, so values the new avatar sent before the reset ran aren't lost. The reset comes after the stop, or the stop could silence the replayed values.
 
 ### Starting state
 
@@ -157,6 +158,16 @@ SPS treats its settings as not being contact, so they don't make the processor s
 
 The fixtures in `src-tauri/src/osc/fixtures/` are real trees captured with `osc-tool avatar` (asset and avatar names replaced). Capture new ones the same way when VRChat or a penetration system changes its parameters.
 
+## Connection and activity events
+
+Events for things the Pro rule engine will react to. Nothing in the free app reacts to them except as listed. While the diagnostics view is open, the core event handler logs each one under the `events` module (label: the source module, value: `connected`, `disconnected`, `started`, `stopped`, `failing: …` or `working again`), and the log shows them in italics.
+
+- **VRChat** (`Connection` from `vrchat/connection`, value true or false). Plain OSC can't tell when VRChat goes away: it just stops sending. The avatar catalog already asks VRChat's OSCQuery server for `/avatar/change` every 3 s, so it also keeps whether VRChat is running (`AvatarCatalog::presence`, a `watch` channel). VRChat counts as gone after two failed requests in a row (the poll, then the lookup: about 6 to 9 s), so one slow answer doesn't count. Each session's `vrchat_presence` task (`runtime/presence.rs`) publishes "connected" when the session starts if VRChat is already running, then every change. Without OSCQuery (VRChat's OSC off, or mDNS not working) VRChat is never found, so it never "disconnects" either.
+  - **When VRChat disconnects**, `core_event_handler` stops everything as on an avatar change: clears the OSC values from the signal plane (no OSC is arriving, so nothing races the clear), stops every device, resets the graphs, and disarms every risky output. Before, toys kept their last level after VRChat crashed or closed.
+  - **When it's back**, it starts a starting-state lookup (`AvatarQuery::fill_now`).
+- **Toys** (`Connection` from the toy's module, e.g. `toy:lovense_lush:0/connection`). The session publishes "connected" in `start_toy`, so also for toys already connected when listening starts, and "disconnected" on `ToyUpdate::RemoveToy`. A risky output that disconnects is disarmed (no-op for toys).
+- **Activity** (`Activity` from `toy:…/activity`). `ButtplugOutput` remembers the last intensity sent to each motor. "Started" fires as soon as any motor is sent a level above 0; "stopped" once every motor has been at 0 for `STOP_AFTER` (1 s), so patterns that pulse through 0 don't fire on every pulse. Levels are intensities from before Flip Input, so 0 is off whichever way the motor runs. The emitter calls `update_activity` every tick so the stop is noticed when nothing new is sent. A panic stops devices without going through the output, so while panicked the levels are forgotten and the toy counts as stopped; nothing is replayed after resume, so it stays stopped. A toy that disconnects while running gets no "stopped": the disconnect ends its activity.
+
 ## Connection modes
 
 `OSCNetworking` (`osc/mod.rs`) has a `mode`:
@@ -185,7 +196,7 @@ Older configs have no `mode`: `settle()` keeps them on Manual if `bind` or `remo
 
 ## Session lifetime
 
-Turning VibeCheck on creates a `Session` (`toy_management_handler.rs`): a tokio runtime, a signal plane, an event plane and the graph runner. On it run the core event handler, the graph runner, `OscInput`, the router, and one task plus one emitter per toy. Everything in the session publishes on the same event plane: `OscInput` (avatar change), graph processors, and each toy's output (errors). Turning off (or a reset) aborts the toy tasks and shuts the runtime down, which closes the OSC socket and frees the port for the "off" listener.
+Turning VibeCheck on creates a `Session` (`toy_management_handler.rs`): a tokio runtime, a signal plane, an event plane and the graph runner. On it run the core event handler, the graph runner, `OscInput`, the router, and one task plus one emitter per toy. Everything in the session publishes on the same event plane: `OscInput` (avatar change), the presence task (VRChat connecting), the session itself (toys connecting), graph processors, and each toy's output (errors and activity). Turning off (or a reset) aborts the toy tasks and shuts the runtime down, which closes the OSC socket and frees the port for the "off" listener.
 
 If the port can't be bound, `OscInput::bind` fails, the error is logged, and `TmSig::BindError` is sent.
 
@@ -243,7 +254,7 @@ Levels are sent as a percentage of the output's steps; Buttplug rounds up to the
 ## Errors
 
 - `ButtplugOutput::apply` tries every command even if one fails, and returns the first error. The emitter logs it (`Send to device error: ...`).
-- Each toy's `ButtplugOutput` also publishes an `OutputError` event when sending starts failing and when it works again. The core event handler logs these (`toy:… is failing: …` / `toy:… is working again`). Nothing reacts to them yet; the safety layer will (e.g. disarming risky outputs that stop responding).
+- Each toy's `ButtplugOutput` also publishes an `OutputError` event when sending starts failing and when it works again. The core event handler logs these (`toy:… is failing: …` / `toy:… is working again`) and disarms a risky output that starts failing (see [Panic stop](#panic-stop)).
 - If a toy's graph can't be built (a wiring bug), the error is logged and that toy gets no new graph.
 
 ## Not on this path
@@ -271,6 +282,9 @@ Levels are sent as a percentage of the output's steps; Buttplug rounds up to the
 | Panic from VRChat | `send vibecheck/api/panic true` | Same as the button; `send vibecheck/api/panic false` does **not** resume |
 | Resume | Press **Resume**, then `send Boop 0.4` | Nothing happens until the new value arrives, then the toy runs at 0.4 |
 | Config changes apply at once | `send Boop 0.8`, then lower the top of Range in the app | The motor drops to the new maximum straight away |
+| Activity events | Diagnostics open, Log tab: `send Boop 0.5`, then `send Boop 0` (Idle Speed 0) | `toy:… started` at once, `toy:… stopped` about a second after the 0 |
+| Toy connection events | Diagnostics open, turn a toy off and on | `toy:… disconnected`, then `toy:… connected` |
+| VRChat leaving stops toys | In VRChat, make a toy run, then close VRChat (or kill it) | Within about 10 s: `vrchat disconnected` in the log and the toy stops. Starting VRChat again logs `vrchat connected` |
 
 If the toy doesn't react, `osc-tool listen` (with VibeCheck closed) shows whether VRChat or the tool is reaching the port at all.
 
@@ -313,7 +327,7 @@ That covers every path a level could take: graph sinks get `None` from `clamp`, 
 
 The hotkey is registered after the app is built, through `AppHandle::plugin`. If global shortcuts aren't available (e.g. under some Wayland setups) or the combo is taken, VibeCheck logs a warning and runs without the hotkey; the button and OSC parameter still work. Registering it in the plugin builder instead would make a failure stop the app from starting.
 
-Outputs marked risky (none in the free app yet) are also disarmed by `core_event_handler` when they start failing (`OutputError`), so they must be re-armed on purpose once they're back.
+Outputs marked risky (none in the free app yet) are also disarmed by `core_event_handler` when they start failing (`OutputError`), when they disconnect, and all at once when VRChat disconnects (see [Connection and activity events](#connection-and-activity-events)), so they must be re-armed on purpose once they're back.
 
 ### Other safety caps
 

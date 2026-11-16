@@ -12,15 +12,23 @@ use log::{debug, info, warn};
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use vibecheck_core::{
-    modules::osc::rosc::OscMessage, EventKind, EventReceiver, SafetyLayer, Value,
+    modules::osc::rosc::OscMessage, Diagnostics, Event, EventKind, EventReceiver, ModuleInstanceId,
+    SafetyLayer, SignalPlane, Value,
 };
 
 use crate::{
-    osc::avatar_query::AvatarQuery, osc_api::handle_api_message,
-    toy_handling::runtime::graph_runner::GraphControl, vcore::state::VCStateMutex,
+    osc::avatar_query::AvatarQuery,
+    osc_api::handle_api_message,
+    toy_handling::runtime::{
+        graph_runner::GraphControl, presence::VRCHAT_MODULE, toy_graph::OSC_MODULE,
+    },
+    vcore::state::VCStateMutex,
 };
 
 const API_PREFIX: &str = "/avatar/parameters/vibecheck/api/";
+
+/// The module diagnostics log entries about events are logged under.
+pub const EVENTS_LOG_MODULE: &str = "events";
 
 /// Reads OscInput's tap until it closes and handles OSC API messages, in
 /// the order they arrived.
@@ -35,16 +43,46 @@ pub async fn osc_router(mut rx: UnboundedReceiver<OscMessage>, app_handle: AppHa
     info!("OSC router stopped");
 }
 
-/// Reacts to events from the event plane.
+/// What the diagnostics log shows for an event, if anything. Avatar changes
+/// are left out: the OSC message itself is already logged.
+fn describe(event: &Event) -> Option<String> {
+    let on_off = |on: &str, off: &str| match event.value {
+        Value::Bool(true) => Some(on.to_owned()),
+        Value::Bool(false) => Some(off.to_owned()),
+        _ => None,
+    };
+    match (&event.kind, &event.value) {
+        (EventKind::Connection, _) => on_off("connected", "disconnected"),
+        (EventKind::Activity, _) => on_off("started", "stopped"),
+        (EventKind::OutputError, Value::Text(error)) => Some(format!("failing: {error}")),
+        (EventKind::OutputError, _) => Some("working again".to_owned()),
+        _ => None,
+    }
+}
+
+/// Reacts to events from the event plane. While diagnostics are on, they're
+/// also logged under `events` (see `describe`).
+///
+/// When VRChat disconnects (crashed or closed), OSC just stops arriving, so
+/// toys would keep their last level. Instead everything stops as on an
+/// avatar change: the old values are cleared, toys stop, graphs start over,
+/// and risky outputs are disarmed. When VRChat is back, current values are
+/// read from OSCQuery again.
 pub async fn core_event_handler(
     mut events: EventReceiver,
     avatar_query: AvatarQuery,
+    signals: SignalPlane,
     graphs: UnboundedSender<GraphControl>,
     safety: SafetyLayer,
+    diagnostics: Diagnostics,
     app_handle: AppHandle,
 ) {
+    let log_module = ModuleInstanceId::new(EVENTS_LOG_MODULE);
     while let Some(event) = events.recv().await {
         debug!("Core event: {:?}", event);
+        if let Some(text) = describe(&event) {
+            diagnostics.log(&log_module, event.source.module.to_string(), || text);
+        }
         match event.kind {
             EventKind::AvatarChange => {
                 info!("Avatar Changed: Halting toy actions");
@@ -59,6 +97,28 @@ pub async fn core_event_handler(
                 // the graphs again after the reset, so this comes after the
                 // stop or the stop would silence them.
                 let _ = graphs.send(GraphControl::ResetAll);
+            }
+            EventKind::Connection if event.source.module.as_str() == VRCHAT_MODULE => {
+                if event.value == Value::Bool(false) {
+                    warn!("VRChat stopped answering: stopping toys");
+                    // No OSC is arriving, so nothing races this clear
+                    signals.clear_module(&ModuleInstanceId::new(OSC_MODULE));
+                    stop_all_devices(&app_handle).await;
+                    let _ = graphs.send(GraphControl::ResetAll);
+                    safety.disarm_all();
+                } else {
+                    info!("VRChat is running");
+                    let query = avatar_query.clone();
+                    tokio::spawn(async move { query.fill_now().await });
+                }
+            }
+            // Anything else disconnecting must be re-armed on purpose once
+            // it's back (no-op for toys)
+            EventKind::Connection if event.value == Value::Bool(false) => {
+                if safety.is_armed(&event.source.module) {
+                    safety.disarm(&event.source.module);
+                    warn!("Disarmed {} because it disconnected", event.source.module);
+                }
             }
             EventKind::OutputError => match &event.value {
                 Value::Text(error) => {
@@ -91,9 +151,55 @@ async fn stop_all_devices(app_handle: &AppHandle) {
     match stop {
         Some(stop) => {
             if let Err(e) = stop.await {
-                warn!("Failed to stop devices on avatar change: {}", e);
+                warn!("Failed to stop devices: {}", e);
             }
         }
-        None => warn!("Avatar changed but there is no Buttplug client to stop devices"),
+        None => warn!("No Buttplug client to stop devices"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vibecheck_core::{EventId, PortId};
+
+    fn event(kind: EventKind, value: Value) -> Event {
+        Event {
+            id: EventId(1),
+            source: PortId::new(ModuleInstanceId::new("toy:lush:0"), "activity"),
+            kind,
+            value,
+            ts_ms: 0,
+            cause: None,
+            depth: 0,
+        }
+    }
+
+    #[test]
+    fn describes_the_events_the_diagnostics_log_shows() {
+        let cases = [
+            (EventKind::Connection, Value::Bool(true), Some("connected")),
+            (
+                EventKind::Connection,
+                Value::Bool(false),
+                Some("disconnected"),
+            ),
+            (EventKind::Activity, Value::Bool(true), Some("started")),
+            (EventKind::Activity, Value::Bool(false), Some("stopped")),
+            (
+                EventKind::OutputError,
+                Value::Text("gone".into()),
+                Some("failing: gone"),
+            ),
+            (EventKind::OutputError, Value::None, Some("working again")),
+            (EventKind::AvatarChange, Value::Text("avtr_1".into()), None),
+        ];
+        for (kind, value, expected) in cases {
+            assert_eq!(
+                describe(&event(kind.clone(), value)).as_deref(),
+                expected,
+                "{kind:?}"
+            );
+        }
     }
 }

@@ -73,13 +73,28 @@ pub enum GraphControl {
         slots: CommandSlots,
     },
     Remove(u32),
-    /// Start every graph over (see `Graph::reset`), e.g. on avatar change.
+    /// Start every graph over (see `Graph::reset`) and send 0 to every
+    /// output, e.g. on avatar change. The 0 also replaces any command still
+    /// waiting to be sent, and lets each output see its toy stop.
     ResetAll,
 }
 
 struct ToyGraph {
     graph: Graph,
     slots: CommandSlots,
+}
+
+/// Sends 0 to every output `toy` drives.
+fn stop_outputs(toy: &ToyGraph, safety: &SafetyLayer) {
+    let mut stopped = HashSet::new();
+    for (target, duration_ms) in toy.graph.sink_targets() {
+        if !stopped.insert(target) {
+            continue;
+        }
+        if let Some(cmd) = safety.clamp(target.clone(), 0.0, duration_ms) {
+            toy.slots.write(cmd);
+        }
+    }
 }
 
 /// Sends 0 to every output `old` drove that `new` doesn't, e.g. a feature
@@ -131,6 +146,7 @@ pub async fn graph_runner(
                 Some(GraphControl::ResetAll) => {
                     for toy in toys.values_mut() {
                         toy.graph.reset();
+                        stop_outputs(toy, &safety);
                     }
                 }
                 None => break,
@@ -262,6 +278,39 @@ mod tests {
         signals.write(&boop, Signal::Float(0.9));
         sleep(Duration::from_millis(50)).await;
         assert!(slots.take_changed().is_empty());
+    }
+
+    #[tokio::test]
+    async fn reset_all_sends_zero_to_every_output() {
+        let signals = SignalPlane::new();
+        let (control, control_rx) = unbounded_channel();
+        tokio::spawn(graph_runner(
+            control_rx,
+            signals.clone(),
+            EventPlane::new().0,
+            SafetyLayer::default(),
+            GraphValues::default(),
+        ));
+        let slots = CommandSlots::new();
+        control
+            .send(GraphControl::Set {
+                toy_id: 1,
+                graph: graph_with(true),
+                slots: slots.clone(),
+            })
+            .unwrap();
+        let boop = PortId::new(ModuleInstanceId::new(OSC_MODULE), "/avatar/parameters/Boop");
+        signals.write(&boop, Signal::Float(0.5));
+        sleep(Duration::from_millis(50)).await;
+        assert_eq!(slots.take_changed()[0].level(), 0.5);
+
+        // Like an avatar change: the values are cleared, then the graphs reset
+        signals.clear(&boop);
+        control.send(GraphControl::ResetAll).unwrap();
+        sleep(Duration::from_millis(50)).await;
+        let sent = slots.take_changed();
+        assert_eq!(sent.len(), 1);
+        assert_eq!(sent[0].level(), 0.0);
     }
 
     #[tokio::test]

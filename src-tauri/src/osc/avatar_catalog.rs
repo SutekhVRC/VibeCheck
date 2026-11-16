@@ -12,6 +12,12 @@
  *   changes, then again a few times while VRChat finishes loading it.
  * - `refresh` reads everything again straight away (the Refresh button).
  *
+ * It also tells whether VRChat is running (`presence`), which plain OSC
+ * can't: VRChat just stops sending. VRChat counts as gone after
+ * MISSES_UNTIL_GONE failed requests in a row (about 6 to 9 seconds), so one
+ * slow answer doesn't count. The listening session turns changes into
+ * connection events (see runtime/presence.rs).
+ *
  * The avatar's id is only used to notice changes. It isn't shown or logged.
  *
  * `check_feature` compares one feature's settings with the avatar, so every
@@ -24,7 +30,7 @@ use std::time::Duration;
 
 use log::{debug, info};
 use parking_lot::Mutex;
-use tokio::sync::Notify;
+use tokio::sync::{watch, Notify};
 use tokio::task::JoinHandle;
 use tokio::time::{sleep_until, Instant};
 use vrcoscquery::node::{OSCQueryNode, OSCQueryValue};
@@ -44,6 +50,10 @@ const TIMEOUT: Duration = Duration::from_secs(3);
 const LOOKUP_EVERY: Duration = Duration::from_secs(10);
 /// How often to check which avatar is loaded.
 const POLL_EVERY: Duration = Duration::from_secs(3);
+
+/// Failed requests in a row (the poll, then the lookup) before VRChat
+/// counts as gone.
+const MISSES_UNTIL_GONE: u8 = 2;
 /// When to read the parameters again after an avatar change: VRChat may
 /// still be loading it, so the first read can be incomplete.
 const REREAD_AFTER_CHANGE: [Duration; 3] = [
@@ -360,6 +370,28 @@ pub struct AvatarCatalog {
     endpoint: Arc<Mutex<Option<Endpoint>>>,
     refresh: Arc<Notify>,
     task: Arc<Mutex<Option<JoinHandle<()>>>>,
+    present: Arc<watch::Sender<bool>>,
+}
+
+/// Whether VRChat is running, with the grace period described at the top.
+struct Presence {
+    misses: u8,
+}
+
+impl Presence {
+    /// VRChat answered: it's running.
+    fn answered(&mut self, present: &watch::Sender<bool>) {
+        self.misses = 0;
+        present.send_if_modified(|p| !std::mem::replace(p, true));
+    }
+
+    /// A request failed, or VRChat wasn't found.
+    fn missed(&mut self, present: &watch::Sender<bool>) {
+        self.misses = self.misses.saturating_add(1);
+        if self.misses >= MISSES_UNTIL_GONE {
+            present.send_if_modified(|p| std::mem::replace(p, false));
+        }
+    }
 }
 
 impl Default for AvatarCatalog {
@@ -369,6 +401,7 @@ impl Default for AvatarCatalog {
             endpoint: Arc::default(),
             refresh: Arc::default(),
             task: Arc::default(),
+            present: Arc::new(watch::channel(false).0),
         }
     }
 }
@@ -405,6 +438,12 @@ impl AvatarCatalog {
         self.endpoint.lock().clone()
     }
 
+    /// Whether VRChat is running (false until it's first found), and every
+    /// change to that.
+    pub fn presence(&self) -> watch::Receiver<bool> {
+        self.present.subscribe()
+    }
+
     /// Reads the avatar again now.
     pub fn refresh(&self) {
         self.refresh.notify_one();
@@ -425,17 +464,20 @@ type OnChange = Box<dyn Fn(&CatalogState) + Send + Sync>;
 async fn run(catalog: AvatarCatalog, on_change: OnChange) {
     let mut avatar_id: Option<String> = None;
     let mut rereads: Vec<Instant> = Vec::new();
+    let mut presence = Presence { misses: 0 };
     loop {
         // Find VRChat
         let Some(endpoint) = catalog.vrchat() else {
             match discovery::find_vrchat(TIMEOUT).await {
                 Ok(Some(found)) => {
                     info!("Avatar catalog: found VRChat's OSCQuery server");
+                    presence.answered(&catalog.present);
                     *catalog.endpoint.lock() = Some(found);
                     avatar_id = None;
                     catalog.set(CatalogState::Reading, &on_change);
                 }
                 _ => {
+                    presence.missed(&catalog.present);
                     catalog.set(CatalogState::Searching, &on_change);
                     wait(&catalog.refresh, Instant::now() + LOOKUP_EVERY).await;
                 }
@@ -445,9 +487,13 @@ async fn run(catalog: AvatarCatalog, on_change: OnChange) {
 
         // Which avatar is loaded? Failing means VRChat went away
         let current = match discovery::node(&endpoint, AVATAR_CHANGE_PATH, TIMEOUT).await {
-            Ok(node) => avatar_id_of(&node),
+            Ok(node) => {
+                presence.answered(&catalog.present);
+                avatar_id_of(&node)
+            }
             Err(e) => {
                 debug!("Avatar catalog: VRChat stopped answering: {}", e);
+                presence.missed(&catalog.present);
                 *catalog.endpoint.lock() = None;
                 catalog.set(CatalogState::Searching, &on_change);
                 continue;
@@ -512,6 +558,34 @@ fn avatar_id_of(node: &OSCQueryNode) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn vrchat_counts_as_gone_only_after_two_misses_in_a_row() {
+        let (present, rx) = watch::channel(false);
+        let mut presence = Presence { misses: 0 };
+
+        presence.missed(&present);
+        presence.missed(&present);
+        assert!(!*rx.borrow(), "never found");
+        assert!(!rx.has_changed().unwrap(), "nothing to report");
+
+        presence.answered(&present);
+        assert!(*rx.borrow());
+        assert!(rx.has_changed().unwrap());
+        let mut rx = present.subscribe();
+
+        // One slow answer isn't gone
+        presence.missed(&present);
+        presence.answered(&present);
+        assert!(!rx.has_changed().unwrap(), "no change seen");
+
+        presence.missed(&present);
+        presence.missed(&present);
+        assert!(rx.has_changed().unwrap());
+        assert!(!*rx.borrow_and_update());
+        presence.missed(&present);
+        assert!(!rx.has_changed().unwrap(), "already gone");
+    }
     use crate::toy_handling::input_processor::penetration_systems::sps::{Format, ZoneKind};
 
     fn param(name: &str, kind: ParamKind) -> AvatarParam {
