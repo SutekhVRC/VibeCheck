@@ -16,9 +16,11 @@ The goal is a pipeline of modules:
 Inputs  ->  Processors  ->  Safety layer  ->  Outputs
 ```
 
-The app runs on it: OSC comes in through `OscInput`, each toy's processing is a `Graph` generated from its config and ticked at 100 Hz, and commands leave through the safety layer and `ButtplugOutput`. See [Migration status](#migration-status) for what's left.
+The app runs on it: OSC comes in through `OscInput`, each toy's processing is a `Graph` generated from its config and ticked at 100 Hz, and commands leave through the safety layer and `ButtplugOutput`.
 
 The app only uses graphs generated from toy settings; there's no way to build graphs by hand yet.
+
+**Writing a module?** Start with [Writing modules](writing-modules.md). Every public item has rustdoc (`cargo doc -p vibecheck-core --open` from `src-tauri/`), and the `Input`, `Processor` and `Output` traits each have a complete, tested example.
 
 ## Layout
 
@@ -76,6 +78,8 @@ The plane also **remembers recent events** (the last 4096), so a chain can be tr
 
 The safety layer uses the depth and the chain to stop feedback loops (see [Feedback loops](#feedback-loops)).
 
+Which kinds, ports and values are in use (avatar change, connection, activity, output errors) is listed in [Writing modules](writing-modules.md#events-in-use).
+
 ## Module traits
 
 | Trait | Does | Shape |
@@ -84,7 +88,7 @@ The safety layer uses the depth and the chain to stop feedback loops (see [Feedb
 | `Processor` | Transforms signals once per graph tick, may emit events | `fn tick(&mut self, ins: &[Signal], dt, out: &mut [Option<Signal>], events: &mut Vec<EventOut>)`, plus optional `watches` / `watched` and `reset` |
 | `Output` | Acts on a device or service | `async fn apply(&mut self, cmds: &[ClampedCmd])` |
 
-Modules are ordinary Rust types compiled into the app. `async-trait` keeps `Input` and `Output` usable as trait objects.
+Modules are ordinary Rust types compiled into the app. `async-trait` keeps `Input` and `Output` usable as trait objects. [Writing modules](writing-modules.md) covers how to write each kind and how to wire it into the app.
 
 `InputCtx` gives an input its own module id and lets it write signals and publish events on its own ports. `with_diagnostics(d)` connects it to a [`Diagnostics`](#diagnostics) log, which `log(label, value)` writes to while diagnostics are on.
 
@@ -310,18 +314,7 @@ It uses the Buttplug 12 client (`buttplug_client` 11, message spec v4), where co
 
 With `with_events(module, events)`, it publishes `EventKind::OutputError` on its `error` port when sending **starts** failing (value: the error as text) and when it **works again** (value: `None`). It doesn't fire on every failed send, so a disconnected toy at 20 Hz doesn't flood the event plane.
 
-## Migration status
-
-| Step | State |
-|---|---|
-| Workspace split, core types and traits | Done |
-| Toy commands through `ButtplugOutput` with one slot per motor | Done ([toy-command-path.md](toy-command-path.md)) |
-| OSC listener as an `Input` module, avatar change as an event | Done ([toy-command-path.md](toy-command-path.md#routing)) |
-| Smooth, Rate, Constant and level tweaks as `Processor` modules | Done |
-| Input processors (SPS/TPS) as graph nodes | Done: they watch their parameters on the signal plane, and the per-toy OSC routing is gone ([toy-command-path.md](toy-command-path.md#input-processors)). SPS is rewritten for both the legacy and SPS3 formats, and TPS follows the deepest orifice or penetrator |
-| Each toy's graph generated from its existing config, ticked at a fixed rate | Done ([toy-command-path.md](toy-command-path.md#the-graph)) |
-| Output events from `ButtplugOutput` | Error and recovery done. Activity events ("motor started/stopped") wait for a design that handles Flip Input, where level 0 isn't "off" |
-| Processor events published from the graph | Done |
+It also publishes `EventKind::Activity` on its `activity` port: `true` as soon as any actuator is sent a level above 0, `false` once every actuator has been at 0 for `STOP_AFTER` (1 s), so patterns that pulse through 0 don't fire on every pulse. Levels are intensities from before Flip Input, so 0 is off either way. `update_activity(now, stopped_outside)` must be called regularly (the app's emitter does it every tick) so a stop is noticed when nothing new is sent; `stopped_outside` is for a device stopped without going through the output, such as a panic stop, which forgets the levels it was last sent.
 
 ## Tests
 
@@ -330,6 +323,8 @@ cd src-tauri
 cargo test -p vibecheck-core
 ```
 
-Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, tracing event chains through the remembered history, refusing a module that reacts to the result of its own action, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `LegacyLayout` numbering actuators like spec v3, `OutputLevels`, `ButtplugOutput`'s error events firing only on change, and the graph (publishing processor events from their node, dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, rejecting bad wiring, and watching nodes seeing ports that were never wired), `changed_since` returning each new value once, in write order, `write_if_absent` never overwriting, a late reset replaying what's still on the plane, and `OscInput` clearing the old avatar's values. Diagnostics: `changed_since_all` covering every module with write counts and counting clears, graph snapshots before and after input, the log only formatting while on, returning only newer entries and dropping the oldest when full, and `OscInput` logging every message, including an Int the plane never sees.
+The doctests on `Input`, `Processor` and `Output` (`module.rs`) are the worked examples from [Writing modules](writing-modules.md), so they run too.
+
+Covers address formatting, latest-value-wins on the signal plane, event order and causality, clamping and the depth limit, tracing event chains through the remembered history, refusing a module that reacts to the result of its own action, that motors on one toy don't overwrite each other in `CommandSlots`, `OscInput` over real UDP (tapping in order, bundles, avatar change events, signal writes, stopping when the tap closes, reporting a busy port), each processing mode's behaviour, `LegacyLayout` numbering actuators like spec v3, `OutputLevels`, `ButtplugOutput`'s error events firing only on change and its activity events (started at once, stopped after a second at 0, a stop from outside), and the graph (publishing processor events from their node, dependency order, holding values until inputs exist, outputs keeping their last value, sinks only firing on change, durations and the safety layer, rejecting bad wiring, and watching nodes seeing ports that were never wired), `changed_since` returning each new value once, in write order, `write_if_absent` never overwriting, a late reset replaying what's still on the plane, and `OscInput` clearing the old avatar's values. Diagnostics: `changed_since_all` covering every module with write counts and counting clears, graph snapshots before and after input, the log only formatting while on, returning only newer entries and dropping the oldest when full, and `OscInput` logging every message, including an Int the plane never sees.
 
 The app's tests (`cargo test -p vibecheck`) cover `InputProcessorNode` (reading only its prefixes, input filter tags), the graph runner task, and the generated toy graphs end to end: nothing before the first input, modes loaded from config, one parameter driving several motors, Range and Idle after the mode, the first matching parameter winning, disabled features, Linear speed, the f32 rounding, Smooth following over its window, Rate winding down after the input stops, and input processor chains next to parameter chains.
