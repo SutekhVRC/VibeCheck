@@ -33,17 +33,17 @@ mod vcore;
 /// `tauri::generate_context!()`: its tauri.conf.json, icons and frontend.
 pub fn run(context: tauri::Context<tauri::Wry>, extensions: Extensions) {
     // On Wayland the taskbar finds the app's icon through its app ID, which
-    // GTK takes from the binary's name. Installed builds are named after
-    // mainBinaryName ("VibeCheck"), matching the .desktop file the packages
-    // install, but dev builds use the crate's name and showed a generic
-    // icon. Use the installed name everywhere.
+    // GTK takes from the binary's name, matched against the .desktop file the
+    // packages install. That file is named after productName
+    // ("VibeCheck.desktop"), but dev builds' binary is named after the crate
+    // and showed a generic icon. Use the product name everywhere.
     #[cfg(target_os = "linux")]
     {
         let config = context.config();
         let name = config
-            .main_binary_name
+            .product_name
             .as_deref()
-            .or(config.product_name.as_deref())
+            .or(config.main_binary_name.as_deref())
             .unwrap_or("VibeCheck");
         glib::set_prgname(Some(name));
     }
