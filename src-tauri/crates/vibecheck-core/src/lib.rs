@@ -17,6 +17,11 @@
 //! Modules implement the traits in [`module`]. Outputs only ever receive
 //! [`ClampedCmd`]s, which only the [`SafetyLayer`]
 //! can create.
+//!
+//! To write a module, see `docs/runtime/writing-modules.md` and the examples
+//! on the [`Input`], [`Processor`] and [`Output`] traits.
+
+#![warn(missing_docs)]
 
 pub mod address;
 pub mod diagnostics;

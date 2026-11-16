@@ -10,6 +10,8 @@
 use crate::module::{EventOut, PortSpec, Processor};
 use crate::signal::Signal;
 
+/// Idle Speed and Range, as a processor (`in` to `out`) or through
+/// [`apply`](Self::apply).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct OutputLevels {
     /// Range minimum, 0 to 1.
