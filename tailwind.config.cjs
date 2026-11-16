@@ -11,7 +11,9 @@ module.exports = {
 		'./src/**/*.{ts,tsx}',
 		// Classes used by the extensions module (see vite.config.ts)
 		...(process.env.VIBECHECK_EXTENSIONS
-			? [require('path').dirname(require('path').resolve(process.env.VIBECHECK_EXTENSIONS)) + '/**/*.{ts,tsx}']
+			? (dir => [dir + '/*.{ts,tsx}', dir + '/!(node_modules)/**/*.{ts,tsx}'])(
+					require('path').dirname(require('path').resolve(process.env.VIBECHECK_EXTENSIONS)),
+				)
 			: []),
 	],
 	theme: {
