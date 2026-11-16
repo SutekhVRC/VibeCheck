@@ -11,12 +11,22 @@ import PageHeader from "../components/PageHeader";
 import UpdateButton from "../components/UpdateButton";
 import { useCoreEventContext } from "../context/CoreEvents";
 import { INVOKE, TOOLTIP } from "../data/constants";
+import { appExtensions } from "../extensions";
+import type { UpdateStatus } from "../hooks/useUpdate";
 import Button from "../layout/Button";
 import { Select } from "../layout/Select";
 import Slider from "../layout/Slider";
 import Switch from "../layout/Switch";
 import { TooltipLabel } from "../layout/Tooltip";
 import ThemePicker from "./ThemePicker";
+
+const UPDATE_TEXT: Record<UpdateStatus, string> = {
+  checking: "Checking for updates…",
+  available: "Update available",
+  current: "Up to date",
+  failed: "Couldn't check for updates",
+  off: "",
+};
 
 const ADDRESS_PATTERN = String.raw`^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}:\d{1,5}$`;
 
@@ -245,13 +255,18 @@ export default function Config({
   config,
   refreshConfig,
   canUpdate,
+  updateStatus,
   version,
+  appName,
   disableOnPortChange,
 }: {
   config: FeVibeCheckConfig;
   refreshConfig: () => Promise<void>;
   canUpdate: boolean;
+  updateStatus: UpdateStatus;
   version: string;
+  /** The app's product name, e.g. VibeCheck */
+  appName: string;
   disableOnPortChange: () => Promise<void>;
 }) {
   const { autoEnableOnScan, setAutoEnableOnScan } = useCoreEventContext();
@@ -587,6 +602,14 @@ export default function Config({
             <ThemePicker />
           </Section>
 
+          {(appExtensions.settingsSections ?? []).map(
+            ({ id, title, hint, Body }) => (
+              <Section key={id} title={title} hint={hint}>
+                <Body />
+              </Section>
+            ),
+          )}
+
           <Section title="Troubleshooting">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-[12rem] flex-1">
@@ -635,17 +658,19 @@ export default function Config({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-theme-text">
-                  VibeCheck {version || "…"}
+                  {appName} {version || "…"}
                 </div>
-                <div
-                  className={
-                    canUpdate
-                      ? "text-xs text-theme-success"
-                      : "text-xs text-theme-muted"
-                  }
-                >
-                  {canUpdate ? "Update available" : "Up to date"}
-                </div>
+                {updateStatus != "off" && (
+                  <div
+                    className={
+                      canUpdate
+                        ? "text-xs text-theme-success"
+                        : "text-xs text-theme-muted"
+                    }
+                  >
+                    {UPDATE_TEXT[updateStatus]}
+                  </div>
+                )}
               </div>
               {canUpdate && <UpdateButton enabled={canUpdate} />}
             </div>

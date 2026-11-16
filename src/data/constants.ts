@@ -11,6 +11,7 @@ export const INVOKE = {
   CLEAR_OSC_CONFIG: "clear_osc_config",
   SIMULATE_TOY_FEATURE: "simulate_device_feature",
   VERSION: "vibecheck_version",
+  UPDATER_ENABLED: "vibecheck_updater_enabled",
   START_SCAN: "vibecheck_start_bt_scan",
   STOP_SCAN: "vibecheck_stop_bt_scan",
   ENABLE: "vibecheck_enable",

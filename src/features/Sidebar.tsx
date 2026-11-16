@@ -3,6 +3,7 @@ import Loading from "@/components/Loading";
 import ThemedLogo from "@/components/ThemedLogo";
 import { useCoreEventContext } from "@/context/CoreEvents";
 import { PANIC_HOTKEY, TOOLTIP } from "@/data/constants";
+import type { ExtensionPage } from "@/extensions";
 import { toyKey } from "@/hooks/useToys";
 import Button from "@/layout/Button";
 import Switch from "@/layout/Switch";
@@ -26,6 +27,7 @@ import {
   Search,
   Settings,
 } from "lucide-react";
+import type { ComponentType } from "react";
 import DiscordLogo from "../assets/discord-mark-white.svg";
 import GithubLogo from "../assets/GitHub-Mark-Light-64px.png";
 import VibecheckLogo from "../assets/VibeCheck_logo.png";
@@ -46,6 +48,10 @@ type SidebarProps = {
   onToggleConfig: () => void;
   diagnosticsSelected: boolean;
   onToggleDiagnostics: () => void;
+  /** Pages extensions add (src/extensions), each a button next to Diagnostics */
+  extensionPages: ExtensionPage[];
+  selectedExtensionPage: string | null;
+  onToggleExtensionPage: (id: string) => void;
   canUpdate: boolean;
   version: string;
   /** Icon-only narrow bar instead of the full sidebar */
@@ -67,6 +73,9 @@ export default function Sidebar({
   onToggleConfig,
   diagnosticsSelected,
   onToggleDiagnostics,
+  extensionPages,
+  selectedExtensionPage,
+  onToggleExtensionPage,
   canUpdate,
   version,
   collapsed,
@@ -197,6 +206,18 @@ export default function Sidebar({
           collapsed ? "flex-col items-center" : "items-stretch",
         )}
       >
+        {collapsed &&
+          extensionPages.map((page) => (
+            <NavSquareButton
+              key={page.id}
+              label={page.label}
+              tooltip={page.label}
+              Icon={page.Icon}
+              selected={selectedExtensionPage == page.id}
+              onClick={() => onToggleExtensionPage(page.id)}
+              collapsed
+            />
+          ))}
         {collapsed && (
           <DiagnosticsButton
             selected={diagnosticsSelected}
@@ -217,6 +238,18 @@ export default function Sidebar({
             collapsed={false}
           />
         )}
+        {!collapsed &&
+          extensionPages.map((page) => (
+            <NavSquareButton
+              key={page.id}
+              label={page.label}
+              tooltip={page.label}
+              Icon={page.Icon}
+              selected={selectedExtensionPage == page.id}
+              onClick={() => onToggleExtensionPage(page.id)}
+              collapsed={false}
+            />
+          ))}
       </div>
 
       {/* Community links and version: only in the full sidebar. The
@@ -675,14 +708,39 @@ function DiagnosticsButton({
   collapsed: boolean;
 }) {
   return (
-    <Tooltip
-      text="Diagnostics: live values from VRChat"
-      side={collapsed ? "right" : "top"}
-    >
+    <NavSquareButton
+      label="Diagnostics"
+      tooltip="Diagnostics: live values from VRChat"
+      Icon={Activity}
+      selected={selected}
+      onClick={onClick}
+      collapsed={collapsed}
+    />
+  );
+}
+
+/** A square page button next to Settings: Diagnostics, or an extension's page */
+function NavSquareButton({
+  label,
+  tooltip,
+  Icon,
+  selected,
+  onClick,
+  collapsed,
+}: {
+  label: string;
+  tooltip: string;
+  Icon: ComponentType<{ className?: string }>;
+  selected: boolean;
+  onClick: () => void;
+  collapsed: boolean;
+}) {
+  return (
+    <Tooltip text={tooltip} side={collapsed ? "right" : "top"}>
       <button
         onClick={onClick}
         aria-pressed={selected}
-        aria-label="Diagnostics"
+        aria-label={label}
         className={cn(
           "group flex shrink-0 items-center justify-center transition-all duration-200",
           collapsed ? ICON_SQUARE : "w-11 rounded-2xl border",
@@ -695,7 +753,7 @@ function DiagnosticsButton({
               : "border-theme-border/60 bg-theme-surface hover:border-theme-secondary",
         )}
       >
-        <Activity
+        <Icon
           className={cn(
             "h-5 w-5",
             selected ? "text-theme-primary" : "text-theme-secondary",

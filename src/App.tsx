@@ -3,6 +3,7 @@ import { FeVCToy } from "@bindings/FeVCToy";
 import { useState } from "react";
 import "./App.css";
 import { useCoreEventContext } from "./context/CoreEvents";
+import { appExtensions } from "./extensions";
 import Config from "./features/Config";
 import Diagnostics from "./features/Diagnostics";
 import EmptyState from "./features/EmptyState";
@@ -13,7 +14,12 @@ import { useUpdate } from "./hooks/useUpdate";
 import { useVersion } from "./hooks/useVersion";
 import { cn } from "./lib/utils";
 
-type Selection = ToySelection | ConfigSelection | DiagnosticsSelection | null;
+type Selection =
+  | ToySelection
+  | ConfigSelection
+  | DiagnosticsSelection
+  | ExtensionSelection
+  | null;
 
 type ToySelection = {
   type: "Toy";
@@ -27,6 +33,14 @@ type ConfigSelection = {
 type DiagnosticsSelection = {
   type: "Diagnostics";
 };
+
+/** A page an extension adds (src/extensions) */
+type ExtensionSelection = {
+  type: "Extension";
+  id: string;
+};
+
+const extensionPages = appExtensions.pages ?? [];
 
 export default function App() {
   const [selection, setSelection] = useState<Selection>(null);
@@ -43,8 +57,8 @@ export default function App() {
   function toggleSidebar() {
     saveConfig({ sidebar_collapsed: !sidebarCollapsed });
   }
-  const { canUpdate } = useUpdate();
-  const { version } = useVersion();
+  const { canUpdate, updateStatus } = useUpdate();
+  const { version, appName } = useVersion();
 
   async function disableOnPortChange() {
     if (isEnabled) {
@@ -58,15 +72,24 @@ export default function App() {
   )
     setSelection(null); // selection is no longer valid
 
+  const extensionPage =
+    selection?.type == "Extension"
+      ? extensionPages.find((p) => p.id == selection.id)
+      : undefined;
+
   const mainPanel =
-    selection?.type == "Toy" && toy != null ? (
+    extensionPage != null ? (
+      <extensionPage.Page />
+    ) : selection?.type == "Toy" && toy != null ? (
       <Toy toy={toy} onRemove={removeOfflineToy} />
     ) : selection?.type == "Config" && config != null ? (
       <Config
         config={config}
         refreshConfig={refreshConfig}
         canUpdate={canUpdate}
+        updateStatus={updateStatus}
         version={version}
+        appName={appName}
         disableOnPortChange={disableOnPortChange}
       />
     ) : selection?.type == "Diagnostics" ? (
@@ -87,6 +110,12 @@ export default function App() {
   function setConfig() {
     if (selection?.type == "Config") setSelection(null);
     else setSelection({ type: "Config" });
+  }
+
+  function setExtensionPage(id: string) {
+    if (selection?.type == "Extension" && selection.id == id)
+      setSelection(null);
+    else setSelection({ type: "Extension", id });
   }
 
   function setDiagnostics() {
@@ -118,6 +147,11 @@ export default function App() {
           onToggleConfig={setConfig}
           diagnosticsSelected={selection?.type == "Diagnostics"}
           onToggleDiagnostics={setDiagnostics}
+          extensionPages={extensionPages}
+          selectedExtensionPage={
+            selection?.type == "Extension" ? selection.id : null
+          }
+          onToggleExtensionPage={setExtensionPage}
           canUpdate={canUpdate}
           version={version}
           collapsed={sidebarCollapsed}

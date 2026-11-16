@@ -1,11 +1,22 @@
-import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { defineConfig, searchForWorkspaceRoot } from "vite";
+
+// What this build adds to the app (src/extensions/types.ts): none, unless
+// VIBECHECK_EXTENSIONS names a module whose default export is AppExtensions.
+// That module can import the app's own code through "@/" and "@bindings/".
+const extensions = process.env.VIBECHECK_EXTENSIONS
+  ? path.resolve(process.env.VIBECHECK_EXTENSIONS)
+  : null;
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      "@extensions":
+        extensions ??
+        path.resolve(import.meta.dirname, "./src/extensions/none.ts"),
+      "@bindings": path.resolve(import.meta.dirname, "./src-tauri/bindings"),
       "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
@@ -16,6 +27,15 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    // The extensions module may live outside this folder
+    fs: extensions
+      ? {
+          allow: [
+            searchForWorkspaceRoot(process.cwd()),
+            path.dirname(extensions),
+          ],
+        }
+      : undefined,
   },
   // to make use of `TAURI_DEBUG` and other env variables
   // https://tauri.studio/v1/api/config#buildconfig.beforedevcommand
