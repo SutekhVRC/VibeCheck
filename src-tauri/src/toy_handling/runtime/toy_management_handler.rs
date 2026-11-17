@@ -41,11 +41,12 @@ use vibecheck_core::{
 };
 
 use crate::{
+    extensions::{SessionContext, SessionExtension},
     osc::{avatar_catalog::AvatarCatalog, avatar_query::AvatarQuery, OSCNetworking},
     toy_handling::{
         runtime::{
             diagnostics::diagnostics_task,
-            graph_runner::{graph_runner, GraphControl, GraphValues},
+            graph_runner::{graph_runner, GraphControl, GraphKey, GraphValues},
             osc_routing::{core_event_handler, osc_router},
             presence::{publish_connection, vrchat_presence},
             toy_emitter_thread::{toy_emitter_thread, EmitterThreadData, ToyEmitterThreadSignal},
@@ -223,12 +224,31 @@ impl Session {
         }
     }
 
+    /// What an app's session extensions get (see extensions.rs).
+    fn context(&self, app_handle: &AppHandle) -> SessionContext {
+        SessionContext {
+            app: app_handle.clone(),
+            runtime: self
+                .async_rt
+                .lock()
+                .as_ref()
+                .expect(SESSION_RUNNING)
+                .handle()
+                .clone(),
+            signals: self.signals.clone(),
+            events: self.events.clone(),
+            safety: self.safety.clone(),
+            diagnostics: self.diagnostics.clone(),
+            graphs: self.graphs.clone(),
+        }
+    }
+
     /// Builds the toy's graph from its config and hands it to the runner.
     fn set_graph(&self, toy: &VCToy, slots: &CommandSlots) {
         match build_toy_graph(&toy_module_id(toy), &toy.parsed_toy_features) {
             Ok(graph) => {
                 let _ = self.graphs.send(GraphControl::Set {
-                    toy_id: toy.toy_id,
+                    key: GraphKey::Toy(toy.toy_id),
                     graph,
                     slots: slots.clone(),
                 });
@@ -325,9 +345,18 @@ fn start_osc(
     rt.spawn(osc_router(tap_rx, app_handle.clone()));
 }
 
-/// Stops every toy task and the session's runtime (which ends OscInput, the
-/// router, the event handler and the graph runner, and frees the OSC port).
-async fn stop_listening(running_toys: &mut HashMap<u32, RunningToy>, session: &Session) {
+/// Stops the apps' session extensions, every toy task and the session's
+/// runtime (which ends OscInput, the router, the event handler, the graph
+/// runner and any task an app spawned, and frees the OSC port).
+async fn stop_listening(
+    running_toys: &mut HashMap<u32, RunningToy>,
+    session: &Session,
+    extensions: &mut [Box<dyn SessionExtension>],
+) {
+    // First, while the session's tasks still run
+    for extension in extensions.iter_mut() {
+        extension.stop();
+    }
     for (id, toy) in running_toys.drain() {
         toy.handle.abort();
         match toy.handle.await {
@@ -352,6 +381,7 @@ pub async fn toy_management_handler(
     safety: SafetyLayer,
     diagnostics: Diagnostics,
     avatar_catalog: AvatarCatalog,
+    mut session_extensions: Vec<Box<dyn SessionExtension>>,
     app_handle: AppHandle,
 ) {
     let mut listening = false;
@@ -416,6 +446,12 @@ pub async fn toy_management_handler(
         // Create OSC listener
         start_osc(&session, &vc_config, &tme_send, &app_handle);
 
+        // Apps' own graphs and outputs (see extensions.rs)
+        let context = session.context(&app_handle);
+        for extension in session_extensions.iter_mut() {
+            extension.start(&context);
+        }
+
         loop {
             // Recv event (listening)
             let event = tme_recv.recv().await;
@@ -431,7 +467,7 @@ pub async fn toy_management_handler(
                         if let Some(toy) = running_toys.remove(&id) {
                             // Its activity ends here too: no "stopped" follows
                             publish_connection(&session.events, toy.module.clone(), false);
-                            let _ = session.graphs.send(GraphControl::Remove(id));
+                            let _ = session.graphs.send(GraphControl::Remove(GraphKey::Toy(id)));
                             toy.handle.abort();
                             match toy.handle.await {
                                 Ok(()) => info!("Toy {} thread finished", id),
@@ -468,14 +504,14 @@ pub async fn toy_management_handler(
                         // Already listening
                     }
                     TmSig::StopListening => {
-                        stop_listening(&mut running_toys, &session).await;
+                        stop_listening(&mut running_toys, &session, &mut session_extensions).await;
                         listening = false;
                         info!("Toys: {}", core_toy_manager.online_toys.len());
                         break; //Stop Listening
                     }
                     TmSig::TMHReset => {
                         info!("TMHReset");
-                        stop_listening(&mut running_toys, &session).await;
+                        stop_listening(&mut running_toys, &session, &mut session_extensions).await;
                         listening = false;
                         info!("Toys: {}", core_toy_manager.online_toys.len());
                         break; //Stop Listening

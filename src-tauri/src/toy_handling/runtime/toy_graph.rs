@@ -37,7 +37,7 @@ use vibecheck_core::{
 use crate::toy_handling::{
     input_processor::InputProcessorNode,
     runtime::toy_output::feature_port_name,
-    toyops::{ProcessingMode, VCFeatureType, VCToyFeatures},
+    toyops::{ProcessingMode, VCFeatureType, VCToyFeature, VCToyFeatures},
 };
 
 /// The module id OscInput writes parameter values under.
@@ -82,18 +82,19 @@ impl Processor for OscRounding {
     }
 }
 
-struct Chain<'a> {
+struct Chain {
     prefix: String,
     source: PortId,
     round: bool,
     mode: Mode,
     settings: ModeSettings,
-    levels: OutputLevels,
-    motor: &'a PortId,
-    duration_ms: Option<u32>,
+    /// Idle Speed and Range, or none to end at the mode's output
+    levels: Option<OutputLevels>,
 }
 
-fn add_chain(b: &mut GraphBuilder, chain: Chain) -> Result<()> {
+/// Adds one chain (source -> round -> mode -> levels) and returns its last
+/// output.
+fn add_chain(b: &mut GraphBuilder, chain: Chain) -> Result<PortId> {
     let node = |name: &str| ModuleInstanceId::new(format!("{}/{}", chain.prefix, name));
     let mut upstream = chain.source;
 
@@ -105,89 +106,102 @@ fn add_chain(b: &mut GraphBuilder, chain: Chain) -> Result<()> {
 
     b.add_processor(node("mode"), modes::build(chain.mode, chain.settings))?;
     b.connect(upstream, PortId::new(node("mode"), "in"))?;
+    upstream = PortId::new(node("mode"), "out");
 
-    b.add_processor(node("levels"), Box::new(chain.levels))?;
-    b.connect(
-        PortId::new(node("mode"), "out"),
-        PortId::new(node("levels"), "in"),
-    )?;
+    if let Some(levels) = chain.levels {
+        b.add_processor(node("levels"), Box::new(levels))?;
+        b.connect(upstream, PortId::new(node("levels"), "in"))?;
+        upstream = PortId::new(node("levels"), "out");
+    }
+    Ok(upstream)
+}
 
-    b.add_sink(
-        PortId::new(node("levels"), "out"),
-        chain.motor.clone(),
-        chain.duration_ms,
-    )
+/// Adds a feature's inputs to `b`, the same way a toy's motor gets them, and
+/// returns each chain's output: one for the feature's input processor
+/// (SPS/TPS, with its input filter) if it has one, then one per parameter
+/// (only the first parameter with an address counts). Each chain is the
+/// source, then (for OSC parameters) rounding, the processing mode, and with
+/// `with_levels` Idle Speed and Range. Node ids start with `prefix`.
+///
+/// The feature's enabled flag, type and index aren't used here. The chains
+/// are separate because a node only runs once all its inputs have a value:
+/// wire each one on its own (toys send each to the motor; the newest wins).
+pub fn add_feature_inputs(
+    b: &mut GraphBuilder,
+    prefix: &str,
+    feature: &VCToyFeature,
+    with_levels: bool,
+) -> Result<Vec<PortId>> {
+    let osc = ModuleInstanceId::new(OSC_MODULE);
+    let l = feature.feature_levels;
+    let settings = ModeSettings {
+        smooth_window: smooth_window(l.smooth_rate),
+        rate_wind_down: l.rate_tune,
+        rate_sensitivity: l.rate_sensitivity,
+        constant_level: l.constant_level,
+        flip: feature.flip_input_float,
+    };
+    let levels = with_levels.then_some(OutputLevels {
+        min: l.minimum_level,
+        max: l.maximum_level,
+        idle: l.idle_level,
+    });
+    let mut outputs = Vec::new();
+
+    let pen = &feature.penetration_system;
+    if let Some(processor) = pen.pen_system_type.processor(feature.feature_type) {
+        let node = ModuleInstanceId::new(format!("{prefix}/input_processor"));
+        let tags = pen.pen_system_input_filter.clone().unwrap_or_default();
+        b.add_processor(
+            node.clone(),
+            Box::new(InputProcessorNode::new(processor, tags)),
+        )?;
+        outputs.push(add_chain(
+            b,
+            Chain {
+                prefix: format!("{prefix}/input_processor"),
+                source: PortId::new(node, "out"),
+                round: false,
+                mode: to_core_mode(&pen.pen_system_processing_mode),
+                settings,
+                levels,
+            },
+        )?);
+    }
+
+    let mut seen = HashSet::new();
+    for (i, param) in feature.osc_parameters.iter().enumerate() {
+        if !seen.insert(param.parameter.as_str()) {
+            continue; // Only the first parameter with an address counts
+        }
+        outputs.push(add_chain(
+            b,
+            Chain {
+                prefix: format!("{prefix}/param{i}"),
+                source: PortId::new(osc.clone(), &param.parameter),
+                round: true,
+                mode: to_core_mode(&param.processing_mode),
+                settings,
+                levels,
+            },
+        )?);
+    }
+    Ok(outputs)
 }
 
 /// The graph for one toy. `toy` is the toy's module id (see `toy_module_id`).
 pub fn build_toy_graph(toy: &ModuleInstanceId, features: &VCToyFeatures) -> Result<Graph> {
     let mut b = GraphBuilder::new();
-    let osc = ModuleInstanceId::new(OSC_MODULE);
 
     for feature in features.features.iter().filter(|f| f.feature_enabled) {
         let motor_name = feature_port_name(feature.feature_type, feature.feature_index);
         let motor = PortId::new(toy.clone(), &motor_name);
-        let prefix = format!("{toy}/{motor_name}");
-
-        let l = feature.feature_levels;
-        let settings = ModeSettings {
-            smooth_window: smooth_window(l.smooth_rate),
-            rate_wind_down: l.rate_tune,
-            rate_sensitivity: l.rate_sensitivity,
-            constant_level: l.constant_level,
-            flip: feature.flip_input_float,
-        };
-        let levels = OutputLevels {
-            min: l.minimum_level,
-            max: l.maximum_level,
-            idle: l.idle_level,
-        };
         let duration_ms = match feature.feature_type {
-            VCFeatureType::Linear => Some(l.linear_position_speed),
+            VCFeatureType::Linear => Some(feature.feature_levels.linear_position_speed),
             _ => None,
         };
-
-        let pen = &feature.penetration_system;
-        if let Some(processor) = pen.pen_system_type.processor(feature.feature_type) {
-            let node = ModuleInstanceId::new(format!("{prefix}/input_processor"));
-            let tags = pen.pen_system_input_filter.clone().unwrap_or_default();
-            b.add_processor(
-                node.clone(),
-                Box::new(InputProcessorNode::new(processor, tags)),
-            )?;
-            add_chain(
-                &mut b,
-                Chain {
-                    prefix: format!("{prefix}/input_processor"),
-                    source: PortId::new(node, "out"),
-                    round: false,
-                    mode: to_core_mode(&pen.pen_system_processing_mode),
-                    settings,
-                    levels,
-                    motor: &motor,
-                    duration_ms,
-                },
-            )?;
-        }
-
-        let mut seen = HashSet::new();
-        for (i, param) in feature.osc_parameters.iter().enumerate() {
-            if !seen.insert(param.parameter.as_str()) {
-                continue; // Only the first parameter with an address counts
-            }
-            add_chain(
-                &mut b,
-                Chain {
-                    prefix: format!("{prefix}/param{i}"),
-                    source: PortId::new(osc.clone(), &param.parameter),
-                    round: true,
-                    mode: to_core_mode(&param.processing_mode),
-                    settings,
-                    levels,
-                    motor: &motor,
-                    duration_ms,
-                },
-            )?;
+        for output in add_feature_inputs(&mut b, &format!("{toy}/{motor_name}"), feature, true)? {
+            b.add_sink(output, motor.clone(), duration_ms)?;
         }
     }
 
@@ -198,8 +212,7 @@ pub fn build_toy_graph(toy: &ModuleInstanceId, features: &VCToyFeatures) -> Resu
 mod tests {
     use super::*;
     use crate::toy_handling::{
-        input_processor::penetration_systems::PenetrationSystemType,
-        toyops::{ToyParameter, VCToyFeature},
+        input_processor::penetration_systems::PenetrationSystemType, toyops::ToyParameter,
     };
     use vibecheck_core::{EventPlane, SafetyLayer, SignalPlane};
 
@@ -474,5 +487,40 @@ mod tests {
         );
         // Sent again although 0.5 was the last value before the reset
         assert_eq!(h.tick(), vec![("Vibrator_0".into(), 0.5, None)]);
+    }
+
+    #[test]
+    fn feature_inputs_without_levels_end_at_the_mode() {
+        let mut f = feature(
+            0,
+            VCFeatureType::Vibrator,
+            vec![param(BOOP, ProcessingMode::Raw)],
+        );
+        f.feature_levels.idle_level = 0.2;
+        f.feature_levels.maximum_level = 0.5;
+        let mut b = GraphBuilder::new();
+        let outputs = add_feature_inputs(&mut b, "app:trigger", &f, false).unwrap();
+        assert_eq!(
+            outputs,
+            vec![PortId::new(
+                ModuleInstanceId::new("app:trigger/param0/mode"),
+                "out"
+            )]
+        );
+        // Wired to a target so the graph sends what the chain outputs
+        let target = PortId::new(ModuleInstanceId::new("app:dev"), "level");
+        b.add_sink(outputs[0].clone(), target, None).unwrap();
+        let mut graph = b.build().unwrap();
+
+        let signals = SignalPlane::new();
+        let events = EventPlane::new().0;
+        let boop = PortId::new(ModuleInstanceId::new(OSC_MODULE), BOOP);
+        let mut level = |v: f64| {
+            signals.write(&boop, Signal::Float(v));
+            graph.tick(&signals, 0.01, &SafetyLayer::default(), &events)[0].level()
+        };
+        // No Range cap and no Idle Speed: the mode's output as is
+        assert_eq!(level(0.5), 0.5);
+        assert_eq!(level(0.0), 0.0);
     }
 }

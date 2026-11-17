@@ -196,7 +196,7 @@ Older configs have no `mode`: `settle()` keeps them on Manual if `bind` or `remo
 
 ## Session lifetime
 
-Turning VibeCheck on creates a `Session` (`toy_management_handler.rs`): a tokio runtime, a signal plane, an event plane and the graph runner. On it run the core event handler, the graph runner, `OscInput`, the router, and one task plus one emitter per toy. Everything in the session publishes on the same event plane: `OscInput` (avatar change), the presence task (VRChat connecting), the session itself (toys connecting), graph processors, and each toy's output (errors and activity). Turning off (or a reset) aborts the toy tasks and shuts the runtime down, which closes the OSC socket and frees the port for the "off" listener.
+Turning VibeCheck on creates a `Session` (`toy_management_handler.rs`): a tokio runtime, a signal plane, an event plane and the graph runner. On it run the core event handler, the graph runner, `OscInput`, the router, and one task plus one emitter per toy. Everything in the session publishes on the same event plane: `OscInput` (avatar change), the presence task (VRChat connecting), the session itself (toys connecting), graph processors, and each toy's output (errors and activity). An app built on the library can add its own graphs (ticked by the same graph runner, under its own names) and output tasks to each session through a `SessionExtension` (`src/extensions.rs`): `start` runs once the OSC input is set up, `stop` before anything else when the session ends. Turning off (or a reset) aborts the toy tasks and shuts the runtime down, which closes the OSC socket and frees the port for the "off" listener.
 
 If the port can't be bound, `OscInput::bind` fails, the error is logged, and `TmSig::BindError` is sent.
 
