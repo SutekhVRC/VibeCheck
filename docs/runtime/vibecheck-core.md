@@ -122,6 +122,7 @@ for cmd in graph.tick(&signals, dt, &safety, &mut events) {
 - `add_processor(id, processor)` adds a node; its ports are the processor's signal ports.
 - `connect(from, to)` wires a source into a node input. If `from` belongs to a node, it's that node's output; otherwise it's read from the signal plane (e.g. an OSC parameter). Each input takes exactly one source.
 - `add_sink(from, target, duration_ms)` sends a node output to a target port, such as a motor.
+- `add_event_sink(from, target, duration_ms)` turns the events a node emits on its event port `from` into commands for `target`, for outputs that act on one-off actions (a timed pulse, a beep) rather than a level.
 - `build()` rejects unknown nodes or ports, inputs wired twice or not at all, sinks fed from something other than a node, and cycles. It orders nodes so each runs after the nodes it reads from.
 
 **Ticking** (`Graph::tick`):
@@ -129,6 +130,7 @@ for cmd in graph.tick(&signals, dt, &safety, &mut events) {
 1. Nodes run in dependency order, each reading the latest value of its inputs. A watching node first gets its [watched](#watching-ports) changes. A node only runs once **all** its inputs have a value, so nothing happens before the first input arrives. A node with no inputs (e.g. one that only watches) runs every tick.
 2. A node output keeps its last value until the node writes a new one (`None` means unchanged).
 3. Each sink whose value **changed** since it last fired goes through `SafetyLayer::clamp` and is returned as a `ClampedCmd`, unless the safety layer refuses it. Unchanged sinks send nothing, so idle graphs don't flood outputs. A refused value still counts as the sink's last value, so it isn't retried or replayed later (after a resume or arming): the sink waits for its next change.
+4. Each event a node emitted on a port wired to an event sink becomes a command for its target, **every time**, so the same action can repeat at the same level. The level comes from the event's value: a `Float` is the level, `Bool(true)` and `None` are 1.0, and `Bool(false)` or `Text` send nothing. It goes through `SafetyLayer::clamp` like any command (refused while panicked, unarmed or rate-limited, and never replayed), and carries the event as its `cause()`, so an output's report about it chains back to the processor. These commands come before signal sink commands, in the order the events were emitted. Event sinks aren't in `sink_targets()`: there's no "0" to send them on reset, so stopping a one-off device is the output's job.
 
 Events processors emit during a tick are published on the `EventPlane` passed to `tick`, with the node's port as the source (e.g. `proc:avg/crossed`).
 

@@ -106,12 +106,20 @@ impl ClampedCmd {
         self.duration_ms
     }
 
-    /// For commands made by [`SafetyLayer::clamp_in_response`]: the `Acted`
-    /// event recorded for it. An output reporting what it did should publish
-    /// its event caused by this (`EventPlane::publish_caused_by_id`), so the
-    /// chain leads back through whoever asked.
+    /// The event this command was made for: for commands made by
+    /// [`SafetyLayer::clamp_in_response`], the `Acted` event recorded for it;
+    /// for a graph's event sinks, the event the processor emitted. An output
+    /// reporting what it did should publish its event caused by this
+    /// (`EventPlane::publish_caused_by_id`), so the chain leads back through
+    /// whoever asked.
     pub fn cause(&self) -> Option<EventId> {
         self.cause
+    }
+
+    /// Records the event this command was made for (see [`cause`](Self::cause)).
+    pub(crate) fn with_cause(mut self, cause: EventId) -> Self {
+        self.cause = Some(cause);
+        self
     }
 }
 
