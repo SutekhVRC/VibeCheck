@@ -8,7 +8,12 @@
  * - Tauri commands, next to VibeCheck's own (`commands`);
  * - anything else on the Tauri builder: plugins, managed state
  *   (`builder`);
- * - work to start once VibeCheck is running (`on_start`).
+ * - work to start once VibeCheck is running (`on_start`);
+ * - its own graphs and outputs in every listening session (`session`):
+ *   each time VibeCheck turns on, `SessionExtension::start` gets the
+ *   session's signal and event planes, the safety layer and a way to add
+ *   graphs to the session's graph runner; `stop` runs just before the
+ *   session ends (VibeCheck turned off or reset), while its tasks still run.
  *
  * Tauri only takes one command handler, built at compile time by
  * `generate_handler!`, so an app's commands come with their names: a call
@@ -18,6 +23,12 @@
  */
 
 use tauri::{ipc::Invoke, AppHandle, Builder, Wry};
+use tokio::{runtime::Handle, sync::mpsc::UnboundedSender};
+use vibecheck_core::{
+    graph::Graph, CommandSlots, Diagnostics, EventPlane, SafetyLayer, SignalPlane,
+};
+
+use crate::toy_handling::runtime::graph_runner::{GraphControl, GraphKey};
 
 pub(crate) type Handler = Box<dyn Fn(Invoke<Wry>) -> bool + Send + Sync>;
 type BuilderHook = Box<dyn FnOnce(Builder<Wry>) -> Builder<Wry>>;
@@ -30,6 +41,7 @@ pub struct Extensions {
     pub(crate) commands: Vec<(Vec<&'static str>, Handler)>,
     pub(crate) builder: Vec<BuilderHook>,
     pub(crate) on_start: Vec<StartHook>,
+    pub(crate) sessions: Vec<Box<dyn SessionExtension>>,
 }
 
 impl Extensions {
@@ -57,6 +69,91 @@ impl Extensions {
     pub fn on_start(mut self, start: impl FnOnce(&AppHandle) + Send + 'static) -> Self {
         self.on_start.push(Box::new(start));
         self
+    }
+
+    /// Adds graphs and outputs to every listening session (see the top of
+    /// this file).
+    pub fn session(mut self, extension: impl SessionExtension + 'static) -> Self {
+        self.sessions.push(Box::new(extension));
+        self
+    }
+}
+
+/// An app's part in each listening session.
+pub trait SessionExtension: Send {
+    /// VibeCheck was turned on: a new session started. Add graphs with
+    /// [`SessionContext::set_graph`] and spawn output tasks on
+    /// [`SessionContext::runtime`]; they're stopped with the session.
+    fn start(&mut self, ctx: &SessionContext);
+
+    /// The session is about to end (VibeCheck turned off or reset). Its
+    /// runtime still runs; stop devices here. A panic stop doesn't end the
+    /// session: outputs check [`SafetyLayer::is_panicked`] themselves.
+    fn stop(&mut self) {}
+}
+
+/// What a [`SessionExtension`] gets from a listening session. Cheap to
+/// clone, and usable from the session's tasks.
+#[derive(Clone)]
+pub struct SessionContext {
+    pub(crate) app: AppHandle,
+    pub(crate) runtime: Handle,
+    pub(crate) signals: SignalPlane,
+    pub(crate) events: EventPlane,
+    pub(crate) safety: SafetyLayer,
+    pub(crate) diagnostics: Diagnostics,
+    pub(crate) graphs: UnboundedSender<GraphControl>,
+}
+
+impl SessionContext {
+    /// The app.
+    pub fn app(&self) -> &AppHandle {
+        &self.app
+    }
+
+    /// The session's tokio runtime. Tasks spawned on it end with the session.
+    pub fn runtime(&self) -> &Handle {
+        &self.runtime
+    }
+
+    /// Avatar parameters and every other signal (module `osc`, port = OSC
+    /// address).
+    pub fn signals(&self) -> &SignalPlane {
+        &self.signals
+    }
+
+    /// The session's events (avatar change, connections, activity, ...).
+    pub fn events(&self) -> &EventPlane {
+        &self.events
+    }
+
+    /// The app-wide safety layer: caps, panic stop, arming, rate limits.
+    pub fn safety(&self) -> &SafetyLayer {
+        &self.safety
+    }
+
+    /// The diagnostics switch and log.
+    pub fn diagnostics(&self) -> &Diagnostics {
+        &self.diagnostics
+    }
+
+    /// Runs `graph` in the session's graph runner (100 Hz) under `name`,
+    /// replacing any graph this app set under that name. Its commands go to
+    /// `slots`, for the app's output to send. Like toy graphs, it's reset
+    /// on avatar change.
+    pub fn set_graph(&self, name: impl Into<String>, graph: Graph, slots: CommandSlots) {
+        let _ = self.graphs.send(GraphControl::Set {
+            key: GraphKey::App(name.into()),
+            graph,
+            slots,
+        });
+    }
+
+    /// Stops running the graph set under `name`.
+    pub fn remove_graph(&self, name: impl Into<String>) {
+        let _ = self
+            .graphs
+            .send(GraphControl::Remove(GraphKey::App(name.into())));
     }
 }
 

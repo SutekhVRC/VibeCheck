@@ -50,7 +50,7 @@
   },
   "productName": "VibeCheck",
   "mainBinaryName": "VibeCheck",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "identifier": "com.vibecheck",
   "plugins": {
     "updater": {

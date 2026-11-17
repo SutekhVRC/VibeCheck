@@ -204,7 +204,12 @@ impl VibeCheckState {
         Ok(())
     }
 
-    pub fn start_tmh(&mut self) -> Result<(), VibeCheckError> {
+    /// `session_extensions`: an app's part in every listening session (see
+    /// extensions.rs).
+    pub fn start_tmh(
+        &mut self,
+        session_extensions: Vec<Box<dyn crate::extensions::SessionExtension>>,
+    ) -> Result<(), VibeCheckError> {
         if self.app_handle.is_none() {
             logerr!("start_tmh() called but no app_handle was set");
             return Err(VibeCheckError::new(
@@ -234,6 +239,7 @@ impl VibeCheckState {
                 self.safety.clone(),
                 self.diagnostics.clone(),
                 self.avatar_catalog.clone(),
+                session_extensions,
                 self.app_handle.clone().expect("checked above"),
             )),
         );

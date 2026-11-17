@@ -1,10 +1,11 @@
 /*
- * Ticks every toy's graph at a fixed rate.
+ * Ticks every toy's graph, and any graphs an app added (see extensions.rs),
+ * at a fixed rate.
  *
- * One task per listening session. Each tick it runs every toy's graph against
- * the session's signal plane and writes the resulting commands into that
- * toy's CommandSlots, which the toy's emitter sends at the toy's own update
- * rate.
+ * One task per listening session. Each tick it runs every graph against the
+ * session's signal plane and writes the resulting commands into that graph's
+ * CommandSlots, which its output sends at its own rate (a toy's emitter at
+ * the toy's update rate).
  */
 
 use std::{
@@ -56,23 +57,34 @@ impl GraphValues {
         self.latest.lock().clone()
     }
 
-    fn update(&self, toys: &HashMap<u32, ToyGraph>) {
+    fn update(&self, graphs: &HashMap<GraphKey, ToyGraph>) {
         let mut latest = self.latest.lock();
         latest.clear();
         if self.diagnostics.enabled() {
-            latest.extend(toys.iter().map(|(id, toy)| (*id, toy.graph.snapshot())));
+            latest.extend(graphs.iter().filter_map(|(key, toy)| match key {
+                GraphKey::Toy(id) => Some((*id, toy.graph.snapshot())),
+                GraphKey::App(_) => None,
+            }));
         }
     }
 }
 
+/// Which graph: a toy's, or one an app added to the session (by the name
+/// it chose; see extensions.rs).
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum GraphKey {
+    Toy(u32),
+    App(String),
+}
+
 pub enum GraphControl {
-    /// Run `graph` for this toy from now on, replacing any previous graph.
+    /// Run `graph` from now on, replacing any previous graph with this key.
     Set {
-        toy_id: u32,
+        key: GraphKey,
         graph: Graph,
         slots: CommandSlots,
     },
-    Remove(u32),
+    Remove(GraphKey),
     /// Start every graph over (see `Graph::reset`) and send 0 to every
     /// output, e.g. on avatar change. The 0 also replaces any command still
     /// waiting to be sent, and lets each output see its toy stop.
@@ -122,7 +134,7 @@ pub async fn graph_runner(
     safety: SafetyLayer,
     values: GraphValues,
 ) {
-    let mut toys: HashMap<u32, ToyGraph> = HashMap::new();
+    let mut toys: HashMap<GraphKey, ToyGraph> = HashMap::new();
 
     let mut ticker = interval(Duration::from_nanos(1_000_000_000 / GRAPH_TICK_HZ));
     ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
@@ -134,14 +146,14 @@ pub async fn graph_runner(
             // Apply graph changes before the next tick
             biased;
             change = control.recv() => match change {
-                Some(GraphControl::Set { toy_id, graph, slots }) => {
-                    let old = toys.insert(toy_id, ToyGraph { graph, slots });
+                Some(GraphControl::Set { key, graph, slots }) => {
+                    let old = toys.insert(key.clone(), ToyGraph { graph, slots });
                     if let Some(old) = old {
-                        stop_dropped_outputs(&old, &toys[&toy_id], &safety);
+                        stop_dropped_outputs(&old, &toys[&key], &safety);
                     }
                 }
-                Some(GraphControl::Remove(toy_id)) => {
-                    toys.remove(&toy_id);
+                Some(GraphControl::Remove(key)) => {
+                    toys.remove(&key);
                 }
                 Some(GraphControl::ResetAll) => {
                     for toy in toys.values_mut() {
@@ -218,7 +230,7 @@ mod tests {
         let slots = CommandSlots::new();
         control
             .send(GraphControl::Set {
-                toy_id: 1,
+                key: GraphKey::Toy(1),
                 graph: graph(),
                 slots: slots.clone(),
             })
@@ -231,7 +243,9 @@ mod tests {
         assert_eq!(sent.len(), 1);
         assert_eq!(sent[0].level(), 0.5);
 
-        control.send(GraphControl::Remove(1)).unwrap();
+        control
+            .send(GraphControl::Remove(GraphKey::Toy(1)))
+            .unwrap();
         sleep(Duration::from_millis(20)).await;
         signals.write(&boop, Signal::Float(0.9));
         sleep(Duration::from_millis(50)).await;
@@ -258,7 +272,7 @@ mod tests {
         ));
         let slots = CommandSlots::new();
         let set = |graph| GraphControl::Set {
-            toy_id: 1,
+            key: GraphKey::Toy(1),
             graph,
             slots: slots.clone(),
         };
@@ -294,7 +308,7 @@ mod tests {
         let slots = CommandSlots::new();
         control
             .send(GraphControl::Set {
-                toy_id: 1,
+                key: GraphKey::Toy(1),
                 graph: graph_with(true),
                 slots: slots.clone(),
             })
@@ -328,7 +342,7 @@ mod tests {
         ));
         control
             .send(GraphControl::Set {
-                toy_id: 1,
+                key: GraphKey::Toy(1),
                 graph: graph(),
                 slots: CommandSlots::new(),
             })
@@ -362,7 +376,7 @@ mod tests {
         let slots = CommandSlots::new();
         control
             .send(GraphControl::Set {
-                toy_id: 1,
+                key: GraphKey::Toy(1),
                 graph: graph(),
                 slots: slots.clone(),
             })
@@ -399,7 +413,7 @@ mod tests {
         let slots = CommandSlots::new();
         control
             .send(GraphControl::Set {
-                toy_id: 1,
+                key: GraphKey::Toy(1),
                 graph: graph(),
                 slots: slots.clone(),
             })

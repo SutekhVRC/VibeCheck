@@ -12,6 +12,9 @@
 //!   front (e.g. every SPS parameter an avatar sends).
 //! - [`add_sink`](GraphBuilder::add_sink) sends a node's output to a target,
 //!   such as a toy's motor port.
+//! - [`add_event_sink`](GraphBuilder::add_event_sink) turns the events a node
+//!   emits on one of its event ports into commands for a target, for outputs
+//!   that act on one-off actions rather than a level (see step 4 below).
 //!
 //! On every [`tick`](Graph::tick):
 //!
@@ -28,6 +31,15 @@
 //!    nothing, so an idle graph doesn't flood its outputs, and a refused
 //!    value isn't retried: the sink waits for its next change.
 //!
+//! 4. each event a node emits on a port wired to an event sink becomes a
+//!    command for the sink's target, every time it's emitted (not only on
+//!    change, so the same action can repeat). The level comes from the
+//!    event's value: a `Float` is the level, `Bool(true)` and `None` are 1.0,
+//!    and `Bool(false)` or `Text` send nothing. It goes through the safety
+//!    layer like any command, and carries the event as its
+//!    [`cause`](ClampedCmd::cause). Event sink commands come before signal
+//!    sink commands, in the order the events were emitted.
+//!
 //! Events a processor emits ([`EventOut`](crate::module::EventOut)) are published on the
 //! [`EventPlane`] with the node's port as their source, e.g.
 //! `proc:avg/above_0.7`.
@@ -37,7 +49,7 @@ use std::sync::Arc;
 
 use crate::address::{ModuleInstanceId, PortId};
 use crate::error::{Error, Result};
-use crate::event::EventPlane;
+use crate::event::{EventPlane, Value};
 use crate::module::{PortDirection, PortKind, Processor, Watch};
 use crate::safety::{ClampedCmd, SafetyLayer};
 use crate::signal::{Signal, SignalPlane, SignalSeq};
@@ -49,6 +61,8 @@ struct NodeSpec {
     outputs: Vec<Arc<str>>,
     wiring: Vec<Option<PortId>>,
     watches: Vec<Watch>,
+    /// Ports the node publishes events on.
+    event_outputs: Vec<Arc<str>>,
 }
 
 struct SinkSpec {
@@ -64,6 +78,7 @@ pub struct GraphBuilder {
     nodes: Vec<NodeSpec>,
     index: HashMap<ModuleInstanceId, usize>,
     sinks: Vec<SinkSpec>,
+    event_sinks: Vec<SinkSpec>,
 }
 
 fn graph_err(why: impl Into<String>) -> Error {
@@ -95,6 +110,12 @@ impl GraphBuilder {
         };
         let inputs = signal_ports(PortDirection::In);
         let outputs = signal_ports(PortDirection::Out);
+        let event_outputs = processor
+            .ports()
+            .into_iter()
+            .filter(|p| p.kind == PortKind::Event && p.direction == PortDirection::Out)
+            .map(|p| Arc::from(p.name))
+            .collect();
         let watches = processor.watches();
         self.index.insert(id.clone(), self.nodes.len());
         self.nodes.push(NodeSpec {
@@ -104,6 +125,7 @@ impl GraphBuilder {
             processor,
             inputs,
             outputs,
+            event_outputs,
         });
         Ok(())
     }
@@ -154,6 +176,32 @@ impl GraphBuilder {
             )));
         }
         self.sinks.push(SinkSpec {
+            from,
+            target,
+            duration_ms,
+        });
+        Ok(())
+    }
+
+    /// Sends each event the node emits on its event port `from` to `target`
+    /// as a command, every time (see the module docs for how the event's
+    /// value becomes a level), with an optional duration for timed actions.
+    pub fn add_event_sink(
+        &mut self,
+        from: PortId,
+        target: PortId,
+        duration_ms: Option<u32>,
+    ) -> Result<()> {
+        let &node = self.index.get(&from.module).ok_or_else(|| {
+            graph_err(format!("event sink source {from}: no node {}", from.module))
+        })?;
+        if !self.nodes[node].event_outputs.contains(&from.port) {
+            return Err(graph_err(format!(
+                "event sink source {from} is not an event port of node {}",
+                from.module
+            )));
+        }
+        self.event_sinks.push(SinkSpec {
             from,
             target,
             duration_ms,
@@ -266,8 +314,22 @@ impl GraphBuilder {
                 }
             })
             .collect();
+        let event_sinks = self
+            .event_sinks
+            .into_iter()
+            .map(|sink| EventSink {
+                node: index[&sink.from.module],
+                port: sink.from.port,
+                target: sink.target,
+                duration_ms: sink.duration_ms,
+            })
+            .collect();
 
-        Ok(Graph { nodes, sinks })
+        Ok(Graph {
+            nodes,
+            sinks,
+            event_sinks,
+        })
     }
 }
 
@@ -295,16 +357,34 @@ struct Sink {
     last: Option<f64>,
 }
 
+struct EventSink {
+    node: usize,
+    port: Arc<str>,
+    target: PortId,
+    duration_ms: Option<u32>,
+}
+
+/// The level an event sink sends for an event's value, if any.
+fn event_level(value: &Value) -> Option<f64> {
+    match value {
+        Value::Float(level) => Some(*level),
+        Value::Bool(true) | Value::None => Some(1.0),
+        Value::Bool(false) | Value::Text(_) => None,
+    }
+}
+
 /// A built graph. See the [module docs](self).
 pub struct Graph {
     nodes: Vec<Node>,
     sinks: Vec<Sink>,
+    event_sinks: Vec<EventSink>,
 }
 
 impl Graph {
-    /// Runs every node once, then returns a command for every sink whose
-    /// value changed. `dt` is the time since the last tick, in seconds.
-    /// Events processors emit are published on `events`.
+    /// Runs every node once, then returns a command for every event sent to
+    /// an event sink and every sink whose value changed. `dt` is the time
+    /// since the last tick, in seconds. Events processors emit are published
+    /// on `events`.
     pub fn tick(
         &mut self,
         signals: &SignalPlane,
@@ -315,6 +395,7 @@ impl Graph {
         let mut ins = Vec::new();
         let mut emitted = Vec::new();
         let mut changed = Vec::new();
+        let mut cmds = Vec::new();
         for i in 0..self.nodes.len() {
             // Nodes only read from nodes before them (run order)
             let (before, rest) = self.nodes.split_at_mut(i);
@@ -356,11 +437,23 @@ impl Graph {
             let mut out = vec![None; node.outputs.len()];
             node.processor.tick(&ins, dt, &mut out, &mut emitted);
             for event in emitted.drain(..) {
-                events.publish(
-                    PortId::new(node.id.clone(), event.port),
+                let level = event_level(&event.value);
+                let id = events.publish(
+                    PortId::new(node.id.clone(), event.port.as_ref()),
                     event.kind,
                     event.value,
                 );
+                let Some(level) = level else { continue };
+                for sink in &self.event_sinks {
+                    if sink.node != i || sink.port != event.port {
+                        continue;
+                    }
+                    // Refused (panic, not armed, rate limit): dropped, never
+                    // replayed
+                    if let Some(cmd) = safety.clamp(sink.target.clone(), level, sink.duration_ms) {
+                        cmds.push(cmd.with_cause(id));
+                    }
+                }
             }
             for (slot, new) in node.outputs.iter_mut().zip(out) {
                 if new.is_some() {
@@ -369,7 +462,6 @@ impl Graph {
             }
         }
 
-        let mut cmds = Vec::new();
         for sink in &mut self.sinks {
             let Some(value) = self.nodes[sink.node].outputs[sink.port] else {
                 continue;
@@ -514,6 +606,39 @@ mod tests {
                 out[0] = Some(ins[0]);
             }
         }
+    }
+
+    /// Emits its input as an event on `fire` every tick, as the value it's
+    /// given: a float stays a float, a bool stays a bool.
+    struct Fire;
+
+    impl Processor for Fire {
+        fn ports(&self) -> Vec<PortSpec> {
+            vec![PortSpec::signal_in("in"), PortSpec::event_out("fire")]
+        }
+        fn tick(
+            &mut self,
+            ins: &[Signal],
+            _: f32,
+            _: &mut [Option<Signal>],
+            events: &mut Vec<EventOut>,
+        ) {
+            let value = match ins[0] {
+                Signal::Float(v) => Value::Float(v),
+                Signal::Bool(b) => Value::Bool(b),
+            };
+            events.push(EventOut::new("fire", EventKind::Threshold, value));
+        }
+    }
+
+    /// A graph: osc/in -> Fire, its events to dev/zap for 300 ms.
+    fn fire_graph() -> Graph {
+        let mut b = GraphBuilder::new();
+        b.add_processor(id("fire"), Box::new(Fire)).unwrap();
+        b.connect(port("osc", "in"), port("fire", "in")).unwrap();
+        b.add_event_sink(port("fire", "fire"), port("dev", "zap"), Some(300))
+            .unwrap();
+        b.build().unwrap()
     }
 
     fn id(s: &str) -> ModuleInstanceId {
@@ -901,5 +1026,89 @@ mod tests {
         g.reset();
         signals.clear(&port("osc", "Boop"));
         assert!(tick(&mut g, &signals).is_empty());
+    }
+
+    #[test]
+    fn event_sinks_send_every_event_with_its_cause() {
+        let mut g = fire_graph();
+        let signals = SignalPlane::new();
+        let (events, mut received) = EventPlane::new();
+        let safety = SafetyLayer::default();
+        let mut tick = |value| {
+            signals.write(&port("osc", "in"), value);
+            g.tick(&signals, 0.01, &safety, &events)
+        };
+
+        // The same level twice: two commands, unlike a signal sink
+        for _ in 0..2 {
+            let cmds = tick(Signal::Float(0.4));
+            assert_eq!(cmds.len(), 1);
+            assert_eq!(cmds[0].target(), &port("dev", "zap"));
+            assert_eq!(cmds[0].level(), 0.4);
+            assert_eq!(cmds[0].duration_ms(), Some(300));
+            // Caused by the event the processor emitted
+            let event = received.try_recv().unwrap();
+            assert_eq!(event.source, port("fire", "fire"));
+            assert_eq!(cmds[0].cause(), Some(event.id));
+        }
+
+        // true is full level, false sends nothing (but is still published)
+        assert_eq!(tick(Signal::Bool(true))[0].level(), 1.0);
+        assert!(tick(Signal::Bool(false)).is_empty());
+        assert_eq!(
+            received.try_recv().map(|e| e.value),
+            Some(Value::Bool(true))
+        );
+        assert_eq!(
+            received.try_recv().map(|e| e.value),
+            Some(Value::Bool(false))
+        );
+    }
+
+    #[test]
+    fn event_sinks_go_through_the_safety_layer_and_never_replay() {
+        let mut g = fire_graph();
+        let signals = SignalPlane::new();
+        let events = EventPlane::new().0;
+        let safety = SafetyLayer::default();
+        signals.write(&port("osc", "in"), Signal::Float(0.8));
+
+        safety.panic();
+        assert!(g.tick(&signals, 0.01, &safety, &events).is_empty());
+        safety.resume();
+        // Only the new event is sent, nothing queued from the panic
+        assert_eq!(g.tick(&signals, 0.01, &safety, &events).len(), 1);
+
+        // A device that needs arming gets nothing until armed
+        safety.set_policy(
+            id("dev"),
+            crate::safety::TargetPolicy {
+                requires_arming: true,
+                min_interval: None,
+            },
+        );
+        assert!(g.tick(&signals, 0.01, &safety, &events).is_empty());
+        assert!(safety.arm(id("dev")));
+        assert_eq!(g.tick(&signals, 0.01, &safety, &events).len(), 1);
+    }
+
+    #[test]
+    fn event_sinks_need_a_node_event_port() {
+        let mut b = GraphBuilder::new();
+        b.add_processor(id("fire"), Box::new(Fire)).unwrap();
+        b.add_processor(id("add"), Box::new(Add(0.1))).unwrap();
+        // Unknown node, a signal port, a port that doesn't exist
+        assert!(b
+            .add_event_sink(port("nope", "fire"), port("dev", "zap"), None)
+            .is_err());
+        assert!(b
+            .add_event_sink(port("add", "out"), port("dev", "zap"), None)
+            .is_err());
+        assert!(b
+            .add_event_sink(port("fire", "missing"), port("dev", "zap"), None)
+            .is_err());
+        assert!(b
+            .add_event_sink(port("fire", "fire"), port("dev", "zap"), None)
+            .is_ok());
     }
 }

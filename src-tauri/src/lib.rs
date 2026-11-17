@@ -11,6 +11,19 @@ use parking_lot::Mutex;
 use tauri::Manager;
 
 pub use crate::extensions::Extensions;
+
+/// What an app built on VibeCheck needs for its own session graphs and
+/// outputs (see extensions.rs).
+pub mod embed {
+    pub use crate::extensions::{SessionContext, SessionExtension};
+    pub use crate::toy_handling::input_processor::penetration_systems::{
+        PenetrationSystem, PenetrationSystemType,
+    };
+    pub use crate::toy_handling::runtime::toy_graph::{add_feature_inputs, OSC_MODULE};
+    pub use crate::toy_handling::toyops::{
+        LevelTweaks, ProcessingMode, ToyParameter, VCFeatureType, VCToyFeature,
+    };
+}
 use crate::{
     frontend::frontend_native,
     vcore::config::{
@@ -198,7 +211,7 @@ pub fn run(context: tauri::Context<tauri::Wry>, extensions: Extensions) {
         trace!("App Identifier set");
 
         vc_state
-            .start_tmh()
+            .start_tmh(extensions.sessions)
             .expect("the app handle and toy manager are set just above");
         trace!("Started TMH");
         // Without the toy service VibeCheck still runs (OSC, settings); the
