@@ -3,7 +3,7 @@ import Loading from "@/components/Loading";
 import ThemedLogo from "@/components/ThemedLogo";
 import { useCoreEventContext } from "@/context/CoreEvents";
 import { PANIC_HOTKEY, TOOLTIP } from "@/data/constants";
-import type { ExtensionPage } from "@/extensions";
+import type { ExtensionItem, ExtensionPage } from "@/extensions";
 import { toyKey } from "@/hooks/useToys";
 import Button from "@/layout/Button";
 import Switch from "@/layout/Switch";
@@ -48,10 +48,12 @@ type SidebarProps = {
   onToggleConfig: () => void;
   diagnosticsSelected: boolean;
   onToggleDiagnostics: () => void;
-  /** Pages extensions add (src/extensions), each a button next to Diagnostics */
+  /** Pages extensions add (src/extensions): a button next to Diagnostics,
+   * or a row in the device list (see ExtensionPage.placement) */
   extensionPages: ExtensionPage[];
-  selectedExtensionPage: string | null;
-  onToggleExtensionPage: (id: string) => void;
+  /** The extension page open, and which of its items (null: the page) */
+  selectedExtension: { id: string; item: string | null } | null;
+  onToggleExtensionPage: (id: string, item?: string | null) => void;
   canUpdate: boolean;
   version: string;
   /** Icon-only narrow bar instead of the full sidebar */
@@ -74,13 +76,17 @@ export default function Sidebar({
   diagnosticsSelected,
   onToggleDiagnostics,
   extensionPages,
-  selectedExtensionPage,
+  selectedExtension,
   onToggleExtensionPage,
   canUpdate,
   version,
   collapsed,
   onToggleCollapsed,
 }: SidebarProps) {
+  const navPages = extensionPages.filter(
+    (p) => (p.placement ?? "nav") === "nav",
+  );
+  const devicePages = extensionPages.filter((p) => p.placement === "devices");
   const connected = toys.filter((t) => t.toy_connected);
   const saved = toys.filter((t) => !t.toy_connected);
 
@@ -195,6 +201,42 @@ export default function Sidebar({
               )}
             </>
           )}
+          {devicePages.length > 0 && (
+            <>
+              {toys.length > 0 && (
+                <div
+                  className={cn(
+                    "h-px shrink-0 bg-theme-border",
+                    collapsed ? "my-0.5 w-8" : "mx-1",
+                  )}
+                />
+              )}
+              {devicePages.map((page) =>
+                collapsed ? (
+                  <NavSquareButton
+                    key={page.id}
+                    label={page.label}
+                    tooltip={page.label}
+                    Icon={page.Icon}
+                    selected={selectedExtension?.id == page.id}
+                    onClick={() => onToggleExtensionPage(page.id)}
+                    collapsed
+                  />
+                ) : (
+                  <DevicePageGroup
+                    key={page.id}
+                    page={page}
+                    selectedItem={
+                      selectedExtension?.id == page.id
+                        ? selectedExtension.item
+                        : undefined
+                    }
+                    onOpen={(item) => onToggleExtensionPage(page.id, item)}
+                  />
+                ),
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -207,13 +249,13 @@ export default function Sidebar({
         )}
       >
         {collapsed &&
-          extensionPages.map((page) => (
+          navPages.map((page) => (
             <NavSquareButton
               key={page.id}
               label={page.label}
               tooltip={page.label}
               Icon={page.Icon}
-              selected={selectedExtensionPage == page.id}
+              selected={selectedExtension?.id == page.id}
               onClick={() => onToggleExtensionPage(page.id)}
               collapsed
             />
@@ -239,13 +281,13 @@ export default function Sidebar({
           />
         )}
         {!collapsed &&
-          extensionPages.map((page) => (
+          navPages.map((page) => (
             <NavSquareButton
               key={page.id}
               label={page.label}
               tooltip={page.label}
               Icon={page.Icon}
-              selected={selectedExtensionPage == page.id}
+              selected={selectedExtension?.id == page.id}
               onClick={() => onToggleExtensionPage(page.id)}
               collapsed={false}
             />
@@ -525,6 +567,82 @@ function ToyEntry({
       )}
       <span className="min-w-0 flex-1 truncate">{toy.toy_name}</span>
       <PowerLabel power={toy.toy_power} />
+    </button>
+  );
+}
+
+/** A page without items */
+function useNoItems(): ExtensionItem[] {
+  return [];
+}
+
+/** A device-list page's row, with its items (if any) listed under it */
+function DevicePageGroup({
+  page,
+  selectedItem,
+  onOpen,
+}: {
+  page: ExtensionPage;
+  /** undefined: this page isn't open; null: the page itself is */
+  selectedItem: string | null | undefined;
+  onOpen: (item: string | null) => void;
+}) {
+  const useItems = page.useItems ?? useNoItems;
+  const items = useItems();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <DevicePageEntry
+        page={page}
+        selected={selectedItem === null}
+        onClick={() => onOpen(null)}
+      />
+      {items.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => onOpen(item.id)}
+          aria-pressed={selectedItem === item.id}
+          className={cn(
+            "ml-5 flex items-center gap-2 rounded-2xl px-3 py-1.5 text-left text-sm text-theme-text transition-all duration-200 hover:-translate-y-0.5",
+            selectedItem === item.id
+              ? "bg-gradient-to-r from-theme-primary/30 to-theme-secondary/30 ring-2 ring-theme-primary"
+              : "bg-theme-raised hover:bg-theme-border",
+          )}
+        >
+          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+          {item.note && (
+            <span className="shrink-0 text-xs text-theme-muted">
+              {item.note}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** An extension's page in the device list, styled like a toy row */
+function DevicePageEntry({
+  page,
+  selected,
+  onClick,
+}: {
+  page: ExtensionPage;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        "group flex items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm text-theme-text transition-all duration-200 hover:-translate-y-0.5",
+        selected
+          ? "bg-gradient-to-r from-theme-primary/30 to-theme-secondary/30 ring-2 ring-theme-primary"
+          : "bg-theme-raised hover:bg-theme-border",
+      )}
+    >
+      <page.Icon className="h-4 w-4 shrink-0 text-theme-primary" />
+      <span className="min-w-0 flex-1 truncate">{page.label}</span>
     </button>
   );
 }
