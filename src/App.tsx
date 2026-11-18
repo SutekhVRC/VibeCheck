@@ -38,6 +38,8 @@ type DiagnosticsSelection = {
 type ExtensionSelection = {
   type: "Extension";
   id: string;
+  /** One of the page's items (ExtensionItem), or null for the page itself */
+  item: string | null;
 };
 
 const extensionPages = appExtensions.pages ?? [];
@@ -78,8 +80,13 @@ export default function App() {
       : undefined;
 
   const mainPanel =
-    extensionPage != null ? (
-      <extensionPage.Page />
+    extensionPage != null && selection?.type == "Extension" ? (
+      <extensionPage.Page
+        item={selection.item}
+        open={(item) =>
+          setSelection({ type: "Extension", id: selection.id, item })
+        }
+      />
     ) : selection?.type == "Toy" && toy != null ? (
       <Toy toy={toy} onRemove={removeOfflineToy} />
     ) : selection?.type == "Config" && config != null ? (
@@ -112,10 +119,14 @@ export default function App() {
     else setSelection({ type: "Config" });
   }
 
-  function setExtensionPage(id: string) {
-    if (selection?.type == "Extension" && selection.id == id)
+  function setExtensionPage(id: string, item: string | null = null) {
+    if (
+      selection?.type == "Extension" &&
+      selection.id == id &&
+      selection.item == item
+    )
       setSelection(null);
-    else setSelection({ type: "Extension", id });
+    else setSelection({ type: "Extension", id, item });
   }
 
   function setDiagnostics() {
@@ -148,9 +159,7 @@ export default function App() {
           diagnosticsSelected={selection?.type == "Diagnostics"}
           onToggleDiagnostics={setDiagnostics}
           extensionPages={extensionPages}
-          selectedExtensionPage={
-            selection?.type == "Extension" ? selection.id : null
-          }
+          selectedExtension={selection?.type == "Extension" ? selection : null}
           onToggleExtensionPage={setExtensionPage}
           canUpdate={canUpdate}
           version={version}

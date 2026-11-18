@@ -3,7 +3,7 @@ import Loading from "@/components/Loading";
 import ThemedLogo from "@/components/ThemedLogo";
 import { useCoreEventContext } from "@/context/CoreEvents";
 import { PANIC_HOTKEY, TOOLTIP } from "@/data/constants";
-import type { ExtensionPage } from "@/extensions";
+import type { ExtensionItem, ExtensionPage } from "@/extensions";
 import { toyKey } from "@/hooks/useToys";
 import Button from "@/layout/Button";
 import Switch from "@/layout/Switch";
@@ -51,8 +51,9 @@ type SidebarProps = {
   /** Pages extensions add (src/extensions): a button next to Diagnostics,
    * or a row in the device list (see ExtensionPage.placement) */
   extensionPages: ExtensionPage[];
-  selectedExtensionPage: string | null;
-  onToggleExtensionPage: (id: string) => void;
+  /** The extension page open, and which of its items (null: the page) */
+  selectedExtension: { id: string; item: string | null } | null;
+  onToggleExtensionPage: (id: string, item?: string | null) => void;
   canUpdate: boolean;
   version: string;
   /** Icon-only narrow bar instead of the full sidebar */
@@ -75,7 +76,7 @@ export default function Sidebar({
   diagnosticsSelected,
   onToggleDiagnostics,
   extensionPages,
-  selectedExtensionPage,
+  selectedExtension,
   onToggleExtensionPage,
   canUpdate,
   version,
@@ -217,16 +218,20 @@ export default function Sidebar({
                     label={page.label}
                     tooltip={page.label}
                     Icon={page.Icon}
-                    selected={selectedExtensionPage == page.id}
+                    selected={selectedExtension?.id == page.id}
                     onClick={() => onToggleExtensionPage(page.id)}
                     collapsed
                   />
                 ) : (
-                  <DevicePageEntry
+                  <DevicePageGroup
                     key={page.id}
                     page={page}
-                    selected={selectedExtensionPage == page.id}
-                    onClick={() => onToggleExtensionPage(page.id)}
+                    selectedItem={
+                      selectedExtension?.id == page.id
+                        ? selectedExtension.item
+                        : undefined
+                    }
+                    onOpen={(item) => onToggleExtensionPage(page.id, item)}
                   />
                 ),
               )}
@@ -250,7 +255,7 @@ export default function Sidebar({
               label={page.label}
               tooltip={page.label}
               Icon={page.Icon}
-              selected={selectedExtensionPage == page.id}
+              selected={selectedExtension?.id == page.id}
               onClick={() => onToggleExtensionPage(page.id)}
               collapsed
             />
@@ -282,7 +287,7 @@ export default function Sidebar({
               label={page.label}
               tooltip={page.label}
               Icon={page.Icon}
-              selected={selectedExtensionPage == page.id}
+              selected={selectedExtension?.id == page.id}
               onClick={() => onToggleExtensionPage(page.id)}
               collapsed={false}
             />
@@ -563,6 +568,55 @@ function ToyEntry({
       <span className="min-w-0 flex-1 truncate">{toy.toy_name}</span>
       <PowerLabel power={toy.toy_power} />
     </button>
+  );
+}
+
+/** A page without items */
+function useNoItems(): ExtensionItem[] {
+  return [];
+}
+
+/** A device-list page's row, with its items (if any) listed under it */
+function DevicePageGroup({
+  page,
+  selectedItem,
+  onOpen,
+}: {
+  page: ExtensionPage;
+  /** undefined: this page isn't open; null: the page itself is */
+  selectedItem: string | null | undefined;
+  onOpen: (item: string | null) => void;
+}) {
+  const useItems = page.useItems ?? useNoItems;
+  const items = useItems();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <DevicePageEntry
+        page={page}
+        selected={selectedItem === null}
+        onClick={() => onOpen(null)}
+      />
+      {items.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => onOpen(item.id)}
+          aria-pressed={selectedItem === item.id}
+          className={cn(
+            "ml-5 flex items-center gap-2 rounded-2xl px-3 py-1.5 text-left text-sm text-theme-text transition-all duration-200 hover:-translate-y-0.5",
+            selectedItem === item.id
+              ? "bg-gradient-to-r from-theme-primary/30 to-theme-secondary/30 ring-2 ring-theme-primary"
+              : "bg-theme-raised hover:bg-theme-border",
+          )}
+        >
+          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+          {item.note && (
+            <span className="shrink-0 text-xs text-theme-muted">
+              {item.note}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
   );
 }
 
