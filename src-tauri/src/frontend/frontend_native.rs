@@ -145,6 +145,23 @@ pub fn set_vibecheck_config(
 /*
  * Puts every app setting back to its default (toy settings are untouched)
  */
+/// The toy connection setting and how it's doing.
+#[tauri::command]
+pub fn get_toy_connection(
+    vc_state: tauri::State<'_, state::VCStateMutex>,
+) -> call_plane::FeToyConnectionState {
+    call_plane::native_get_toy_connection(vc_state)
+}
+
+/// Saves the toy connection and switches to it; returns it as saved.
+#[tauri::command]
+pub fn set_toy_connection(
+    vc_state: tauri::State<'_, state::VCStateMutex>,
+    connection: crate::util::toy_service::ToyConnection,
+) -> Result<crate::util::toy_service::ToyConnection, VCFeError> {
+    call_plane::native_set_toy_connection(vc_state, connection)
+}
+
 #[tauri::command]
 pub fn reset_vibecheck_config(
     vc_state: tauri::State<'_, state::VCStateMutex>,

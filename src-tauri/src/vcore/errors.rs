@@ -69,10 +69,12 @@ pub mod frontend {
         EnableBindFailure,
         #[error("VibeCheck is already off.")]
         DisableFailure,
-        #[error("VibeCheck's toy connection service didn't start, so toys can't connect. Restart VibeCheck.")]
+        #[error("VibeCheck isn't connected to its toy service, so toys can't connect. Settings > Toys > Toy connection says why.")]
         ToyServiceNotRunning,
         #[error("Couldn't start looking for toys: {0}")]
         StartScanFailure(String),
+        #[error("{0}")]
+        InvalidToyConnection(String),
         #[error("Couldn't stop looking for toys: {0}")]
         StopScanFailure(String),
 

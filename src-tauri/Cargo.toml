@@ -1,6 +1,6 @@
 [package]
 name = "vibecheck"
-version = "0.7.5"
+version = "0.7.6"
 edition = "2021"
 authors = ["SutekhVRC"]
 rust-version = "1.57"
@@ -28,6 +28,9 @@ buttplug_server = "12.0.2"
 buttplug_server_device_config = "12.0.1"
 buttplug_server_hwmgr_btleplug = "12.0.3"
 buttplug_server_hwmgr_lovense_dongle = "12.0.1"
+# Intiface Central (desktop or phone) as the toy server, over websocket
+# (util/toy_service.rs)
+buttplug_transport_websocket_tungstenite = "12.0.0"
 #vrcoscquery = {path = "../../../vrcoscquery-rs"}
 # OSCQuery: advertises VibeCheck so VRChat sends to it (OSCQuery mode), and
 # finds VRChat's own service (osc/oscquery.rs, osc/avatar_query.rs). Brings

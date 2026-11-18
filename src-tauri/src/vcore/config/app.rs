@@ -1,3 +1,4 @@
+use crate::util::toy_service::ToyConnection;
 use log::{error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
 use std::{fs, path::Path};
@@ -42,6 +43,10 @@ pub struct VibeCheckConfig {
     /// The sidebar is collapsed to icons
     #[serde(default)]
     pub sidebar_collapsed: bool,
+    /// Where toys are reached: VibeCheck's own Bluetooth, or Intiface
+    /// Central (util/toy_service.rs). Local in older config files.
+    #[serde(default)]
+    pub toy_connection: ToyConnection,
 }
 
 /// The frontend's DEFAULT_THEME_ID
@@ -75,6 +80,7 @@ impl Default for VibeCheckConfig {
             theme: default_theme(),
             auto_enable_on_scan: false,
             sidebar_collapsed: false,
+            toy_connection: ToyConnection::Local,
         }
     }
 }

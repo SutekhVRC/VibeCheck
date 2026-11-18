@@ -282,7 +282,10 @@ pub async fn client_event_handler(
                 }
             }
         } else {
-            warn!("GOT NONE IN EVENT HANDLER: THIS SHOULD NEVER HAPPEN LOL");
+            // The connection is gone without a ServerDisconnect: stop, or
+            // this loop would spin
+            warn!("Toy service event stream ended");
+            break;
         }
     }
     info!("Event handler returning!");

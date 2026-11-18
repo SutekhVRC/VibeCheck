@@ -1,3 +1,4 @@
+use crate::util::toy_service::{self, ToyConnection, ToyServiceStatus};
 use buttplug_client::ButtplugClient;
 use log::{error as logerr, info, warn};
 use parking_lot::Mutex;
@@ -13,10 +14,8 @@ use crate::osc::avatar_catalog::AvatarCatalog;
 use crate::osc::logic::{toy_refresh, vc_disabled_osc_command_listen};
 use crate::osc::oscquery::OscQuery;
 use crate::osc::OscMode;
-use crate::toy_handling::runtime::client_event_handler::client_event_handler;
 use crate::toy_handling::runtime::toy_management_handler::toy_management_handler;
 use crate::toy_handling::toy_manager::ToyManager;
-use crate::util::bluetooth;
 use crate::vcore::errors::VcoreError;
 
 use super::config::app::VibeCheckConfig;
@@ -59,7 +58,13 @@ pub struct VibeCheckState {
     notices: Option<UnboundedReceiver<Notice>>,
     pub notice_handler_thread: Option<JoinHandle<()>>,
     // Client Event Handler
+    /// The toy service supervisor (util/toy_service.rs), which runs the
+    /// client event handler for each connection.
     pub client_eh_thread: Option<JoinHandle<()>>,
+    /// Sends the toy connection setting to the supervisor (switches it).
+    pub toy_connection_tx: Option<tokio::sync::watch::Sender<ToyConnection>>,
+    /// How the toy connection is doing, for Settings.
+    pub toy_service_status: Arc<parking_lot::Mutex<ToyServiceStatus>>,
     //Toy update handler
     pub toy_update_h_thread: Option<JoinHandle<()>>,
     // Toy Management Handler
@@ -130,6 +135,8 @@ impl VibeCheckState {
             //======================================
             // Client Event Handler
             client_eh_thread: None,
+            toy_connection_tx: None,
+            toy_service_status: Arc::new(parking_lot::Mutex::new(ToyServiceStatus::Connecting)),
             //client_eh_event_rx,
             //client_eh_event_tx,
 
@@ -306,6 +313,9 @@ impl VibeCheckState {
         Ok(())
     }
 
+    /// Starts the toy service supervisor (util/toy_service.rs), which
+    /// connects to the toy server the config names, runs the client event
+    /// handler, and reconnects or switches as needed.
     pub fn init_ceh(&mut self) -> Result<(), VibeCheckError> {
         // Is there a supplied state pointer?
         if self.vibecheck_state_pointer.is_none() {
@@ -314,52 +324,46 @@ impl VibeCheckState {
                 None,
             ));
         }
-
-        // Is CEH already running?
-
         if self.client_eh_thread.is_some() {
             return Err(VibeCheckError::new(
                 ErrorSource::Vcore(VcoreError::CehAlreadyInitialized),
                 None,
             ));
         }
-
-        // Create connection mode defaults
-        //let mut connection_modes = ConnectionModes { btle_enabled: true, lc_enabled: true };
-
-        // Get ButtPlugClient with modified connection modes
-
-        let bp_client_future = bluetooth::vc_toy_client_server_init("VibeCheck");
-
-        self.bp_client = match self.async_rt.block_on(bp_client_future) {
-            Ok(bpc) => Some(bpc),
-            Err(e) => {
-                logerr!("Failed to initialize bpio..");
-                return Err(VibeCheckError::new(
-                    ErrorSource::Util(e),
-                    Some("Failed to initialize bpio.."),
-                ));
-            }
+        let Some(app_handle) = self.app_handle.clone() else {
+            return Err(VibeCheckError::new(
+                ErrorSource::Vcore(VcoreError::NoAppHandle),
+                None,
+            ));
         };
-        info!("Buttplug Client Initialized.");
 
-        // Get event stream
-        let event_stream = self
-            .bp_client
-            .as_ref()
-            .expect("set just above")
-            .event_stream();
-
-        // Start CEH
-        self.client_eh_thread = Some(self.async_rt.spawn(client_event_handler(
-            event_stream,
-            self.vibecheck_state_pointer.clone().expect("checked above"),
-            self.identifier.clone(),
-            self.app_handle.clone().expect("checked above"),
-            self.tme_send_tx.clone(),
-            self.reporter.clone(),
-        )));
+        let (tx, rx) = tokio::sync::watch::channel(self.config.toy_connection.clone());
+        self.toy_connection_tx = Some(tx);
+        let ctx = toy_service::ToyServiceContext {
+            state: self.vibecheck_state_pointer.clone().expect("checked above"),
+            status: self.toy_service_status.clone(),
+            identifier: self.identifier.clone(),
+            app_handle,
+            tme_send: self.tme_send_tx.clone(),
+            reporter: self.reporter.clone(),
+        };
+        self.client_eh_thread = Some(self.async_rt.spawn(toy_service::run(ctx, rx)));
+        info!("Toy service started");
         Ok(())
+    }
+
+    /// Switches the toy connection (already saved in the config). The same
+    /// connection again changes nothing.
+    pub fn set_toy_connection(&self, connection: ToyConnection) {
+        if let Some(tx) = &self.toy_connection_tx {
+            tx.send_if_modified(|current| {
+                if *current == connection {
+                    return false;
+                }
+                *current = connection;
+                true
+            });
+        }
     }
 
     /*
