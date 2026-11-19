@@ -12,6 +12,8 @@ export const INVOKE = {
   SIMULATE_TOY_FEATURE: "simulate_device_feature",
   VERSION: "vibecheck_version",
   UPDATER_ENABLED: "vibecheck_updater_enabled",
+  GET_TOY_CONNECTION: "get_toy_connection",
+  SET_TOY_CONNECTION: "set_toy_connection",
   START_SCAN: "vibecheck_start_bt_scan",
   STOP_SCAN: "vibecheck_stop_bt_scan",
   ENABLE: "vibecheck_enable",
@@ -120,6 +122,14 @@ export const TOOLTIP = {
   },
   OSC_Send: {
     text: "OSC Send Port (Default: 127.0.0.1:9000)",
+    link: "",
+  },
+  ToyConnection: {
+    text: "How VibeCheck reaches your toys. This computer: its own Bluetooth (and the Lovense USB dongle). Intiface Central: through the Intiface Central app on this computer or your phone, for computers without Bluetooth. Switching disconnects the toys on the old connection.",
+    link: "",
+  },
+  IntifaceAddress: {
+    text: "Intiface Central's server address, shown in the app once you press Start Server, e.g. 192.168.1.20:12345 (a phone on your Wi-Fi) or 127.0.0.1:12345 (this computer). Use it on a network you trust.",
     link: "",
   },
   ScanLength: {

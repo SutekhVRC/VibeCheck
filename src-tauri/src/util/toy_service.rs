@@ -16,7 +16,8 @@
  *   -> wait until the connection drops or the setting changes.
  * - Dropped (Intiface closed, the phone asleep, Wi-Fi): the client has
  *   already removed every device (DeviceRemoved, which stops and removes the
- *   toys), the status says so, and it tries again every RETRY_EVERY.
+ *   toys), the user is told once, the status says so, and it tries again
+ *   every RETRY_EVERY.
  * - Setting changed: the old client is disconnected (its toys leave the same
  *   way) and the new one connects straight away.
  * The status is kept for Settings to show.
@@ -174,6 +175,12 @@ pub async fn run(ctx: ToyServiceContext, mut connection: watch::Receiver<ToyConn
                     ),
                 };
                 warn!("Toy service: {lost}");
+                // Once per drop (retries don't repeat it)
+                ctx.reporter.warning(
+                    "toys",
+                    "toy_service_lost",
+                    format!("{lost} Toys on it were disconnected."),
+                );
                 *ctx.status.lock() = ToyServiceStatus::Failed(lost);
                 wait_or_change(&mut connection).await;
             }

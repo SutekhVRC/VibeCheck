@@ -19,6 +19,7 @@ import Slider from "../layout/Slider";
 import Switch from "../layout/Switch";
 import { TooltipLabel } from "../layout/Tooltip";
 import ThemePicker from "./ThemePicker";
+import ToyConnection from "./ToyConnection";
 
 const UPDATE_TEXT: Record<UpdateStatus, string> = {
   checking: "Checking for updates…",
@@ -538,6 +539,7 @@ export default function Config({
           </Section>
 
           <Section title="Toys" hint="Saves instantly">
+            <ToyConnection />
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4">
               <TooltipLabel
                 text="Master intensity"
