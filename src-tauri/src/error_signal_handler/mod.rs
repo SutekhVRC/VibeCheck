@@ -27,6 +27,9 @@ impl VibeCheckError {
 #[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum ErrorSource {
+    // Not produced since the toy service (util/toy_service.rs) reports its
+    // own errors; kept for util errors
+    #[allow(dead_code)]
     #[error(transparent)]
     Util(UtilError),
     #[error(transparent)]

@@ -127,6 +127,8 @@ pub enum FeBrowserLink {
     Discord,
     ToyOptions,
     FeatureOptions,
+    /// The wiki's page on Intiface Central (Settings > Toys > Toy connection)
+    IntifaceCentral,
 }
 
 #[derive(Serialize, Deserialize, Clone, TS, Debug)]

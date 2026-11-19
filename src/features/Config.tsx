@@ -19,6 +19,7 @@ import Slider from "../layout/Slider";
 import Switch from "../layout/Switch";
 import { TooltipLabel } from "../layout/Tooltip";
 import ThemePicker from "./ThemePicker";
+import ToyConnection from "./ToyConnection";
 
 const UPDATE_TEXT: Record<UpdateStatus, string> = {
   checking: "Checking for updates…",
@@ -429,6 +430,9 @@ export default function Config({
     }
   }
 
+  // Bumped by each reset, to start the toy connection row over
+  const [resets, setResets] = useState(0);
+
   async function resetSettings() {
     if (!confirmSettingsReset) {
       setConfirmSettingsReset(true);
@@ -447,6 +451,7 @@ export default function Config({
         remote: fresh.networking.remote,
       });
       await refreshConfig();
+      setResets((n) => n + 1);
       toast.info("Settings reset to defaults. Turn VibeCheck back on.");
     } catch (e) {
       toast.error(`Could not reset settings!\n${errorText(e)}`);
@@ -538,6 +543,8 @@ export default function Config({
           </Section>
 
           <Section title="Toys" hint="Saves instantly">
+            {/* A new one after a reset, so nothing from before it lingers */}
+            <ToyConnection key={resets} />
             <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4">
               <TooltipLabel
                 text="Master intensity"

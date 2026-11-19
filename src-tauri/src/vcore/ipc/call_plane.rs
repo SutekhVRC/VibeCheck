@@ -1,5 +1,8 @@
+use crate::util::toy_service::{ToyConnection, ToyServiceStatus};
 use log::{debug, error as logerr, info, trace, warn};
+use serde::Serialize;
 use std::{fs, net::SocketAddrV4, str::FromStr, thread, time::Duration};
+use ts_rs::TS;
 
 use crate::{
     frontend::{
@@ -338,6 +341,49 @@ pub fn native_set_vibecheck_config(
     }
 }
 
+/// The toy connection setting and how it's doing, for Settings.
+#[derive(Serialize, Debug, Clone, TS)]
+#[ts(export)]
+pub struct FeToyConnectionState {
+    pub connection: ToyConnection,
+    pub status: ToyServiceStatus,
+}
+
+pub fn native_get_toy_connection(vc_state: tauri::State<'_, VCStateMutex>) -> FeToyConnectionState {
+    let vc_lock = vc_state.0.lock();
+    let status = vc_lock.toy_service_status.lock().clone();
+    FeToyConnectionState {
+        connection: vc_lock.config.toy_connection.clone(),
+        status,
+    }
+}
+
+/// Saves the toy connection and switches to it straight away (toys on the
+/// old connection leave). Returns the setting as saved (tidied).
+pub fn native_set_toy_connection(
+    vc_state: tauri::State<'_, VCStateMutex>,
+    connection: ToyConnection,
+) -> Result<ToyConnection, VCFeError> {
+    let connection = connection
+        .normalized()
+        .map_err(VCFeError::InvalidToyConnection)?;
+    let (config, app_handle) = {
+        let mut vc_lock = vc_state.0.lock();
+        vc_lock.config.toy_connection = connection.clone();
+        vc_lock.set_toy_connection(connection.clone());
+        (
+            vc_lock.config.clone(),
+            vc_lock.app_handle.clone().expect(APP_HANDLE_SET),
+        )
+    };
+    save_config(config, &app_handle).map_err(|e| match e {
+        VibeCheckConfigError::SerializeError => VCFeError::SerializeFailure,
+        VibeCheckConfigError::WriteFailure => VCFeError::WriteFailure,
+        VibeCheckConfigError::ConfigDirFail => VCFeError::ConfigDirFailure,
+    })?;
+    Ok(connection)
+}
+
 /// Puts every app setting back to its default and saves. Toy settings are
 /// separate and untouched.
 ///
@@ -365,6 +411,9 @@ pub fn native_reset_vibecheck_config(
         }
         let intensity = vc_lock.config.master_intensity;
         vc_lock.safety.set_intensity(intensity);
+        // Back to this computer's Bluetooth, if it was on Intiface
+        let connection = vc_lock.config.toy_connection.clone();
+        vc_lock.set_toy_connection(connection);
 
         (
             vc_lock.config.clone(),

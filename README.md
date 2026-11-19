@@ -27,6 +27,7 @@
 ## Features
 
 - **Bluetooth toy support** through [Buttplug.io](https://buttplug.io/): connect any [supported toy](https://iostindex.com/?filter0ButtplugSupport=4) directly, no extra app needed. Toys show up as soon as they connect.
+- **No Bluetooth on your PC?** Connect through [Intiface Central](https://intiface.com/central/) on your phone instead: your toys pair with the phone, and VibeCheck drives them over Wi-Fi ([how](https://github.com/SutekhVRC/VibeCheck/wiki/Intiface-Central)).
 - **Driven by your avatar**: map VRChat avatar parameters to each toy motor over OSC.
 - **Connects automatically** over OSCQuery on its own port, so it works alongside other OSC apps. Manual ports are still an option.
 - **SPS and TPS support**: SPS 3 and older SPS (including mixing the two), with depth, touch and frot, plus TPS. Input filters pick which sockets or plugs drive each toy.
@@ -54,6 +55,7 @@ All guides live on the [wiki](https://github.com/SutekhVRC/VibeCheck/wiki):
 |---|---|
 | [App Setup](https://github.com/SutekhVRC/VibeCheck/wiki/VibeCheck-App-Setup) | A tour of the app and first-time setup |
 | [Connecting Toys](https://github.com/SutekhVRC/VibeCheck/wiki/Connecting-Toys) | Bluetooth requirements, finding toys and common Bluetooth issues |
+| [Intiface Central](https://github.com/SutekhVRC/VibeCheck/wiki/Intiface-Central) | Using Intiface Central (desktop or phone) instead of this computer's Bluetooth |
 | [Avatar Setup](https://github.com/SutekhVRC/VibeCheck/wiki/Avatar-Setup) | OSC, custom setups, SPS and TPS |
 | [Toy Options](https://github.com/SutekhVRC/VibeCheck/wiki/Toy-Options-List) | Every per-toy and per-motor setting |
 | [Settings](https://github.com/SutekhVRC/VibeCheck/wiki/VibeCheck-Settings) | Every app setting |
