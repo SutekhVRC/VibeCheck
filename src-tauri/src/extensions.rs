@@ -29,7 +29,7 @@ use std::net::SocketAddrV4;
 use tauri::{image::Image, ipc::Invoke, AppHandle, Builder, Manager, Wry};
 use tokio::{runtime::Handle, sync::mpsc::UnboundedSender};
 use vibecheck_core::{
-    graph::Graph, CommandSlots, Diagnostics, EventPlane, SafetyLayer, SignalPlane,
+    graph::Graph, CommandSlots, Diagnostics, EventPlane, ModuleInstanceId, SafetyLayer, SignalPlane,
 };
 
 use crate::{
@@ -179,6 +179,18 @@ impl SessionContext {
         let _ = self
             .graphs
             .send(GraphControl::Remove(GraphKey::App(name.into())));
+    }
+
+    /// Makes `slots` the place for commands to `module`'s ports, from any
+    /// graph in the session (toys are registered already). A graph can then
+    /// drive this output and others at once; see graph_runner.rs.
+    pub fn set_output(&self, module: ModuleInstanceId, slots: CommandSlots) {
+        let _ = self.graphs.send(GraphControl::SetOutput { module, slots });
+    }
+
+    /// Stops routing commands for `module` (see [`set_output`](Self::set_output)).
+    pub fn remove_output(&self, module: ModuleInstanceId) {
+        let _ = self.graphs.send(GraphControl::RemoveOutput(module));
     }
 
     /// Every graph the session runs now (each toy's and every app's), with

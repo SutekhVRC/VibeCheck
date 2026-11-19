@@ -247,8 +247,13 @@ impl Session {
         }
     }
 
-    /// Builds the toy's graph from its config and hands it to the runner.
+    /// Builds the toy's graph from its config and hands it to the runner,
+    /// and registers the toy as an output other graphs can drive.
     fn set_graph(&self, toy: &VCToy, slots: &CommandSlots) {
+        let _ = self.graphs.send(GraphControl::SetOutput {
+            module: toy_module_id(toy),
+            slots: slots.clone(),
+        });
         match build_toy_graph(&toy_module_id(toy), &toy.parsed_toy_features) {
             Ok(graph) => {
                 let _ = self.graphs.send(GraphControl::Set {
@@ -473,6 +478,9 @@ pub async fn toy_management_handler(
                             // Its activity ends here too: no "stopped" follows
                             publish_connection(&session.events, toy.module.clone(), false);
                             let _ = session.graphs.send(GraphControl::Remove(GraphKey::Toy(id)));
+                            let _ = session
+                                .graphs
+                                .send(GraphControl::RemoveOutput(toy.module.clone()));
                             toy.handle.abort();
                             match toy.handle.await {
                                 Ok(()) => info!("Toy {} thread finished", id),
