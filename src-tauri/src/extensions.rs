@@ -9,6 +9,8 @@
  * - anything else on the Tauri builder: plugins, managed state
  *   (`builder`);
  * - work to start once VibeCheck is running (`on_start`);
+ * - its own tray icon (`tray_icon`), as the app icon comes from its own
+ *   tauri.conf.json;
  * - its own graphs and outputs in every listening session (`session`):
  *   each time VibeCheck turns on, `SessionExtension::start` gets the
  *   session's signal and event planes, the safety layer and a way to add
@@ -22,7 +24,7 @@
  * replaces it.
  */
 
-use tauri::{ipc::Invoke, AppHandle, Builder, Wry};
+use tauri::{image::Image, ipc::Invoke, AppHandle, Builder, Wry};
 use tokio::{runtime::Handle, sync::mpsc::UnboundedSender};
 use vibecheck_core::{
     graph::Graph, CommandSlots, Diagnostics, EventPlane, SafetyLayer, SignalPlane,
@@ -42,6 +44,7 @@ pub struct Extensions {
     pub(crate) builder: Vec<BuilderHook>,
     pub(crate) on_start: Vec<StartHook>,
     pub(crate) sessions: Vec<Box<dyn SessionExtension>>,
+    pub(crate) tray_icon: Option<Image<'static>>,
 }
 
 impl Extensions {
@@ -68,6 +71,14 @@ impl Extensions {
     /// event loop.
     pub fn on_start(mut self, start: impl FnOnce(&AppHandle) + Send + 'static) -> Self {
         self.on_start.push(Box::new(start));
+        self
+    }
+
+    /// Uses `icon` in the tray instead of VibeCheck's, e.g.
+    /// `tauri::include_image!("icons/tray.png")`. 64 px reads well on both
+    /// Windows and Linux trays.
+    pub fn tray_icon(mut self, icon: Image<'static>) -> Self {
+        self.tray_icon = Some(icon);
         self
     }
 

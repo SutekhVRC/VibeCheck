@@ -1,7 +1,8 @@
 /*
  * VibeCheck as a library. The VibeCheck app (main.rs) is `run` with its own
  * Tauri context and no extensions; another app can run it with its own
- * context and add commands and services (see extensions.rs).
+ * context and add commands, services and its own tray icon (see
+ * extensions.rs).
  */
 
 use std::sync::Arc;
@@ -81,6 +82,7 @@ pub fn run(context: tauri::Context<tauri::Wry>, extensions: Extensions) {
     // Only apps that configure the updater get it (it needs a key and an
     // endpoint)
     let has_updater = context.config().plugins.0.contains_key("updater");
+    let tray_icon = extensions.tray_icon;
 
     let mut builder = tauri::Builder::default()
         //.plugin(tauri_plugin_os::init())
@@ -105,8 +107,8 @@ pub fn run(context: tauri::Context<tauri::Wry>, extensions: Extensions) {
                 .expect("Failed to get window main");
             window.show().expect("Failed to show window");
         }))
-        .setup(|app| {
-            tray::build(app)?;
+        .setup(move |app| {
+            tray::build(app, tray_icon)?;
             Ok(())
         })
         .manage(vcore::state::VCStateMutex(vibecheck_state_pointer.clone()));
