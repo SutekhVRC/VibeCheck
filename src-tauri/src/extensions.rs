@@ -33,7 +33,7 @@ use vibecheck_core::{
 };
 
 use crate::{
-    toy_handling::runtime::graph_runner::{GraphControl, GraphKey},
+    toy_handling::runtime::graph_runner::{GraphControl, GraphKey, GraphView},
     vcore::state::VCStateMutex,
 };
 
@@ -179,6 +179,16 @@ impl SessionContext {
         let _ = self
             .graphs
             .send(GraphControl::Remove(GraphKey::App(name.into())));
+    }
+
+    /// Every graph the session runs now (each toy's and every app's), with
+    /// its shape and current values. Empty if the session is ending.
+    pub async fn graphs(&self) -> Vec<GraphView> {
+        let (reply, answer) = tokio::sync::oneshot::channel();
+        if self.graphs.send(GraphControl::Describe(reply)).is_err() {
+            return Vec::new();
+        }
+        answer.await.unwrap_or_default()
     }
 }
 

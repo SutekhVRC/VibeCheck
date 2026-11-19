@@ -70,6 +70,10 @@ fn to_core_mode(mode: &ProcessingMode) -> Mode {
 struct OscRounding;
 
 impl Processor for OscRounding {
+    fn kind(&self) -> String {
+        "Round".into()
+    }
+
     fn ports(&self) -> Vec<PortSpec> {
         vec![PortSpec::signal_in("in"), PortSpec::signal_out("out")]
     }

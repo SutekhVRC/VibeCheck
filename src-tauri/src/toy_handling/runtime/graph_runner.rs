@@ -17,12 +17,12 @@ use std::{
 use log::info;
 use parking_lot::Mutex;
 use tokio::{
-    sync::mpsc::UnboundedReceiver,
+    sync::{mpsc::UnboundedReceiver, oneshot},
     time::{interval, Instant, MissedTickBehavior},
 };
 use vibecheck_core::{
-    graph::Graph, CommandSlots, Diagnostics, EventPlane, GraphSnapshot, PortId, SafetyLayer,
-    SignalPlane,
+    graph::Graph, CommandSlots, Diagnostics, EventPlane, GraphShape, GraphSnapshot, PortId,
+    SafetyLayer, SignalPlane,
 };
 
 /// How often graphs run.
@@ -89,6 +89,19 @@ pub enum GraphControl {
     /// output, e.g. on avatar change. The 0 also replaces any command still
     /// waiting to be sent, and lets each output see its toy stop.
     ResetAll,
+    /// Reply with every graph running now: its shape and current values.
+    Describe(oneshot::Sender<Vec<GraphView>>),
+}
+
+/// A running graph, for views of it.
+#[derive(Clone, Debug)]
+pub struct GraphView {
+    /// Which graph.
+    pub key: GraphKey,
+    /// Its nodes, wiring and sinks.
+    pub shape: GraphShape,
+    /// Its current values.
+    pub values: GraphSnapshot,
 }
 
 struct ToyGraph {
@@ -155,6 +168,17 @@ pub async fn graph_runner(
                 Some(GraphControl::Remove(key)) => {
                     toys.remove(&key);
                 }
+                Some(GraphControl::Describe(reply)) => {
+                    let views = toys
+                        .iter()
+                        .map(|(key, toy)| GraphView {
+                            key: key.clone(),
+                            shape: toy.graph.shape(),
+                            values: toy.graph.snapshot(),
+                        })
+                        .collect();
+                    let _ = reply.send(views);
+                }
                 Some(GraphControl::ResetAll) => {
                     for toy in toys.values_mut() {
                         toy.graph.reset();
@@ -213,6 +237,39 @@ mod tests {
             },
         )
         .unwrap()
+    }
+
+    #[tokio::test]
+    async fn describes_every_graph_with_its_values() {
+        let signals = SignalPlane::new();
+        let (control, control_rx) = unbounded_channel();
+        tokio::spawn(graph_runner(
+            control_rx,
+            signals.clone(),
+            EventPlane::new().0,
+            SafetyLayer::default(),
+            GraphValues::default(),
+        ));
+        control
+            .send(GraphControl::Set {
+                key: GraphKey::App("app".into()),
+                graph: graph(),
+                slots: CommandSlots::new(),
+            })
+            .unwrap();
+        signals.write(
+            &PortId::new(ModuleInstanceId::new(OSC_MODULE), "/avatar/parameters/Boop"),
+            Signal::Float(0.5),
+        );
+        sleep(Duration::from_millis(50)).await;
+
+        let (reply, answer) = oneshot::channel();
+        control.send(GraphControl::Describe(reply)).unwrap();
+        let views = answer.await.unwrap();
+        assert_eq!(views.len(), 1);
+        assert_eq!(views[0].key, GraphKey::App("app".into()));
+        assert!(!views[0].shape.nodes.is_empty());
+        assert_eq!(views[0].values.sinks[0].last, Some(0.5));
     }
 
     #[tokio::test]

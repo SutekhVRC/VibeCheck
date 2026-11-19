@@ -43,6 +43,10 @@ pub fn flip(level: f64) -> f64 {
 }
 
 impl Processor for OutputLevels {
+    fn kind(&self) -> String {
+        "Idle and Range".into()
+    }
+
     fn ports(&self) -> Vec<PortSpec> {
         vec![PortSpec::signal_in("in"), PortSpec::signal_out("out")]
     }

@@ -20,6 +20,8 @@ pub mod embed {
     pub use crate::toy_handling::input_processor::penetration_systems::{
         PenetrationSystem, PenetrationSystemType,
     };
+    /// A running graph and which one it is (see `SessionContext::graphs`).
+    pub use crate::toy_handling::runtime::graph_runner::{GraphKey, GraphView};
     pub use crate::toy_handling::runtime::toy_graph::{add_feature_inputs, OSC_MODULE};
     /// Where a toy's sent levels are on the signal plane: its module and
     /// each motor's port (see toy_emitter_thread.rs `SentLevels`).

@@ -38,7 +38,7 @@ pub use address::{ModuleInstanceId, PortId};
 pub use diagnostics::{Diagnostics, LogEntry};
 pub use error::{Error, Result};
 pub use event::{Event, EventId, EventKind, EventPlane, EventReceiver, Value};
-pub use graph::{Graph, GraphBuilder, GraphSnapshot, SinkValue};
+pub use graph::{Graph, GraphBuilder, GraphShape, GraphSnapshot, NodeShape, SinkShape, SinkValue};
 pub use module::{
     process_one, EventOut, Input, InputCtx, Output, PortDirection, PortKind, PortSpec, Processor,
     Watch,

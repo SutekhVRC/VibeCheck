@@ -52,6 +52,10 @@ impl TPSProcessor {
 }
 
 impl InputProcessor for TPSProcessor {
+    fn name(&self) -> &'static str {
+        "TPS"
+    }
+
     fn prefixes(&self) -> Vec<String> {
         vec![PREFIX.to_owned()]
     }

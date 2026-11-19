@@ -513,6 +513,71 @@ impl Graph {
         self.nodes.iter().map(|n| &n.id)
     }
 
+    /// What the graph is made of: nodes, wiring and sinks. For views of
+    /// the graph; pair it with [`snapshot`](Self::snapshot) for its values.
+    pub fn shape(&self) -> GraphShape {
+        let output = |node: usize, port: usize| {
+            let node = &self.nodes[node];
+            PortId::new(node.id.clone(), &node.output_names[port])
+        };
+        let nodes = self
+            .nodes
+            .iter()
+            .map(|node| {
+                let ports = node.processor.ports();
+                let names = |direction: PortDirection, kind: PortKind| -> Vec<Arc<str>> {
+                    ports
+                        .iter()
+                        .filter(|p| p.direction == direction && p.kind == kind)
+                        .map(|p| Arc::from(p.name.as_str()))
+                        .collect()
+                };
+                let input_names = names(PortDirection::In, PortKind::Signal);
+                NodeShape {
+                    id: node.id.clone(),
+                    kind: node.processor.kind(),
+                    inputs: input_names
+                        .into_iter()
+                        .zip(&node.inputs)
+                        .map(|(name, input)| {
+                            let from = match input {
+                                InputRef::Node { node, port } => output(*node, *port),
+                                InputRef::External(port) => port.clone(),
+                            };
+                            (name, from)
+                        })
+                        .collect(),
+                    outputs: node.output_names.clone(),
+                    event_outputs: names(PortDirection::Out, PortKind::Event),
+                    watches: node.watches.iter().map(|(w, _)| w.clone()).collect(),
+                }
+            })
+            .collect();
+        let sinks = self
+            .sinks
+            .iter()
+            .map(|sink| SinkShape {
+                from: output(sink.node, sink.port),
+                target: sink.target.clone(),
+                duration_ms: sink.duration_ms,
+            })
+            .collect();
+        let event_sinks = self
+            .event_sinks
+            .iter()
+            .map(|sink| SinkShape {
+                from: PortId::new(self.nodes[sink.node].id.clone(), &sink.port),
+                target: sink.target.clone(),
+                duration_ms: sink.duration_ms,
+            })
+            .collect();
+        GraphShape {
+            nodes,
+            sinks,
+            event_sinks,
+        }
+    }
+
     /// Every node output's latest value, and the last value each sink sent,
     /// for views that show what's going on inside (diagnostics, a graph
     /// editor). `None` means nothing yet, e.g. a node that hasn't had input.
@@ -541,6 +606,46 @@ impl Graph {
             .collect();
         GraphSnapshot { outputs, sinks }
     }
+}
+
+/// What a graph is made of, for views of it ([`Graph::shape`]).
+#[derive(Clone, Debug, PartialEq)]
+pub struct GraphShape {
+    /// Each node, in run order.
+    pub nodes: Vec<NodeShape>,
+    /// Each sink, in the order they were added.
+    pub sinks: Vec<SinkShape>,
+    /// Each event sink, in the order they were added.
+    pub event_sinks: Vec<SinkShape>,
+}
+
+/// A node in a [`GraphShape`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct NodeShape {
+    /// The node's id in the graph.
+    pub id: ModuleInstanceId,
+    /// What kind of node it is ([`Processor::kind`]).
+    pub kind: String,
+    /// Each signal input and what it reads: another node's output, or a
+    /// port on the signal plane (e.g. an avatar parameter).
+    pub inputs: Vec<(Arc<str>, PortId)>,
+    /// Its signal outputs.
+    pub outputs: Vec<Arc<str>>,
+    /// The ports it publishes events on.
+    pub event_outputs: Vec<Arc<str>>,
+    /// Signal-plane ports it reads besides its inputs.
+    pub watches: Vec<Watch>,
+}
+
+/// A sink or event sink in a [`GraphShape`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct SinkShape {
+    /// The node output (or event port) it sends.
+    pub from: PortId,
+    /// Where it sends it, e.g. a motor.
+    pub target: PortId,
+    /// The duration it sends with, for timed outputs.
+    pub duration_ms: Option<u32>,
 }
 
 /// What [`Graph::snapshot`] returns.
@@ -654,6 +759,43 @@ mod tests {
             .iter()
             .map(|c| (c.target().to_string(), c.level()))
             .collect()
+    }
+
+    #[test]
+    fn shape_shows_nodes_wiring_and_sinks() {
+        let mut b = GraphBuilder::new();
+        b.add_processor(id("add"), Box::new(Add(0.25))).unwrap();
+        b.add_processor(id("more"), Box::new(Add(0.5))).unwrap();
+        b.connect(port("osc", "Boop"), port("add", "in")).unwrap();
+        b.connect(port("add", "out"), port("more", "in")).unwrap();
+        b.add_sink(port("more", "out"), port("toy", "Vibrator_0"), Some(100))
+            .unwrap();
+        let shape = b.build().unwrap().shape();
+
+        assert_eq!(shape.nodes.len(), 2);
+        let add = &shape.nodes[0];
+        assert_eq!(add.id, id("add"));
+        assert_eq!(add.kind, "Add", "the type's name by default");
+        assert_eq!(
+            add.inputs,
+            vec![(Arc::from("in"), port("osc", "Boop"))],
+            "an outside input"
+        );
+        assert_eq!(add.outputs, vec![Arc::from("out")]);
+        assert_eq!(
+            shape.nodes[1].inputs,
+            vec![(Arc::from("in"), port("add", "out"))],
+            "wired from the first node"
+        );
+        assert_eq!(
+            shape.sinks,
+            vec![SinkShape {
+                from: port("more", "out"),
+                target: port("toy", "Vibrator_0"),
+                duration_ms: Some(100),
+            }]
+        );
+        assert!(shape.event_sinks.is_empty());
     }
 
     #[test]

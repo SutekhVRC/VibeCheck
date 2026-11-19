@@ -76,6 +76,10 @@ fn is_rest(value: f64, flip: bool) -> bool {
 pub struct RawMode;
 
 impl Processor for RawMode {
+    fn kind(&self) -> String {
+        "Raw".into()
+    }
+
     fn ports(&self) -> Vec<PortSpec> {
         ports()
     }
@@ -141,6 +145,10 @@ impl SmoothMode {
 }
 
 impl Processor for SmoothMode {
+    fn kind(&self) -> String {
+        "Smooth".into()
+    }
+
     fn ports(&self) -> Vec<PortSpec> {
         ports()
     }
@@ -247,6 +255,10 @@ impl RateMode {
 }
 
 impl Processor for RateMode {
+    fn kind(&self) -> String {
+        "Rate".into()
+    }
+
     fn ports(&self) -> Vec<PortSpec> {
         ports()
     }
@@ -277,6 +289,10 @@ impl ConstantMode {
 }
 
 impl Processor for ConstantMode {
+    fn kind(&self) -> String {
+        "Constant".into()
+    }
+
     fn ports(&self) -> Vec<PortSpec> {
         ports()
     }
