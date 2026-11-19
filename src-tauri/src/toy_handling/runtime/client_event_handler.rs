@@ -25,9 +25,8 @@ use futures::StreamExt;
 use futures_timer::Delay;
 use log::{error as logerr, info, trace, warn};
 use parking_lot::Mutex;
-use std::sync::mpsc::Sender;
 use tauri::AppHandle;
-use tauri_plugin_notification::{Notification, NotificationExt};
+use tauri_plugin_notification::NotificationExt;
 use tokio::sync::mpsc::UnboundedSender;
 use vibecheck_core::modules::buttplug::LegacyLayout;
 
@@ -102,7 +101,6 @@ async fn read_battery_later(
 pub async fn client_event_handler(
     mut event_stream: impl futures::Stream<Item = ButtplugClientEvent> + std::marker::Unpin,
     vibecheck_state_pointer: Arc<Mutex<VibeCheckState>>,
-    identifier: String,
     app_handle: AppHandle,
     tme_send: UnboundedSender<ToyManagementEvent>,
     reporter: ErrorReporter,

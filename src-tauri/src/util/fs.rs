@@ -1,4 +1,3 @@
-use directories::BaseDirs;
 use std::{
     ffi::OsStr,
     path::{Path, PathBuf},
@@ -6,26 +5,6 @@ use std::{
 use tauri::{AppHandle, Manager};
 
 use crate::util::errors::UtilError;
-
-pub enum ConfigFileType {
-    Toy,
-    App,
-}
-
-impl ToString for ConfigFileType {
-    fn to_string(&self) -> String {
-        match self {
-            #[cfg(target_os = "linux")]
-            Self::Toy => "ToyConfigs".to_string(),
-            #[cfg(target_os = "windows")]
-            Self::Toy => "ToyConfigs".to_string(),
-            #[cfg(target_os = "linux")]
-            Self::App => "".to_string(),
-            #[cfg(target_os = "windows")]
-            Self::App => "".to_string(),
-        }
-    }
-}
 
 /// Renames a settings file that couldn't be read to `<path>.bad`
 /// (replacing an older one), so it's kept for the user instead of being

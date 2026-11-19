@@ -19,7 +19,9 @@ pub trait FromFrontend<F> {
     fn from_frontend(&mut self, frontend_type: F) -> Self::OutputType;
 }
 
+/* Unused atm
 pub trait FromBackend<B> {
     type OutputType;
     fn from_backend(&mut self, backend_type: B) -> Self::OutputType;
 }
+*/

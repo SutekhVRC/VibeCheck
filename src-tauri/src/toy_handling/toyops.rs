@@ -499,11 +499,6 @@ impl VCFeatureType {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct ToyConfig {
-    pub toy_feature_map: HashMap<String, VCToyFeature>,
-}
-
 /*
     Parse configs of toy names and populate toys on ToyAdd
     If no config put toy to Auto params

@@ -342,7 +342,6 @@ impl VibeCheckState {
         let ctx = toy_service::ToyServiceContext {
             state: self.vibecheck_state_pointer.clone().expect("checked above"),
             status: self.toy_service_status.clone(),
-            identifier: self.identifier.clone(),
             app_handle,
             tme_send: self.tme_send_tx.clone(),
             reporter: self.reporter.clone(),

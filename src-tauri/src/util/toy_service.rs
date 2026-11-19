@@ -126,7 +126,6 @@ async fn connect(connection: &ToyConnection) -> Result<ButtplugClient, String> {
 pub struct ToyServiceContext {
     pub state: Arc<Mutex<VibeCheckState>>,
     pub status: Arc<Mutex<ToyServiceStatus>>,
-    pub identifier: String,
     pub app_handle: AppHandle,
     pub tme_send: UnboundedSender<ToyManagementEvent>,
     pub reporter: ErrorReporter,
@@ -173,7 +172,6 @@ pub async fn run(ctx: ToyServiceContext, mut connection: watch::Receiver<ToyConn
         let mut handler = tokio::spawn(client_event_handler(
             events,
             ctx.state.clone(),
-            ctx.identifier.clone(),
             ctx.app_handle.clone(),
             ctx.tme_send.clone(),
             ctx.reporter.clone(),
