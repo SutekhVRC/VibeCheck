@@ -335,10 +335,12 @@ Three ways in, all ending in `trigger_panic` (`vcore/panic.rs`):
 `trigger_panic`:
 
 1. calls `panic()` on the app-wide safety layer: every new command is refused, every command already made is stale, everything is disarmed;
-2. stops every device with Buttplug's stop-all, awaited without holding the state lock;
+2. stops every device with Buttplug's stop-all, awaited without holding the state lock (each toy's emitter stops its toy again, see below);
 3. emits `FeCoreEvent::Safety(Panicked)`, so the sidebar shows "All toys stopped" with **Resume**.
 
 That covers every path a level could take: graph sinks get `None` from `clamp`, commands already sitting in a toy's slots fail `admits` in the emitter, and the Test button's `limit` returns 0.
+
+One command can still be in flight: one the emitter had already checked and was sending when the panic came. Over Bluetooth, and more so over Intiface on Wi-Fi, it can reach the toy after the stop-all and start it again. So each toy's emitter also stops its own toy (`ButtplugOutput::stop`) the first time it sees the panic. It sends one command at a time, so that stop goes after anything it was already sending, and is the last thing the toy gets.
 
 **Resume** (`panic_resume` → `resume_from_panic`) is only possible from the app, on purpose: neither the hotkey nor the OSC parameter can resume. After resuming, nothing is replayed: values that arrived during the panic count as already seen by each graph sink, so each motor waits for its next change. On load, the frontend asks `get_panic_state`, in case a panic happened before the window opened.
 

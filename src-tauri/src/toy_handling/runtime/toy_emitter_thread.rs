@@ -93,7 +93,13 @@ impl Drop for SentLevels {
 
 /// Sends the latest command for every motor that changed since the last tick,
 /// at the toy's update rate, and reports when the toy starts or stops.
+///
+/// On a panic stop it stops its toy itself, once. The panic also stops every
+/// device straight away, but a command this task was already sending could
+/// reach the toy after that stop and leave it running; this task sends one
+/// command at a time, so its own stop comes after it.
 pub async fn toy_emitter_thread(mut data: EmitterThreadData) {
+    let mut stopped_for_panic = false;
     loop {
         let start = Instant::now();
 
@@ -114,7 +120,15 @@ pub async fn toy_emitter_thread(mut data: EmitterThreadData) {
             }
         }
         if data.safety.is_panicked() {
+            if !stopped_for_panic {
+                stopped_for_panic = true;
+                if let Err(e) = data.output.stop().await {
+                    logerr!("Panic stop: couldn't stop the toy: {}", e);
+                }
+            }
             data.sent.stopped();
+        } else {
+            stopped_for_panic = false;
         }
         // A panic stops devices directly, not through the output
         data.output
