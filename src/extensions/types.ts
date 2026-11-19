@@ -1,3 +1,4 @@
+import type { FeVCToy } from "@bindings/FeVCToy";
 import type { ComponentType } from "react";
 
 /*
@@ -22,6 +23,11 @@ export type ExtensionPageProps = {
   item: string | null;
   /** Opens the page itself (null) or one of its items, e.g. one just added */
   open: (item: string | null) => void;
+  /**
+   * Every toy the app lists: connected ones (with their real sub_id) and
+   * saved ones that aren't connected, as in the sidebar
+   */
+  toys: FeVCToy[];
 };
 
 /** A page of its own, opened from the sidebar */

@@ -237,7 +237,7 @@ Stopping the devices themselves is the caller's job (the app calls Buttplug's st
 
 ### Arming and rate limits
 
-`set_policy(module, TargetPolicy { requires_arming, min_interval })` marks an output module as risky and/or rate-limited. Modules without a policy (toys) only get the caps and panic stop.
+`set_policy(module, TargetPolicy { requires_arming, min_interval, unscaled })` marks an output module as risky and/or rate-limited. Modules without a policy (toys) only get the caps and panic stop. An `unscaled` module's levels aren't device intensities (e.g. a value shown somewhere else), so they're only clamped to 0..=1: the master intensity and level cap would change what they mean. Panic, arming and rate limits still apply to it.
 
 - `arm(module)` (refused while panicked), `disarm(module)`, `disarm_all()`, `is_armed(module)`.
 - Arming lasts until disarmed or a panic. Nothing is armed by default.

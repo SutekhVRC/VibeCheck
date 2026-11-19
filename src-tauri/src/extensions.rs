@@ -24,13 +24,18 @@
  * replaces it.
  */
 
-use tauri::{image::Image, ipc::Invoke, AppHandle, Builder, Wry};
+use std::net::SocketAddrV4;
+
+use tauri::{image::Image, ipc::Invoke, AppHandle, Builder, Manager, Wry};
 use tokio::{runtime::Handle, sync::mpsc::UnboundedSender};
 use vibecheck_core::{
     graph::Graph, CommandSlots, Diagnostics, EventPlane, SafetyLayer, SignalPlane,
 };
 
-use crate::toy_handling::runtime::graph_runner::{GraphControl, GraphKey};
+use crate::{
+    toy_handling::runtime::graph_runner::{GraphControl, GraphKey},
+    vcore::state::VCStateMutex,
+};
 
 pub(crate) type Handler = Box<dyn Fn(Invoke<Wry>) -> bool + Send + Sync>;
 type BuilderHook = Box<dyn FnOnce(Builder<Wry>) -> Builder<Wry>>;
@@ -146,6 +151,15 @@ impl SessionContext {
     /// The diagnostics switch and log.
     pub fn diagnostics(&self) -> &Diagnostics {
         &self.diagnostics
+    }
+
+    /// Where VibeCheck sends OSC to VRChat right now: the address set in
+    /// Settings, or in Automatic mode the one VRChat advertises (it can
+    /// change while the session runs, so ask again rather than keeping it).
+    /// Send from your own socket bound to port 0; never bind or advertise
+    /// VRChat's ports.
+    pub fn osc_remote(&self) -> SocketAddrV4 {
+        self.app.state::<VCStateMutex>().0.lock().osc_remote()
     }
 
     /// Runs `graph` in the session's graph runner (100 Hz) under `name`,

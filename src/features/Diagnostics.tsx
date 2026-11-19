@@ -24,6 +24,11 @@ import { toast } from "sonner";
 
 /** The OSC input's module id (src-tauri toy_graph.rs OSC_MODULE) */
 const OSC_MODULE = "osc";
+/**
+ * Toys' module ids start with this (src-tauri toy_output.rs toy_module_id).
+ * Their values are the levels each motor was last sent.
+ */
+const TOY_MODULE_PREFIX = "toy:";
 
 /** Log entries from the OSCQuery lookup (src-tauri osc/avatar_query.rs) */
 const OSCQUERY_MODULE = "oscquery";
@@ -174,7 +179,8 @@ function ValuesTab({
   toyNames: FeVCToy[];
   matches: (text: string) => boolean;
 }) {
-  // Group by input: OSC first, then any other input in name order
+  // Group by module: OSC first, then other inputs and toys' sent levels in
+  // name order
   const modules = [...new Set(values.map((v) => v.module))].sort((a, b) =>
     a === OSC_MODULE ? -1 : b === OSC_MODULE ? 1 : a.localeCompare(b),
   );
@@ -196,7 +202,11 @@ function ValuesTab({
           <Section
             key={module}
             title={
-              module === OSC_MODULE ? "Avatar parameters" : `Input: ${module}`
+              module === OSC_MODULE
+                ? "Avatar parameters"
+                : module.startsWith(TOY_MODULE_PREFIX)
+                  ? `Sent to ${module.slice(TOY_MODULE_PREFIX.length)}`
+                  : `Input: ${module}`
             }
             hint={`${rows.length} ${rows.length === 1 ? "value" : "values"}`}
           >

@@ -354,6 +354,18 @@ impl ButtplugOutput {
         }
     }
 
+    /// Stops every motor on the device now, outside the safety layer (e.g.
+    /// on a panic stop). Called from the task that sends this output's
+    /// commands, it goes after any command that was already being sent, so
+    /// it's the last thing the device gets.
+    pub async fn stop(&mut self) -> Result<()> {
+        self.activity.clear();
+        self.device
+            .stop()
+            .await
+            .map_err(|e| Error::OutputUnavailable(e.to_string()))
+    }
+
     async fn send(&self, spec: ActuatorSpec, cmd: &ClampedCmd) -> Result<()> {
         let level = device_level(cmd.level(), spec.flip);
         send_to_actuator(&self.device, spec.actuator, level, cmd.duration_ms()).await

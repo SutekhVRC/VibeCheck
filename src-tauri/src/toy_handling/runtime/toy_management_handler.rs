@@ -49,7 +49,9 @@ use crate::{
             graph_runner::{graph_runner, GraphControl, GraphKey, GraphValues},
             osc_routing::{core_event_handler, osc_router},
             presence::{publish_connection, vrchat_presence},
-            toy_emitter_thread::{toy_emitter_thread, EmitterThreadData, ToyEmitterThreadSignal},
+            toy_emitter_thread::{
+                toy_emitter_thread, EmitterThreadData, SentLevels, ToyEmitterThreadSignal,
+            },
             toy_graph::{build_toy_graph, OSC_MODULE},
             toy_output::{buttplug_output, toy_actuators, toy_module_id},
         },
@@ -110,6 +112,7 @@ async fn toy_task(
     mut control_rx: UnboundedReceiver<VCToy>,
     mut vc_toy: VCToy,
     slots: CommandSlots,
+    signals: SignalPlane,
     events: EventPlane,
     safety: SafetyLayer,
 ) {
@@ -124,6 +127,7 @@ async fn toy_task(
         buttplug_output(&vc_toy).with_events(module.clone(), events),
         vc_toy.bt_update_rate,
         safety,
+        SentLevels::new(signals),
     );
 
     async_rt
@@ -287,6 +291,7 @@ fn start_toy(session: &Session, toy: VCToy) -> RunningToy {
             control_rx,
             toy,
             slots.clone(),
+            session.signals.clone(),
             session.events.clone(),
             session.safety.clone(),
         ));

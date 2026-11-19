@@ -36,7 +36,7 @@ flowchart LR
 1. **`OscInput`** (`vibecheck-core/src/modules/osc.rs`) receives OSC from VRChat and unpacks bundles. Every parameter value is written to the session's **signal plane**, which keeps only the latest value per address. `/avatar/change` becomes an `AvatarChange` event. Every other message is also passed, in order, to the OSC router through the input's *tap*.
 2. **OSC router** (`osc_routing.rs`) handles VibeCheck OSC API messages (`/avatar/parameters/vibecheck/api/...`). Nothing else needs routing (see [Routing](#routing)).
 3. **Graph runner** (`graph_runner.rs`) ticks every toy's [graph](#the-graph) 100 times a second. Each tick reads the latest values from the signal plane, runs the chains, and for every motor whose value changed, passes it through `SafetyLayer::clamp` into the toy's `CommandSlots`.
-4. **Emitter task** (`toy_emitter_thread.rs`) wakes at the toy's Update Rate, takes every command that changed since its last run, drops any the safety layer no longer `admits` (a panic since it was made), and hands the rest to `ButtplugOutput::apply`, which sends one Buttplug command per motor.
+4. **Emitter task** (`toy_emitter_thread.rs`) wakes at the toy's Update Rate, takes every command that changed since its last run, drops any the safety layer no longer `admits` (a panic since it was made), and hands the rest to `ButtplugOutput::apply`, which sends one Buttplug command per motor. What was sent is written back to the signal plane under the toy's module and the motor's port (`toy:<name>:<sub id>` / `Vibrate_0`), so other graphs and Diagnostics can read what each motor is doing: the intensity after the safety layer, before Flip Input. A panic shows as 0, and so does a toy that stopped (disconnected, or VibeCheck turned off), so anything following it doesn't keep its last level.
 
 ## The graph
 
@@ -335,10 +335,12 @@ Three ways in, all ending in `trigger_panic` (`vcore/panic.rs`):
 `trigger_panic`:
 
 1. calls `panic()` on the app-wide safety layer: every new command is refused, every command already made is stale, everything is disarmed;
-2. stops every device with Buttplug's stop-all, awaited without holding the state lock;
+2. stops every device with Buttplug's stop-all, awaited without holding the state lock (each toy's emitter stops its toy again, see below);
 3. emits `FeCoreEvent::Safety(Panicked)`, so the sidebar shows "All toys stopped" with **Resume**.
 
 That covers every path a level could take: graph sinks get `None` from `clamp`, commands already sitting in a toy's slots fail `admits` in the emitter, and the Test button's `limit` returns 0.
+
+One command can still be in flight: one the emitter had already checked and was sending when the panic came. Over Bluetooth, and more so over Intiface on Wi-Fi, it can reach the toy after the stop-all and start it again. So each toy's emitter also stops its own toy (`ButtplugOutput::stop`) the first time it sees the panic. It sends one command at a time, so that stop goes after anything it was already sending, and is the last thing the toy gets.
 
 **Resume** (`panic_resume` → `resume_from_panic`) is only possible from the app, on purpose: neither the hotkey nor the OSC parameter can resume. After resuming, nothing is replayed: values that arrived during the panic count as already seen by each graph sink, so each motor waits for its next change. On load, the frontend asks `get_panic_state`, in case a panic happened before the window opened.
 
