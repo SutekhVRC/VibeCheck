@@ -140,7 +140,22 @@ pub async fn run(ctx: ToyServiceContext, mut connection: watch::Receiver<ToyConn
         *ctx.status.lock() = ToyServiceStatus::Connecting;
         info!("Toy service: connecting ({current:?})");
 
-        let client = match connect(&current).await {
+        // A change while connecting (e.g. to an address that doesn't
+        // answer, which can take a while to fail) starts over at once
+        let attempt = tokio::select! {
+            result = connect(&current) => Some(result),
+            changed = connection.changed() => {
+                if changed.is_err() {
+                    return; // The app is closing
+                }
+                None
+            }
+        };
+        let Some(attempt) = attempt else {
+            info!("Toy service: setting changed while connecting");
+            continue;
+        };
+        let client = match attempt {
             Ok(client) => client,
             Err(e) => {
                 warn!("Toy service: {e}");
