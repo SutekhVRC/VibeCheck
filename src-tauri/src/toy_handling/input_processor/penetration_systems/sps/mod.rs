@@ -99,6 +99,10 @@ impl SPSProcessor {
 }
 
 impl InputProcessor for SPSProcessor {
+    fn name(&self) -> &'static str {
+        "SPS"
+    }
+
     fn prefixes(&self) -> Vec<String> {
         vec![format!("{PARAMS}OGB/"), format!("{PARAMS}VFH/Zone/")]
     }

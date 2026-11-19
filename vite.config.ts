@@ -12,6 +12,9 @@ const extensions = process.env.VIBECHECK_EXTENSIONS
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    // One copy of React, even for libraries an extensions module brings
+    // from its own folder
+    dedupe: ["react", "react-dom"],
     alias: {
       "@extensions":
         extensions ??

@@ -252,6 +252,13 @@ impl Watch {
     }
 }
 
+/// `T`'s name without its module path or generic parameters.
+fn short_type_name<T: ?Sized>() -> String {
+    let full = std::any::type_name::<T>();
+    let base = full.split('<').next().unwrap_or(full);
+    base.rsplit("::").next().unwrap_or(base).to_owned()
+}
+
 /// A module that turns signals into signals once per graph tick, and may
 /// emit events. It runs as a node in a [`Graph`](crate::graph::Graph). See
 /// `docs/runtime/writing-modules.md`.
@@ -341,6 +348,12 @@ pub trait Processor: Send {
     /// The processor's ports. Its signal inputs and outputs, in this order,
     /// are the order of `ins` and `out` in [`tick`](Processor::tick).
     fn ports(&self) -> Vec<PortSpec>;
+
+    /// What kind of node this is, for views of a graph, e.g. `Smooth`.
+    /// Default: the type's name without its path.
+    fn kind(&self) -> String {
+        short_type_name::<Self>()
+    }
 
     /// Signal-plane ports this processor reads besides its wired inputs.
     /// Asked once, when the node is added to a graph. Default: none.

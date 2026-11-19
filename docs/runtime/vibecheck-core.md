@@ -28,7 +28,7 @@ The app only uses graphs generated from toy settings; there's no way to build gr
 |---|---|---|
 | `address.rs` | `ModuleInstanceId`, `PortId` | Yes |
 | `safety.rs` | `SafetyLayer`, `SafetyCaps`, `ClampedCmd` | Yes |
-| `graph.rs` | `GraphBuilder`, `Graph`, `GraphSnapshot`, `SinkValue` | Yes: one graph per toy |
+| `graph.rs` | `GraphBuilder`, `Graph`, `GraphShape`, `GraphSnapshot`, `SinkValue` | Yes: one graph per toy |
 | `diagnostics.rs` | `Diagnostics`, `LogEntry` | Yes: the diagnostics view |
 | `slots.rs` | `CommandSlots` | Yes |
 | `modules/buttplug.rs` | `ButtplugOutput` (with `OutputError` and `Activity` events), `Actuator`, `LegacyLayout`, `send_to_actuator` | Yes |
@@ -160,6 +160,8 @@ The app's input processors (SPS/TPS) run this way; see [toy-command-path.md](toy
 `Graph::tick` doesn't sleep or spawn anything; the caller decides the rate. The app ticks at 100 Hz (`graph_runner.rs`) and passes the real time since the last tick as `dt`, capped at 0.1 s.
 
 Node outputs live inside the graph, not on the signal plane. `Graph::snapshot()` copies them out for views (diagnostics, later a graph editor): every node output with its latest value (`None` before its first), and every sink as a `SinkValue { from, target, last }`, where `last` is the level it last sent, before the safety layer.
+
+`Graph::shape()` describes what the graph is made of, for the same views: each node (in run order) with its kind (`Processor::kind`, e.g. `Smooth`; the type's name unless the processor says otherwise), its inputs and what each reads (another node's output, or a signal-plane port such as an avatar parameter), its outputs, event ports and watches; and every sink and event sink with its target. In the app, `SessionContext::graphs()` returns every running graph (toys' and apps') with its shape and snapshot, through the graph runner (`GraphControl::Describe`).
 
 ## Diagnostics
 

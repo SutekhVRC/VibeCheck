@@ -2,6 +2,12 @@
  * Ticks every toy's graph, and any graphs an app added (see extensions.rs),
  * at a fixed rate.
  *
+ * Commands are routed by their target's module: each output registers its
+ * module with its CommandSlots (every toy does; apps register theirs), so a
+ * graph can drive any of them, e.g. a toy's motor and an avatar parameter
+ * at once. A command for a module nothing registered goes to the graph's
+ * own slots.
+ *
  * One task per listening session. Each tick it runs every graph against the
  * session's signal plane and writes the resulting commands into that graph's
  * CommandSlots, which its output sends at its own rate (a toy's emitter at
@@ -17,12 +23,12 @@ use std::{
 use log::info;
 use parking_lot::Mutex;
 use tokio::{
-    sync::mpsc::UnboundedReceiver,
+    sync::{mpsc::UnboundedReceiver, oneshot},
     time::{interval, Instant, MissedTickBehavior},
 };
 use vibecheck_core::{
-    graph::Graph, CommandSlots, Diagnostics, EventPlane, GraphSnapshot, PortId, SafetyLayer,
-    SignalPlane,
+    graph::Graph, ClampedCmd, CommandSlots, Diagnostics, EventPlane, GraphShape, GraphSnapshot,
+    ModuleInstanceId, PortId, SafetyLayer, SignalPlane,
 };
 
 /// How often graphs run.
@@ -89,6 +95,37 @@ pub enum GraphControl {
     /// output, e.g. on avatar change. The 0 also replaces any command still
     /// waiting to be sent, and lets each output see its toy stop.
     ResetAll,
+    /// Reply with every graph running now: its shape and current values.
+    Describe(oneshot::Sender<Vec<GraphView>>),
+    /// Commands for `module`'s ports go to `slots`, from any graph.
+    SetOutput {
+        module: ModuleInstanceId,
+        slots: CommandSlots,
+    },
+    /// `module` no longer takes commands from other graphs.
+    RemoveOutput(ModuleInstanceId),
+}
+
+/// Where each registered output's commands go.
+type Outputs = HashMap<ModuleInstanceId, CommandSlots>;
+
+/// Writes `cmd` to the output that owns its target, or to `fallback`.
+fn route(cmd: ClampedCmd, outputs: &Outputs, fallback: &CommandSlots) {
+    outputs
+        .get(&cmd.target().module)
+        .unwrap_or(fallback)
+        .write(cmd);
+}
+
+/// A running graph, for views of it.
+#[derive(Clone, Debug)]
+pub struct GraphView {
+    /// Which graph.
+    pub key: GraphKey,
+    /// Its nodes, wiring and sinks.
+    pub shape: GraphShape,
+    /// Its current values.
+    pub values: GraphSnapshot,
 }
 
 struct ToyGraph {
@@ -97,14 +134,14 @@ struct ToyGraph {
 }
 
 /// Sends 0 to every output `toy` drives.
-fn stop_outputs(toy: &ToyGraph, safety: &SafetyLayer) {
+fn stop_outputs(toy: &ToyGraph, safety: &SafetyLayer, outputs: &Outputs) {
     let mut stopped = HashSet::new();
     for (target, duration_ms) in toy.graph.sink_targets() {
         if !stopped.insert(target) {
             continue;
         }
         if let Some(cmd) = safety.clamp(target.clone(), 0.0, duration_ms) {
-            toy.slots.write(cmd);
+            route(cmd, outputs, &toy.slots);
         }
     }
 }
@@ -112,7 +149,7 @@ fn stop_outputs(toy: &ToyGraph, safety: &SafetyLayer) {
 /// Sends 0 to every output `old` drove that `new` doesn't, e.g. a feature
 /// that was just disabled. Nothing drives those outputs any more, so without
 /// this they'd keep their last level.
-fn stop_dropped_outputs(old: &ToyGraph, new: &ToyGraph, safety: &SafetyLayer) {
+fn stop_dropped_outputs(old: &ToyGraph, new: &ToyGraph, safety: &SafetyLayer, outputs: &Outputs) {
     let kept: HashSet<&PortId> = new.graph.sink_targets().map(|(t, _)| t).collect();
     let mut stopped = HashSet::new();
     for (target, duration_ms) in old.graph.sink_targets() {
@@ -120,7 +157,7 @@ fn stop_dropped_outputs(old: &ToyGraph, new: &ToyGraph, safety: &SafetyLayer) {
             continue;
         }
         if let Some(cmd) = safety.clamp(target.clone(), 0.0, duration_ms) {
-            new.slots.write(cmd);
+            route(cmd, outputs, &new.slots);
         }
     }
 }
@@ -135,6 +172,7 @@ pub async fn graph_runner(
     values: GraphValues,
 ) {
     let mut toys: HashMap<GraphKey, ToyGraph> = HashMap::new();
+    let mut outputs: Outputs = HashMap::new();
 
     let mut ticker = interval(Duration::from_nanos(1_000_000_000 / GRAPH_TICK_HZ));
     ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
@@ -149,16 +187,33 @@ pub async fn graph_runner(
                 Some(GraphControl::Set { key, graph, slots }) => {
                     let old = toys.insert(key.clone(), ToyGraph { graph, slots });
                     if let Some(old) = old {
-                        stop_dropped_outputs(&old, &toys[&key], &safety);
+                        stop_dropped_outputs(&old, &toys[&key], &safety, &outputs);
                     }
                 }
                 Some(GraphControl::Remove(key)) => {
                     toys.remove(&key);
                 }
+                Some(GraphControl::Describe(reply)) => {
+                    let views = toys
+                        .iter()
+                        .map(|(key, toy)| GraphView {
+                            key: key.clone(),
+                            shape: toy.graph.shape(),
+                            values: toy.graph.snapshot(),
+                        })
+                        .collect();
+                    let _ = reply.send(views);
+                }
+                Some(GraphControl::SetOutput { module, slots }) => {
+                    outputs.insert(module, slots);
+                }
+                Some(GraphControl::RemoveOutput(module)) => {
+                    outputs.remove(&module);
+                }
                 Some(GraphControl::ResetAll) => {
                     for toy in toys.values_mut() {
                         toy.graph.reset();
-                        stop_outputs(toy, &safety);
+                        stop_outputs(toy, &safety, &outputs);
                     }
                 }
                 None => break,
@@ -169,7 +224,7 @@ pub async fn graph_runner(
                 last_tick = now;
                 for toy in toys.values_mut() {
                     for cmd in toy.graph.tick(&signals, dt, &safety, &events) {
-                        toy.slots.write(cmd);
+                        route(cmd, &outputs, &toy.slots);
                     }
                 }
                 ticks = ticks.wrapping_add(1);
@@ -213,6 +268,85 @@ mod tests {
             },
         )
         .unwrap()
+    }
+
+    #[tokio::test]
+    async fn commands_go_to_the_output_that_owns_their_target() {
+        let signals = SignalPlane::new();
+        let (control, control_rx) = unbounded_channel();
+        tokio::spawn(graph_runner(
+            control_rx,
+            signals.clone(),
+            EventPlane::new().0,
+            SafetyLayer::default(),
+            GraphValues::default(),
+        ));
+        // The test graph drives toy:test:0 (see `graph`)
+        let toy = CommandSlots::new();
+        let own = CommandSlots::new();
+        control
+            .send(GraphControl::SetOutput {
+                module: ModuleInstanceId::new("toy:test:0"),
+                slots: toy.clone(),
+            })
+            .unwrap();
+        control
+            .send(GraphControl::Set {
+                key: GraphKey::App("app".into()),
+                graph: graph(),
+                slots: own.clone(),
+            })
+            .unwrap();
+        let boop = PortId::new(ModuleInstanceId::new(OSC_MODULE), "/avatar/parameters/Boop");
+        signals.write(&boop, Signal::Float(0.5));
+        sleep(Duration::from_millis(50)).await;
+        assert_eq!(toy.take_changed().len(), 1, "routed to the toy");
+        assert!(own.take_changed().is_empty());
+
+        // Not registered any more: back to the graph's own slots
+        control
+            .send(GraphControl::RemoveOutput(ModuleInstanceId::new(
+                "toy:test:0",
+            )))
+            .unwrap();
+        sleep(Duration::from_millis(20)).await;
+        signals.write(&boop, Signal::Float(0.9));
+        sleep(Duration::from_millis(50)).await;
+        assert!(toy.take_changed().is_empty());
+        assert_eq!(own.take_changed().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn describes_every_graph_with_its_values() {
+        let signals = SignalPlane::new();
+        let (control, control_rx) = unbounded_channel();
+        tokio::spawn(graph_runner(
+            control_rx,
+            signals.clone(),
+            EventPlane::new().0,
+            SafetyLayer::default(),
+            GraphValues::default(),
+        ));
+        control
+            .send(GraphControl::Set {
+                key: GraphKey::App("app".into()),
+                graph: graph(),
+                slots: CommandSlots::new(),
+            })
+            .unwrap();
+        signals.write(
+            &PortId::new(ModuleInstanceId::new(OSC_MODULE), "/avatar/parameters/Boop"),
+            Signal::Float(0.5),
+        );
+        sleep(Duration::from_millis(50)).await;
+
+        let (reply, answer) = oneshot::channel();
+        control.send(GraphControl::Describe(reply)).unwrap();
+        let views = answer.await.unwrap();
+        assert_eq!(views.len(), 1);
+        assert_eq!(views[0].key, GraphKey::App("app".into()));
+        assert!(!views[0].shape.nodes.is_empty());
+        assert_eq!(views[0].values.sinks[0].last, Some(0.5));
     }
 
     #[tokio::test]

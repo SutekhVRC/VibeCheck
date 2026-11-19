@@ -32,6 +32,11 @@ use crate::toy_handling::runtime::toy_graph::OSC_MODULE;
 pub mod penetration_systems;
 
 pub trait InputProcessor: Send {
+    /// Its name in views of a graph, e.g. `SPS`.
+    fn name(&self) -> &'static str {
+        "Input processor"
+    }
+
     /// The OSC address prefixes this processor reads, e.g.
     /// `/avatar/parameters/OGB/`. Asked once, when the graph is built.
     fn prefixes(&self) -> Vec<String>;
@@ -78,6 +83,10 @@ impl InputProcessorNode {
 }
 
 impl Processor for InputProcessorNode {
+    fn kind(&self) -> String {
+        self.processor.name().into()
+    }
+
     fn ports(&self) -> Vec<PortSpec> {
         vec![PortSpec::signal_out("out")]
     }
