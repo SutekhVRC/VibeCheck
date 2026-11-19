@@ -1,10 +1,11 @@
+use crate::util::errors::UtilError;
+#[cfg(target_os = "windows")]
+use directories::BaseDirs;
 use std::{
     ffi::OsStr,
     path::{Path, PathBuf},
 };
 use tauri::{AppHandle, Manager};
-
-use crate::util::errors::UtilError;
 
 /// Renames a settings file that couldn't be read to `<path>.bad`
 /// (replacing an older one), so it's kept for the user instead of being
