@@ -6,7 +6,7 @@ The Cargo workspace is rooted at `src-tauri/Cargo.toml`:
 
 | Member | Path | What it is |
 |---|---|---|
-| `vibecheck` | `src-tauri` | The Tauri app: the `vibecheck_lib` library (`src/lib.rs`, everything the app does) and a small `src/main.rs` that runs it with VibeCheck's own `tauri.conf.json`. Another app can run the library with its own config and frontend and add Tauri commands, services, and its own graphs and outputs in every listening session (a `SessionExtension`, with the session's planes, safety layer and graph runner, and `embed::add_feature_inputs` to build inputs the way toys get them) through `Extensions` (`src/extensions.rs`), and pages and Settings sections through the frontend's `src/extensions` (the `VIBECHECK_EXTENSIONS` build variable; none in VibeCheck itself) |
+| `vibecheck` | `src-tauri` | The Tauri app: the `vibecheck_lib` library (`src/lib.rs`, everything the app does) and a small `src/main.rs` that runs it with VibeCheck's own `tauri.conf.json`. Another app can run the library with its own config and frontend and add Tauri commands, services, its own tray icon, and its own graphs and outputs in every listening session (a `SessionExtension`, with the session's planes, safety layer and graph runner, and `embed::add_feature_inputs` to build inputs the way toys get them) through `Extensions` (`src/extensions.rs`), and pages and Settings sections through the frontend's `src/extensions` (the `VIBECHECK_EXTENSIONS` build variable; none in VibeCheck itself) |
 | `vibecheck-core` | `src-tauri/crates/vibecheck-core` | This crate |
 | `osc-tool` | `src-tauri/crates/osc-tool` | Debug CLI to listen for, send and sweep OSC ([README](../../src-tauri/crates/osc-tool/README.md)). Not part of the app or installers |
 

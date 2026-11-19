@@ -28,6 +28,7 @@ use std::time::Duration;
 use log::warn;
 use parking_lot::Mutex;
 use tauri::{
+    image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, Wry,
@@ -62,7 +63,9 @@ struct TrayMenu {
     shown: Mutex<Option<Status>>,
 }
 
-pub fn build(app: &tauri::App) -> tauri::Result<()> {
+/// Builds the tray; `icon` replaces VibeCheck's (an app's own, see
+/// extensions.rs).
+pub fn build(app: &tauri::App, icon: Option<Image<'static>>) -> tauri::Result<()> {
     let version = app.package_info().version.to_string();
     // The app's product name from its tauri.conf.json
     let name = app.package_info().name.clone();
@@ -110,8 +113,8 @@ pub fn build(app: &tauri::App) -> tauri::Result<()> {
         .menu(&menu)
         .tooltip(&name)
         // A simpler version of the app icon that stays readable at tray size
-        // (icons/source/app-icon-small.svg)
-        .icon(tauri::include_image!("icons/tray.png"))
+        // (icons/source/app-icon-small.svg), unless the app brings its own
+        .icon(icon.unwrap_or_else(|| tauri::include_image!("icons/tray.png")))
         // Windows: left click opens the window, right click the menu. Linux
         // trays always open the menu.
         .show_menu_on_left_click(false)
