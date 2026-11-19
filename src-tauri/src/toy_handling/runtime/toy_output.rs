@@ -17,10 +17,15 @@ use crate::toy_handling::toyops::{VCFeatureType, VCToy};
 /// Module id for a toy, e.g. `toy:lovense_lush:0`. Same name form as the OSC
 /// battery address, and stable across reconnects (no Buttplug device index).
 pub fn toy_module_id(toy: &VCToy) -> ModuleInstanceId {
+    toy_module(&toy.toy_name, toy.sub_id)
+}
+
+/// Module id for the toy named `name` with `sub_id` (see `toy_module_id`).
+pub fn toy_module(name: &str, sub_id: u8) -> ModuleInstanceId {
     ModuleInstanceId::new(format!(
         "toy:{}:{}",
-        toy.toy_name.replace(' ', "_").to_lowercase(),
-        toy.sub_id
+        name.replace(' ', "_").to_lowercase(),
+        sub_id
     ))
 }
 

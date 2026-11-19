@@ -21,6 +21,9 @@ pub mod embed {
         PenetrationSystem, PenetrationSystemType,
     };
     pub use crate::toy_handling::runtime::toy_graph::{add_feature_inputs, OSC_MODULE};
+    /// Where a toy's sent levels are on the signal plane: its module and
+    /// each motor's port (see toy_emitter_thread.rs `SentLevels`).
+    pub use crate::toy_handling::runtime::toy_output::{feature_port_name, toy_module};
     pub use crate::toy_handling::toyops::{
         LevelTweaks, ProcessingMode, ToyParameter, VCFeatureType, VCToyFeature,
     };
