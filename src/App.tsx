@@ -83,6 +83,7 @@ export default function App() {
     extensionPage != null && selection?.type == "Extension" ? (
       <extensionPage.Page
         item={selection.item}
+        toys={toysList}
         open={(item) =>
           setSelection({ type: "Extension", id: selection.id, item })
         }
