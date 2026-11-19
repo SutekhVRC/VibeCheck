@@ -1084,7 +1084,7 @@ mod tests {
             id("dev"),
             crate::safety::TargetPolicy {
                 requires_arming: true,
-                min_interval: None,
+                ..Default::default()
             },
         );
         assert!(g.tick(&signals, 0.01, &safety, &events).is_empty());

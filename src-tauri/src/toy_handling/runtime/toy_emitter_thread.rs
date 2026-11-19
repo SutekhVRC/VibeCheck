@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use log::{debug, error as logerr};
 use tokio::{
     sync::{mpsc::error::TryRecvError, mpsc::UnboundedReceiver},
@@ -5,7 +7,7 @@ use tokio::{
 };
 use vibecheck_core::{
     modules::buttplug::{ActuatorSpec, ButtplugOutput},
-    CommandSlots, Output, SafetyLayer,
+    CommandSlots, ModuleInstanceId, Output, PortId, SafetyLayer, Signal, SignalPlane,
 };
 
 use crate::toy_handling::runtime::toy_management_handler::sleep_for_constant_rate;
@@ -23,6 +25,7 @@ pub struct EmitterThreadData {
     slots: CommandSlots,
     output: ButtplugOutput,
     safety: SafetyLayer,
+    sent: SentLevels,
 }
 
 impl EmitterThreadData {
@@ -32,6 +35,7 @@ impl EmitterThreadData {
         output: ButtplugOutput,
         update_rate: u64,
         safety: SafetyLayer,
+        sent: SentLevels,
     ) -> Self {
         Self {
             update_rate,
@@ -39,7 +43,51 @@ impl EmitterThreadData {
             slots,
             output,
             safety,
+            sent,
         }
+    }
+}
+
+/// The levels a toy was last sent, on the signal plane under the toy's
+/// module and each motor's port (`toy:<name>:<sub id>` / `Vibrate_0`), so
+/// other graphs and the diagnostics view can see what the toy is doing.
+/// They're intensities after the safety layer, as commanded (before Flip
+/// Input, which the output applies). A panic stop shows as 0, and the
+/// toy's values are removed when it stops.
+pub struct SentLevels {
+    signals: SignalPlane,
+    module: ModuleInstanceId,
+    last: HashMap<PortId, f64>,
+}
+
+impl SentLevels {
+    pub fn new(signals: SignalPlane, module: ModuleInstanceId) -> Self {
+        Self {
+            signals,
+            module,
+            last: HashMap::new(),
+        }
+    }
+
+    fn sent(&mut self, port: &PortId, level: f64) {
+        if self.last.get(port) != Some(&level) {
+            self.signals.write(port, Signal::Float(level));
+            self.last.insert(port.clone(), level);
+        }
+    }
+
+    /// Panic stops devices directly, not through the output: show them at 0.
+    fn stopped(&mut self) {
+        let ports: Vec<PortId> = self.last.keys().cloned().collect();
+        for port in ports {
+            self.sent(&port, 0.0);
+        }
+    }
+}
+
+impl Drop for SentLevels {
+    fn drop(&mut self) {
+        self.signals.clear_module(&self.module);
     }
 }
 
@@ -56,9 +104,17 @@ pub async fn toy_emitter_thread(mut data: EmitterThreadData) {
             for cmd in &cmds {
                 debug!("Sending {} to {}", cmd.level(), cmd.target());
             }
-            if let Err(e) = data.output.apply(&cmds).await {
-                logerr!("Send to device error: {}", e);
+            match data.output.apply(&cmds).await {
+                Ok(()) => {
+                    for cmd in &cmds {
+                        data.sent.sent(cmd.target(), cmd.level());
+                    }
+                }
+                Err(e) => logerr!("Send to device error: {}", e),
             }
+        }
+        if data.safety.is_panicked() {
+            data.sent.stopped();
         }
         // A panic stops devices directly, not through the output
         data.output
@@ -79,5 +135,27 @@ pub async fn toy_emitter_thread(mut data: EmitterThreadData) {
             },
         }
         sleep_for_constant_rate(data.update_rate, start).await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sent_levels_show_on_the_plane_drop_to_zero_on_panic_and_go_with_the_toy() {
+        let signals = SignalPlane::new();
+        let module = ModuleInstanceId::new("toy:lush:0");
+        let motor = PortId::new(module.clone(), "Vibrate_0");
+        let mut sent = SentLevels::new(signals.clone(), module);
+
+        sent.sent(&motor, 0.4);
+        assert_eq!(signals.read(&motor), Some(Signal::Float(0.4)));
+
+        sent.stopped();
+        assert_eq!(signals.read(&motor), Some(Signal::Float(0.0)));
+
+        drop(sent);
+        assert_eq!(signals.read(&motor), None);
     }
 }

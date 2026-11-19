@@ -11,7 +11,9 @@
 //!
 //! What it enforces:
 //!
-//! - **Master intensity** and a level cap ([`SafetyCaps`]).
+//! - **Master intensity** and a level cap ([`SafetyCaps`]), except for
+//!   targets whose [`TargetPolicy`] says `unscaled` (values that aren't
+//!   device intensities, e.g. a level shown elsewhere).
 //! - **Panic stop**: [`panic`](SafetyLayer::panic) refuses every new command,
 //!   invalidates commands already created (outputs check
 //!   [`admits`](SafetyLayer::admits) before sending), and disarms everything,
@@ -75,6 +77,11 @@ pub struct TargetPolicy {
     pub requires_arming: bool,
     /// Commands to the same target port closer together than this are refused.
     pub min_interval: Option<Duration>,
+    /// Levels pass as requested (clamped to 0..=1), not scaled by the master
+    /// intensity or capped by `max_level`. For targets that aren't devices,
+    /// such as a value shown somewhere else, where scaling would change its
+    /// meaning. Panic stop, arming and rate limits still apply.
+    pub unscaled: bool,
 }
 
 /// A command that has passed the safety layer.
@@ -141,6 +148,25 @@ impl State {
 
     fn may_send_to(&self, module: &ModuleInstanceId) -> bool {
         !self.panicked && (!self.requires_arming(module) || self.armed.contains(module))
+    }
+
+    /// See [`SafetyLayer::limit`].
+    fn limit(&self, level: f64) -> f64 {
+        if self.panicked {
+            return 0.0;
+        }
+        (unit(level) * unit(self.caps.intensity)).min(unit(self.caps.max_level))
+    }
+
+    /// The level a command to `module` gets: [`limit`](Self::limit), or only
+    /// clamped to 0..=1 for an unscaled target.
+    fn level_for(&self, module: &ModuleInstanceId, level: f64) -> f64 {
+        let unscaled = self.policies.get(module).is_some_and(|p| p.unscaled);
+        if unscaled && !self.panicked {
+            unit(level)
+        } else {
+            self.limit(level)
+        }
     }
 }
 
@@ -239,27 +265,25 @@ impl SafetyLayer {
     /// `max_level`. Non-finite levels (NaN or infinity) become 0.0 so a bad
     /// input can never drive an output.
     pub fn limit(&self, level: f64) -> f64 {
-        let state = self.state.lock();
-        if state.panicked {
-            return 0.0;
-        }
-        (unit(level) * unit(state.caps.intensity)).min(unit(state.caps.max_level))
+        self.state.lock().limit(level)
     }
 
     /// Makes a command for `target`, or refuses it (`None`) while panicked,
     /// while the target's module requires arming and isn't armed, or if the
-    /// target's minimum interval hasn't passed since its last command.
+    /// target's minimum interval hasn't passed since its last command. Its
+    /// level is [`limit`](Self::limit)ed, unless the target's policy says
+    /// `unscaled`.
     pub fn clamp(
         &self,
         target: PortId,
         level: f64,
         duration_ms: Option<u32>,
     ) -> Option<ClampedCmd> {
-        let level = self.limit(level);
         let mut state = self.state.lock();
         if !state.may_send_to(&target.module) {
             return None;
         }
+        let level = state.level_for(&target.module, level);
         if let Some(interval) = state
             .policies
             .get(&target.module)
@@ -393,6 +417,35 @@ mod tests {
     }
 
     #[test]
+    fn unscaled_targets_skip_intensity_and_cap_but_not_panic() {
+        let safety = SafetyLayer::new(SafetyCaps {
+            intensity: 0.5,
+            max_level: 0.8,
+            ..SafetyCaps::default()
+        });
+        let shown = PortId::new(ModuleInstanceId::new("shown"), "level");
+        safety.set_policy(
+            shown.module.clone(),
+            TargetPolicy {
+                unscaled: true,
+                ..TargetPolicy::default()
+            },
+        );
+
+        assert_eq!(safety.clamp(shown.clone(), 0.9, None).unwrap().level(), 0.9);
+        assert_eq!(safety.clamp(shown.clone(), 2.0, None).unwrap().level(), 1.0);
+        assert_eq!(
+            safety.clamp(shown.clone(), f64::NAN, None).unwrap().level(),
+            0.0
+        );
+        // Other targets are still scaled and capped
+        assert_eq!(safety.clamp(target(), 0.9, None).unwrap().level(), 0.45);
+
+        safety.panic();
+        assert!(safety.clamp(shown, 0.9, None).is_none());
+    }
+
+    #[test]
     fn full_intensity_changes_nothing() {
         let safety = SafetyLayer::default();
         for level in [0.0, 0.01, 0.37, 0.5, 0.99, 1.0] {
@@ -462,6 +515,7 @@ mod tests {
             TargetPolicy {
                 requires_arming: true,
                 min_interval: None,
+                ..TargetPolicy::default()
             },
         );
 
@@ -595,6 +649,7 @@ mod tests {
             TargetPolicy {
                 requires_arming: false,
                 min_interval: Some(Duration::from_secs(60)),
+                ..TargetPolicy::default()
             },
         );
         assert!(safety.clamp(target(), 0.3, None).is_some());
