@@ -1,4 +1,3 @@
-import { useCoreEventContext } from "@/context/CoreEvents";
 import { INVOKE, TOOLTIP } from "@/data/constants";
 import { Select } from "@/layout/Select";
 import { TooltipLabel } from "@/layout/Tooltip";
@@ -30,9 +29,6 @@ export default function ToyConnection() {
   const [choosingIntiface, setChoosingIntiface] = useState(false);
   const [address, setAddress] = useState("");
 
-  // The app's settings: reloaded after a reset, which also resets this
-  const { config } = useCoreEventContext();
-
   useEffect(() => {
     let alive = true;
     async function refresh() {
@@ -51,7 +47,7 @@ export default function ToyConnection() {
       alive = false;
       clearInterval(timer);
     };
-  }, [config]);
+  }, []);
 
   // The saved address, when there is one. Only a change to it updates the
   // field: the status refresh every 2 s mustn't overwrite what's typed
