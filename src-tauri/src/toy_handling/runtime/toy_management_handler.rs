@@ -127,7 +127,7 @@ async fn toy_task(
         buttplug_output(&vc_toy).with_events(module.clone(), events),
         vc_toy.bt_update_rate,
         safety,
-        SentLevels::new(signals, module.clone()),
+        SentLevels::new(signals),
     );
 
     async_rt

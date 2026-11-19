@@ -7,7 +7,7 @@ use tokio::{
 };
 use vibecheck_core::{
     modules::buttplug::{ActuatorSpec, ButtplugOutput},
-    CommandSlots, ModuleInstanceId, Output, PortId, SafetyLayer, Signal, SignalPlane,
+    CommandSlots, Output, PortId, SafetyLayer, Signal, SignalPlane,
 };
 
 use crate::toy_handling::runtime::toy_management_handler::sleep_for_constant_rate;
@@ -52,19 +52,18 @@ impl EmitterThreadData {
 /// module and each motor's port (`toy:<name>:<sub id>` / `Vibrate_0`), so
 /// other graphs and the diagnostics view can see what the toy is doing.
 /// They're intensities after the safety layer, as commanded (before Flip
-/// Input, which the output applies). A panic stop shows as 0, and the
-/// toy's values are removed when it stops.
+/// Input, which the output applies). A panic stop shows as 0, and so does
+/// a toy that stopped (disconnected, or VibeCheck turned off), so anything
+/// following it doesn't keep its last level.
 pub struct SentLevels {
     signals: SignalPlane,
-    module: ModuleInstanceId,
     last: HashMap<PortId, f64>,
 }
 
 impl SentLevels {
-    pub fn new(signals: SignalPlane, module: ModuleInstanceId) -> Self {
+    pub fn new(signals: SignalPlane) -> Self {
         Self {
             signals,
-            module,
             last: HashMap::new(),
         }
     }
@@ -76,7 +75,8 @@ impl SentLevels {
         }
     }
 
-    /// Panic stops devices directly, not through the output: show them at 0.
+    /// Panic stops devices directly, not through the output, and a toy that
+    /// stopped sends nothing more: show them at 0.
     fn stopped(&mut self) {
         let ports: Vec<PortId> = self.last.keys().cloned().collect();
         for port in ports {
@@ -87,7 +87,7 @@ impl SentLevels {
 
 impl Drop for SentLevels {
     fn drop(&mut self) {
-        self.signals.clear_module(&self.module);
+        self.stopped();
     }
 }
 
@@ -143,11 +143,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sent_levels_show_on_the_plane_drop_to_zero_on_panic_and_go_with_the_toy() {
+    fn sent_levels_show_on_the_plane_and_drop_to_zero_on_panic_and_stop() {
         let signals = SignalPlane::new();
-        let module = ModuleInstanceId::new("toy:lush:0");
-        let motor = PortId::new(module.clone(), "Vibrate_0");
-        let mut sent = SentLevels::new(signals.clone(), module);
+        let motor = PortId::new(
+            vibecheck_core::ModuleInstanceId::new("toy:lush:0"),
+            "Vibrate_0",
+        );
+        let mut sent = SentLevels::new(signals.clone());
 
         sent.sent(&motor, 0.4);
         assert_eq!(signals.read(&motor), Some(Signal::Float(0.4)));
@@ -155,7 +157,8 @@ mod tests {
         sent.stopped();
         assert_eq!(signals.read(&motor), Some(Signal::Float(0.0)));
 
+        sent.sent(&motor, 0.7);
         drop(sent);
-        assert_eq!(signals.read(&motor), None);
+        assert_eq!(signals.read(&motor), Some(Signal::Float(0.0)));
     }
 }
