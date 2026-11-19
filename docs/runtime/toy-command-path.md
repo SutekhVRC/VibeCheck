@@ -194,6 +194,23 @@ Older configs have no `mode`: `settle()` keeps them on Manual if `bind` or `remo
 
 `/avatar/parameters/vibecheck/api/state = true` (turn on) is not on this path: it's handled by the listener that runs while VibeCheck is **off** (`vc_disabled_osc_command_listen` in `osc/logic.rs`). The same parameter set to false while VibeCheck is on is handled here, and turns it off.
 
+## Toy connection
+
+`ButtplugOutput` sends to devices through the `ButtplugClient` in the app state. Where that client connects is the **toy connection** (`util/toy_service.rs`, saved as `toy_connection` in `Config.json`):
+
+- **Local** (the default, and for older configs): VibeCheck's own Buttplug server, in-process, using this computer's Bluetooth and the Lovense USB dongle (`util/bluetooth.rs`).
+- **Intiface** `{ address }`: Intiface Central (desktop, or the phone app) over websocket, through `ButtplugRemoteClientConnector` and `buttplug_transport_websocket_tungstenite`. For computers without Bluetooth: toys pair with the phone.
+
+Everything after the client (scanning, outputs, battery, saved toys) is the same either way.
+
+A supervisor (`toy_service::run`, started by `VibeCheckState::init_ceh`) runs for the life of the app: connect, put the client in the state, run the client event handler, then wait.
+
+- **The connection drops** (Intiface closed, phone asleep, Wi-Fi): the client has already removed every device, so the client event handler stops and removes those toys as on any disconnect. The user gets one warning (`toys/toy_service_lost`), the status says why, and it retries every 5 s.
+- **The setting changes** (`set_toy_connection`, or Reset VibeCheck settings back to Local): the old client is disconnected (its toys leave the same way) and the new one connects. A change while still connecting stops that attempt at once.
+- **Status** (`get_toy_connection`): `Connecting`, `Connected`, or `Failed(why)`, shown in Settings > Toys > Toy connection.
+
+An address without a scheme gets `ws://` (`ToyConnection::normalized`). The client speaks Buttplug message spec v4, so Intiface Central needs to be a version that does too.
+
 ## Session lifetime
 
 Turning VibeCheck on creates a `Session` (`toy_management_handler.rs`): a tokio runtime, a signal plane, an event plane and the graph runner. On it run the core event handler, the graph runner, `OscInput`, the router, and one task plus one emitter per toy. Everything in the session publishes on the same event plane: `OscInput` (avatar change), the presence task (VRChat connecting), the session itself (toys connecting), graph processors, and each toy's output (errors and activity). An app built on the library can add its own graphs (ticked by the same graph runner, under its own names) and output tasks to each session through a `SessionExtension` (`src/extensions.rs`): `start` runs once the OSC input is set up, `stop` before anything else when the session ends. Turning off (or a reset) aborts the toy tasks and shuts the runtime down, which closes the OSC socket and frees the port for the "off" listener.

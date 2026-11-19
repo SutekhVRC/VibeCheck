@@ -126,11 +126,11 @@ export const TOOLTIP = {
   },
   ToyConnection: {
     text: "How VibeCheck reaches your toys. This computer: its own Bluetooth (and the Lovense USB dongle). Intiface Central: through the Intiface Central app on this computer or your phone, for computers without Bluetooth. Switching disconnects the toys on the old connection.",
-    link: "",
+    link: "IntifaceCentral",
   },
   IntifaceAddress: {
     text: "Intiface Central's server address, shown in the app once you press Start Server, e.g. 192.168.1.20:12345 (a phone on your Wi-Fi) or 127.0.0.1:12345 (this computer). Use it on a network you trust.",
-    link: "",
+    link: "IntifaceCentral",
   },
   ScanLength: {
     text: "How long looking for toys runs before it stops by itself. Toys show up as soon as they connect, so you can stop early. Also applies to Scan On Disconnect.",

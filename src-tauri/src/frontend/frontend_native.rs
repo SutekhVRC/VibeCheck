@@ -304,6 +304,9 @@ pub fn open_default_browser(link: FeBrowserLink) -> Result<(), VCFeError> {
         FeBrowserLink::FeatureOptions => {
             "https://github.com/SutekhVRC/VibeCheck/wiki/Toy-Options-List#toy-feature-options"
         }
+        FeBrowserLink::IntifaceCentral => {
+            "https://github.com/SutekhVRC/VibeCheck/wiki/Intiface-Central"
+        }
     };
     open::that(url).map_err(|e| {
         logerr!("Couldn't open {} in the browser: {}", url, e);
