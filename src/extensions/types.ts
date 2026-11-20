@@ -1,8 +1,10 @@
+import type { ValueDecoration } from "@/components/ui/FreeTextOptions";
 import type { FeFeatureCheck } from "@bindings/FeFeatureCheck";
 import type { FeVCToy } from "@bindings/FeVCToy";
 import type { FeVCToyFeature } from "@bindings/FeVCToyFeature";
 import type { PenetrationSystemType } from "@bindings/PenetrationSystemType";
 import type { ComponentType } from "react";
+export type { ValueDecoration };
 
 /*
  * What an app built on VibeCheck can add to its frontend. The VibeCheck app
@@ -112,6 +114,11 @@ export type FeatureFormSlots = {
   Processor?: ComponentType<FeatureSlotProps>;
   /** Under the Input Filter row */
   InputFilter?: ComponentType<FeatureSlotProps>;
+  /** Extra content after an input filter tag's text, and its tooltip */
+  inputFilterTag?: (
+    tag: string,
+    props: FeatureSlotProps,
+  ) => ValueDecoration | null | undefined;
 };
 
 export type AppExtensions = {

@@ -542,6 +542,7 @@ function InputFilter() {
   const unmatched = check?.unmatched_tags ?? [];
   const slotProps = useSlotProps();
   const FilterSlot = appExtensions.featureForm?.InputFilter;
+  const tagSlot = appExtensions.featureForm?.inputFilterTag;
 
   function handleInputProcessor(items: string[]) {
     setToyFeature((f) => {
@@ -570,6 +571,7 @@ function InputFilter() {
         }}
         warnValues={unmatched}
         warnTooltip="No zone on your current avatar has this in its name"
+        decorate={tagSlot && ((tag) => tagSlot(tag, slotProps))}
       />
       {unmatched.length > 0 && (
         <SetupWarning>

@@ -21,7 +21,17 @@ export interface FreeTextOptionProps extends Omit<
   warnValues?: string[];
   /** Tooltip for a marked value */
   warnTooltip?: string;
+  /** Extra content after a value's text and a tooltip for it, if any */
+  decorate?: (value: string) => ValueDecoration | null | undefined;
 }
+
+/** What `decorate` adds to a value */
+export type ValueDecoration = {
+  /** Shown after the value's text, e.g. an icon */
+  after?: React.ReactNode;
+  /** The value's tooltip, unless it's marked with a warning */
+  title?: string;
+};
 
 export const FreeTextOptions = React.forwardRef<
   HTMLDivElement,
@@ -37,6 +47,7 @@ export const FreeTextOptions = React.forwardRef<
       disabled = false,
       warnValues = [],
       warnTooltip,
+      decorate,
       className,
       ...props
     },
@@ -88,30 +99,37 @@ export const FreeTextOptions = React.forwardRef<
         )}
         {...props}
       >
-        {values.map((v) => (
-          <Badge
-            key={v}
-            className={cn(
-              "inline-flex items-center gap-2",
-              warnValues.includes(v) &&
-                "bg-theme-warning/20 text-theme-warning ring-1 ring-theme-warning/60",
-            )}
-            title={warnValues.includes(v) ? warnTooltip : undefined}
-          >
-            <span className="max-w-[200px] truncate">{v}</span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                removeItem(v);
-              }}
-              aria-label={`Remove ${v}`}
-              className="ml-1 rounded-sm p-0.5 focus:outline-none focus:ring-1 focus:ring-ring"
+        {values.map((v) => {
+          const warned = warnValues.includes(v);
+          const decoration = decorate?.(v);
+          return (
+            <Badge
+              key={v}
+              className={cn(
+                "inline-flex items-center gap-2",
+                warned &&
+                  "bg-theme-warning/20 text-theme-warning ring-1 ring-theme-warning/60",
+              )}
+              title={warned ? warnTooltip : decoration?.title}
             >
-              <XCircle className="h-4 w-4" />
-            </button>
-          </Badge>
-        ))}
+              <span className="inline-flex max-w-[200px] items-center gap-1">
+                <span className="truncate">{v}</span>
+                {decoration?.after}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeItem(v);
+                }}
+                aria-label={`Remove ${v}`}
+                className="ml-1 rounded-sm p-0.5 focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            </Badge>
+          );
+        })}
 
         <input
           ref={inputRef}
