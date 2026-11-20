@@ -63,8 +63,8 @@ type SidebarProps = {
 
 /*
  * Left column: logo, app on/off status, panic stop, toy list with scanning,
- * Settings with Diagnostics beside it, and a footer with community links and
- * the version.
+ * a row of tools (Diagnostics and extension pages) above Settings, and a
+ * footer with community links and the version.
  * Collapses into a narrow icon-only bar; tooltips then carry the labels.
  */
 export default function Sidebar({
@@ -220,7 +220,6 @@ export default function Sidebar({
                     Icon={page.Icon}
                     selected={selectedExtension?.id == page.id}
                     onClick={() => onToggleExtensionPage(page.id)}
-                    collapsed
                   />
                 ) : (
                   <DevicePageGroup
@@ -240,16 +239,12 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* Collapsed: two squares stacked. Full: Settings row with a
-          Diagnostics square beside it. */}
-      <div
-        className={cn(
-          "flex shrink-0 gap-2",
-          collapsed ? "flex-col items-center" : "items-stretch",
-        )}
-      >
-        {collapsed &&
-          navPages.map((page) => (
+      {/* Tools: Diagnostics and extension pages. Full: a row of labelled
+          tiles above a full-width Settings row. Collapsed: squares stacked
+          above Settings. */}
+      {collapsed ? (
+        <div className="flex shrink-0 flex-col items-center gap-2">
+          {navPages.map((page) => (
             <NavSquareButton
               key={page.id}
               label={page.label}
@@ -257,42 +252,51 @@ export default function Sidebar({
               Icon={page.Icon}
               selected={selectedExtension?.id == page.id}
               onClick={() => onToggleExtensionPage(page.id)}
-              collapsed
             />
           ))}
-        {collapsed && (
-          <DiagnosticsButton
+          <NavSquareButton
+            label="Diagnostics"
+            tooltip={DIAGNOSTICS_TOOLTIP}
+            Icon={Activity}
             selected={diagnosticsSelected}
             onClick={onToggleDiagnostics}
+          />
+          <SettingsRow
+            selected={configSelected}
+            canUpdate={canUpdate}
+            onClick={onToggleConfig}
             collapsed
           />
-        )}
-        <SettingsRow
-          selected={configSelected}
-          canUpdate={canUpdate}
-          onClick={onToggleConfig}
-          collapsed={collapsed}
-        />
-        {!collapsed && (
-          <DiagnosticsButton
-            selected={diagnosticsSelected}
-            onClick={onToggleDiagnostics}
+        </div>
+      ) : (
+        <div className="flex shrink-0 flex-col gap-2">
+          <div className="flex gap-2">
+            {navPages.map((page) => (
+              <ToolTile
+                key={page.id}
+                label={page.shortLabel ?? page.label}
+                tooltip={page.label}
+                Icon={page.Icon}
+                selected={selectedExtension?.id == page.id}
+                onClick={() => onToggleExtensionPage(page.id)}
+              />
+            ))}
+            <ToolTile
+              label="Diagnostics"
+              tooltip={DIAGNOSTICS_TOOLTIP}
+              Icon={Activity}
+              selected={diagnosticsSelected}
+              onClick={onToggleDiagnostics}
+            />
+          </div>
+          <SettingsRow
+            selected={configSelected}
+            canUpdate={canUpdate}
+            onClick={onToggleConfig}
             collapsed={false}
           />
-        )}
-        {!collapsed &&
-          navPages.map((page) => (
-            <NavSquareButton
-              key={page.id}
-              label={page.label}
-              tooltip={page.label}
-              Icon={page.Icon}
-              selected={selectedExtension?.id == page.id}
-              onClick={() => onToggleExtensionPage(page.id)}
-              collapsed={false}
-            />
-          ))}
-      </div>
+        </div>
+      )}
 
       {/* Community links and version: only in the full sidebar. The
           collapsed bar keeps to the core controls; the links are one click
@@ -815,60 +819,36 @@ function ToyListHeader({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-/** Diagnostics: a square button, beside Settings or stacked above it */
-function DiagnosticsButton({
-  selected,
-  onClick,
-  collapsed,
-}: {
+const DIAGNOSTICS_TOOLTIP = "Diagnostics: live values from VRChat";
+
+type ToolButtonProps = {
+  label: string;
+  tooltip: string;
+  Icon: ComponentType<{ className?: string }>;
   selected: boolean;
   onClick: () => void;
-  collapsed: boolean;
-}) {
-  return (
-    <NavSquareButton
-      label="Diagnostics"
-      tooltip="Diagnostics: live values from VRChat"
-      Icon={Activity}
-      selected={selected}
-      onClick={onClick}
-      collapsed={collapsed}
-    />
-  );
-}
+};
 
-/** A square page button next to Settings: Diagnostics, or an extension's page */
+/** A tool in the collapsed bar: Diagnostics or an extension's page */
 function NavSquareButton({
   label,
   tooltip,
   Icon,
   selected,
   onClick,
-  collapsed,
-}: {
-  label: string;
-  tooltip: string;
-  Icon: ComponentType<{ className?: string }>;
-  selected: boolean;
-  onClick: () => void;
-  collapsed: boolean;
-}) {
+}: ToolButtonProps) {
   return (
-    <Tooltip text={tooltip} side={collapsed ? "right" : "top"}>
+    <Tooltip text={tooltip} side="right">
       <button
         onClick={onClick}
         aria-pressed={selected}
         aria-label={label}
         className={cn(
-          "group flex shrink-0 items-center justify-center transition-all duration-200",
-          collapsed ? ICON_SQUARE : "w-11 rounded-2xl border",
+          ICON_SQUARE,
+          "group",
           selected
-            ? collapsed
-              ? "bg-gradient-to-br from-theme-primary/30 to-theme-secondary/30 ring-2 ring-theme-primary"
-              : "border-theme-primary bg-gradient-to-r from-theme-primary/25 to-theme-secondary/25"
-            : collapsed
-              ? "bg-theme-raised hover:bg-theme-border"
-              : "border-theme-border/60 bg-theme-surface hover:border-theme-secondary",
+            ? "bg-gradient-to-br from-theme-primary/30 to-theme-secondary/30 ring-2 ring-theme-primary"
+            : "bg-theme-raised hover:bg-theme-border",
         )}
       >
         <Icon
@@ -877,6 +857,47 @@ function NavSquareButton({
             selected ? "text-theme-primary" : "text-theme-secondary",
           )}
         />
+      </button>
+    </Tooltip>
+  );
+}
+
+/** A tool in the full sidebar's tools row: an icon over a short label; the
+ * tiles share the row's width equally */
+function ToolTile({
+  label,
+  tooltip,
+  Icon,
+  selected,
+  onClick,
+}: ToolButtonProps) {
+  return (
+    <Tooltip text={tooltip} side="top">
+      <button
+        onClick={onClick}
+        aria-pressed={selected}
+        aria-label={label}
+        className={cn(
+          "group flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl border px-1 py-2 transition-all duration-200",
+          selected
+            ? "border-theme-primary bg-gradient-to-r from-theme-primary/25 to-theme-secondary/25"
+            : "border-theme-border/60 bg-theme-surface hover:border-theme-secondary",
+        )}
+      >
+        <Icon
+          className={cn(
+            "h-5 w-5 shrink-0",
+            selected ? "text-theme-primary" : "text-theme-secondary",
+          )}
+        />
+        <span
+          className={cn(
+            "w-full truncate text-center text-xs",
+            selected ? "text-theme-text" : "text-theme-muted",
+          )}
+        >
+          {label}
+        </span>
       </button>
     </Tooltip>
   );

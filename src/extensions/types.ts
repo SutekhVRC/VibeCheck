@@ -35,13 +35,16 @@ export type ExtensionPage = {
   /** Unique among pages */
   id: string;
   /**
-   * Where its button goes: "nav" (the default), a square next to
-   * Diagnostics, for tools; or "devices", a row in the device list below
+   * Where its button goes: "nav" (the default), a tile in the tools row
+   * beside Diagnostics, for tools; or "devices", a row in the device list below
    * the toys, for pages about devices.
    */
   placement?: "nav" | "devices";
   /** Button label and tooltip */
   label: string;
+  /** A shorter label for its tile in the sidebar's tools row ("nav" pages),
+   * if `label` is too long to fit, e.g. "Outputs" for "Avatar outputs" */
+  shortLabel?: string;
   Icon: ComponentType<{ className?: string }>;
   Page: ComponentType<ExtensionPageProps>;
   /**
