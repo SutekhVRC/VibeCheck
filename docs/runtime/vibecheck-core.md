@@ -123,6 +123,7 @@ for cmd in graph.tick(&signals, dt, &safety, &mut events) {
 - `connect(from, to)` wires a source into a node input. If `from` belongs to a node, it's that node's output; otherwise it's read from the signal plane (e.g. an OSC parameter). Each input takes exactly one source.
 - `add_sink(from, target, duration_ms)` sends a node output to a target port, such as a motor.
 - `add_event_sink(from, target, duration_ms)` turns the events a node emits on its event port `from` into commands for `target`, for outputs that act on one-off actions (a timed pulse, a beep) rather than a level.
+- `connect_event(from, to)` wires a node's event output into another node's event input (`PortSpec::event_in`). An event input takes any number of wires. Each event reaches `Processor::event` on the receiving node in the same tick, before that node's `tick` (event wires order nodes like signal wires, so a loop of them is a cycle). What the receiver emits in response is published as caused by the event, so `chain_includes` and the depth limit see it.
 - `build()` rejects unknown nodes or ports, inputs wired twice or not at all, sinks fed from something other than a node, and cycles. It orders nodes so each runs after the nodes it reads from.
 
 **Ticking** (`Graph::tick`):
@@ -161,7 +162,7 @@ The app's input processors (SPS/TPS) run this way; see [toy-command-path.md](toy
 
 Node outputs live inside the graph, not on the signal plane. `Graph::snapshot()` copies them out for views (diagnostics, later a graph editor): every node output with its latest value (`None` before its first), and every sink as a `SinkValue { from, target, last }`, where `last` is the level it last sent, before the safety layer.
 
-`Graph::shape()` describes what the graph is made of, for the same views: each node (in run order) with its kind (`Processor::kind`, e.g. `Smooth`; the type's name unless the processor says otherwise), its inputs and what each reads (another node's output, or a signal-plane port such as an avatar parameter), its outputs, event ports and watches; and every sink and event sink with its target. In the app, `SessionContext::graphs()` returns every running graph (toys' and apps') with its shape and snapshot, through the graph runner (`GraphControl::Describe`).
+`Graph::shape()` describes what the graph is made of, for the same views: each node (in run order) with its kind (`Processor::kind`, e.g. `Smooth`; the type's name unless the processor says otherwise), its inputs and what each reads (another node's output, or a signal-plane port such as an avatar parameter), its outputs, event outputs, event inputs (with the event ports wired to each) and watches; and every sink and event sink with its target. In the app, `SessionContext::graphs()` returns every running graph (toys' and apps') with its shape and snapshot, through the graph runner (`GraphControl::Describe`).
 
 ## Diagnostics
 

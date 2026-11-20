@@ -57,7 +57,8 @@ A processor runs as a node in a [graph](vibecheck-core.md#graphs). Each tick it 
    - Push an `EventOut` naming one of your event ports to publish an event. The graph publishes it with your node as the source.
    - A node only runs once every wired input has a value.
 3. **`reset()`**: forget everything learned from past input, keep settings. Called on avatar change, so nothing from the old avatar carries over.
-4. **Inputs that aren't known in advance** (e.g. every SPS parameter an avatar sends): declare `watches()` with a module and a port-name prefix, and handle the values in `watched()`. See [Watching ports](vibecheck-core.md#watching-ports).
+4. **Events in** (optional): declare `PortSpec::event_in` ports, and handle what arrives in `event(input, value)`, where `input` is the event input's place among yours. Events wired to you (`GraphBuilder::connect_event`) arrive in the same tick they're emitted, before your `tick`, in order, even while a signal input has no value yet. Events you emit in that tick are published as caused by the last one, so the loop guard can follow the chain. A node that counts, latches or delays events works this way.
+5. **Inputs that aren't known in advance** (e.g. every SPS parameter an avatar sends): declare `watches()` with a module and a port-name prefix, and handle the values in `watched()`. See [Watching ports](vibecheck-core.md#watching-ports).
 
 **Testing.** For a single-input, single-output processor, `process_one(&mut p, input, dt)` runs one tick and returns the output. For events, several inputs or watches, build a small graph as the `Processor` example does, and read events with `EventReceiver::try_recv`. Pin the behaviour users feel (when it starts, how fast it winds down, what jitter does), not the internals.
 

@@ -65,6 +65,13 @@ impl PortSpec {
         Self::new(name, PortDirection::Out, PortKind::Event)
     }
 
+    /// An event input: events other nodes emit, wired to it with
+    /// [`GraphBuilder::connect_event`](crate::GraphBuilder::connect_event),
+    /// arrive through [`Processor::event`].
+    pub fn event_in(name: impl Into<String>) -> Self {
+        Self::new(name, PortDirection::In, PortKind::Event)
+    }
+
     /// Any port.
     pub fn new(name: impl Into<String>, direction: PortDirection, kind: PortKind) -> Self {
         Self {
@@ -353,6 +360,16 @@ pub trait Processor: Send {
     /// Default: the type's name without its path.
     fn kind(&self) -> String {
         short_type_name::<Self>()
+    }
+
+    /// An event arrived on one of its event inputs. `input` is its place
+    /// among the processor's event inputs, in port order. Called before
+    /// this tick's [`tick`](Processor::tick), once per event, in the order
+    /// they were emitted (and even while a signal input has no value yet,
+    /// so none are missed). Events it emits in that tick are published as
+    /// caused by the last one. Default: ignore them.
+    fn event(&mut self, input: usize, value: &crate::event::Value) {
+        let _ = (input, value);
     }
 
     /// Signal-plane ports this processor reads besides its wired inputs.
