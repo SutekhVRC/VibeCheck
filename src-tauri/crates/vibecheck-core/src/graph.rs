@@ -49,7 +49,7 @@ use std::sync::Arc;
 
 use crate::address::{ModuleInstanceId, PortId};
 use crate::error::{Error, Result};
-use crate::event::{EventPlane, Value};
+use crate::event::{EventId, EventPlane, Value};
 use crate::module::{PortDirection, PortKind, Processor, Watch};
 use crate::safety::{ClampedCmd, SafetyLayer};
 use crate::signal::{Signal, SignalPlane, SignalSeq};
@@ -63,6 +63,8 @@ struct NodeSpec {
     watches: Vec<Watch>,
     /// Ports the node publishes events on.
     event_outputs: Vec<Arc<str>>,
+    /// Its event inputs, each with the event ports wired to it.
+    event_inputs: Vec<(Arc<str>, Vec<PortId>)>,
 }
 
 struct SinkSpec {
@@ -110,11 +112,18 @@ impl GraphBuilder {
         };
         let inputs = signal_ports(PortDirection::In);
         let outputs = signal_ports(PortDirection::Out);
-        let event_outputs = processor
-            .ports()
+        let event_ports = |direction| -> Vec<Arc<str>> {
+            processor
+                .ports()
+                .into_iter()
+                .filter(|p| p.kind == PortKind::Event && p.direction == direction)
+                .map(|p| Arc::from(p.name))
+                .collect()
+        };
+        let event_outputs = event_ports(PortDirection::Out);
+        let event_inputs = event_ports(PortDirection::In)
             .into_iter()
-            .filter(|p| p.kind == PortKind::Event && p.direction == PortDirection::Out)
-            .map(|p| Arc::from(p.name))
+            .map(|name| (name, Vec::new()))
             .collect();
         let watches = processor.watches();
         self.index.insert(id.clone(), self.nodes.len());
@@ -126,7 +135,39 @@ impl GraphBuilder {
             inputs,
             outputs,
             event_outputs,
+            event_inputs,
         });
+        Ok(())
+    }
+
+    /// Wires the event port `from` (a node's event output) into the event
+    /// input `to`. An event input can take any number of wires: events from
+    /// all of them arrive, in the order they're emitted.
+    pub fn connect_event(&mut self, from: PortId, to: PortId) -> Result<()> {
+        let &source = self
+            .index
+            .get(&from.module)
+            .ok_or_else(|| graph_err(format!("{from}: no node {}", from.module)))?;
+        if !self.nodes[source].event_outputs.contains(&from.port) {
+            return Err(graph_err(format!(
+                "{from} is not an event output of node {}",
+                from.module
+            )));
+        }
+        let &node = self
+            .index
+            .get(&to.module)
+            .ok_or_else(|| graph_err(format!("{to}: no node {}", to.module)))?;
+        let input = self.nodes[node]
+            .event_inputs
+            .iter_mut()
+            .find(|(name, _)| *name == to.port)
+            .ok_or_else(|| {
+                graph_err(format!("{to} is not an event input of node {}", to.module))
+            })?;
+        if !input.1.contains(&from) {
+            input.1.push(from);
+        }
         Ok(())
     }
 
@@ -230,6 +271,12 @@ impl GraphBuilder {
                     None => node_inputs.push(InputRef::External(source.clone())),
                 }
             }
+            // Event wires order nodes too: an emitter runs before what it feeds
+            for (_, sources) in &spec.event_inputs {
+                for source in sources {
+                    node_deps.push(self.index[&source.module]);
+                }
+            }
             deps.push(node_deps);
             inputs.push(node_inputs);
         }
@@ -270,8 +317,13 @@ impl GraphBuilder {
             },
             InputRef::External(p) => InputRef::External(p.clone()),
         };
+        let specs_events: Vec<Vec<(Arc<str>, Vec<PortId>)>> = self
+            .nodes
+            .iter()
+            .map(|spec| spec.event_inputs.clone())
+            .collect();
         let mut specs: Vec<Option<NodeSpec>> = self.nodes.into_iter().map(Some).collect();
-        let nodes = order
+        let mut nodes = order
             .iter()
             .map(|&old| {
                 let spec = specs[old].take().unwrap();
@@ -286,6 +338,7 @@ impl GraphBuilder {
                     processor: spec.processor,
                     id: spec.id,
                     output_names: spec.outputs,
+                    event_inputs: Vec::new(),
                 }
             })
             .collect::<Vec<_>>();
@@ -324,11 +377,31 @@ impl GraphBuilder {
                 duration_ms: sink.duration_ms,
             })
             .collect();
+        let mut event_wires = Vec::new();
+        let mut event_inputs = vec![Vec::new(); nodes.len()];
+        for (old, spec) in specs_events.into_iter().enumerate() {
+            let to = position[old];
+            for (input, (name, sources)) in spec.into_iter().enumerate() {
+                for source in &sources {
+                    event_wires.push(EventWire {
+                        from: index[&source.module],
+                        port: source.port.clone(),
+                        to,
+                        input,
+                    });
+                }
+                event_inputs[to].push((name, sources));
+            }
+        }
+        for (node, inputs) in nodes.iter_mut().zip(event_inputs) {
+            node.event_inputs = inputs;
+        }
 
         Ok(Graph {
             nodes,
             sinks,
             event_sinks,
+            event_wires,
         })
     }
 }
@@ -347,6 +420,18 @@ struct Node {
     outputs: Vec<Option<Signal>>,
     /// Each watch, with how far the node has seen.
     watches: Vec<(Watch, SignalSeq)>,
+    /// Its event inputs and what's wired to each (for `shape`).
+    event_inputs: Vec<(Arc<str>, Vec<PortId>)>,
+}
+
+/// An event port wired to a node's event input.
+struct EventWire {
+    /// The emitting node and its port.
+    from: usize,
+    port: Arc<str>,
+    /// The receiving node and which of its event inputs.
+    to: usize,
+    input: usize,
 }
 
 struct Sink {
@@ -378,6 +463,7 @@ pub struct Graph {
     nodes: Vec<Node>,
     sinks: Vec<Sink>,
     event_sinks: Vec<EventSink>,
+    event_wires: Vec<EventWire>,
 }
 
 impl Graph {
@@ -396,6 +482,9 @@ impl Graph {
         let mut emitted = Vec::new();
         let mut changed = Vec::new();
         let mut cmds = Vec::new();
+        // Events on their way to each node's event inputs this tick: (input,
+        // value, the event's id). Emitters run first, so it's filled in time.
+        let mut inbox: Vec<Vec<(usize, Value, EventId)>> = vec![Vec::new(); self.nodes.len()];
         for i in 0..self.nodes.len() {
             // Nodes only read from nodes before them (run order)
             let (before, rest) = self.nodes.split_at_mut(i);
@@ -413,6 +502,13 @@ impl Graph {
                 if !changed.is_empty() {
                     node.processor.watched(&changed);
                 }
+            }
+
+            // Events first too, even if the node can't run yet
+            let mut cause = None;
+            for (input, value, id) in inbox[i].drain(..) {
+                node.processor.event(input, &value);
+                cause = Some(id);
             }
 
             ins.clear();
@@ -438,11 +534,21 @@ impl Graph {
             node.processor.tick(&ins, dt, &mut out, &mut emitted);
             for event in emitted.drain(..) {
                 let level = event_level(&event.value);
-                let id = events.publish(
-                    PortId::new(node.id.clone(), event.port.as_ref()),
-                    event.kind,
-                    event.value,
-                );
+                let value = event.value.clone();
+                let source = PortId::new(node.id.clone(), event.port.as_ref());
+                let id = match cause {
+                    // A response to an event: part of its chain
+                    Some(cause) => {
+                        events.publish_caused_by_id(cause, source, event.kind, event.value)
+                    }
+                    None => events.publish(source, event.kind, event.value),
+                };
+                // On to the nodes wired to this port (they run later)
+                for wire in &self.event_wires {
+                    if wire.from == i && wire.port == event.port {
+                        inbox[wire.to].push((wire.input, value.clone(), id));
+                    }
+                }
                 let Some(level) = level else { continue };
                 for sink in &self.event_sinks {
                     if sink.node != i || sink.port != event.port {
@@ -549,6 +655,7 @@ impl Graph {
                         .collect(),
                     outputs: node.output_names.clone(),
                     event_outputs: names(PortDirection::Out, PortKind::Event),
+                    event_inputs: node.event_inputs.clone(),
                     watches: node.watches.iter().map(|(w, _)| w.clone()).collect(),
                 }
             })
@@ -633,6 +740,8 @@ pub struct NodeShape {
     pub outputs: Vec<Arc<str>>,
     /// The ports it publishes events on.
     pub event_outputs: Vec<Arc<str>>,
+    /// Its event inputs, each with the event ports wired to it.
+    pub event_inputs: Vec<(Arc<str>, Vec<PortId>)>,
     /// Signal-plane ports it reads besides its inputs.
     pub watches: Vec<Watch>,
 }
@@ -759,6 +868,159 @@ mod tests {
             .iter()
             .map(|c| (c.target().to_string(), c.level()))
             .collect()
+    }
+
+    /// Emits `fired` (value: its input) whenever its input is 0.5 or more.
+    struct Emit;
+
+    impl Processor for Emit {
+        fn ports(&self) -> Vec<PortSpec> {
+            vec![PortSpec::signal_in("in"), PortSpec::event_out("fired")]
+        }
+
+        fn tick(
+            &mut self,
+            ins: &[Signal],
+            _: f32,
+            _: &mut [Option<Signal>],
+            ev: &mut Vec<EventOut>,
+        ) {
+            if ins[0].as_level() >= 0.5 {
+                ev.push(EventOut::new(
+                    "fired",
+                    EventKind::Threshold,
+                    Value::Float(ins[0].as_level()),
+                ));
+            }
+        }
+    }
+
+    /// Counts events on `add` in quarters (levels are capped at 1), starts
+    /// over on `reset`; outputs the count and emits `counted` when it grows.
+    #[derive(Default)]
+    struct Count {
+        n: f64,
+        added: bool,
+    }
+
+    impl Processor for Count {
+        fn ports(&self) -> Vec<PortSpec> {
+            vec![
+                PortSpec::event_in("add"),
+                PortSpec::event_in("reset"),
+                PortSpec::signal_out("count"),
+                PortSpec::event_out("counted"),
+            ]
+        }
+
+        fn event(&mut self, input: usize, _: &Value) {
+            if input == 0 {
+                self.n += 0.25;
+                self.added = true;
+            } else {
+                self.n = 0.0;
+            }
+        }
+
+        fn tick(
+            &mut self,
+            _: &[Signal],
+            _: f32,
+            out: &mut [Option<Signal>],
+            ev: &mut Vec<EventOut>,
+        ) {
+            out[0] = Some(Signal::Float(self.n));
+            if std::mem::take(&mut self.added) {
+                ev.push(EventOut::new(
+                    "counted",
+                    EventKind::Threshold,
+                    Value::Float(self.n),
+                ));
+            }
+        }
+    }
+
+    fn counting_graph() -> Graph {
+        let mut b = GraphBuilder::new();
+        // Added in the "wrong" order: the wiring decides who runs first
+        b.add_processor(id("count"), Box::new(Count::default()))
+            .unwrap();
+        b.add_processor(id("a"), Box::new(Emit)).unwrap();
+        b.add_processor(id("b"), Box::new(Emit)).unwrap();
+        b.connect(port("osc", "A"), port("a", "in")).unwrap();
+        b.connect(port("osc", "B"), port("b", "in")).unwrap();
+        b.connect_event(port("a", "fired"), port("count", "add"))
+            .unwrap();
+        b.connect_event(port("b", "fired"), port("count", "add"))
+            .unwrap();
+        b.add_sink(port("count", "count"), port("toy", "Vibrator_0"), None)
+            .unwrap();
+        b.build().unwrap()
+    }
+
+    #[test]
+    fn events_reach_the_inputs_wired_to_them_in_the_same_tick() {
+        let mut g = counting_graph();
+        let signals = SignalPlane::new();
+        let (events, mut received) = EventPlane::new();
+        let safety = SafetyLayer::default();
+        signals.write(&port("osc", "A"), Signal::Float(0.0));
+        signals.write(&port("osc", "B"), Signal::Float(0.0));
+        let levels = |cmds: Vec<ClampedCmd>| cmds.iter().map(|c| c.level()).collect::<Vec<_>>();
+        assert_eq!(levels(g.tick(&signals, 0.01, &safety, &events)), vec![0.0]);
+
+        // Both inputs fire: both events reach the one input this tick
+        signals.write(&port("osc", "A"), Signal::Float(1.0));
+        signals.write(&port("osc", "B"), Signal::Float(0.8));
+        assert_eq!(levels(g.tick(&signals, 0.01, &safety, &events)), vec![0.5]);
+
+        // The counter's own event is part of the chain that caused it
+        let mut fired = Vec::new();
+        while let Some(e) = received.try_recv() {
+            fired.push(e);
+        }
+        let counted = fired
+            .iter()
+            .find(|e| e.source == port("count", "counted"))
+            .unwrap();
+        assert_eq!(counted.depth, 1);
+        assert!(events.chain_includes(counted.id, &id("b")));
+    }
+
+    #[test]
+    fn event_wiring_is_checked_and_ordered() {
+        let mut b = GraphBuilder::new();
+        b.add_processor(id("count"), Box::new(Count::default()))
+            .unwrap();
+        b.add_processor(id("a"), Box::new(Emit)).unwrap();
+        assert!(b
+            .connect_event(port("a", "nope"), port("count", "add"))
+            .is_err());
+        assert!(b
+            .connect_event(port("a", "fired"), port("count", "count"))
+            .is_err());
+        assert!(b
+            .connect_event(port("count", "counted"), port("count", "add"))
+            .is_ok());
+        assert!(b.build().is_err(), "a node feeding itself is a cycle");
+
+        let shape = counting_graph().shape();
+        let count = shape.nodes.iter().find(|n| n.id == id("count")).unwrap();
+        assert_eq!(
+            count.event_inputs,
+            vec![
+                (
+                    Arc::from("add"),
+                    vec![port("a", "fired"), port("b", "fired")]
+                ),
+                (Arc::from("reset"), vec![]),
+            ]
+        );
+        assert_eq!(
+            *shape.nodes.last().map(|n| &n.id).unwrap(),
+            id("count"),
+            "runs last"
+        );
     }
 
     #[test]
