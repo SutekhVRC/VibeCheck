@@ -678,6 +678,7 @@ export default function Config({
                     {UPDATE_TEXT[updateStatus]}
                   </div>
                 )}
+                {appExtensions.About && <appExtensions.About />}
               </div>
               {canUpdate && <UpdateButton enabled={canUpdate} />}
             </div>

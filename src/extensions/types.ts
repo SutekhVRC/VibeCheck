@@ -67,4 +67,6 @@ export type ExtensionSettingsSection = {
 export type AppExtensions = {
   pages?: ExtensionPage[];
   settingsSections?: ExtensionSettingsSection[];
+  /** More lines in Settings > About, under the name and version */
+  About?: ComponentType;
 };
