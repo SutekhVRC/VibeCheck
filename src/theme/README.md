@@ -155,6 +155,7 @@ Shadow styles and font stacks live in `styles.ts`. Add an entry to
 | `neon-kitten.ts` | Neon glows, hearts-and-sparkles pattern, heart icon, kitten ears |
 | `latex.ts` | Glossy black with latex red and chrome silver, gloss shadows, O-rings-chains-and-padlocks pattern, dark `onAccent` for the silver half of gradients |
 | `hellfire.ts` | Crimson and pink on near-black, devil horns, flames-and-pitchforks pattern, flame icon, custom wording and `onAccent` |
+| `matte.ts` | Flat: soft charcoal greys, muted accents, no shadows, pattern or logo glow, sans font |
 
 ## How it works
 
