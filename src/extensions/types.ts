@@ -15,6 +15,17 @@ export type ExtensionItem = {
   label: string;
   /** Short state at the end of the row, e.g. "armed" */
   note?: string;
+  /** The note's colour; muted if unset */
+  noteTone?: NoteTone;
+};
+
+/** A row note's colour */
+export type NoteTone = "success" | "warning" | "danger";
+
+/** A device-list page's own row's state, e.g. "connected" */
+export type ExtensionPageStatus = {
+  note?: string;
+  noteTone?: NoteTone;
 };
 
 /** What an extension's page is given */
@@ -42,8 +53,12 @@ export type ExtensionPage = {
   placement?: "nav" | "devices";
   /** Button label and tooltip */
   label: string;
-  /** A shorter label for its tile in the sidebar's tools row ("nav" pages),
-   * if `label` is too long to fit, e.g. "Outputs" for "Avatar outputs" */
+  /**
+   * A shorter label where space is tight or the rest is said nearby: its
+   * tile in the tools row ("nav" pages), e.g. "Outputs" for "Avatar
+   * outputs"; or its row under its group title ("devices" pages with a
+   * group), e.g. "Hub" under "PiShock"
+   */
   shortLabel?: string;
   Icon: ComponentType<{ className?: string }>;
   Page: ComponentType<ExtensionPageProps>;
@@ -52,6 +67,15 @@ export type ExtensionPage = {
    * the page with that item. A hook: the sidebar calls it on every render.
    */
   useItems?: () => ExtensionItem[];
+  /** For "devices" pages: a hook giving the state shown on the page's row */
+  useStatus?: () => ExtensionPageStatus;
+  /**
+   * For "devices" pages: a title above its card, like the toys' groups
+   * (e.g. "PiShock"), with the number of items beside it
+   */
+  group?: string;
+  /** For "devices" pages: each item's icon (default: the page's Icon) */
+  ItemIcon?: ComponentType<{ className?: string }>;
 };
 
 /** A section in Settings, before Troubleshooting */

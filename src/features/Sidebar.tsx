@@ -3,7 +3,12 @@ import Loading from "@/components/Loading";
 import ThemedLogo from "@/components/ThemedLogo";
 import { useCoreEventContext } from "@/context/CoreEvents";
 import { PANIC_HOTKEY, TOOLTIP } from "@/data/constants";
-import type { ExtensionItem, ExtensionPage } from "@/extensions";
+import type {
+  ExtensionItem,
+  ExtensionPage,
+  ExtensionPageStatus,
+  NoteTone,
+} from "@/extensions";
 import { toyKey } from "@/hooks/useToys";
 import Button from "@/layout/Button";
 import Switch from "@/layout/Switch";
@@ -27,7 +32,7 @@ import {
   Search,
   Settings,
 } from "lucide-react";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import DiscordLogo from "../assets/discord-mark-white.svg";
 import GithubLogo from "../assets/GitHub-Mark-Light-64px.png";
 import VibecheckLogo from "../assets/VibeCheck_logo.png";
@@ -203,13 +208,8 @@ export default function Sidebar({
           )}
           {devicePages.length > 0 && (
             <>
-              {toys.length > 0 && (
-                <div
-                  className={cn(
-                    "h-px shrink-0 bg-theme-border",
-                    collapsed ? "my-0.5 w-8" : "mx-1",
-                  )}
-                />
+              {collapsed && toys.length > 0 && (
+                <div className="my-0.5 h-px w-8 shrink-0 bg-theme-border" />
               )}
               {devicePages.map((page) =>
                 collapsed ? (
@@ -581,7 +581,36 @@ function useNoItems(): ExtensionItem[] {
   return [];
 }
 
-/** A device-list page's row, with its items (if any) listed under it */
+/** A page without a state on its row */
+function useNoStatus(): ExtensionPageStatus {
+  return {};
+}
+
+const NOTE_TONE: Record<NoteTone, string> = {
+  success: "text-theme-success",
+  warning: "text-theme-warning",
+  danger: "text-theme-danger",
+};
+
+/** A row's note at its end, coloured by its tone */
+function RowNote({ note, tone }: { note?: string; tone?: NoteTone }) {
+  if (!note) return null;
+  return (
+    <span
+      className={cn(
+        "shrink-0 text-xs",
+        tone ? NOTE_TONE[tone] : "text-theme-muted",
+      )}
+    >
+      {note}
+    </span>
+  );
+}
+
+/**
+ * A device-list page: an optional group title like the toys' (with the
+ * number of items), then a card holding the page's row and its items
+ */
 function DevicePageGroup({
   page,
   selectedItem,
@@ -593,61 +622,72 @@ function DevicePageGroup({
   onOpen: (item: string | null) => void;
 }) {
   const useItems = page.useItems ?? useNoItems;
+  const useStatus = page.useStatus ?? useNoStatus;
   const items = useItems();
+  const status = useStatus();
+  const ItemIcon = page.ItemIcon ?? page.Icon;
   return (
     <div className="flex flex-col gap-1.5">
-      <DevicePageEntry
-        page={page}
-        selected={selectedItem === null}
-        onClick={() => onOpen(null)}
-      />
-      {items.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => onOpen(item.id)}
-          aria-pressed={selectedItem === item.id}
-          className={cn(
-            "ml-5 flex items-center gap-2 rounded-2xl px-3 py-1.5 text-left text-sm text-theme-text transition-all duration-200 hover:-translate-y-0.5",
-            selectedItem === item.id
-              ? "bg-gradient-to-r from-theme-primary/30 to-theme-secondary/30 ring-2 ring-theme-primary"
-              : "bg-theme-raised hover:bg-theme-border",
-          )}
+      {page.group && (
+        <div className="flex items-center justify-between px-1 text-[0.7rem] font-semibold uppercase tracking-wider text-theme-muted">
+          <span>{page.group}</span>
+          <span>{items.length}</span>
+        </div>
+      )}
+      <div className="flex flex-col gap-1 rounded-2xl border border-theme-border/60 bg-theme-surface p-1">
+        <DeviceRow
+          selected={selectedItem === null}
+          onClick={() => onOpen(null)}
+          className="font-semibold"
         >
-          <span className="min-w-0 flex-1 truncate">{item.label}</span>
-          {item.note && (
-            <span className="shrink-0 text-xs text-theme-muted">
-              {item.note}
-            </span>
-          )}
-        </button>
-      ))}
+          <page.Icon className="h-4 w-4 shrink-0 text-theme-primary" />
+          <span className="min-w-0 flex-1 truncate">
+            {page.group ? (page.shortLabel ?? page.label) : page.label}
+          </span>
+          <RowNote note={status.note} tone={status.noteTone} />
+        </DeviceRow>
+        {items.map((item) => (
+          <DeviceRow
+            key={item.id}
+            selected={selectedItem === item.id}
+            onClick={() => onOpen(item.id)}
+            className="pl-5"
+          >
+            <ItemIcon className="h-3.5 w-3.5 shrink-0 text-theme-secondary" />
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            <RowNote note={item.note} tone={item.noteTone} />
+          </DeviceRow>
+        ))}
+      </div>
     </div>
   );
 }
 
-/** An extension's page in the device list, styled like a toy row */
-function DevicePageEntry({
-  page,
+/** A row in a device page's card, styled like a toy row */
+function DeviceRow({
   selected,
   onClick,
+  className,
+  children,
 }: {
-  page: ExtensionPage;
   selected: boolean;
   onClick: () => void;
+  className?: string;
+  children: ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        "group flex items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm text-theme-text transition-all duration-200 hover:-translate-y-0.5",
+        "group flex items-center gap-2 rounded-xl px-3 py-1.5 text-left text-sm text-theme-text transition-all duration-200",
         selected
           ? "bg-gradient-to-r from-theme-primary/30 to-theme-secondary/30 ring-2 ring-theme-primary"
-          : "bg-theme-raised hover:bg-theme-border",
+          : "hover:bg-theme-raised",
+        className,
       )}
     >
-      <page.Icon className="h-4 w-4 shrink-0 text-theme-primary" />
-      <span className="min-w-0 flex-1 truncate">{page.label}</span>
+      {children}
     </button>
   );
 }
