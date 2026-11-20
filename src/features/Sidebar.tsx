@@ -63,8 +63,8 @@ type SidebarProps = {
 
 /*
  * Left column: logo, app on/off status, panic stop, toy list with scanning,
- * a row of tools (Diagnostics and extension pages) above Settings, and a
- * footer with community links and the version.
+ * a row of extension pages' tools, Settings with Diagnostics beside it, and
+ * a footer with community links and the version.
  * Collapses into a narrow icon-only bar; tooltips then carry the labels.
  */
 export default function Sidebar({
@@ -239,8 +239,8 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* Tools: Diagnostics and extension pages. Full: a row of labelled
-          tiles above a full-width Settings row. Collapsed: squares stacked
+      {/* Full: extension pages as a row of labelled tiles, above Settings
+          with a Diagnostics square beside it. Collapsed: squares stacked
           above Settings. */}
       {collapsed ? (
         <div className="flex shrink-0 flex-col items-center gap-2">
@@ -270,31 +270,32 @@ export default function Sidebar({
         </div>
       ) : (
         <div className="flex shrink-0 flex-col gap-2">
-          <div className="flex gap-2">
-            {navPages.map((page) => (
-              <ToolTile
-                key={page.id}
-                label={page.shortLabel ?? page.label}
-                tooltip={page.label}
-                Icon={page.Icon}
-                selected={selectedExtension?.id == page.id}
-                onClick={() => onToggleExtensionPage(page.id)}
-              />
-            ))}
-            <ToolTile
-              label="Diagnostics"
-              tooltip={DIAGNOSTICS_TOOLTIP}
-              Icon={Activity}
+          {navPages.length > 0 && (
+            <div className="flex gap-2">
+              {navPages.map((page) => (
+                <ToolTile
+                  key={page.id}
+                  label={page.shortLabel ?? page.label}
+                  tooltip={page.label}
+                  Icon={page.Icon}
+                  selected={selectedExtension?.id == page.id}
+                  onClick={() => onToggleExtensionPage(page.id)}
+                />
+              ))}
+            </div>
+          )}
+          <div className="flex items-stretch gap-2">
+            <SettingsRow
+              selected={configSelected}
+              canUpdate={canUpdate}
+              onClick={onToggleConfig}
+              collapsed={false}
+            />
+            <DiagnosticsSquare
               selected={diagnosticsSelected}
               onClick={onToggleDiagnostics}
             />
           </div>
-          <SettingsRow
-            selected={configSelected}
-            canUpdate={canUpdate}
-            onClick={onToggleConfig}
-            collapsed={false}
-          />
         </div>
       )}
 
@@ -852,6 +853,38 @@ function NavSquareButton({
         )}
       >
         <Icon
+          className={cn(
+            "h-5 w-5",
+            selected ? "text-theme-primary" : "text-theme-secondary",
+          )}
+        />
+      </button>
+    </Tooltip>
+  );
+}
+
+/** Diagnostics in the full sidebar: a square beside Settings */
+function DiagnosticsSquare({
+  selected,
+  onClick,
+}: {
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip text={DIAGNOSTICS_TOOLTIP} side="top">
+      <button
+        onClick={onClick}
+        aria-pressed={selected}
+        aria-label="Diagnostics"
+        className={cn(
+          "group flex w-11 shrink-0 items-center justify-center rounded-2xl border transition-all duration-200",
+          selected
+            ? "border-theme-primary bg-gradient-to-r from-theme-primary/25 to-theme-secondary/25"
+            : "border-theme-border/60 bg-theme-surface hover:border-theme-secondary",
+        )}
+      >
+        <Activity
           className={cn(
             "h-5 w-5",
             selected ? "text-theme-primary" : "text-theme-secondary",

@@ -36,7 +36,7 @@ export type ExtensionPage = {
   id: string;
   /**
    * Where its button goes: "nav" (the default), a tile in the tools row
-   * beside Diagnostics, for tools; or "devices", a row in the device list below
+   * above Settings, for tools; or "devices", a row in the device list below
    * the toys, for pages about devices.
    */
   placement?: "nav" | "devices";
