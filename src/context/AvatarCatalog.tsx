@@ -26,7 +26,12 @@ type AvatarCatalogContext = {
   refresh: () => void;
 };
 
-const LOOKING: FeAvatarCatalog = { status: "Looking", parameters: [] };
+const LOOKING: FeAvatarCatalog = {
+  status: "Looking",
+  parameters: [],
+  zones: [],
+  tps: false,
+};
 
 const Context = createContext<AvatarCatalogContext>({
   catalog: LOOKING,
