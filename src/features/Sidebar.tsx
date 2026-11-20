@@ -3,7 +3,12 @@ import Loading from "@/components/Loading";
 import ThemedLogo from "@/components/ThemedLogo";
 import { useCoreEventContext } from "@/context/CoreEvents";
 import { PANIC_HOTKEY, TOOLTIP } from "@/data/constants";
-import type { ExtensionItem, ExtensionPage } from "@/extensions";
+import type {
+  ExtensionItem,
+  ExtensionPage,
+  ExtensionPageStatus,
+  NoteTone,
+} from "@/extensions";
 import { toyKey } from "@/hooks/useToys";
 import Button from "@/layout/Button";
 import Switch from "@/layout/Switch";
@@ -27,7 +32,7 @@ import {
   Search,
   Settings,
 } from "lucide-react";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import DiscordLogo from "../assets/discord-mark-white.svg";
 import GithubLogo from "../assets/GitHub-Mark-Light-64px.png";
 import VibecheckLogo from "../assets/VibeCheck_logo.png";
@@ -63,8 +68,8 @@ type SidebarProps = {
 
 /*
  * Left column: logo, app on/off status, panic stop, toy list with scanning,
- * Settings with Diagnostics beside it, and a footer with community links and
- * the version.
+ * a row of extension pages' tools, Settings with Diagnostics beside it, and
+ * a footer with community links and the version.
  * Collapses into a narrow icon-only bar; tooltips then carry the labels.
  */
 export default function Sidebar({
@@ -203,13 +208,8 @@ export default function Sidebar({
           )}
           {devicePages.length > 0 && (
             <>
-              {toys.length > 0 && (
-                <div
-                  className={cn(
-                    "h-px shrink-0 bg-theme-border",
-                    collapsed ? "my-0.5 w-8" : "mx-1",
-                  )}
-                />
+              {collapsed && toys.length > 0 && (
+                <div className="my-0.5 h-px w-8 shrink-0 bg-theme-border" />
               )}
               {devicePages.map((page) =>
                 collapsed ? (
@@ -220,7 +220,6 @@ export default function Sidebar({
                     Icon={page.Icon}
                     selected={selectedExtension?.id == page.id}
                     onClick={() => onToggleExtensionPage(page.id)}
-                    collapsed
                   />
                 ) : (
                   <DevicePageGroup
@@ -240,16 +239,12 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* Collapsed: two squares stacked. Full: Settings row with a
-          Diagnostics square beside it. */}
-      <div
-        className={cn(
-          "flex shrink-0 gap-2",
-          collapsed ? "flex-col items-center" : "items-stretch",
-        )}
-      >
-        {collapsed &&
-          navPages.map((page) => (
+      {/* Full: extension pages as a row of labelled tiles, above Settings
+          with a Diagnostics square beside it. Collapsed: squares stacked
+          above Settings. */}
+      {collapsed ? (
+        <div className="flex shrink-0 flex-col items-center gap-2">
+          {navPages.map((page) => (
             <NavSquareButton
               key={page.id}
               label={page.label}
@@ -257,42 +252,52 @@ export default function Sidebar({
               Icon={page.Icon}
               selected={selectedExtension?.id == page.id}
               onClick={() => onToggleExtensionPage(page.id)}
-              collapsed
             />
           ))}
-        {collapsed && (
-          <DiagnosticsButton
+          <NavSquareButton
+            label="Diagnostics"
+            tooltip={DIAGNOSTICS_TOOLTIP}
+            Icon={Activity}
             selected={diagnosticsSelected}
             onClick={onToggleDiagnostics}
+          />
+          <SettingsRow
+            selected={configSelected}
+            canUpdate={canUpdate}
+            onClick={onToggleConfig}
             collapsed
           />
-        )}
-        <SettingsRow
-          selected={configSelected}
-          canUpdate={canUpdate}
-          onClick={onToggleConfig}
-          collapsed={collapsed}
-        />
-        {!collapsed && (
-          <DiagnosticsButton
-            selected={diagnosticsSelected}
-            onClick={onToggleDiagnostics}
-            collapsed={false}
-          />
-        )}
-        {!collapsed &&
-          navPages.map((page) => (
-            <NavSquareButton
-              key={page.id}
-              label={page.label}
-              tooltip={page.label}
-              Icon={page.Icon}
-              selected={selectedExtension?.id == page.id}
-              onClick={() => onToggleExtensionPage(page.id)}
+        </div>
+      ) : (
+        <div className="flex shrink-0 flex-col gap-2">
+          {navPages.length > 0 && (
+            <div className="flex gap-2">
+              {navPages.map((page) => (
+                <ToolTile
+                  key={page.id}
+                  label={page.shortLabel ?? page.label}
+                  tooltip={page.label}
+                  Icon={page.Icon}
+                  selected={selectedExtension?.id == page.id}
+                  onClick={() => onToggleExtensionPage(page.id)}
+                />
+              ))}
+            </div>
+          )}
+          <div className="flex items-stretch gap-2">
+            <SettingsRow
+              selected={configSelected}
+              canUpdate={canUpdate}
+              onClick={onToggleConfig}
               collapsed={false}
             />
-          ))}
-      </div>
+            <DiagnosticsSquare
+              selected={diagnosticsSelected}
+              onClick={onToggleDiagnostics}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Community links and version: only in the full sidebar. The
           collapsed bar keeps to the core controls; the links are one click
@@ -576,7 +581,36 @@ function useNoItems(): ExtensionItem[] {
   return [];
 }
 
-/** A device-list page's row, with its items (if any) listed under it */
+/** A page without a state on its row */
+function useNoStatus(): ExtensionPageStatus {
+  return {};
+}
+
+const NOTE_TONE: Record<NoteTone, string> = {
+  success: "text-theme-success",
+  warning: "text-theme-warning",
+  danger: "text-theme-danger",
+};
+
+/** A row's note at its end, coloured by its tone */
+function RowNote({ note, tone }: { note?: string; tone?: NoteTone }) {
+  if (!note) return null;
+  return (
+    <span
+      className={cn(
+        "shrink-0 text-xs",
+        tone ? NOTE_TONE[tone] : "text-theme-muted",
+      )}
+    >
+      {note}
+    </span>
+  );
+}
+
+/**
+ * A device-list page: an optional group title like the toys' (with the
+ * number of items), then a card holding the page's row and its items
+ */
 function DevicePageGroup({
   page,
   selectedItem,
@@ -588,61 +622,72 @@ function DevicePageGroup({
   onOpen: (item: string | null) => void;
 }) {
   const useItems = page.useItems ?? useNoItems;
+  const useStatus = page.useStatus ?? useNoStatus;
   const items = useItems();
+  const status = useStatus();
+  const ItemIcon = page.ItemIcon ?? page.Icon;
   return (
     <div className="flex flex-col gap-1.5">
-      <DevicePageEntry
-        page={page}
-        selected={selectedItem === null}
-        onClick={() => onOpen(null)}
-      />
-      {items.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => onOpen(item.id)}
-          aria-pressed={selectedItem === item.id}
-          className={cn(
-            "ml-5 flex items-center gap-2 rounded-2xl px-3 py-1.5 text-left text-sm text-theme-text transition-all duration-200 hover:-translate-y-0.5",
-            selectedItem === item.id
-              ? "bg-gradient-to-r from-theme-primary/30 to-theme-secondary/30 ring-2 ring-theme-primary"
-              : "bg-theme-raised hover:bg-theme-border",
-          )}
+      {page.group && (
+        <div className="flex items-center justify-between px-1 text-[0.7rem] font-semibold uppercase tracking-wider text-theme-muted">
+          <span>{page.group}</span>
+          <span>{items.length}</span>
+        </div>
+      )}
+      <div className="flex flex-col gap-1 rounded-2xl border border-theme-border/60 bg-theme-surface p-1">
+        <DeviceRow
+          selected={selectedItem === null}
+          onClick={() => onOpen(null)}
+          className="font-semibold"
         >
-          <span className="min-w-0 flex-1 truncate">{item.label}</span>
-          {item.note && (
-            <span className="shrink-0 text-xs text-theme-muted">
-              {item.note}
-            </span>
-          )}
-        </button>
-      ))}
+          <page.Icon className="h-4 w-4 shrink-0 text-theme-primary" />
+          <span className="min-w-0 flex-1 truncate">
+            {page.group ? (page.shortLabel ?? page.label) : page.label}
+          </span>
+          <RowNote note={status.note} tone={status.noteTone} />
+        </DeviceRow>
+        {items.map((item) => (
+          <DeviceRow
+            key={item.id}
+            selected={selectedItem === item.id}
+            onClick={() => onOpen(item.id)}
+            className="pl-5"
+          >
+            <ItemIcon className="h-3.5 w-3.5 shrink-0 text-theme-secondary" />
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            <RowNote note={item.note} tone={item.noteTone} />
+          </DeviceRow>
+        ))}
+      </div>
     </div>
   );
 }
 
-/** An extension's page in the device list, styled like a toy row */
-function DevicePageEntry({
-  page,
+/** A row in a device page's card, styled like a toy row */
+function DeviceRow({
   selected,
   onClick,
+  className,
+  children,
 }: {
-  page: ExtensionPage;
   selected: boolean;
   onClick: () => void;
+  className?: string;
+  children: ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        "group flex items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm text-theme-text transition-all duration-200 hover:-translate-y-0.5",
+        "group flex items-center gap-2 rounded-xl px-3 py-1.5 text-left text-sm text-theme-text transition-all duration-200",
         selected
           ? "bg-gradient-to-r from-theme-primary/30 to-theme-secondary/30 ring-2 ring-theme-primary"
-          : "bg-theme-raised hover:bg-theme-border",
+          : "hover:bg-theme-raised",
+        className,
       )}
     >
-      <page.Icon className="h-4 w-4 shrink-0 text-theme-primary" />
-      <span className="min-w-0 flex-1 truncate">{page.label}</span>
+      {children}
     </button>
   );
 }
@@ -815,60 +860,36 @@ function ToyListHeader({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-/** Diagnostics: a square button, beside Settings or stacked above it */
-function DiagnosticsButton({
-  selected,
-  onClick,
-  collapsed,
-}: {
+const DIAGNOSTICS_TOOLTIP = "Diagnostics: live values from VRChat";
+
+type ToolButtonProps = {
+  label: string;
+  tooltip: string;
+  Icon: ComponentType<{ className?: string }>;
   selected: boolean;
   onClick: () => void;
-  collapsed: boolean;
-}) {
-  return (
-    <NavSquareButton
-      label="Diagnostics"
-      tooltip="Diagnostics: live values from VRChat"
-      Icon={Activity}
-      selected={selected}
-      onClick={onClick}
-      collapsed={collapsed}
-    />
-  );
-}
+};
 
-/** A square page button next to Settings: Diagnostics, or an extension's page */
+/** A tool in the collapsed bar: Diagnostics or an extension's page */
 function NavSquareButton({
   label,
   tooltip,
   Icon,
   selected,
   onClick,
-  collapsed,
-}: {
-  label: string;
-  tooltip: string;
-  Icon: ComponentType<{ className?: string }>;
-  selected: boolean;
-  onClick: () => void;
-  collapsed: boolean;
-}) {
+}: ToolButtonProps) {
   return (
-    <Tooltip text={tooltip} side={collapsed ? "right" : "top"}>
+    <Tooltip text={tooltip} side="right">
       <button
         onClick={onClick}
         aria-pressed={selected}
         aria-label={label}
         className={cn(
-          "group flex shrink-0 items-center justify-center transition-all duration-200",
-          collapsed ? ICON_SQUARE : "w-11 rounded-2xl border",
+          ICON_SQUARE,
+          "group",
           selected
-            ? collapsed
-              ? "bg-gradient-to-br from-theme-primary/30 to-theme-secondary/30 ring-2 ring-theme-primary"
-              : "border-theme-primary bg-gradient-to-r from-theme-primary/25 to-theme-secondary/25"
-            : collapsed
-              ? "bg-theme-raised hover:bg-theme-border"
-              : "border-theme-border/60 bg-theme-surface hover:border-theme-secondary",
+            ? "bg-gradient-to-br from-theme-primary/30 to-theme-secondary/30 ring-2 ring-theme-primary"
+            : "bg-theme-raised hover:bg-theme-border",
         )}
       >
         <Icon
@@ -877,6 +898,79 @@ function NavSquareButton({
             selected ? "text-theme-primary" : "text-theme-secondary",
           )}
         />
+      </button>
+    </Tooltip>
+  );
+}
+
+/** Diagnostics in the full sidebar: a square beside Settings */
+function DiagnosticsSquare({
+  selected,
+  onClick,
+}: {
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip text={DIAGNOSTICS_TOOLTIP} side="top">
+      <button
+        onClick={onClick}
+        aria-pressed={selected}
+        aria-label="Diagnostics"
+        className={cn(
+          "group flex w-11 shrink-0 items-center justify-center rounded-2xl border transition-all duration-200",
+          selected
+            ? "border-theme-primary bg-gradient-to-r from-theme-primary/25 to-theme-secondary/25"
+            : "border-theme-border/60 bg-theme-surface hover:border-theme-secondary",
+        )}
+      >
+        <Activity
+          className={cn(
+            "h-5 w-5",
+            selected ? "text-theme-primary" : "text-theme-secondary",
+          )}
+        />
+      </button>
+    </Tooltip>
+  );
+}
+
+/** A tool in the full sidebar's tools row: an icon over a short label; the
+ * tiles share the row's width equally */
+function ToolTile({
+  label,
+  tooltip,
+  Icon,
+  selected,
+  onClick,
+}: ToolButtonProps) {
+  return (
+    <Tooltip text={tooltip} side="top">
+      <button
+        onClick={onClick}
+        aria-pressed={selected}
+        aria-label={label}
+        className={cn(
+          "group flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl border px-1 py-2 transition-all duration-200",
+          selected
+            ? "border-theme-primary bg-gradient-to-r from-theme-primary/25 to-theme-secondary/25"
+            : "border-theme-border/60 bg-theme-surface hover:border-theme-secondary",
+        )}
+      >
+        <Icon
+          className={cn(
+            "h-5 w-5 shrink-0",
+            selected ? "text-theme-primary" : "text-theme-secondary",
+          )}
+        />
+        <span
+          className={cn(
+            "w-full truncate text-center text-xs",
+            selected ? "text-theme-text" : "text-theme-muted",
+          )}
+        >
+          {label}
+        </span>
       </button>
     </Tooltip>
   );
