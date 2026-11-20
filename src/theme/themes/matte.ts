@@ -1,24 +1,26 @@
 import { Circle } from "lucide-react";
 import { defineTheme } from "../defineTheme";
 
-// Flat and quiet: soft charcoal greys rather than black, muted lavender and
-// sage accents, no glows, no pattern, no ears
+// Flat and dark: near-black charcoal greys with crisp text and one muted
+// slate-blue accent. Primary and secondary are the same colour, so
+// selections and buttons are solid instead of a two-colour gradient. No
+// glows, no pattern, no ears.
 export default defineTheme({
   id: "matte",
   name: "Matte",
   colors: {
-    background: "#18181b",
-    surface: "#1f1f23",
-    raised: "#28282d",
-    border: "#38383f",
-    text: "#e4e4e7",
-    muted: "#8e8e97",
-    primary: "#b6a8d9",
-    secondary: "#8fb5a9",
-    success: "#93c49a",
-    danger: "#d98c8c",
-    info: "#93b4d9",
-    warning: "#d9bb8c",
+    background: "#0c0c0e",
+    surface: "#141416",
+    raised: "#1d1d20",
+    border: "#323237",
+    text: "#f4f4f5",
+    muted: "#a1a1aa",
+    primary: "#8fa8d0",
+    secondary: "#8fa8d0",
+    success: "#8cc79a",
+    danger: "#e08585",
+    info: "#8fbbe0",
+    warning: "#e0bd85",
   },
   logo: {
     glow: null,
