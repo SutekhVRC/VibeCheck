@@ -23,6 +23,20 @@ export default defineTheme({
     warning: "#e0bd85",
   },
   logo: {
+    // The logo in its own colours (as in vibecheck.ts), with the black
+    // outlines made light so they show on the dark background; no glow
+    stops: [
+      { brightness: 0, color: "#f4f4f5" },
+      { brightness: 0.1, color: "#f4f4f5" },
+      { brightness: 0.18, color: "#7828a8" },
+      { brightness: 0.29, color: "#7828a8" },
+      { brightness: 0.36, color: "#c84a5a" },
+      { brightness: 0.45, color: "#e85e66" },
+      { brightness: 0.56, color: "#f87070" },
+      { brightness: 0.68, color: "#f89090" },
+      { brightness: 0.97, color: "#f8f8f8" },
+      { brightness: 1, color: "#ffffff" },
+    ],
     glow: null,
   },
   decorations: {
