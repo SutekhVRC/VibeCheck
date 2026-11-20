@@ -238,6 +238,18 @@ pub struct FeatureCheck {
     pub unmatched_tags: Vec<String>,
     /// The Processor's system, if the avatar has none of it.
     pub system_missing: Option<PenetrationSystemType>,
+    /// Each input filter tag and the names of the avatar's SPS zones it
+    /// matches (none for a tag that matches nothing), by the rule the
+    /// input filter itself uses.
+    pub tag_matches: Vec<TagMatch>,
+}
+
+/// An input filter tag and the SPS zones it matches.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TagMatch {
+    pub tag: String,
+    /// Zone names, each once, in the avatar's order.
+    pub zones: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -267,6 +279,22 @@ pub fn check_feature(
             }),
         }
     }
+
+    check.tag_matches = tags
+        .iter()
+        .map(|tag| {
+            let mut zones: Vec<String> = Vec::new();
+            for zone in &avatar.zones {
+                if sps::tag_matches_zone(tag, &zone.name) && !zones.contains(&zone.name) {
+                    zones.push(zone.name.clone());
+                }
+            }
+            TagMatch {
+                tag: tag.clone(),
+                zones,
+            }
+        })
+        .collect();
 
     match system {
         PenetrationSystemType::Sps if !avatar.has_sps() => {
@@ -821,7 +849,17 @@ mod tests {
             PenetrationSystemType::Sps,
             &["Mouth".to_owned()],
         );
-        assert_eq!(check, FeatureCheck::default());
+        // Nothing flagged; the tag's matches are listed, not a problem
+        assert_eq!(
+            check,
+            FeatureCheck {
+                tag_matches: vec![TagMatch {
+                    tag: "Mouth".to_owned(),
+                    zones: vec!["Mouth".to_owned()],
+                }],
+                ..FeatureCheck::default()
+            }
+        );
     }
 
     #[test]
@@ -876,6 +914,30 @@ mod tests {
         // A tag matches any zone whose name contains it
         assert_eq!(check.unmatched_tags, vec!["Feet".to_owned()]);
         assert_eq!(check.system_missing, None);
+    }
+
+    #[test]
+    fn lists_the_zones_each_filter_tag_matches() {
+        let check = check_feature(
+            &sps3_avatar(),
+            &[],
+            PenetrationSystemType::None,
+            &["Mou".to_owned(), "H".to_owned(), "Feet".to_owned()],
+        );
+        let matches: Vec<(&str, Vec<&str>)> = check
+            .tag_matches
+            .iter()
+            .map(|m| (m.tag.as_str(), m.zones.iter().map(String::as_str).collect()))
+            .collect();
+        // Every tag, in order, whatever the system; capitals count
+        assert_eq!(
+            matches,
+            vec![
+                ("Mou", vec!["Mouth"]),
+                ("H", vec!["Hips"]),
+                ("Feet", vec![])
+            ]
+        );
     }
 
     #[test]

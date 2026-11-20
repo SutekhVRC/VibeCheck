@@ -28,6 +28,7 @@ import {
 } from "react";
 import EditableNumber from "../components/EditableNumber";
 import { OSC, TOOLTIP } from "../data/constants";
+import { appExtensions, type FeatureSlotProps } from "../extensions";
 import { handleFeatureAlter as handleToyFeatureAlter } from "../hooks/useToys";
 import Slider from "../layout/Slider";
 import Switch from "../layout/Switch";
@@ -241,9 +242,35 @@ export default function FeatureForm({
   );
 }
 
+/** What an extension's slot in this form is given (FeatureFormSlots) */
+function useSlotProps(): FeatureSlotProps {
+  const { feature, setToyFeature, handleFeatureAlter, check } =
+    useFeatureFormContext();
+  function setPenetration(
+    update: Partial<FeVCToyFeature["penetration_system"]>,
+  ) {
+    setToyFeature((f) => {
+      const newF: FeVCToyFeature = {
+        ...f,
+        penetration_system: { ...f.penetration_system, ...update },
+      };
+      handleFeatureAlter(newF);
+      return newF;
+    });
+  }
+  return {
+    feature,
+    check,
+    setSystem: (system) => setPenetration({ pen_system_type: system }),
+    setInputFilter: (tags) => setPenetration({ pen_system_input_filter: tags }),
+  };
+}
+
 function InputProcessor() {
   const { feature, setToyFeature, handleFeatureAlter, check } =
     useFeatureFormContext();
+  const slotProps = useSlotProps();
+  const ProcessorSlot = appExtensions.featureForm?.Processor;
 
   function handleInputProcessor<
     K extends "pen_system_type" | "pen_system_processing_mode",
@@ -297,6 +324,7 @@ function InputProcessor() {
           won&apos;t react. Choose the system your avatar uses.
         </SetupWarning>
       )}
+      {ProcessorSlot && <ProcessorSlot {...slotProps} />}
     </SettingRow>
   );
 }
@@ -512,6 +540,8 @@ function InputFilter() {
   const { feature, setToyFeature, handleFeatureAlter, check } =
     useFeatureFormContext();
   const unmatched = check?.unmatched_tags ?? [];
+  const slotProps = useSlotProps();
+  const FilterSlot = appExtensions.featureForm?.InputFilter;
 
   function handleInputProcessor(items: string[]) {
     setToyFeature((f) => {
@@ -549,6 +579,7 @@ function InputFilter() {
           (capitals count).
         </SetupWarning>
       )}
+      {FilterSlot && <FilterSlot {...slotProps} />}
     </SettingRow>
   );
 }

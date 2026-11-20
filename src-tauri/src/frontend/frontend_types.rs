@@ -389,6 +389,38 @@ pub struct FeAvatarCatalog {
     pub status: FeAvatarStatus,
     /// Empty unless `status` is `Ready`. Sorted by address.
     pub parameters: Vec<FeAvatarParameter>,
+    /// The avatar's SPS zones, each once, in the order first seen. Empty
+    /// unless `status` is `Ready`.
+    pub zones: Vec<FeAvatarZone>,
+    /// Whether the avatar has TPS parameters.
+    pub tps: bool,
+}
+
+/// An SPS zone on the current avatar.
+#[derive(Serialize, Debug, Clone, TS)]
+#[ts(export)]
+pub struct FeAvatarZone {
+    /// e.g. a socket's name in the SPS menu. What input filter tags match.
+    pub name: String,
+    pub kind: FeZoneKind,
+    pub format: FeZoneFormat,
+}
+
+#[derive(Serialize, Debug, Clone, Copy, TS)]
+#[ts(export)]
+pub enum FeZoneKind {
+    Socket,
+    Plug,
+    Touch,
+}
+
+#[derive(Serialize, Debug, Clone, Copy, TS)]
+#[ts(export)]
+pub enum FeZoneFormat {
+    /// SPS 3 and later
+    Sps3,
+    /// Older SPS
+    Legacy,
 }
 
 #[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq, TS)]
@@ -444,6 +476,16 @@ pub struct FeFeatureCheck {
     pub unmatched_tags: Vec<String>,
     /// The Processor's system, if the avatar has none of it
     pub system_missing: Option<PenetrationSystemType>,
+    /// Each input filter tag and the SPS zones it matches
+    pub tag_matches: Vec<FeTagMatch>,
+}
+
+#[derive(Serialize, Debug, Clone, TS)]
+#[ts(export)]
+pub struct FeTagMatch {
+    pub tag: String,
+    /// Names of the zones it matches; empty if none
+    pub zones: Vec<String>,
 }
 
 #[derive(Serialize, Debug, Clone, TS)]
@@ -459,6 +501,26 @@ mod avatar_conversions {
     use crate::osc::avatar_catalog::{
         AvatarParam, CatalogState, FeatureCheck, ParamGroup, ParamKind,
     };
+    use crate::toy_handling::input_processor::penetration_systems::sps::{
+        Format, ZoneInfo, ZoneKind,
+    };
+
+    impl From<&ZoneInfo> for FeAvatarZone {
+        fn from(z: &ZoneInfo) -> Self {
+            Self {
+                name: z.name.clone(),
+                kind: match z.kind {
+                    ZoneKind::Socket => FeZoneKind::Socket,
+                    ZoneKind::Plug => FeZoneKind::Plug,
+                    ZoneKind::Touch => FeZoneKind::Touch,
+                },
+                format: match z.format {
+                    Format::Sps3 => FeZoneFormat::Sps3,
+                    Format::Legacy => FeZoneFormat::Legacy,
+                },
+            }
+        }
+    }
 
     impl From<&AvatarParam> for FeAvatarParameter {
         fn from(p: &AvatarParam) -> Self {
@@ -483,22 +545,21 @@ mod avatar_conversions {
 
     impl From<&CatalogState> for FeAvatarCatalog {
         fn from(state: &CatalogState) -> Self {
+            let empty = |status| Self {
+                status,
+                parameters: Vec::new(),
+                zones: Vec::new(),
+                tps: false,
+            };
             match state {
-                CatalogState::Looking => Self {
-                    status: FeAvatarStatus::Looking,
-                    parameters: Vec::new(),
-                },
-                CatalogState::Searching => Self {
-                    status: FeAvatarStatus::Searching,
-                    parameters: Vec::new(),
-                },
-                CatalogState::Reading => Self {
-                    status: FeAvatarStatus::Reading,
-                    parameters: Vec::new(),
-                },
+                CatalogState::Looking => empty(FeAvatarStatus::Looking),
+                CatalogState::Searching => empty(FeAvatarStatus::Searching),
+                CatalogState::Reading => empty(FeAvatarStatus::Reading),
                 CatalogState::Ready(avatar) => Self {
                     status: FeAvatarStatus::Ready,
                     parameters: avatar.params.iter().map(Into::into).collect(),
+                    zones: avatar.zones.iter().map(Into::into).collect(),
+                    tps: avatar.tps,
                 },
             }
         }
@@ -518,6 +579,14 @@ mod avatar_conversions {
                 unusable: check.unusable.iter().map(Into::into).collect(),
                 unmatched_tags: check.unmatched_tags,
                 system_missing: check.system_missing,
+                tag_matches: check
+                    .tag_matches
+                    .into_iter()
+                    .map(|m| FeTagMatch {
+                        tag: m.tag,
+                        zones: m.zones,
+                    })
+                    .collect(),
             }
         }
     }

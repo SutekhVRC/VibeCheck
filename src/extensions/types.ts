@@ -1,4 +1,7 @@
+import type { FeFeatureCheck } from "@bindings/FeFeatureCheck";
 import type { FeVCToy } from "@bindings/FeVCToy";
+import type { FeVCToyFeature } from "@bindings/FeVCToyFeature";
+import type { PenetrationSystemType } from "@bindings/PenetrationSystemType";
 import type { ComponentType } from "react";
 
 /*
@@ -88,9 +91,33 @@ export type ExtensionSettingsSection = {
   Body: ComponentType;
 };
 
+/**
+ * What a slot in a toy feature's settings is given. The current avatar is
+ * in useAvatarCatalog (src/context/AvatarCatalog.tsx).
+ */
+export type FeatureSlotProps = {
+  feature: FeVCToyFeature;
+  /** What the feature's settings miss on the current avatar, and which
+   * zones each input filter tag matches; null while the avatar isn't known */
+  check: FeFeatureCheck | null;
+  /** Sets the Processor's system, and saves */
+  setSystem: (system: PenetrationSystemType) => void;
+  /** Sets the input filter's tags, and saves */
+  setInputFilter: (tags: string[]) => void;
+};
+
+/** Extra content under rows of a toy feature's settings */
+export type FeatureFormSlots = {
+  /** Under the Processor row */
+  Processor?: ComponentType<FeatureSlotProps>;
+  /** Under the Input Filter row */
+  InputFilter?: ComponentType<FeatureSlotProps>;
+};
+
 export type AppExtensions = {
   pages?: ExtensionPage[];
   settingsSections?: ExtensionSettingsSection[];
   /** More lines in Settings > About, under the name and version */
   About?: ComponentType;
+  featureForm?: FeatureFormSlots;
 };
