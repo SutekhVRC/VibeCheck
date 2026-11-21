@@ -8,8 +8,11 @@
  * - Windows: %LOCALAPPDATA%\com.vibecheck (WebView2's EBWebView folder)
  *
  * Old cached pages and old local storage could clash with the new version's
- * frontend, so on a version change everything in that folder is deleted
- * before the window opens. Nothing is lost: every setting, including the
+ * frontend, so on a version change the webview's data in that folder is
+ * deleted before the window opens: everything except what VibeCheck keeps
+ * there itself (KEEP: the log folder and the version file). Anything else
+ * VibeCheck ever stores in this folder must be added to KEEP, or it's
+ * deleted on every update. Nothing is lost: every setting, including the
  * frontend's (theme, Turn on when scanning, sidebar collapsed), is saved in
  * Config.json in the config folder, which isn't touched, and so are toy
  * configs. The frontend doesn't use local storage.
@@ -28,6 +31,11 @@ use log::{info, warn};
 
 /// Records the version that last ran
 const VERSION_FILE: &str = "vibecheck-version";
+
+/// VibeCheck's own entries in the folder, never deleted. The log folder
+/// matters most: the log is already open when this runs, and its old
+/// session's log is what a bug report needs after an update.
+const KEEP: &[&str] = &[VERSION_FILE, crate::util::log_file::LOG_FOLDER];
 
 /// Clears the webview's data if `version` differs from the last run. Call
 /// before any window is created.
@@ -69,6 +77,9 @@ fn reset_if_changed(dir: &Path, version: &str) -> std::io::Result<bool> {
     if dir.is_dir() {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
+            if KEEP.iter().any(|keep| entry.file_name() == *keep) {
+                continue;
+            }
             let path = entry.path();
             // Folders are removed with their contents; links are removed
             // themselves, never followed
@@ -77,8 +88,7 @@ fn reset_if_changed(dir: &Path, version: &str) -> std::io::Result<bool> {
             } else {
                 fs::remove_file(&path)?;
             }
-            // The old version file doesn't count as data
-            cleared |= path != version_file;
+            cleared = true;
         }
     }
 
@@ -134,6 +144,38 @@ mod tests {
             .collect();
         assert_eq!(left, vec![std::ffi::OsString::from(VERSION_FILE)]);
         assert_eq!(fs::read_to_string(dir.join(VERSION_FILE)).unwrap(), "0.6.6");
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_new_version_keeps_the_logs() {
+        let dir = scratch("logs");
+        reset_if_changed(&dir, "0.7.14").unwrap();
+        let logs = dir.join(crate::util::log_file::LOG_FOLDER);
+        fs::create_dir_all(&logs).unwrap();
+        fs::write(logs.join("VibeCheck.log"), "this session").unwrap();
+        fs::write(logs.join("VibeCheck.old.log"), "the session before").unwrap();
+        fs::create_dir_all(dir.join("EBWebView/Default")).unwrap();
+
+        assert!(reset_if_changed(&dir, "0.7.15").unwrap());
+        assert!(!dir.join("EBWebView").exists());
+        assert_eq!(
+            fs::read_to_string(logs.join("VibeCheck.log")).unwrap(),
+            "this session"
+        );
+        assert_eq!(
+            fs::read_to_string(logs.join("VibeCheck.old.log")).unwrap(),
+            "the session before"
+        );
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn only_the_logs_and_version_file_dont_count_as_data() {
+        let dir = scratch("only-logs");
+        reset_if_changed(&dir, "0.7.14").unwrap();
+        fs::create_dir_all(dir.join(crate::util::log_file::LOG_FOLDER)).unwrap();
+        assert!(!reset_if_changed(&dir, "0.7.15").unwrap());
         fs::remove_dir_all(&dir).unwrap();
     }
 

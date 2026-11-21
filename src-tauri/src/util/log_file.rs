@@ -38,6 +38,9 @@ use std::{
 use log::{LevelFilter, Log, Metadata, Record};
 use regex::{Captures, Regex};
 
+/// The log folder, in the app's local data folder (which it shares with
+/// the webview's data: see webview_data.rs, which leaves it alone).
+pub const LOG_FOLDER: &str = "logs";
 const LOG_NAME: &str = "VibeCheck.log";
 const OLD_LOG_NAME: &str = "VibeCheck.old.log";
 /// Locked by the running VibeCheck, so a second start leaves the logs alone.
@@ -63,7 +66,7 @@ pub fn log_dir() -> Option<&'static Path> {
 pub fn init(identifier: &str) {
     let debug = cfg!(debug_assertions);
     let dir = directories::BaseDirs::new()
-        .map(|dirs| dirs.data_local_dir().join(identifier).join("logs"));
+        .map(|dirs| dirs.data_local_dir().join(identifier).join(LOG_FOLDER));
 
     let tx = dir.as_ref().and_then(|dir| match open_log(dir) {
         Ok(OpenedLog { file, lock }) => {
