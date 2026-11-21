@@ -493,18 +493,25 @@ async fn run(catalog: AvatarCatalog, on_change: OnChange) {
     let mut avatar_id: Option<String> = None;
     let mut rereads: Vec<Instant> = Vec::new();
     let mut presence = Presence { misses: 0 };
+    // Logged once until VRChat is really gone: while a world loads, VRChat
+    // can be found but not answer, so it's found again every second
+    let mut found_logged = false;
     loop {
         // Find VRChat
         let Some(endpoint) = catalog.vrchat() else {
             match discovery::find_vrchat(TIMEOUT).await {
                 Ok(Some(found)) => {
-                    info!("Avatar catalog: found VRChat's OSCQuery server");
+                    if !found_logged {
+                        info!("Avatar catalog: found VRChat's OSCQuery server");
+                        found_logged = true;
+                    }
                     presence.answered(&catalog.present);
                     *catalog.endpoint.lock() = Some(found);
                     avatar_id = None;
                     catalog.set(CatalogState::Reading, &on_change);
                 }
                 _ => {
+                    found_logged = false;
                     presence.missed(&catalog.present);
                     catalog.set(CatalogState::Searching, &on_change);
                     wait(&catalog.refresh, Instant::now() + LOOKUP_EVERY).await;

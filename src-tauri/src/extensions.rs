@@ -26,7 +26,9 @@
 
 use std::net::SocketAddrV4;
 
+use log::warn;
 use tauri::{image::Image, ipc::Invoke, AppHandle, Builder, Manager, Wry};
+use tauri_plugin_notification::NotificationExt;
 use tokio::{runtime::Handle, sync::mpsc::UnboundedSender};
 use vibecheck_core::{
     graph::Graph, CommandSlots, Diagnostics, EventPlane, ModuleInstanceId, SafetyLayer, SignalPlane,
@@ -160,6 +162,32 @@ impl SessionContext {
     /// VRChat's ports.
     pub fn osc_remote(&self) -> SocketAddrV4 {
         self.app.state::<VCStateMutex>().0.lock().osc_remote()
+    }
+
+    /// Shows a desktop notification, like a toy connecting, if the user has
+    /// Desktop notifications on in Settings. A failure to show it is only
+    /// logged.
+    pub fn notify(&self, title: &str, body: &str) {
+        let wanted = self
+            .app
+            .state::<VCStateMutex>()
+            .0
+            .lock()
+            .config
+            .desktop_notifications;
+        if !wanted {
+            return;
+        }
+        if let Err(e) = self
+            .app
+            .notification()
+            .builder()
+            .title(title)
+            .body(body)
+            .show()
+        {
+            warn!("Couldn't show a desktop notification: {}", e);
+        }
     }
 
     /// Runs `graph` in the session's graph runner (100 Hz) under `name`,
