@@ -26,6 +26,20 @@ use crate::{
 use log::{error as logerr, trace};
 
 /*
+ * Every command here is #[tauri::command(async)]: it runs off the main
+ * thread, which also runs the window and the tray menu, so a command that
+ * takes a while or waits for the state lock can't freeze them (see
+ * docs/ipc/command-plane.md, Where commands run).
+ */
+
+/// Runs `task` to the end from a command. Commands run inside an async task,
+/// where `block_on` alone would panic, so the worker thread is handed over
+/// to blocking code first (as the OSC API does).
+fn run_blocking<F: std::future::Future>(task: F) -> F::Output {
+    tokio::task::block_in_place(|| tauri::async_runtime::block_on(task))
+}
+
+/*
  * vibecheck_version
  * Returns the VibeCheck Version as a String
  * Args: None
@@ -33,12 +47,12 @@ use log::{error as logerr, trace};
  */
 /// Whether this build checks for updates. The updater is only registered
 /// when the app's tauri.conf.json configures it (see lib.rs).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn vibecheck_updater_enabled(app_handle: tauri::AppHandle) -> bool {
     app_handle.config().plugins.0.contains_key("updater")
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn vibecheck_version(app_handle: tauri::AppHandle) -> String {
     #[cfg(target_os = "windows")]
     {
@@ -56,12 +70,10 @@ pub fn vibecheck_version(app_handle: tauri::AppHandle) -> String {
  * Args: VibeCheck State
  * Return: Result<Ok, Err(VCFeError)>
  */
-#[tauri::command]
+#[tauri::command(async)]
 pub fn vibecheck_enable(vc_state: tauri::State<'_, state::VCStateMutex>) -> Result<(), VCFeError> {
     trace!("vibecheck_enable");
-    tauri::async_runtime::block_on(
-        async move { call_plane::native_vibecheck_enable(vc_state).await },
-    )
+    run_blocking(async move { call_plane::native_vibecheck_enable(vc_state).await })
 }
 
 /*
@@ -70,12 +82,10 @@ pub fn vibecheck_enable(vc_state: tauri::State<'_, state::VCStateMutex>) -> Resu
  * Args: VibeCheck State
  * Return: Result<Ok, Err(VCFeError)>
  */
-#[tauri::command]
+#[tauri::command(async)]
 pub fn vibecheck_disable(vc_state: tauri::State<'_, state::VCStateMutex>) -> Result<(), VCFeError> {
     trace!("vibecheck_disable");
-    tauri::async_runtime::block_on(
-        async move { call_plane::native_vibecheck_disable(vc_state).await },
-    )
+    run_blocking(async move { call_plane::native_vibecheck_disable(vc_state).await })
 }
 
 /*
@@ -84,14 +94,12 @@ pub fn vibecheck_disable(vc_state: tauri::State<'_, state::VCStateMutex>) -> Res
  * Args: VibeCheck State
  * Return: None
  */
-#[tauri::command]
+#[tauri::command(async)]
 pub fn vibecheck_start_bt_scan(
     vc_state: tauri::State<'_, state::VCStateMutex>,
 ) -> Result<(), VCFeError> {
     trace!("vibecheck_start_bt_scan");
-    tauri::async_runtime::block_on(async move {
-        call_plane::native_vibecheck_start_bt_scan(vc_state).await
-    })
+    run_blocking(async move { call_plane::native_vibecheck_start_bt_scan(vc_state).await })
 }
 
 /*
@@ -100,14 +108,12 @@ pub fn vibecheck_start_bt_scan(
  * Args: VibeCheck State
  * Return: None
  */
-#[tauri::command]
+#[tauri::command(async)]
 pub fn vibecheck_stop_bt_scan(
     vc_state: tauri::State<'_, state::VCStateMutex>,
 ) -> Result<(), VCFeError> {
     trace!("vibecheck_stop_bt_scan");
-    tauri::async_runtime::block_on(async move {
-        call_plane::native_vibecheck_stop_bt_scan(vc_state).await
-    })
+    run_blocking(async move { call_plane::native_vibecheck_stop_bt_scan(vc_state).await })
 }
 
 /*
@@ -146,7 +152,7 @@ pub fn set_vibecheck_config(
  * Puts every app setting back to its default (toy settings are untouched)
  */
 /// The toy connection setting and how it's doing.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_toy_connection(
     vc_state: tauri::State<'_, state::VCStateMutex>,
 ) -> call_plane::FeToyConnectionState {
@@ -154,7 +160,7 @@ pub fn get_toy_connection(
 }
 
 /// Saves the toy connection and switches to it; returns it as saved.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn set_toy_connection(
     vc_state: tauri::State<'_, state::VCStateMutex>,
     connection: crate::util::toy_service::ToyConnection,
@@ -162,7 +168,7 @@ pub fn set_toy_connection(
     call_plane::native_set_toy_connection(vc_state, connection)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn reset_vibecheck_config(
     vc_state: tauri::State<'_, state::VCStateMutex>,
 ) -> Result<(), VCFeError> {
@@ -370,19 +376,19 @@ pub fn simulate_device_feature(
 /*
  * Panic stop: stops every toy until resumed
  */
-#[tauri::command]
+#[tauri::command(async)]
 pub fn panic_stop(app_handle: tauri::AppHandle) {
     trace!("panic_stop");
     crate::vcore::panic::trigger_panic(&app_handle)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn panic_resume(app_handle: tauri::AppHandle) {
     trace!("panic_resume");
     crate::vcore::panic::resume_from_panic(&app_handle)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_panic_state(app_handle: tauri::AppHandle) -> bool {
     trace!("get_panic_state");
     crate::vcore::panic::is_panicked(&app_handle)
@@ -391,7 +397,7 @@ pub fn get_panic_state(app_handle: tauri::AppHandle) -> bool {
 /*
  * Diagnostics view: live values are sent as fe_diagnostics events while on
  */
-#[tauri::command]
+#[tauri::command(async)]
 pub fn set_diagnostics_enabled(vc_state: tauri::State<'_, state::VCStateMutex>, enabled: bool) {
     trace!("set_diagnostics_enabled {}", enabled);
     vc_state.0.lock().diagnostics.set_enabled(enabled);
@@ -436,7 +442,7 @@ pub fn sync_offline_toys(
  * Forgets an offline toy: deletes its saved settings
  * Args: toy_name
  */
-#[tauri::command]
+#[tauri::command(async)]
 pub fn remove_offline_toy(
     vc_state: tauri::State<'_, state::VCStateMutex>,
     toy_name: String,
@@ -455,7 +461,7 @@ pub fn remove_offline_toy(
 /*
  * OSCQuery mode's status: the advertised port, and where VRChat listens
  */
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_oscquery_status(vc_state: tauri::State<'_, state::VCStateMutex>) -> FeOscQueryStatus {
     call_plane::native_get_oscquery_status(vc_state)
 }
@@ -463,7 +469,7 @@ pub fn get_oscquery_status(vc_state: tauri::State<'_, state::VCStateMutex>) -> F
 /*
  * The current avatar's parameters, for the parameter picker
  */
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_avatar_catalog(
     vc_state: tauri::State<'_, state::VCStateMutex>,
 ) -> crate::frontend::frontend_types::FeAvatarCatalog {
@@ -474,7 +480,7 @@ pub fn get_avatar_catalog(
 /*
  * Reads the current avatar from VRChat again now
  */
-#[tauri::command]
+#[tauri::command(async)]
 pub fn refresh_avatar_catalog(vc_state: tauri::State<'_, state::VCStateMutex>) {
     vc_state.0.lock().avatar_catalog.refresh();
 }
@@ -483,7 +489,7 @@ pub fn refresh_avatar_catalog(vc_state: tauri::State<'_, state::VCStateMutex>) {
  * What a feature's settings miss on the current avatar. None while the
  * avatar isn't known (VRChat not found yet), so nothing is flagged.
  */
-#[tauri::command]
+#[tauri::command(async)]
 pub fn check_feature(
     vc_state: tauri::State<'_, state::VCStateMutex>,
     feature: crate::frontend::frontend_types::FeVCToyFeature,
@@ -500,4 +506,21 @@ pub fn check_feature(
         .pen_system_input_filter
         .unwrap_or_default();
     Some(crate::osc::avatar_catalog::check_feature(&avatar, &parameters, system, &tags).into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::run_blocking;
+
+    #[test]
+    fn run_blocking_works_where_commands_run() {
+        // An async command runs inside a task on Tauri's runtime, where a
+        // plain block_on would panic
+        let answer = tauri::async_runtime::block_on(async {
+            tauri::async_runtime::spawn(async { run_blocking(async { 42 }) })
+                .await
+                .unwrap()
+        });
+        assert_eq!(answer, 42);
+    }
 }
