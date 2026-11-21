@@ -115,19 +115,21 @@ flowchart LR
 
 A command declared as a plain `fn` with `#[tauri::command]` runs on the
 **main thread**, which also runs the window and the tray menu: while it
-runs (or waits for a lock), the window can't respond. `#[tauri::command(async)]`
-on a plain `fn` runs it on Tauri's thread pool instead, and an `async fn`
-command on the async runtime.
+runs (or waits for a lock), the window can't respond. So every command in
+`frontend_native.rs` is `#[tauri::command(async)]`, which runs it in a task
+on Tauri's async runtime instead.
 
-| Runs on | Commands |
-|---|---|
-| Main thread | `vibecheck_enable`, `vibecheck_disable`, `vibecheck_start_bt_scan`, `vibecheck_stop_bt_scan` (each `block_on`s its call plane function, holding `VCStateMutex` while it waits on the toy service and Buttplug), `get_toy_connection`, `set_toy_connection`, `reset_vibecheck_config`, `panic_stop`, `panic_resume`, `get_panic_state`, `set_diagnostics_enabled`, `remove_offline_toy`, `get_oscquery_status`, `get_avatar_catalog`, `refresh_avatar_catalog`, `check_feature`, `vibecheck_version`, `vibecheck_updater_enabled` |
-| Thread pool (`async`) | `get_vibecheck_config`, `set_vibecheck_config`, `alter_toy`, `open_default_browser`, `open_log_folder`, `clear_osc_config`, `simulate_device_feature`, `simulate_feature_osc_input`, `sync_offline_toys` |
-
-Most main-thread commands lock `VCStateMutex`, so anything that holds that
-lock for long (on any thread) also freezes the window. New commands that do
-I/O (files, devices, serial ports, the network) or wait on locks other code
-holds should use `#[tauri::command(async)]`, and so should commands an app
-adds through `Extensions::commands` (`src/extensions.rs`).
+- **Blocking on async work:** `vibecheck_enable`, `vibecheck_disable`,
+  `vibecheck_start_bt_scan` and `vibecheck_stop_bt_scan` wait for their
+  call plane function with `run_blocking`, which hands the worker thread
+  over (`block_in_place`) before `block_on`: a plain `block_on` inside a
+  runtime task panics.
+- **The state lock:** most commands lock `VCStateMutex`, and those four hold
+  it while they wait on the toy service and Buttplug. Other commands then
+  wait for it on a worker thread, not on the main thread, so the window
+  stays responsive.
+- **New commands** should be `#[tauri::command(async)]` (or `async fn`) too,
+  and so should commands an app adds through `Extensions::commands`
+  (`src/extensions.rs`).
 
 See also: [emit plane](emit-plane.md), [VRChat enable round trip](enable-round-trip.md).
