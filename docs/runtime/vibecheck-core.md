@@ -6,7 +6,7 @@ The Cargo workspace is rooted at `src-tauri/Cargo.toml`:
 
 | Member | Path | What it is |
 |---|---|---|
-| `vibecheck` | `src-tauri` | The Tauri app: the `vibecheck_lib` library (`src/lib.rs`, everything the app does) and a small `src/main.rs` that runs it with VibeCheck's own `tauri.conf.json`. Another app can run the library with its own config and frontend and add Tauri commands, services, its own tray icon, and its own graphs and outputs in every listening session (a `SessionExtension`, with the session's planes, safety layer and graph runner, and `embed::add_feature_inputs` to build inputs the way toys get them) through `Extensions` (`src/extensions.rs`), and pages and Settings sections through the frontend's `src/extensions` (the `VIBECHECK_EXTENSIONS` build variable; none in VibeCheck itself) |
+| `vibecheck` | `src-tauri` | The Tauri app: the `vibecheck_lib` library (`src/lib.rs`, everything the app does) and a small `src/main.rs` that runs it with VibeCheck's own `tauri.conf.json`. Another app can run the library with its own config and frontend and add Tauri commands, services, its own tray icon, and its own graphs and outputs in every listening session (a `SessionExtension`, with the session's planes, safety layer and graph runner, and `embed::add_feature_inputs` to build inputs the way toys get them) through `Extensions` (`src/extensions.rs`), with `SessionContext::notify` for desktop notifications that follow the user's setting; and through the frontend's `src/extensions` (the `VIBECHECK_EXTENSIONS` build variable; none in VibeCheck itself): pages (tiles in the sidebar's tools row, or cards in the device list with a group title, a status and their items), Settings sections, lines in Settings > About, and content under a toy feature's Processor and Input Filter rows (`featureForm`, with the avatar check's tag matches) |
 | `vibecheck-core` | `src-tauri/crates/vibecheck-core` | This crate |
 | `osc-tool` | `src-tauri/crates/osc-tool` | Debug CLI to listen for, send and sweep OSC ([README](../../src-tauri/crates/osc-tool/README.md)). Not part of the app or installers |
 
@@ -228,7 +228,7 @@ toy pattern ─▶ Acted (rule A) ─▶ output reports it ─▶ rule A reacts 
                                                    └▶ rule B reacts ✓ allowed (depth permitting)
 ```
 
-Nothing in the free app acts in response to events yet, so the guard is ready for modules that will.
+Nothing in VibeCheck itself acts in response to events yet, so the guard is ready for modules that will.
 
 ### Panic stop
 
@@ -245,7 +245,7 @@ Stopping the devices themselves is the caller's job (the app calls Buttplug's st
 - `arm(module)` (refused while panicked), `disarm(module)`, `disarm_all()`, `is_armed(module)`.
 - Arming lasts until disarmed or a panic. Nothing is armed by default.
 
-Nothing in the free app has a policy yet; this is ready for outputs that need it.
+Nothing in VibeCheck itself has a policy yet; this is ready for outputs that need it.
 
 | `SafetyCaps` | Default |
 |---|---|

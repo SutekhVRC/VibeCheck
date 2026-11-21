@@ -24,5 +24,6 @@ sequenceDiagram
   CE->>CP: invoke vibecheck_start_bt_scan
   CP->>BP: start_scanning
   BP-->>UT: device added → fe_toy_event Add(toy)
-  Note over CE: UI stops the scan itself after 10s<br/>(invoke vibecheck_stop_bt_scan)
+  Note over CP,BP: After the scan length (Settings, 0 = until stopped)<br/>vcore/scan.rs stops the scan
+  CP-->>CE: fe_core_event Scan(Stop) → isScanning = false
 ```

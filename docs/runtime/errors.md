@@ -78,12 +78,22 @@ has an **Open log folder** button for bug reports.
   instead of blocking. The panic hook flushes before reporting.
 - **Size:** `VibeCheck.log` is this session, `VibeCheck.old.log` the one
   before; past 5 MB the current file becomes the old one.
+- **A second start:** the running app holds a lock on `VibeCheck.lock` in
+  the log folder. Starting VibeCheck again while it runs (which hands over
+  to the running one and quits) can't take the lock, so it leaves the log
+  files alone; without it, the running app's log was moved aside and a
+  third start overwrote it. The OS lets go of the lock however the app
+  ends, crashes included.
+- **Updates:** the log folder is in the same folder as the webview's data,
+  which is cleared when VibeCheck starts as a new version
+  (`util/webview_data.rs`). The log folder is on its `KEEP` list, so the
+  first run after an update keeps its own log and the one before it.
 - **Privacy:** every line is redacted before it's written: the home folder
   (to `~`), the computer and account names, VRChat `usr_`/`avtr_`/`wrld_`
   ids, Bluetooth addresses, and IP addresses other than loopback and
   `0.0.0.0`. Times are UTC. On Linux the file is readable by the user only.
-  Redaction is a safety net: never log credentials, tokens or keys (PiShock's
-  included) at any level.
+  Redaction is a safety net: never log credentials, tokens or keys, from
+  any device or service, at any level.
 
 ## unwrap and expect
 
