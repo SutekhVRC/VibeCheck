@@ -60,9 +60,9 @@ export type ExtensionPage = {
   label: string;
   /**
    * A shorter label where space is tight or the rest is said nearby: its
-   * tile in the tools row ("nav" pages), e.g. "Outputs" for "Avatar
-   * outputs"; or its row under its group title ("devices" pages with a
-   * group), e.g. "Hub" under "PiShock"
+   * tile in the tools row ("nav" pages), e.g. "Stats" for "Session
+   * stats"; or its row under its group title ("devices" pages with a
+   * group), e.g. "Bridge" under "Smart lights"
    */
   shortLabel?: string;
   Icon: ComponentType<{ className?: string }>;
@@ -76,7 +76,7 @@ export type ExtensionPage = {
   useStatus?: () => ExtensionPageStatus;
   /**
    * For "devices" pages: a title above its card, like the toys' groups
-   * (e.g. "PiShock"), with the number of items beside it
+   * (e.g. "Smart lights"), with the number of items beside it
    */
   group?: string;
   /** For "devices" pages: each item's icon (default: the page's Icon) */
