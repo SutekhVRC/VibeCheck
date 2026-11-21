@@ -16,12 +16,14 @@
  *
  * Files: `VibeCheck.log` is this session, `VibeCheck.old.log` the one
  * before (or this session's start, once it passes MAX_FILE_BYTES), so the
- * folder stays under about twice that.
+ * folder stays under about twice that. `VibeCheck.lock` is held by the
+ * running app, so starting VibeCheck again while it runs (which hands over
+ * to the running one and quits) leaves its log alone.
  */
 
 use std::{
     borrow::Cow,
-    fs::{self, File, OpenOptions},
+    fs::{self, File, OpenOptions, TryLockError},
     io::{BufWriter, Write},
     path::{Path, PathBuf},
     sync::{
@@ -38,6 +40,8 @@ use regex::{Captures, Regex};
 
 const LOG_NAME: &str = "VibeCheck.log";
 const OLD_LOG_NAME: &str = "VibeCheck.old.log";
+/// Locked by the running VibeCheck, so a second start leaves the logs alone.
+const LOCK_NAME: &str = "VibeCheck.lock";
 /// Past this, the current file becomes the old one and a new one starts.
 const MAX_FILE_BYTES: u64 = 5 * 1024 * 1024;
 /// Lines waiting to be written. Past this, new lines are dropped.
@@ -62,13 +66,18 @@ pub fn init(identifier: &str) {
         .map(|dirs| dirs.data_local_dir().join(identifier).join("logs"));
 
     let tx = dir.as_ref().and_then(|dir| match open_log(dir) {
-        Ok(file) => {
+        Ok(OpenedLog { file, lock }) => {
             let _ = LOG_DIR.set(dir.clone());
             let (tx, rx) = sync_channel(QUEUE_LINES);
             let dir = dir.clone();
             thread::Builder::new()
                 .name("log-writer".into())
-                .spawn(move || write_lines(rx, file, &dir))
+                .spawn(move || {
+                    // Held for as long as the app runs; the OS lets go of it
+                    // when the app ends, however it ends
+                    let _lock = lock;
+                    write_lines(rx, file, &dir)
+                })
                 .ok()
                 .map(|_| tx)
         }
@@ -103,14 +112,43 @@ pub fn init(identifier: &str) {
     }
 }
 
-/// Moves last session's log aside and opens a new one.
-fn open_log(dir: &Path) -> std::io::Result<BufWriter<File>> {
+/// A new log file, and the lock that says this VibeCheck owns the folder.
+struct OpenedLog {
+    file: BufWriter<File>,
+    /// Locked while this VibeCheck runs (see [`open_log`]).
+    lock: File,
+}
+
+/// Moves last session's log aside and opens a new one, unless another
+/// VibeCheck already runs and owns the folder (then it's an error, and its
+/// files are left alone). A second start runs this before it finds the
+/// first and hands over to it; without the lock it would move the running
+/// app's log aside, and a third start would overwrite it.
+fn open_log(dir: &Path) -> std::io::Result<OpenedLog> {
     fs::create_dir_all(dir)?;
+    let lock = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(dir.join(LOCK_NAME))?;
+    match lock.try_lock() {
+        Ok(()) => {}
+        Err(TryLockError::WouldBlock) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::WouldBlock,
+                "another VibeCheck is running and logging there",
+            ));
+        }
+        // Locking isn't possible here (e.g. the file system can't): log
+        // anyway, as before
+        Err(TryLockError::Error(_)) => {}
+    }
     let path = dir.join(LOG_NAME);
     if path.exists() {
         fs::rename(&path, dir.join(OLD_LOG_NAME))?;
     }
-    create_private(&path).map(BufWriter::new)
+    let file = create_private(&path).map(BufWriter::new)?;
+    Ok(OpenedLog { file, lock })
 }
 
 /// A new file only the user can read (on Linux; Windows keeps it in the
@@ -357,6 +395,47 @@ fn replace<'a>(
 mod tests {
     use super::*;
 
+    /// A new, empty folder for one test.
+    fn temp_dir(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("vibecheck-log-test-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        dir
+    }
+
+    #[test]
+    fn a_second_start_leaves_the_running_apps_logs_alone() {
+        let dir = temp_dir("second-start");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join(LOG_NAME), "last session\n").unwrap();
+
+        let mut running = open_log(&dir).unwrap();
+        writeln!(running.file, "running").unwrap();
+        running.file.flush().unwrap();
+
+        // Started again while that one runs: an error, nothing moved
+        let again = open_log(&dir);
+        assert_eq!(
+            again.err().map(|e| e.kind()),
+            Some(std::io::ErrorKind::WouldBlock)
+        );
+        assert_eq!(fs::read_to_string(dir.join(LOG_NAME)).unwrap(), "running\n");
+        assert_eq!(
+            fs::read_to_string(dir.join(OLD_LOG_NAME)).unwrap(),
+            "last session\n"
+        );
+
+        // Once it ends, the next start moves its log aside as usual
+        drop(running);
+        let next = open_log(&dir).unwrap();
+        assert_eq!(
+            fs::read_to_string(dir.join(OLD_LOG_NAME)).unwrap(),
+            "running\n"
+        );
+        drop(next);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
     fn redactor() -> Redactor {
         Redactor::new(
             Some("/home/alice"),
@@ -434,7 +513,7 @@ mod tests {
 
         let (tx, rx) = sync_channel(QUEUE_LINES);
         let writer_dir = dir.clone();
-        let writer = thread::spawn(move || write_lines(rx, file, &writer_dir));
+        let writer = thread::spawn(move || write_lines(rx, file.file, &writer_dir));
         let big = "x".repeat(MAX_FILE_BYTES as usize + 1) + "\n";
         tx.send(Message::Line(big)).unwrap();
         tx.send(Message::Line("after\n".into())).unwrap();
