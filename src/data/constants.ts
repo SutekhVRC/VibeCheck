@@ -14,6 +14,7 @@ export const INVOKE = {
   UPDATER_ENABLED: "vibecheck_updater_enabled",
   GET_TOY_CONNECTION: "get_toy_connection",
   SET_TOY_CONNECTION: "set_toy_connection",
+  SET_SAVED_INTIFACE_ADDRESSES: "set_saved_intiface_addresses",
   START_SCAN: "vibecheck_start_bt_scan",
   STOP_SCAN: "vibecheck_stop_bt_scan",
   ENABLE: "vibecheck_enable",
