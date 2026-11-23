@@ -160,7 +160,7 @@ The app's input processors (SPS/TPS) run this way; see [toy-command-path.md](toy
 
 `Graph::tick` doesn't sleep or spawn anything; the caller decides the rate. The app ticks at 100 Hz (`graph_runner.rs`) and passes the real time since the last tick as `dt`, capped at 0.1 s.
 
-Node outputs live inside the graph, not on the signal plane. `Graph::snapshot()` copies them out for views (diagnostics, later a graph editor): every node output with its latest value (`None` before its first), and every sink as a `SinkValue { from, target, last }`, where `last` is the level it last sent, before the safety layer.
+Node outputs live inside the graph, not on the signal plane. `Graph::snapshot()` copies them out for views (diagnostics, later a graph editor): every node output with its latest value (`None` before its first), and every sink as a `SinkValue { from, target, last }`, where `last` is the level it last sent, before the safety layer. It also has `events`: how many events each node's event port has emitted since the graph was built, so a view that polls can tell an event passed when a count goes up (e.g. to flash its wires).
 
 `Graph::shape()` describes what the graph is made of, for the same views: each node (in run order) with its kind (`Processor::kind`, e.g. `Smooth`; the type's name unless the processor says otherwise), its inputs and what each reads (another node's output, or a signal-plane port such as an avatar parameter), its outputs, event outputs, event inputs (with the event ports wired to each) and watches; and every sink and event sink with its target. In the app, `SessionContext::graphs()` returns every running graph (toys' and apps') with its shape and snapshot, through the graph runner (`GraphControl::Describe`).
 
