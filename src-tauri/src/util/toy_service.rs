@@ -227,13 +227,16 @@ pub async fn run(ctx: ToyServiceContext, mut connection: watch::Receiver<ToyConn
         };
 
         let events = client.event_stream();
-        // An Intiface address that connects is remembered, to pick again
+        // An Intiface address the user chose is remembered once it
+        // connects, to pick again. Not on starting or reconnecting, so an
+        // address the user forgot stays forgotten
         let remembered = {
             let mut state = ctx.state.lock();
             state.bp_client = Some(client);
+            let chosen = std::mem::take(&mut state.remember_next_connection);
             match &current {
                 ToyConnection::Intiface { address }
-                    if remember(&mut state.config.intiface_addresses, address) =>
+                    if chosen && remember(&mut state.config.intiface_addresses, address) =>
                 {
                     Some(state.config.clone())
                 }

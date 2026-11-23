@@ -397,6 +397,8 @@ pub fn native_set_toy_connection(
     let (config, app_handle) = {
         let mut vc_lock = vc_state.0.lock();
         vc_lock.config.toy_connection = connection.clone();
+        // Chosen by the user: remember its address once it connects
+        vc_lock.remember_next_connection = true;
         vc_lock.set_toy_connection(connection.clone());
         (
             vc_lock.config.clone(),
