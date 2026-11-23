@@ -402,6 +402,7 @@ impl GraphBuilder {
             sinks,
             event_sinks,
             event_wires,
+            event_counts: HashMap::new(),
         })
     }
 }
@@ -464,6 +465,9 @@ pub struct Graph {
     sinks: Vec<Sink>,
     event_sinks: Vec<EventSink>,
     event_wires: Vec<EventWire>,
+    /// How many events each node's event port has emitted (by node index
+    /// and port), for views ([`GraphSnapshot::events`]).
+    event_counts: HashMap<(usize, Arc<str>), u64>,
 }
 
 impl Graph {
@@ -533,6 +537,11 @@ impl Graph {
             let mut out = vec![None; node.outputs.len()];
             node.processor.tick(&ins, dt, &mut out, &mut emitted);
             for event in emitted.drain(..) {
+                let count = self
+                    .event_counts
+                    .entry((i, event.port.clone()))
+                    .or_default();
+                *count = count.wrapping_add(1);
                 let level = event_level(&event.value);
                 let value = event.value.clone();
                 let source = PortId::new(node.id.clone(), event.port.as_ref());
@@ -711,7 +720,22 @@ impl Graph {
                 }
             })
             .collect();
-        GraphSnapshot { outputs, sinks }
+        let mut events: Vec<(PortId, u64)> = self
+            .event_counts
+            .iter()
+            .map(|((node, port), count)| {
+                (
+                    PortId::new(self.nodes[*node].id.clone(), port.as_ref()),
+                    *count,
+                )
+            })
+            .collect();
+        events.sort_by(|a, b| a.0.to_string().cmp(&b.0.to_string()));
+        GraphSnapshot {
+            outputs,
+            sinks,
+            events,
+        }
     }
 }
 
@@ -764,6 +788,11 @@ pub struct GraphSnapshot {
     pub outputs: Vec<(PortId, Option<Signal>)>,
     /// Each sink, in the order they were added.
     pub sinks: Vec<SinkValue>,
+    /// How many events each node's event port has emitted since the graph
+    /// was built (wrapping), for ports that have emitted any, sorted by
+    /// port. A view that polls can tell an event passed when a count goes
+    /// up, e.g. to flash the wires from that port.
+    pub events: Vec<(PortId, u64)>,
 }
 
 /// A sink in a [`GraphSnapshot`].
@@ -1079,6 +1108,7 @@ mod tests {
                     target: port("toy", "Vibrator_0"),
                     last: None
                 }],
+                events: vec![],
             }
         );
 
@@ -1094,6 +1124,7 @@ mod tests {
                     target: port("toy", "Vibrator_0"),
                     last: Some(0.5)
                 }],
+                events: vec![],
             }
         );
     }
@@ -1220,10 +1251,13 @@ mod tests {
         assert_eq!(event.source, port("proc:avg", "crossed"));
         assert_eq!(event.kind, EventKind::Threshold);
         assert_eq!(event.value, Value::Bool(true));
+        // Counted for views
+        assert_eq!(g.snapshot().events, vec![(port("proc:avg", "crossed"), 1)]);
 
         // No change, no event
         g.tick(&signals, 0.01, &safety, &events);
         assert!(rx.try_recv().is_none());
+        assert_eq!(g.snapshot().events, vec![(port("proc:avg", "crossed"), 1)]);
     }
 
     #[test]
