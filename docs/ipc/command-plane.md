@@ -31,6 +31,7 @@ flowchart LR
     c_rc["reset_vibecheck_config<br/>native_reset_vibecheck_config"]
     c_gtc["get_toy_connection<br/>native_get_toy_connection"]
     c_stc["set_toy_connection<br/>native_set_toy_connection"]
+    c_sia["set_saved_intiface_addresses<br/>native_set_saved_intiface_addresses"]
     c_at["alter_toy<br/>native_alter_toy (online toys)"]
     c_sim["simulate_device_feature<br/>native_simulate_device_feature"]
     c_simo["simulate_feature_osc_input<br/>native_simulate_feature_osc_input"]
@@ -64,7 +65,7 @@ flowchart LR
 
   CE --> c_en & c_dis & c_ss & c_st & c_gc & c_ps
   CF --> c_sc & c_rc & c_clr & c_oq & c_log
-  TC --> c_gtc & c_stc
+  TC --> c_gtc & c_stc & c_sia
   UT --> c_at & c_sync & c_rm
   US --> c_sim
   AC --> c_gac & c_chk
@@ -86,6 +87,7 @@ flowchart LR
   c_sc -- "save_config" --> FS
   c_gtc -- "status" --> TS
   c_stc -- "save, reconnect" --> TS
+  c_sia -- "rename / forget<br/>saved addresses" --> FS
   c_at -- "ToyUpdate::AlterToy" --> TM
   c_at -- "save toy config<br/>(offline toys: inline path)" --> FS
   c_sim -- "feature level / stop" --> DH

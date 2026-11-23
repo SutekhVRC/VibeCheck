@@ -38,7 +38,10 @@ use crate::{
     error_signal_handler::reporter::ErrorReporter,
     toy_handling::runtime::client_event_handler::client_event_handler,
     util::bluetooth,
-    vcore::{ipc::call_plane::ToyManagementEvent, state::VibeCheckState},
+    vcore::{
+        ipc::call_plane::{save_config, ToyManagementEvent},
+        state::VibeCheckState,
+    },
 };
 
 /// How long to wait before connecting again after a failure or a drop.
@@ -87,6 +90,65 @@ impl ToyConnection {
             }
         }
     }
+}
+
+/// How many Intiface addresses are remembered.
+pub const MAX_SAVED_ADDRESSES: usize = 8;
+
+/// An Intiface address that connected before, for picking again (saved in
+/// Config.json as `intiface_addresses`, newest first).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct SavedAddress {
+    /// Tidied as by [`ToyConnection::normalized`], e.g.
+    /// `ws://192.168.1.20:12345`.
+    pub address: String,
+    /// What the user calls it, e.g. "Phone"; empty shows the address.
+    #[serde(default)]
+    pub name: String,
+}
+
+/// Puts `address` first in `saved`, keeping its name if it was there, and
+/// keeps at most [`MAX_SAVED_ADDRESSES`]. Returns whether anything changed.
+pub fn remember(saved: &mut Vec<SavedAddress>, address: &str) -> bool {
+    if saved.first().is_some_and(|s| s.address == address) {
+        return false;
+    }
+    let entry = match saved.iter().position(|s| s.address == address) {
+        Some(i) => saved.remove(i),
+        None => SavedAddress {
+            address: address.to_owned(),
+            name: String::new(),
+        },
+    };
+    saved.insert(0, entry);
+    saved.truncate(MAX_SAVED_ADDRESSES);
+    true
+}
+
+/// `list` checked and tidied, for saving the user's edits (renames and
+/// removals): addresses tidied, names trimmed, repeats dropped, at most
+/// [`MAX_SAVED_ADDRESSES`]. Errors are for showing to the user.
+pub fn tidy_saved(list: Vec<SavedAddress>) -> Result<Vec<SavedAddress>, String> {
+    let mut tidied: Vec<SavedAddress> = Vec::new();
+    for entry in list {
+        let ToyConnection::Intiface { address } = (ToyConnection::Intiface {
+            address: entry.address,
+        })
+        .normalized()?
+        else {
+            continue;
+        };
+        if tidied.iter().any(|s| s.address == address) {
+            continue;
+        }
+        tidied.push(SavedAddress {
+            address,
+            name: entry.name.trim().to_owned(),
+        });
+    }
+    tidied.truncate(MAX_SAVED_ADDRESSES);
+    Ok(tidied)
 }
 
 /// How the connection is doing, for Settings.
@@ -165,9 +227,29 @@ pub async fn run(ctx: ToyServiceContext, mut connection: watch::Receiver<ToyConn
         };
 
         let events = client.event_stream();
-        ctx.state.lock().bp_client = Some(client);
+        // An Intiface address the user chose is remembered once it
+        // connects, to pick again. Not on starting or reconnecting, so an
+        // address the user forgot stays forgotten
+        let remembered = {
+            let mut state = ctx.state.lock();
+            state.bp_client = Some(client);
+            let chosen = std::mem::take(&mut state.remember_next_connection);
+            match &current {
+                ToyConnection::Intiface { address }
+                    if chosen && remember(&mut state.config.intiface_addresses, address) =>
+                {
+                    Some(state.config.clone())
+                }
+                _ => None,
+            }
+        };
         *ctx.status.lock() = ToyServiceStatus::Connected;
         info!("Toy service: connected");
+        if let Some(config) = remembered {
+            if let Err(e) = save_config(config, &ctx.app_handle) {
+                warn!("Toy service: couldn't save the Intiface address: {e:?}");
+            }
+        }
 
         let mut handler = tokio::spawn(client_event_handler(
             events,
@@ -227,6 +309,58 @@ async fn wait_or_change(connection: &mut watch::Receiver<ToyConnection>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn saved(address: &str, name: &str) -> SavedAddress {
+        SavedAddress {
+            address: address.into(),
+            name: name.into(),
+        }
+    }
+
+    #[test]
+    fn a_connected_address_goes_first_and_keeps_its_name() {
+        let mut list = vec![saved("ws://a:1", ""), saved("ws://b:1", "Phone")];
+        assert!(remember(&mut list, "ws://b:1"));
+        assert_eq!(
+            list,
+            vec![saved("ws://b:1", "Phone"), saved("ws://a:1", "")]
+        );
+        // Already first: nothing to save
+        assert!(!remember(&mut list, "ws://b:1"));
+        assert!(remember(&mut list, "ws://c:1"));
+        assert_eq!(list[0], saved("ws://c:1", ""));
+    }
+
+    #[test]
+    fn only_the_newest_addresses_are_kept() {
+        let mut list = Vec::new();
+        for i in 0..MAX_SAVED_ADDRESSES + 3 {
+            remember(&mut list, &format!("ws://10.0.0.{i}:12345"));
+        }
+        assert_eq!(list.len(), MAX_SAVED_ADDRESSES);
+        assert_eq!(
+            list[0].address,
+            format!("ws://10.0.0.{}:12345", MAX_SAVED_ADDRESSES + 2)
+        );
+    }
+
+    #[test]
+    fn edits_are_tidied() {
+        let tidied = tidy_saved(vec![
+            saved("192.168.1.20:12345", "  Phone "),
+            saved("ws://192.168.1.20:12345", "again"),
+            saved("ws://127.0.0.1:12345", ""),
+        ])
+        .unwrap();
+        assert_eq!(
+            tidied,
+            vec![
+                saved("ws://192.168.1.20:12345", "Phone"),
+                saved("ws://127.0.0.1:12345", ""),
+            ]
+        );
+        assert!(tidy_saved(vec![saved("http://x:1", "")]).is_err());
+    }
 
     fn intiface(address: &str) -> ToyConnection {
         ToyConnection::Intiface {

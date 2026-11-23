@@ -1,4 +1,4 @@
-use crate::util::toy_service::ToyConnection;
+use crate::util::toy_service::{SavedAddress, ToyConnection};
 use log::{error as logerr, info, warn};
 use serde::{Deserialize, Serialize};
 use std::{fs, path::Path};
@@ -47,6 +47,11 @@ pub struct VibeCheckConfig {
     /// Central (util/toy_service.rs). Local in older config files.
     #[serde(default)]
     pub toy_connection: ToyConnection,
+    /// Intiface addresses that connected before, newest first, with the
+    /// names the user gave them (util/toy_service.rs `remember`). Kept by
+    /// Reset VibeCheck settings. Empty in older config files.
+    #[serde(default)]
+    pub intiface_addresses: Vec<SavedAddress>,
 }
 
 /// The frontend's DEFAULT_THEME_ID
@@ -81,6 +86,7 @@ impl Default for VibeCheckConfig {
             auto_enable_on_scan: false,
             sidebar_collapsed: false,
             toy_connection: ToyConnection::Local,
+            intiface_addresses: Vec::new(),
         }
     }
 }

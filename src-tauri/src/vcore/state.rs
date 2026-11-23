@@ -65,6 +65,10 @@ pub struct VibeCheckState {
     pub toy_connection_tx: Option<tokio::sync::watch::Sender<ToyConnection>>,
     /// How the toy connection is doing, for Settings.
     pub toy_service_status: Arc<parking_lot::Mutex<ToyServiceStatus>>,
+    /// The user just chose the toy connection (`set_toy_connection`): an
+    /// Intiface address is remembered once it connects. Not on starting or
+    /// reconnecting, so a forgotten address stays forgotten.
+    pub remember_next_connection: bool,
     //Toy update handler
     pub toy_update_h_thread: Option<JoinHandle<()>>,
     // Toy Management Handler
@@ -137,6 +141,7 @@ impl VibeCheckState {
             client_eh_thread: None,
             toy_connection_tx: None,
             toy_service_status: Arc::new(parking_lot::Mutex::new(ToyServiceStatus::Connecting)),
+            remember_next_connection: false,
             //client_eh_event_rx,
             //client_eh_event_tx,
 

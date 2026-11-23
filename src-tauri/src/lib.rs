@@ -135,6 +135,7 @@ pub fn run(context: tauri::Context<tauri::Wry>, extensions: Extensions) {
             frontend_native::reset_vibecheck_config,
             frontend_native::get_toy_connection,
             frontend_native::set_toy_connection,
+            frontend_native::set_saved_intiface_addresses,
             frontend_native::vibecheck_start_bt_scan,
             frontend_native::vibecheck_stop_bt_scan,
             frontend_native::alter_toy,

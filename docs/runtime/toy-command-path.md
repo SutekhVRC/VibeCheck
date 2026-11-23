@@ -156,6 +156,10 @@ SPS treats its settings as not being contact, so they don't make the processor s
 - **Frontend:** `get_avatar_catalog`, and `fe_avatar_event` with the whole catalog on every change (`AvatarCatalogProvider` in `src/context/AvatarCatalog.tsx`): the parameters, the SPS zones (`FeAvatarZone`) and `tps`.
 - **Checks:** `check_feature` compares one feature with the avatar: parameters it doesn't have (with a suggestion when exactly one parameter is the same name in other capitals or a letter or two off), int parameters, input filter tags that match no zone (`sps::tag_matches_zone`, the same rule the SPS processor filters with), and a processor system the avatar doesn't have. It also lists every input filter tag with the zones it matches (`tag_matches`, by the same rule, whatever the system), for extensions that show them. It returns nothing while the avatar isn't known. The frontend shows the result and never applies a rule of its own.
 
+### SPS enable switch
+
+Newer SPS avatars send no haptics parameters until an app sets their enable switch to true: `OGB/Enabled` (SPS 3) or `OGB_ENABLED` (newer legacy SPS). It's false whenever the avatar loads. `osc/sps_switch.rs` runs in each listening session and, while some graph watches SPS parameters (`wants_sps`: a watch on the OSC module under `OGB/` or `VFH/`), sends `true` to each switch the current avatar has (from the avatar catalog): at once when that starts or the avatar changes, then every 5 s. It never sends false. The graph runner reports every graph's watches on a `watch` channel (`GraphControl::ReportWatches`). Sent like battery levels, from a socket on port 0 to `osc_remote()`. A toy feature using SPS shows a line naming the switch while VibeCheck keeps it on.
+
 The fixtures in `src-tauri/src/osc/fixtures/` are real trees captured with `osc-tool avatar` (asset and avatar names replaced). Capture new ones the same way when VRChat or a penetration system changes its parameters.
 
 ## Connection and activity events
@@ -208,6 +212,7 @@ A supervisor (`toy_service::run`, started by `VibeCheckState::init_ceh`) runs fo
 - **The connection drops** (Intiface closed, phone asleep, Wi-Fi): the client has already removed every device, so the client event handler stops and removes those toys as on any disconnect. The user gets one warning (`toys/toy_service_lost`), the status says why, and it retries every 5 s.
 - **The setting changes** (`set_toy_connection`, or Reset VibeCheck settings back to Local): the old client is disconnected (its toys leave the same way) and the new one connects. A change while still connecting stops that attempt at once.
 - **Status** (`get_toy_connection`): `Connecting`, `Connected`, or `Failed(why)`, shown in Settings > Toys > Toy connection.
+- **Saved addresses:** an Intiface address the user chose (typed or picked: `set_toy_connection`) is remembered once it connects, not when VibeCheck starts or reconnects, so a forgotten address stays forgotten (`remember`, saved as `intiface_addresses` in `Config.json`, newest first, up to 8, with a name the user can give it). Settings offers them under the address field; `set_saved_intiface_addresses` saves renames and removals (`tidy_saved`). Switching back to Intiface reconnects to the newest one, and Reset VibeCheck settings keeps the list.
 
 An address without a scheme gets `ws://` (`ToyConnection::normalized`). The client speaks Buttplug message spec v4, so Intiface Central needs to be a version that does too.
 

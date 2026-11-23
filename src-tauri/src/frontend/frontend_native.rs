@@ -168,6 +168,16 @@ pub fn set_toy_connection(
     call_plane::native_set_toy_connection(vc_state, connection)
 }
 
+/// Saves edits to the remembered Intiface addresses (renames, removals);
+/// returns the list as saved.
+#[tauri::command(async)]
+pub fn set_saved_intiface_addresses(
+    vc_state: tauri::State<'_, state::VCStateMutex>,
+    addresses: Vec<crate::util::toy_service::SavedAddress>,
+) -> Result<Vec<crate::util::toy_service::SavedAddress>, VCFeError> {
+    call_plane::native_set_saved_intiface_addresses(vc_state, addresses)
+}
+
 #[tauri::command(async)]
 pub fn reset_vibecheck_config(
     vc_state: tauri::State<'_, state::VCStateMutex>,

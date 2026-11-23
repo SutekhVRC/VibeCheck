@@ -1,4 +1,4 @@
-use crate::util::toy_service::{ToyConnection, ToyServiceStatus};
+use crate::util::toy_service::{SavedAddress, ToyConnection, ToyServiceStatus};
 use log::{debug, error as logerr, info, trace, warn};
 use serde::Serialize;
 use std::{fs, net::SocketAddrV4, str::FromStr, thread, time::Duration};
@@ -347,6 +347,8 @@ pub fn native_set_vibecheck_config(
 pub struct FeToyConnectionState {
     pub connection: ToyConnection,
     pub status: ToyServiceStatus,
+    /// Intiface addresses that connected before, newest first.
+    pub saved: Vec<SavedAddress>,
 }
 
 pub fn native_get_toy_connection(vc_state: tauri::State<'_, VCStateMutex>) -> FeToyConnectionState {
@@ -355,7 +357,32 @@ pub fn native_get_toy_connection(vc_state: tauri::State<'_, VCStateMutex>) -> Fe
     FeToyConnectionState {
         connection: vc_lock.config.toy_connection.clone(),
         status,
+        saved: vc_lock.config.intiface_addresses.clone(),
     }
+}
+
+/// Saves the user's edits to the remembered Intiface addresses (renames and
+/// removals). Returns the list as saved (tidied).
+pub fn native_set_saved_intiface_addresses(
+    vc_state: tauri::State<'_, VCStateMutex>,
+    addresses: Vec<SavedAddress>,
+) -> Result<Vec<SavedAddress>, VCFeError> {
+    let addresses =
+        crate::util::toy_service::tidy_saved(addresses).map_err(VCFeError::InvalidToyConnection)?;
+    let (config, app_handle) = {
+        let mut vc_lock = vc_state.0.lock();
+        vc_lock.config.intiface_addresses = addresses.clone();
+        (
+            vc_lock.config.clone(),
+            vc_lock.app_handle.clone().expect(APP_HANDLE_SET),
+        )
+    };
+    save_config(config, &app_handle).map_err(|e| match e {
+        VibeCheckConfigError::SerializeError => VCFeError::SerializeFailure,
+        VibeCheckConfigError::WriteFailure => VCFeError::WriteFailure,
+        VibeCheckConfigError::ConfigDirFail => VCFeError::ConfigDirFailure,
+    })?;
+    Ok(addresses)
 }
 
 /// Saves the toy connection and switches to it straight away (toys on the
@@ -370,6 +397,8 @@ pub fn native_set_toy_connection(
     let (config, app_handle) = {
         let mut vc_lock = vc_state.0.lock();
         vc_lock.config.toy_connection = connection.clone();
+        // Chosen by the user: remember its address once it connects
+        vc_lock.remember_next_connection = true;
         vc_lock.set_toy_connection(connection.clone());
         (
             vc_lock.config.clone(),
@@ -433,6 +462,8 @@ pub fn native_reset_vibecheck_config(
 fn reset_config(current: &VibeCheckConfig) -> VibeCheckConfig {
     let mut config = VibeCheckConfig::default();
     config.networking.oscquery_port = current.networking.oscquery_port;
+    // A list to pick from, not a setting: kept, so nobody types them again
+    config.intiface_addresses = current.intiface_addresses.clone();
     config.networking.settle();
     config
 }
@@ -642,5 +673,21 @@ mod reset_tests {
         assert_eq!(reset.master_intensity, 1.0);
         assert_eq!(reset.theme, VibeCheckConfig::default().theme);
         assert!(!reset.sidebar_collapsed);
+    }
+
+    #[test]
+    fn reset_keeps_the_saved_intiface_addresses() {
+        let mut current = VibeCheckConfig::default();
+        current.toy_connection = ToyConnection::Intiface {
+            address: "ws://192.168.1.20:12345".into(),
+        };
+        current.intiface_addresses = vec![SavedAddress {
+            address: "ws://192.168.1.20:12345".into(),
+            name: "Phone".into(),
+        }];
+
+        let reset = reset_config(&current);
+        assert_eq!(reset.toy_connection, ToyConnection::Local);
+        assert_eq!(reset.intiface_addresses, current.intiface_addresses);
     }
 }

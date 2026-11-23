@@ -12,6 +12,7 @@ pub mod avatar_catalog;
 pub mod avatar_query;
 pub mod logic;
 pub mod oscquery;
+pub mod sps_switch;
 
 /// The default addresses: VRChat sends to 9001 and listens on 9000.
 pub(crate) const DEFAULT_BIND: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 9001);
