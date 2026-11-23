@@ -180,6 +180,7 @@ impl Session {
         let (events, event_rx) = EventPlane::new();
         let (graphs, graphs_rx) = unbounded_channel();
         let presence = avatar_catalog.presence();
+        let sps_catalog = avatar_catalog.clone();
         let avatar_query = AvatarQuery::new(
             signals.clone(),
             ModuleInstanceId::new(OSC_MODULE),
@@ -209,6 +210,14 @@ impl Session {
                 graph_values.clone(),
             ));
             rt.spawn(vrchat_presence(presence, events.clone()));
+            // Newer SPS avatars' haptics, while a graph reads SPS (osc/sps_switch.rs)
+            let (watched_tx, watched) = tokio::sync::watch::channel(Vec::new());
+            let _ = graphs.send(GraphControl::ReportWatches(watched_tx));
+            rt.spawn(crate::osc::sps_switch::sps_switch(
+                watched,
+                sps_catalog,
+                app_handle.clone(),
+            ));
             rt.spawn(diagnostics_task(
                 diagnostics.clone(),
                 signals.clone(),

@@ -23,12 +23,12 @@ use std::{
 use log::info;
 use parking_lot::Mutex;
 use tokio::{
-    sync::{mpsc::UnboundedReceiver, oneshot},
+    sync::{mpsc::UnboundedReceiver, oneshot, watch},
     time::{interval, Instant, MissedTickBehavior},
 };
 use vibecheck_core::{
     graph::Graph, ClampedCmd, CommandSlots, Diagnostics, EventPlane, GraphShape, GraphSnapshot,
-    ModuleInstanceId, PortId, SafetyLayer, SignalPlane,
+    ModuleInstanceId, PortId, SafetyLayer, SignalPlane, Watch,
 };
 
 /// How often graphs run.
@@ -104,6 +104,19 @@ pub enum GraphControl {
     },
     /// `module` no longer takes commands from other graphs.
     RemoveOutput(ModuleInstanceId),
+    /// Keep `watched` current with every watch of every running graph (what
+    /// the graphs read besides their inputs, e.g. SPS parameters), from now
+    /// on and after every change.
+    ReportWatches(watch::Sender<Vec<Watch>>),
+}
+
+/// Every watch of every graph in `graphs`.
+fn all_watches(graphs: &HashMap<GraphKey, ToyGraph>) -> Vec<Watch> {
+    graphs
+        .values()
+        .flat_map(|g| g.graph.shape().nodes)
+        .flat_map(|node| node.watches)
+        .collect()
 }
 
 /// Where each registered output's commands go.
@@ -173,6 +186,8 @@ pub async fn graph_runner(
 ) {
     let mut toys: HashMap<GraphKey, ToyGraph> = HashMap::new();
     let mut outputs: Outputs = HashMap::new();
+    // Told every graph's watches after each change (ReportWatches)
+    let mut watched: Option<watch::Sender<Vec<Watch>>> = None;
 
     let mut ticker = interval(Duration::from_nanos(1_000_000_000 / GRAPH_TICK_HZ));
     ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
@@ -189,9 +204,19 @@ pub async fn graph_runner(
                     if let Some(old) = old {
                         stop_dropped_outputs(&old, &toys[&key], &safety, &outputs);
                     }
+                    if let Some(w) = &watched {
+                        w.send_replace(all_watches(&toys));
+                    }
                 }
                 Some(GraphControl::Remove(key)) => {
                     toys.remove(&key);
+                    if let Some(w) = &watched {
+                        w.send_replace(all_watches(&toys));
+                    }
+                }
+                Some(GraphControl::ReportWatches(w)) => {
+                    w.send_replace(all_watches(&toys));
+                    watched = Some(w);
                 }
                 Some(GraphControl::Describe(reply)) => {
                     let views = toys
@@ -268,6 +293,49 @@ mod tests {
             },
         )
         .unwrap()
+    }
+
+    #[tokio::test]
+    async fn watches_are_reported_as_graphs_come_and_go() {
+        use crate::toy_handling::input_processor::penetration_systems::PenetrationSystemType;
+        let (control, control_rx) = unbounded_channel();
+        tokio::spawn(graph_runner(
+            control_rx,
+            SignalPlane::new(),
+            EventPlane::new().0,
+            SafetyLayer::default(),
+            GraphValues::default(),
+        ));
+        let (watched_tx, watched) = watch::channel(Vec::new());
+        control
+            .send(GraphControl::ReportWatches(watched_tx))
+            .unwrap();
+
+        // A toy feature with SPS watches SPS parameters
+        let mut feature = VCToyFeature::new(Vec::new(), 0, VCFeatureType::Vibrator);
+        feature.penetration_system.pen_system_type = PenetrationSystemType::Sps;
+        let sps = build_toy_graph(
+            &ModuleInstanceId::new("toy:test:0"),
+            &VCToyFeatures {
+                features: vec![feature],
+            },
+        )
+        .unwrap();
+        control
+            .send(GraphControl::Set {
+                key: GraphKey::Toy(0),
+                graph: sps,
+                slots: CommandSlots::new(),
+            })
+            .unwrap();
+        sleep(Duration::from_millis(50)).await;
+        assert!(crate::osc::sps_switch::wants_sps(&watched.borrow()));
+
+        control
+            .send(GraphControl::Remove(GraphKey::Toy(0)))
+            .unwrap();
+        sleep(Duration::from_millis(50)).await;
+        assert!(watched.borrow().is_empty());
     }
 
     #[tokio::test]

@@ -3,6 +3,7 @@ import { SettingRow, SettingsGroup } from "@/components/SettingRow";
 import SetupWarning from "@/components/SetupWarning";
 import { FreeTextOptions } from "@/components/ui/FreeTextOptions";
 import { useAvatarCatalog, useFeatureCheck } from "@/context/AvatarCatalog";
+import { useCoreEventContext } from "@/context/CoreEvents";
 import { PenetrationSystems, ProcessingModes } from "@/data/stringArrayTypes";
 import Button from "@/layout/Button";
 import { Select } from "@/layout/Select";
@@ -16,7 +17,7 @@ import { FeVCToy } from "@bindings/FeVCToy";
 import type { FeVCToyFeature } from "@bindings/FeVCToyFeature";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { DebouncedFunc, debounce } from "lodash";
-import { ChevronRight, Info, Plus, X } from "lucide-react";
+import { Check, ChevronRight, Info, Plus, X } from "lucide-react";
 import {
   Dispatch,
   ReactNode,
@@ -266,6 +267,45 @@ function useSlotProps(): FeatureSlotProps {
   };
 }
 
+/** The enable switches newer SPS avatars have (src-tauri osc/sps_switch.rs) */
+const SPS_SWITCHES = ["OGB/Enabled", "OGB_ENABLED"];
+
+/**
+ * While VibeCheck is on and this feature uses SPS, VibeCheck keeps the
+ * avatar's SPS haptics switch on (newer SPS avatars send nothing without
+ * it). Says so when the current avatar has one, naming it.
+ */
+function SpsSwitchNote({ feature }: { feature: FeVCToyFeature }) {
+  const { isEnabled } = useCoreEventContext();
+  const { catalog } = useAvatarCatalog();
+  if (
+    !isEnabled ||
+    !feature.feature_enabled ||
+    feature.penetration_system.pen_system_type !== "Sps" ||
+    catalog.status !== "Ready"
+  )
+    return null;
+  const on = SPS_SWITCHES.filter((name) =>
+    catalog.parameters.some((p) => p.address === `/avatar/parameters/${name}`),
+  );
+  if (on.length === 0) return null;
+  return (
+    <div className="mt-1.5 flex items-start gap-1.5 text-xs text-theme-muted">
+      <Check className="mt-px h-3.5 w-3.5 shrink-0 text-theme-success" />
+      <span>
+        This avatar&apos;s SPS haptics are on: VibeCheck keeps{" "}
+        {on.map((name, i) => (
+          <span key={name}>
+            {i > 0 && " and "}
+            <code>{name}</code>
+          </span>
+        ))}{" "}
+        on while it&apos;s listening.
+      </span>
+    </div>
+  );
+}
+
 function InputProcessor() {
   const { feature, setToyFeature, handleFeatureAlter, check } =
     useFeatureFormContext();
@@ -324,6 +364,7 @@ function InputProcessor() {
           won&apos;t react. Choose the system your avatar uses.
         </SetupWarning>
       )}
+      <SpsSwitchNote feature={feature} />
       {ProcessorSlot && <ProcessorSlot {...slotProps} />}
     </SettingRow>
   );
