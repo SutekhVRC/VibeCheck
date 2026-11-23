@@ -1,6 +1,4 @@
 use crate::util::errors::UtilError;
-#[cfg(target_os = "windows")]
-use directories::BaseDirs;
 use std::{
     ffi::OsStr,
     path::{Path, PathBuf},
@@ -27,25 +25,6 @@ where
     P: AsRef<OsStr> + ?Sized,
 {
     Path::new(&p).is_file()
-}
-
-/*
- * Old method for config path
- * Still used for clearing OSC avatar configs
-*/
-#[cfg(target_os = "windows")]
-pub fn get_user_home_dir() -> Result<String, UtilError> {
-    let bd = match BaseDirs::new() {
-        Some(bd) => bd,
-        None => return Err(UtilError::HomeDirFS),
-    };
-
-    let bd = match bd.home_dir().to_str() {
-        Some(bd) => bd,
-        None => return Err(UtilError::HomeDirFS),
-    };
-
-    Ok(bd.to_string())
 }
 
 pub fn get_config_dir(app_handle: &AppHandle) -> Result<String, UtilError> {
