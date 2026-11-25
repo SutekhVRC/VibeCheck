@@ -134,4 +134,18 @@ on Tauri's async runtime instead.
   and so should commands an app adds through `Extensions::commands`
   (`src/extensions.rs`).
 
+## Control: the same actions without the window
+
+An app built on VibeCheck can read the app's state and use its main actions
+from Rust, without a command, through `Control` (`src/control.rs`, exported
+in `embed`). It goes through the same paths as the window, so the window
+follows every change:
+
+| `Control` | Same path as |
+|---|---|
+| `state()` | a snapshot: on, panic, master intensity, connected toys (name, battery), VRChat found, toy service status, and an opaque key for the loaded avatar (a hash of its id, never the id) |
+| `turn_on()`, `turn_off()` | the tray menu: `State(Enable)` / `State(Disable)` to the window, which then calls `vibecheck_enable` / `vibecheck_disable` (stopping a scan first) |
+| `panic()`, `resume()` | `panic_stop` / `panic_resume` (`vcore/panic.rs`) |
+| `set_master_intensity()` | the master intensity part of `set_vibecheck_config`; then `Config(Changed)` so the window reloads the settings |
+
 See also: [emit plane](emit-plane.md), [VRChat enable round trip](enable-round-trip.md).

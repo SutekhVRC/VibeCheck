@@ -277,6 +277,10 @@ export default function Config({
 
   // Kept locally while dragging; saved when the drag ends
   const [intensity, setIntensity] = useState(config.master_intensity);
+  // Follows changes made outside the window
+  useEffect(() => {
+    setIntensity(config.master_intensity);
+  }, [config.master_intensity]);
 
   // Address edits are a draft until applied (applying turns the app off)
   const [draft, setDraft] = useState({

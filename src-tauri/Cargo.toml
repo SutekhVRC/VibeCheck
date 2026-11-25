@@ -1,6 +1,6 @@
 [package]
 name = "vibecheck"
-version = "0.7.19"
+version = "0.7.20"
 edition = "2021"
 authors = ["SutekhVRC"]
 rust-version = "1.89"
@@ -49,6 +49,9 @@ directories = "6.0.0"
 sysinfo = "0.37.2"
 reqwest = {version = "0.12.25", features = ["blocking"] }
 parking_lot = "0.12.5"
+# A stable, opaque key for the loaded avatar (control.rs), never its id.
+# Already in the build through other crates.
+sha2 = "0.10"
 btleplug = "0.11.8"
 ts-rs = {version = "11.1.0", features = ["serde-compat"] }
 log = "0.4.17"
