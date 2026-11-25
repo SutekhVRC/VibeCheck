@@ -1,4 +1,5 @@
 import { errorText } from "@/lib/errors";
+import type { FeConfigEvent } from "@bindings/FeConfigEvent";
 import type { FeCoreEvent } from "@bindings/FeCoreEvent";
 import type { FeSafetyEvent } from "@bindings/FeSafetyEvent";
 import { FeStateEvent } from "@bindings/FeStateEvent";
@@ -216,6 +217,17 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  function handleConfigEvent(payload: FeConfigEvent) {
+    switch (payload) {
+      // Changed outside the window (e.g. master intensity from elsewhere)
+      case "Changed":
+        refreshConfig();
+        break;
+      default:
+        assertExhaustive(payload);
+    }
+  }
+
   function handleCoreEvent(payload: FeCoreEvent) {
     switch (payload.kind) {
       case "Scan":
@@ -226,6 +238,9 @@ export function CoreEventProvider({ children }: { children: React.ReactNode }) {
         break;
       case "Safety":
         handleSafetyEvent(payload.data);
+        break;
+      case "Config":
+        handleConfigEvent(payload.data);
         break;
       default:
         assertExhaustive(payload);

@@ -108,6 +108,15 @@ pub enum FeCoreEvent {
     Scan(FeScanEvent),
     State(FeStateEvent),
     Safety(FeSafetyEvent),
+    Config(FeConfigEvent),
+}
+
+#[derive(Serialize, Clone, TS)]
+#[ts(export)]
+pub enum FeConfigEvent {
+    /// The settings changed outside the window (e.g. master intensity, see
+    /// control.rs): load them again.
+    Changed,
 }
 
 #[derive(Serialize, Clone, TS)]

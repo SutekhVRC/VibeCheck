@@ -16,6 +16,8 @@ pub use crate::extensions::Extensions;
 /// What an app built on VibeCheck needs for its own session graphs and
 /// outputs (see extensions.rs).
 pub mod embed {
+    /// The app's state and main actions, for code outside the window.
+    pub use crate::control::{Control, ControlState, ToyService, ToyState};
     pub use crate::extensions::{SessionContext, SessionExtension};
     pub use crate::toy_handling::input_processor::penetration_systems::{
         PenetrationSystem, PenetrationSystemType,
@@ -38,6 +40,7 @@ use crate::{
     },
 };
 
+mod control;
 mod error_signal_handler;
 mod extensions;
 mod frontend;

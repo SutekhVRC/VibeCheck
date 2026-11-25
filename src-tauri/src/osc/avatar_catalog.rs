@@ -399,6 +399,9 @@ pub struct AvatarCatalog {
     refresh: Arc<Notify>,
     task: Arc<Mutex<Option<JoinHandle<()>>>>,
     present: Arc<watch::Sender<bool>>,
+    /// The loaded avatar's id, while VRChat is found. Never logged or shown;
+    /// `control.rs` only hands out a hash of it.
+    avatar_id: Arc<Mutex<Option<String>>>,
 }
 
 /// Whether VRChat is running, with the grace period described at the top.
@@ -430,6 +433,7 @@ impl Default for AvatarCatalog {
             refresh: Arc::default(),
             task: Arc::default(),
             present: Arc::new(watch::channel(false).0),
+            avatar_id: Arc::default(),
         }
     }
 }
@@ -459,6 +463,11 @@ impl AvatarCatalog {
             CatalogState::Ready(avatar) => Some(avatar.clone()),
             _ => None,
         }
+    }
+
+    /// The loaded avatar's id, while VRChat is found. Don't log or show it.
+    pub fn avatar_id(&self) -> Option<String> {
+        self.avatar_id.lock().clone()
     }
 
     /// VRChat's OSCQuery server, while it's found.
@@ -512,6 +521,7 @@ async fn run(catalog: AvatarCatalog, on_change: OnChange) {
                 }
                 _ => {
                     found_logged = false;
+                    *catalog.avatar_id.lock() = None;
                     presence.missed(&catalog.present);
                     catalog.set(CatalogState::Searching, &on_change);
                     wait(&catalog.refresh, Instant::now() + LOOKUP_EVERY).await;
@@ -530,6 +540,7 @@ async fn run(catalog: AvatarCatalog, on_change: OnChange) {
                 debug!("Avatar catalog: VRChat stopped answering: {}", e);
                 presence.missed(&catalog.present);
                 *catalog.endpoint.lock() = None;
+                *catalog.avatar_id.lock() = None;
                 catalog.set(CatalogState::Searching, &on_change);
                 continue;
             }
@@ -538,6 +549,7 @@ async fn run(catalog: AvatarCatalog, on_change: OnChange) {
         let now = Instant::now();
         let changed = current != avatar_id;
         if changed {
+            *catalog.avatar_id.lock() = current.clone();
             avatar_id = current;
             catalog.set(CatalogState::Reading, &on_change);
             rereads = REREAD_AFTER_CHANGE.iter().map(|d| now + *d).collect();

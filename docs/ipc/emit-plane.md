@@ -20,6 +20,7 @@ flowchart LR
     TRAY["Tray menu<br/>(tray.rs)"]
     PAN["Panic stop<br/>(vcore/panic.rs: button, hotkey,<br/>tray, OSC API)"]
     CAT["Avatar catalog<br/>(osc/avatar_catalog.rs, via vcore/state.rs)"]
+    CTL["Control<br/>(control.rs, for apps built on VibeCheck)"]
     DIA["Diagnostics task<br/>(toy_handling/runtime/diagnostics.rs)"]
   end
 
@@ -51,6 +52,8 @@ flowchart LR
   SCN -- "Scan(Stop)<br/>scan length ran out" --> ECE
   TRAY -- "State(Enable / Disable /<br/>Scan / EnableAndScan)" --> ECE
   PAN -- "Safety(Panicked / Resumed)" --> ECE
+  CTL -- "State(Enable / Disable)<br/>Config(Changed)" --> ECE
+  CTL -. "panic / resume" .-> PAN
   ERR -- "Error / Warning / Info<br/>(repeats skipped)" --> EER
   CAT -- "the whole catalog,<br/>on every change" --> EAV
   DIA -- "batches while<br/>diagnostics are on" --> EDI
@@ -63,7 +66,7 @@ flowchart LR
   EDI --> DG
 
   UT -. "on Remove: sync_offline_toys" .-> CMDS
-  CE -. "EnableAndScan: enable + start_bt_scan<br/>Enable: enable · Scan: start_bt_scan<br/>Disable: stop_bt_scan + disable" .-> CMDS
+  CE -. "EnableAndScan: enable + start_bt_scan<br/>Enable: enable · Scan: start_bt_scan<br/>Disable: stop_bt_scan + disable<br/>Config(Changed): get_vibecheck_config" .-> CMDS
 ```
 
 ## Event payloads
@@ -71,13 +74,14 @@ flowchart LR
 | Event | Rust type | Variants or contents |
 |---|---|---|
 | `fe_toy_event` | `FeToyEvent` | `Add(FeVCToy)`, `Remove(u32)`, `Update(FeVCToy)` |
-| `fe_core_event` | `FeCoreEvent` | `Scan(Start \| Stop)`, `State(EnableAndScan \| Disable \| Enable \| Scan)`, `Safety(Panicked \| Resumed)` |
+| `fe_core_event` | `FeCoreEvent` | `Scan(Start \| Stop)`, `State(EnableAndScan \| Disable \| Enable \| Scan)`, `Safety(Panicked \| Resumed)`, `Config(Changed)` |
 | `fe_error` | `FrontendError` | `Error(String)`, `Warning(String)`, `Info(String)` |
 | `fe_avatar_event` | `FeAvatarCatalog` | `status`, `parameters`, `zones` (the avatar's SPS zones), `tps` |
 | `fe_diagnostics` | `FeDiagnostics` | `reset`, changed `signals`, every toy's graph values (`toys`), new `log` entries |
 
 - `fe_error` carries problems found by background work; see [Errors](../runtime/errors.md).
 - `fe_avatar_event` is sent whenever the catalog changes; `get_avatar_catalog` returns the same thing on demand. See [Avatar catalog](../runtime/toy-command-path.md#avatar-catalog).
+- `Config(Changed)` means the settings changed outside the window (master intensity set through `Control`, see `src-tauri/src/control.rs`); the window loads them again.
 - `fe_diagnostics` is only sent while the diagnostics view has turned diagnostics on (`set_diagnostics_enabled`).
 
 Desktop notifications (a toy connecting, or an app's own through
