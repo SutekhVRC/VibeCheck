@@ -3,12 +3,15 @@ import BatteryIcon from "@/components/ui/BatteryIcon";
 import { useCoreEventContext } from "@/context/CoreEvents";
 import Button from "@/layout/Button";
 import ThemeIcon from "@/theme/ThemeIcon";
+import type { FeToyEvent } from "@bindings/FeToyEvent";
 import { FeVCToy } from "@bindings/FeVCToy";
 import { FeVCToyFeature } from "@bindings/FeVCToyFeature";
 import { ToyPower } from "@bindings/ToyPower";
+import { listen } from "@tauri-apps/api/event";
 import { Settings2, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import lovenseLogo from "../assets/Lovense.png";
+import { LISTEN } from "../data/constants";
 import { appExtensions } from "../extensions";
 import Tooltip from "../layout/Tooltip";
 import { cn } from "../lib/utils";
@@ -29,6 +32,18 @@ export default function Toy({
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
   const nameInfo = NameInfo(toy);
   const ToyHeaderSlot = appExtensions.ToyHeader;
+  // The forms keep their own copy of the settings while open: when the
+  // backend loads them again (e.g. after an avatar change), start the forms
+  // over with the new ones
+  const [reloads, setReloads] = useState(0);
+  useEffect(() => {
+    const unlisten = listen<FeToyEvent>(LISTEN.TOY_EVENT, (event) => {
+      if (event.payload.kind === "Reloaded") setReloads((n) => n + 1);
+    });
+    return () => {
+      unlisten.then((u) => u());
+    };
+  }, []);
 
   const { config } = useCoreEventContext();
   // The Config "advanced" switches now decide what starts open
@@ -93,7 +108,7 @@ export default function Toy({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col px-2">
         {toySettingsOpen && (
           <div className="shrink-0">
-            <ToySettings toy={toy} />
+            <ToySettings toy={toy} key={reloads} />
           </div>
         )}
 
@@ -116,7 +131,7 @@ export default function Toy({
             label={featureLabel(toy.features, clampedIndex)}
             advancedOpen={advancedOpen}
             onAdvancedOpenChange={setAdvancedOpen}
-            key={toyFeatureKey(toy, toy.features[clampedIndex])}
+            key={`${toyFeatureKey(toy, toy.features[clampedIndex])} ${reloads}`}
           />
         ) : (
           <div className="mt-4 text-sm text-theme-muted">

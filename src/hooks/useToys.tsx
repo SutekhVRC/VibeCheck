@@ -132,6 +132,9 @@ export function useToys() {
         }
 
         break;
+      case "Reloaded":
+        // The toy page starts its forms over (Toy.tsx)
+        break;
       case "Remove":
         await syncOfflineToys();
         setOnlineToys((curOnlineToys) => {

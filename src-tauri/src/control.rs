@@ -63,6 +63,9 @@ pub struct ControlState {
     /// gone. The same avatar always gives the same key, so settings can be
     /// kept per avatar.
     pub avatar_key: Option<String>,
+    /// That avatar's name, once VRChat has written its OSC config (it can
+    /// take a moment after loading). For showing in the app; don't log it.
+    pub avatar_name: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -91,6 +94,8 @@ impl Control {
     pub fn state(&self) -> ControlState {
         let state = self.app.state::<VCStateMutex>();
         let vc = state.0.lock();
+        // Looked up after the lock is let go: it may read a file
+        let catalog = vc.avatar_catalog.clone();
         let mut toys: Vec<ToyState> = vc
             .toy_manager()
             .online_toys
@@ -110,7 +115,7 @@ impl Control {
             ToyServiceStatus::Connected => ToyService::Connected,
             ToyServiceStatus::Failed(why) => ToyService::Failed(why.clone()),
         };
-        ControlState {
+        let mut snapshot = ControlState {
             on: matches!(vc.running, RunningState::Running),
             panicked: vc.safety.is_panicked(),
             master_intensity: vc.config.master_intensity,
@@ -118,7 +123,11 @@ impl Control {
             vrchat_found: *vc.avatar_catalog.presence().borrow(),
             toy_service,
             avatar_key: vc.avatar_catalog.last_avatar().as_deref().map(avatar_key),
-        }
+            avatar_name: None,
+        };
+        drop(vc);
+        snapshot.avatar_name = catalog.last_avatar_name();
+        snapshot
     }
 
     /// Turns VibeCheck on, as the tray's menu does (through the window, so
