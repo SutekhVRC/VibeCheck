@@ -119,7 +119,7 @@ export default function ToyConnection() {
   }
 
   return (
-    <div className="mb-3 flex flex-col gap-2">
+    <div className="flex flex-col gap-2">
       <div className="grid grid-cols-[minmax(8rem,1fr)_minmax(8rem,2fr)] items-center gap-x-4">
         <TooltipLabel text="Toy connection" tooltip={TOOLTIP.ToyConnection} />
         <Select
