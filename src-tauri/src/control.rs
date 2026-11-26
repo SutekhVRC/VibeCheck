@@ -28,7 +28,10 @@ use crate::{
     toy_handling::ToyPower,
     util::toy_service::ToyServiceStatus,
     vcore::{
-        ipc::{call_plane::save_config, emit_plane::emit_core_event},
+        ipc::{
+            call_plane::{native_reload_toy_settings, save_config},
+            emit_plane::emit_core_event,
+        },
         panic,
         state::{RunningState, VCStateMutex},
     },
@@ -55,9 +58,10 @@ pub struct ControlState {
     pub vrchat_found: bool,
     /// How the connection to the toy service (built in or Intiface) is doing.
     pub toy_service: ToyService,
-    /// An opaque, stable key for the avatar VRChat has loaded (a hash of its
-    /// id, never the id itself), while one is known. The same avatar always
-    /// gives the same key, so settings can be kept per avatar.
+    /// An opaque, stable key for the avatar VRChat loaded last (a hash of its
+    /// id, never the id itself), once one is known; kept while VRChat is
+    /// gone. The same avatar always gives the same key, so settings can be
+    /// kept per avatar.
     pub avatar_key: Option<String>,
 }
 
@@ -113,7 +117,7 @@ impl Control {
             toys,
             vrchat_found: *vc.avatar_catalog.presence().borrow(),
             toy_service,
-            avatar_key: vc.avatar_catalog.avatar_id().as_deref().map(avatar_key),
+            avatar_key: vc.avatar_catalog.last_avatar().as_deref().map(avatar_key),
         }
     }
 
@@ -137,6 +141,15 @@ impl Control {
 
     pub fn resume(&self) {
         panic::resume_from_panic(&self.app);
+    }
+
+    /// Loads every toy's settings again from where they're kept now (see
+    /// `Extensions::toy_settings_location`), e.g. after moving them. Toys
+    /// that are on use them straight away and the window shows them. An
+    /// avatar change does this by itself.
+    pub fn reload_toy_settings(&self) {
+        info!("Reloading toy settings (control)");
+        native_reload_toy_settings(&self.app);
     }
 
     /// Sets and saves the master intensity (clamped to 0.0 to 1.0). It
@@ -164,7 +177,7 @@ impl Control {
 /// The opaque key for an avatar id: a SHA-256 of it (with a fixed prefix,
 /// so it's VibeCheck's own), 32 hex digits. Stable across runs and
 /// versions.
-fn avatar_key(id: &str) -> String {
+pub(crate) fn avatar_key(id: &str) -> String {
     let digest = Sha256::digest(format!("VibeCheck avatar key\0{id}").as_bytes());
     digest[..16].iter().map(|b| format!("{b:02x}")).collect()
 }

@@ -399,9 +399,10 @@ pub struct AvatarCatalog {
     refresh: Arc<Notify>,
     task: Arc<Mutex<Option<JoinHandle<()>>>>,
     present: Arc<watch::Sender<bool>>,
-    /// The loaded avatar's id, while VRChat is found. Never logged or shown;
+    /// The avatar VRChat loaded last: from `/avatar/change` as it happens,
+    /// or as read here. Kept while VRChat is gone. Never logged or shown;
     /// `control.rs` only hands out a hash of it.
-    avatar_id: Arc<Mutex<Option<String>>>,
+    last_avatar: Arc<Mutex<Option<String>>>,
 }
 
 /// Whether VRChat is running, with the grace period described at the top.
@@ -433,7 +434,7 @@ impl Default for AvatarCatalog {
             refresh: Arc::default(),
             task: Arc::default(),
             present: Arc::new(watch::channel(false).0),
-            avatar_id: Arc::default(),
+            last_avatar: Arc::default(),
         }
     }
 }
@@ -441,16 +442,19 @@ impl Default for AvatarCatalog {
 impl AvatarCatalog {
     /// Starts the task on `runtime` (once). `on_change` is called whenever
     /// the state changes.
+    /// `on_avatar` is called when it finds VRChat on an avatar other than
+    /// the last one noted (e.g. VibeCheck started while VRChat ran).
     pub fn start(
         &self,
         runtime: &tokio::runtime::Handle,
         on_change: impl Fn(&CatalogState) + Send + Sync + 'static,
+        on_avatar: impl Fn() + Send + Sync + 'static,
     ) {
         let mut task = self.task.lock();
         if task.is_some() {
             return;
         }
-        *task = Some(runtime.spawn(run(self.clone(), Box::new(on_change))));
+        *task = Some(runtime.spawn(run(self.clone(), Box::new(on_change), Box::new(on_avatar))));
     }
 
     pub fn state(&self) -> CatalogState {
@@ -465,9 +469,21 @@ impl AvatarCatalog {
         }
     }
 
-    /// The loaded avatar's id, while VRChat is found. Don't log or show it.
-    pub fn avatar_id(&self) -> Option<String> {
-        self.avatar_id.lock().clone()
+    /// The avatar VRChat loaded last, kept while VRChat is gone. Don't log
+    /// or show it.
+    pub fn last_avatar(&self) -> Option<String> {
+        self.last_avatar.lock().clone()
+    }
+
+    /// Notes that VRChat loaded avatar `id`; true if it's a different one
+    /// from the last.
+    pub fn note_avatar(&self, id: &str) -> bool {
+        let mut last = self.last_avatar.lock();
+        if last.as_deref() == Some(id) {
+            return false;
+        }
+        *last = Some(id.to_owned());
+        true
     }
 
     /// VRChat's OSCQuery server, while it's found.
@@ -497,8 +513,9 @@ impl AvatarCatalog {
 }
 
 type OnChange = Box<dyn Fn(&CatalogState) + Send + Sync>;
+type OnAvatar = Box<dyn Fn() + Send + Sync>;
 
-async fn run(catalog: AvatarCatalog, on_change: OnChange) {
+async fn run(catalog: AvatarCatalog, on_change: OnChange, on_avatar: OnAvatar) {
     let mut avatar_id: Option<String> = None;
     let mut rereads: Vec<Instant> = Vec::new();
     let mut presence = Presence { misses: 0 };
@@ -521,7 +538,6 @@ async fn run(catalog: AvatarCatalog, on_change: OnChange) {
                 }
                 _ => {
                     found_logged = false;
-                    *catalog.avatar_id.lock() = None;
                     presence.missed(&catalog.present);
                     catalog.set(CatalogState::Searching, &on_change);
                     wait(&catalog.refresh, Instant::now() + LOOKUP_EVERY).await;
@@ -540,7 +556,6 @@ async fn run(catalog: AvatarCatalog, on_change: OnChange) {
                 debug!("Avatar catalog: VRChat stopped answering: {}", e);
                 presence.missed(&catalog.present);
                 *catalog.endpoint.lock() = None;
-                *catalog.avatar_id.lock() = None;
                 catalog.set(CatalogState::Searching, &on_change);
                 continue;
             }
@@ -549,7 +564,9 @@ async fn run(catalog: AvatarCatalog, on_change: OnChange) {
         let now = Instant::now();
         let changed = current != avatar_id;
         if changed {
-            *catalog.avatar_id.lock() = current.clone();
+            if current.as_deref().is_some_and(|id| catalog.note_avatar(id)) {
+                on_avatar();
+            }
             avatar_id = current;
             catalog.set(CatalogState::Reading, &on_change);
             rereads = REREAD_AFTER_CHANGE.iter().map(|d| now + *d).collect();
@@ -605,6 +622,18 @@ fn avatar_id_of(node: &OSCQueryNode) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_last_avatar_is_noted_once_and_kept() {
+        let catalog = AvatarCatalog::default();
+        assert_eq!(catalog.last_avatar(), None);
+        assert!(catalog.note_avatar("avtr_1"));
+        assert!(!catalog.note_avatar("avtr_1"));
+        assert!(catalog.note_avatar("avtr_2"));
+        assert_eq!(catalog.last_avatar().as_deref(), Some("avtr_2"));
+        // A clone (as kept in the app's state) sees the same avatar
+        assert_eq!(catalog.clone().last_avatar().as_deref(), Some("avtr_2"));
+    }
 
     #[test]
     fn vrchat_counts_as_gone_only_after_two_misses_in_a_row() {

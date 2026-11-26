@@ -2,14 +2,12 @@ use crate::util::toy_service::{SavedAddress, ToyConnection, ToyServiceStatus};
 use log::{debug, error as logerr, info, trace, warn};
 use serde::Serialize;
 use std::{fs, net::SocketAddrV4, str::FromStr, thread, time::Duration};
+use tauri::Manager;
 use ts_rs::TS;
 
 use crate::{
-    frontend::{
-        frontend_types::{
-            FeOscMode, FeOscQueryStatus, FeToyEvent, FeVCFeatureType, FeVCToy, FeVibeCheckConfig,
-        },
-        ToFrontend,
+    frontend::frontend_types::{
+        FeOscMode, FeOscQueryStatus, FeToyEvent, FeVCFeatureType, FeVibeCheckConfig,
     },
     osc::{OSCNetworking, OscMode},
     toy_handling::{
@@ -521,29 +519,47 @@ pub fn native_alter_toy(
         let res = vc_lock
             .tme_send_tx
             .send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(altered)));
-        emit_toy_event(
-            &app_handle,
-            FeToyEvent::Update({
-                FeVCToy {
-                    toy_id: Some(alter_clone.toy_id),
-                    toy_anatomy: alter_clone.anatomy(),
-                    toy_name: alter_clone.toy_name,
-                    toy_power: alter_clone.toy_power,
-                    toy_connected: alter_clone.toy_connected,
-                    features: alter_clone.parsed_toy_features.features.to_frontend(),
-                    listening: alter_clone.listening,
-                    osc_data: alter_clone.osc_data,
-                    bt_update_rate: alter_clone.bt_update_rate,
-                    sub_id: alter_clone.sub_id,
-                }
-            }),
-        );
+        emit_toy_event(&app_handle, FeToyEvent::Update(alter_clone.to_fe()));
         res
     };
 
     match send_res {
         Ok(()) => Ok(()),
         Err(_e) => Err(ToyAlterError::TMESendFailure),
+    }
+}
+
+/// Loads every toy's settings again from wherever they're kept now (see
+/// toy_location.rs), e.g. after the avatar changed: connected toys use them
+/// straight away (a fresh graph, as when they're edited), and the window
+/// shows them, saved toys too. Nothing is saved.
+pub fn native_reload_toy_settings(app_handle: &tauri::AppHandle) {
+    let state = app_handle.state::<VCStateMutex>();
+    let mut vc_lock = state.0.lock();
+    let reloaded: Vec<VCToy> = vc_lock
+        .toy_manager_mut()
+        .online_toys
+        .values_mut()
+        .filter_map(|toy| toy.reload_toy_config().then(|| toy.clone()))
+        .collect();
+    for toy in reloaded {
+        info!("Reloaded {}'s settings", toy.toy_name);
+        emit_toy_event(app_handle, FeToyEvent::Update(toy.to_fe()));
+        if vc_lock
+            .tme_send_tx
+            .send(ToyManagementEvent::Tu(ToyUpdate::AlterToy(toy)))
+            .is_err()
+        {
+            warn!("Couldn't apply reloaded toy settings: the toy handler has stopped");
+        }
+    }
+    match vc_lock.toy_manager_mut().sync_frontend(true) {
+        Ok(saved) => {
+            for toy in saved {
+                emit_toy_event(app_handle, FeToyEvent::Update(toy));
+            }
+        }
+        Err(e) => warn!("Couldn't reload saved toys' settings: {:?}", e),
     }
 }
 

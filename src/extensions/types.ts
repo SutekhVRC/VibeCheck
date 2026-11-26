@@ -121,10 +121,20 @@ export type FeatureFormSlots = {
   ) => ValueDecoration | null | undefined;
 };
 
+/** What a slot on a toy's page is given */
+export type ToySlotProps = {
+  toy: FeVCToy;
+};
+
 export type AppExtensions = {
   pages?: ExtensionPage[];
   settingsSections?: ExtensionSettingsSection[];
   /** More lines in Settings > About, under the name and version */
   About?: ComponentType;
   featureForm?: FeatureFormSlots;
+  /**
+   * In a toy page's header, before Toy settings: something small, e.g.
+   * where the toy's settings are kept
+   */
+  ToyHeader?: ComponentType<ToySlotProps>;
 };

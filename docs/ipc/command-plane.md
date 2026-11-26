@@ -143,9 +143,26 @@ follows every change:
 
 | `Control` | Same path as |
 |---|---|
-| `state()` | a snapshot: on, panic, master intensity, connected toys (name, battery), VRChat found, toy service status, and an opaque key for the loaded avatar (a hash of its id, never the id) |
+| `state()` | a snapshot: on, panic, master intensity, connected toys (name, battery), VRChat found, toy service status, and an opaque key for the avatar VRChat loaded last (a hash of its id, never the id; kept while VRChat is gone) |
 | `turn_on()`, `turn_off()` | the tray menu: `State(Enable)` / `State(Disable)` to the window, which then calls `vibecheck_enable` / `vibecheck_disable` (stopping a scan first) |
 | `panic()`, `resume()` | `panic_stop` / `panic_resume` (`vcore/panic.rs`) |
 | `set_master_intensity()` | the master intensity part of `set_vibecheck_config`; then `Config(Changed)` so the window reloads the settings |
+| `reload_toy_settings()` | what an avatar change does for toy settings (below): every toy's settings loaded again, applied like `alter_toy` (without saving), and `Update` toy events for connected and saved toys |
+
+### Where toy settings are kept
+
+A toy's settings are `ToyConfigs/<toy>.json` unless the app gives another
+file through `Extensions::toy_settings_location` (asked with the toy's name
+and the avatar's key; `vcore/config/toy_location.rs`). Every load and save
+asks it: a toy connecting, `alter_toy` (both connected and saved toys), and
+the saved toys' list. Removing a toy still deletes its `ToyConfigs` file
+only.
+
+When the avatar changes (`/avatar/change`, or the avatar catalog finding
+VRChat on another avatar), the avatar's key changes too, so every toy's
+settings are loaded again from wherever they are now, before the graphs
+start over. A file that can't be read or doesn't fit the toy (other
+features) is skipped, and the toy keeps the settings it had. Without a
+location from the app nothing is reloaded.
 
 See also: [emit plane](emit-plane.md), [VRChat enable round trip](enable-round-trip.md).

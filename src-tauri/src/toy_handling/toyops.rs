@@ -17,7 +17,8 @@ use crate::{
         },
         FromFrontend, ToBackend, ToFrontend,
     },
-    util::fs::{build_path_dir, build_path_file, file_exists, get_config_dir, set_aside_bad_file},
+    util::fs::{file_exists, set_aside_bad_file},
+    vcore::config::toy_location::toy_settings_path,
     vcore::errors::{
         self,
         backend::{VibeCheckFSError, VibeCheckToyConfigError},
@@ -133,47 +134,56 @@ impl VCToy {
         }
     }
 
+    /// Whether `conf` has the features this toy has. If it doesn't, the user
+    /// probably swapped between connection types (this used to be a bug
+    /// when LC impl in bp-rs wasnt done for the Max2; kept in case it
+    /// happens again).
+    fn config_fits(&self, conf: &VCToyConfig) -> bool {
+        // Each kind of actuator counts only if the config has the same
+        // number of them as the toy
+        let counts = [
+            (
+                conf.features.get_feature_scalar_count(),
+                self.layout.scalars.len(),
+            ),
+            (
+                conf.features.get_feature_rotator_count(),
+                self.layout.rotators.len(),
+            ),
+            (
+                conf.features.get_feature_linear_count(),
+                self.layout.linears.len(),
+            ),
+        ];
+        let conn_toy_feature_count: usize = counts
+            .iter()
+            .filter(|(in_config, on_toy)| in_config == on_toy)
+            .map(|(_, on_toy)| on_toy)
+            .sum();
+        debug!("Feature counts (config, toy): {:?}", counts);
+        conn_toy_feature_count == conf.features.features.len()
+    }
+
+    /// Takes the loaded config's features and settings.
+    fn apply_config(&mut self, conf: &VCToyConfig) {
+        self.parsed_toy_features = conf.features.clone();
+        self.osc_data = conf.osc_data;
+        self.bt_update_rate = conf.bt_update_rate;
+    }
+
     pub fn populate_toy_config(&mut self) {
-        match self.config {
+        match self.config.clone() {
             // If config is loaded check that its feature count matches the toy that loaded it. Then set the feature map to the one from the config.
-            Some(ref conf) => {
-                // If feature count differs the user probably swapped between connection types (This used to be a bug when LC impl in bp-rs wasnt done for the Max2. This was fixed but I am keeping the feature count check in case it happens again)
-
-                // Each kind of actuator counts only if the config has the same
-                // number of them as the toy
-                let counts = [
-                    (
-                        conf.features.get_feature_scalar_count(),
-                        self.layout.scalars.len(),
-                    ),
-                    (
-                        conf.features.get_feature_rotator_count(),
-                        self.layout.rotators.len(),
-                    ),
-                    (
-                        conf.features.get_feature_linear_count(),
-                        self.layout.linears.len(),
-                    ),
-                ];
-                let conn_toy_feature_count: usize = counts
-                    .iter()
-                    .filter(|(in_config, on_toy)| in_config == on_toy)
-                    .map(|(_, on_toy)| on_toy)
-                    .sum();
-                debug!("Feature counts (config, toy): {:?}", counts);
-
+            Some(conf) => {
                 // If Toy has a different count of features repopulate config
-                if conn_toy_feature_count != conf.features.features.len() {
+                if !self.config_fits(&conf) {
                     warn!("Config is likely corrupted! Repopulating features!");
                     self.populate_routine();
                     return;
                 }
 
                 // Feature count is the same so its probably safe to assume the toy config is intact
-                self.parsed_toy_features = conf.features.clone();
-
-                self.osc_data = conf.osc_data;
-                self.bt_update_rate = conf.bt_update_rate;
+                self.apply_config(&conf);
                 info!("Populated toy with loaded config from file!");
             }
             // If config is not loaded populate the toy
@@ -183,16 +193,46 @@ impl VCToy {
         }
     }
 
+    /// Loads the toy's settings again from wherever they're kept now (see
+    /// toy_location.rs) and uses them. Returns false, keeping the current
+    /// settings, if there's no file there or it doesn't fit this toy.
+    pub fn reload_toy_config(&mut self) -> bool {
+        let current = self.config.clone();
+        let loaded = self.load_toy_config();
+        match self.config.clone() {
+            Some(conf) if loaded.is_ok() && self.config_fits(&conf) => {
+                self.apply_config(&conf);
+                true
+            }
+            _ => {
+                warn!(
+                    "Couldn't reload {}'s settings; keeping the ones in use",
+                    self.toy_name
+                );
+                self.config = current;
+                false
+            }
+        }
+    }
+
+    /// The toy as the frontend shows it.
+    pub fn to_fe(&self) -> crate::frontend::frontend_types::FeVCToy {
+        crate::frontend::frontend_types::FeVCToy {
+            toy_id: Some(self.toy_id),
+            toy_anatomy: self.anatomy(),
+            toy_name: self.toy_name.clone(),
+            toy_power: self.toy_power.clone(),
+            toy_connected: self.toy_connected,
+            features: self.parsed_toy_features.features.to_frontend(),
+            listening: self.listening,
+            osc_data: self.osc_data,
+            bt_update_rate: self.bt_update_rate,
+            sub_id: self.sub_id,
+        }
+    }
+
     pub fn load_toy_config(&mut self) -> Result<(), VibeCheckToyConfigError> {
-        // Generate config path
-
-        let config_dir = match get_config_dir(&self.app_handle) {
-            Ok(d) => d,
-            Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
-        };
-
-        let toy_config_dir = build_path_dir(&[&config_dir, "ToyConfigs"]);
-        let config_path = build_path_file(&[&toy_config_dir, &format!("{}.json", self.toy_name)]);
+        let config_path = toy_settings_path(&self.app_handle, &self.toy_name)?;
 
         if !file_exists(&config_path) {
             self.config = None;
@@ -232,12 +272,7 @@ impl VCToy {
 
     // Save Toy config by name
     pub fn save_toy_config(&self) -> Result<(), VibeCheckToyConfigError> {
-        let config_dir = match get_config_dir(&self.app_handle) {
-            Ok(d) => d,
-            Err(_) => return Err(VibeCheckToyConfigError::ConfigDirFail),
-        };
-        let toy_config_dir = build_path_dir(&[&config_dir, "ToyConfigs"]);
-        let config_path = build_path_file(&[&toy_config_dir, &format!("{}.json", self.toy_name)]);
+        let config_path = toy_settings_path(&self.app_handle, &self.toy_name)?;
         info!("Saving toy config to: {}", config_path);
 
         if let Some(conf) = &self.config {
