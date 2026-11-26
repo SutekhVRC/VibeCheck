@@ -403,7 +403,21 @@ pub struct AvatarCatalog {
     /// or as read here. Kept while VRChat is gone. Never logged or shown;
     /// `control.rs` only hands out a hash of it.
     last_avatar: Arc<Mutex<Option<String>>>,
+    /// The last avatar's name, as last looked up.
+    name: Arc<Mutex<NameLookup>>,
 }
+
+/// An avatar's name from VRChat's OSC config, and when it was looked for
+/// (VRChat writes the file as the avatar loads, so a miss is tried again).
+#[derive(Default)]
+struct NameLookup {
+    avatar: Option<String>,
+    name: Option<String>,
+    at: Option<Instant>,
+}
+
+/// How long a missing name waits before it's looked for again.
+const NAME_RETRY: Duration = Duration::from_secs(10);
 
 /// Whether VRChat is running, with the grace period described at the top.
 struct Presence {
@@ -435,6 +449,7 @@ impl Default for AvatarCatalog {
             task: Arc::default(),
             present: Arc::new(watch::channel(false).0),
             last_avatar: Arc::default(),
+            name: Arc::default(),
         }
     }
 }
@@ -473,6 +488,25 @@ impl AvatarCatalog {
     /// or show it.
     pub fn last_avatar(&self) -> Option<String> {
         self.last_avatar.lock().clone()
+    }
+
+    /// The last avatar's name, from VRChat's OSC config (see
+    /// util/vrchat_osc.rs), once VRChat has written it. Reads a file now and
+    /// then, so don't call it while holding VibeCheck's state lock. Shown in
+    /// the app only; never logged.
+    pub fn last_avatar_name(&self) -> Option<String> {
+        let avatar = self.last_avatar()?;
+        let mut lookup = self.name.lock();
+        let fresh = lookup.avatar.as_deref() == Some(avatar.as_str())
+            && (lookup.name.is_some() || lookup.at.is_some_and(|at| at.elapsed() < NAME_RETRY));
+        if !fresh {
+            *lookup = NameLookup {
+                name: crate::util::vrchat_osc::avatar_name(&avatar),
+                avatar: Some(avatar),
+                at: Some(Instant::now()),
+            };
+        }
+        lookup.name.clone()
     }
 
     /// Notes that VRChat loaded avatar `id`; true if it's a different one

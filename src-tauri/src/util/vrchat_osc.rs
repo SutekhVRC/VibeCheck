@@ -1,6 +1,7 @@
 /*
  * Finds and clears VRChat's saved avatar OSC configs (Settings >
- * Troubleshooting > Reset VRChat OSC configs).
+ * Troubleshooting > Reset VRChat OSC configs), and reads an avatar's name
+ * from them (`avatar_name`).
  *
  * VRChat keeps one folder per user, `usr_<id>`, inside its OSC folder, holding
  * a JSON config per avatar. Deleting the `usr_*` folders makes VRChat write
@@ -52,6 +53,43 @@ pub fn clear_osc_configs() -> Result<Vec<String>, VibeCheckFSError> {
         clear_user_folders(dir)?;
     }
     Ok(dirs.iter().map(|d| d.display().to_string()).collect())
+}
+
+/// The name VRChat gave avatar `avatar_id` in its OSC config
+/// (`usr_*/Avatars/<id>.json`), if it has written one. Shown in the app
+/// only; never logged.
+pub fn avatar_name(avatar_id: &str) -> Option<String> {
+    let home = directories::BaseDirs::new()?.home_dir().to_path_buf();
+    osc_dirs(&home)
+        .iter()
+        .find_map(|dir| avatar_name_in(dir, avatar_id))
+}
+
+/// `avatar_name` in one OSC folder.
+fn avatar_name_in(osc_dir: &Path, avatar_id: &str) -> Option<String> {
+    // An id is one file name: letters, digits, '_' and '-'
+    if avatar_id.is_empty()
+        || !avatar_id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
+        return None;
+    }
+    fs::read_dir(osc_dir).ok()?.flatten().find_map(|user| {
+        if !user.file_name().to_string_lossy().starts_with("usr_") {
+            return None;
+        }
+        let file = user
+            .path()
+            .join("Avatars")
+            .join(format!("{avatar_id}.json"));
+        let text = fs::read_to_string(file).ok()?;
+        // VRChat writes it with a byte order mark
+        let json: serde_json::Value =
+            serde_json::from_str(text.trim_start_matches('\u{feff}')).ok()?;
+        let name = json.get("name")?.as_str()?.trim();
+        (!name.is_empty()).then(|| name.to_owned())
+    })
 }
 
 /// Every VRChat OSC folder that exists for this user
@@ -180,6 +218,23 @@ mod tests {
         assert!(!osc.join("usr_abc").exists());
         assert!(osc.join("other").exists());
         assert!(osc.join("usr_file").exists());
+        fs::remove_dir_all(&osc).unwrap();
+    }
+
+    #[test]
+    fn reads_an_avatars_name_from_its_osc_config() {
+        let osc = scratch("name");
+        fs::create_dir_all(osc.join("usr_abc/Avatars")).unwrap();
+        fs::write(
+            osc.join("usr_abc/Avatars/avtr_1-2.json"),
+            "\u{feff}{\"id\":\"avtr_1-2\",\"name\":\" Fox \",\"parameters\":[]}",
+        )
+        .unwrap();
+
+        assert_eq!(avatar_name_in(&osc, "avtr_1-2").as_deref(), Some("Fox"));
+        assert_eq!(avatar_name_in(&osc, "avtr_other"), None);
+        // Never a path out of the folder
+        assert_eq!(avatar_name_in(&osc, "../usr_abc/Avatars/avtr_1-2"), None);
         fs::remove_dir_all(&osc).unwrap();
     }
 
