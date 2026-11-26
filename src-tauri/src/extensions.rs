@@ -15,7 +15,10 @@
  *   each time VibeCheck turns on, `SessionExtension::start` gets the
  *   session's signal and event planes, the safety layer and a way to add
  *   graphs to the session's graph runner; `stop` runs just before the
- *   session ends (VibeCheck turned off or reset), while its tasks still run.
+ *   session ends (VibeCheck turned off or reset), while its tasks still run;
+ * - where toys' settings are kept (`toy_settings_location`), e.g. per
+ *   avatar: VibeCheck loads and saves a toy's settings there instead of its
+ *   default file, and loads them again when the avatar changes.
  *
  * Tauri only takes one command handler, built at compile time by
  * `generate_handler!`, so an app's commands come with their names: a call
@@ -24,7 +27,7 @@
  * replaces it.
  */
 
-use std::net::SocketAddrV4;
+use std::{net::SocketAddrV4, path::PathBuf, sync::Arc};
 
 use log::warn;
 use tauri::{image::Image, ipc::Invoke, AppHandle, Builder, Manager, Wry};
@@ -36,6 +39,7 @@ use vibecheck_core::{
 
 use crate::{
     toy_handling::runtime::graph_runner::{GraphControl, GraphKey, GraphView},
+    vcore::config::toy_location::{ToySettingsLocation, ToySettingsQuery},
     vcore::state::VCStateMutex,
 };
 
@@ -52,6 +56,7 @@ pub struct Extensions {
     pub(crate) on_start: Vec<StartHook>,
     pub(crate) sessions: Vec<Box<dyn SessionExtension>>,
     pub(crate) tray_icon: Option<Image<'static>>,
+    pub(crate) toy_settings: Option<ToySettingsLocation>,
 }
 
 impl Extensions {
@@ -86,6 +91,22 @@ impl Extensions {
     /// Windows and Linux trays.
     pub fn tray_icon(mut self, icon: Image<'static>) -> Self {
         self.tray_icon = Some(icon);
+        self
+    }
+
+    /// Keeps toys' settings somewhere else: for each toy (and the avatar
+    /// VRChat loaded last), `location` gives the file to load and save its
+    /// settings in, or `None` for its default file (`ToyConfigs/<toy>.json`).
+    /// It's asked whenever a toy's settings are loaded or saved, from any
+    /// thread, so keep it quick and don't call into `Control` from it. The
+    /// file's folder must exist. When the avatar changes, every toy's
+    /// settings are loaded again; after changing the answer for the same
+    /// avatar, call `Control::reload_toy_settings`.
+    pub fn toy_settings_location(
+        mut self,
+        location: impl Fn(ToySettingsQuery) -> Option<PathBuf> + Send + Sync + 'static,
+    ) -> Self {
+        self.toy_settings = Some(Arc::new(location));
         self
     }
 

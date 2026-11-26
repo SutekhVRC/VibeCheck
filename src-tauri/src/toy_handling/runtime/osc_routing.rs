@@ -17,12 +17,15 @@ use vibecheck_core::{
 };
 
 use crate::{
-    osc::avatar_query::AvatarQuery,
+    osc::{avatar_catalog::AvatarCatalog, avatar_query::AvatarQuery},
     osc_api::handle_api_message,
     toy_handling::runtime::{
         graph_runner::GraphControl, presence::VRCHAT_MODULE, toy_graph::OSC_MODULE,
     },
-    vcore::state::VCStateMutex,
+    vcore::{
+        config::toy_location::ToySettingsLocations, ipc::call_plane::native_reload_toy_settings,
+        state::VCStateMutex,
+    },
 };
 
 const API_PREFIX: &str = "/avatar/parameters/vibecheck/api/";
@@ -90,6 +93,17 @@ pub async fn core_event_handler(
                 let query = avatar_query.clone();
                 tokio::spawn(async move { query.fill_after_avatar_change().await });
                 stop_all_devices(&app_handle).await;
+                // Toys' settings may be kept per avatar: take the new
+                // avatar's before the graphs start over, so its values never
+                // run through the old avatar's settings
+                if let Value::Text(id) = &event.value {
+                    let new_avatar = app_handle
+                        .try_state::<AvatarCatalog>()
+                        .is_some_and(|catalog| catalog.note_avatar(id));
+                    if new_avatar && ToySettingsLocations::given(&app_handle) {
+                        native_reload_toy_settings(&app_handle);
+                    }
+                }
                 // OscInput has already cleared the old avatar's values, in
                 // message order. Start every graph over, so no processor
                 // (Smooth, Rate, SPS zones and lengths) carries old state

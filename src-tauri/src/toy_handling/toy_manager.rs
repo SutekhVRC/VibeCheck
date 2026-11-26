@@ -4,6 +4,9 @@ use std::path::Path;
 
 use crate::frontend::ToFrontend;
 use crate::util::fs::build_path_dir;
+use crate::vcore::config::toy_location::{
+    default_toy_settings_path, toy_settings_path, ToySettingsLocations,
+};
 use crate::{
     config::toy::VCToyConfig,
     frontend::frontend_types::FeVCToy,
@@ -89,11 +92,33 @@ impl ToyManager {
                 config.toy_name
             );
             let toy_name = config.toy_name.clone();
+            // Kept somewhere else for now (toy_location.rs)? Show those
+            let config = self.given_location_config(&toy_name).unwrap_or(config);
             self.configs.insert(toy_name, config);
         }
 
         debug!("Loaded {} Offline toy configs!", self.configs.len());
         Ok(())
+    }
+
+    /// The toy's settings from where an app keeps them now, if that isn't
+    /// its default file and they can be read.
+    fn given_location_config(&self, toy_name: &str) -> Option<VCToyConfig> {
+        if !ToySettingsLocations::given(&self._app_handle) {
+            return None;
+        }
+        let path = toy_settings_path(&self._app_handle, toy_name).ok()?;
+        if path == default_toy_settings_path(&self._app_handle, toy_name).ok()? {
+            return None;
+        }
+        let contents = fs::read_to_string(&path).ok()?;
+        match serde_json::from_str(&contents) {
+            Ok(config) => Some(config),
+            Err(e) => {
+                warn!("Couldn't read {}'s settings: {}", toy_name, e);
+                None
+            }
+        }
     }
 
     pub fn sync_frontend(&mut self, refresh_toys: bool) -> Result<Vec<FeVCToy>, ToyHandlingError> {

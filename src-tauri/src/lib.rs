@@ -31,6 +31,8 @@ pub mod embed {
     pub use crate::toy_handling::toyops::{
         LevelTweaks, ProcessingMode, ToyParameter, VCFeatureType, VCToyFeature,
     };
+    /// What `Extensions::toy_settings_location` is asked.
+    pub use crate::vcore::config::toy_location::ToySettingsQuery;
 }
 use crate::{
     frontend::frontend_native,
@@ -91,6 +93,9 @@ pub fn run(context: tauri::Context<tauri::Wry>, extensions: Extensions) {
     // endpoint)
     let has_updater = context.config().plugins.0.contains_key("updater");
     let tray_icon = extensions.tray_icon;
+    let toy_settings = extensions.toy_settings;
+    // Both read without VibeCheck's state lock (toy_location.rs)
+    let avatar_catalog = vibecheck_state_pointer.lock().avatar_catalog.clone();
 
     let mut builder = tauri::Builder::default()
         //.plugin(tauri_plugin_os::init())
@@ -119,7 +124,11 @@ pub fn run(context: tauri::Context<tauri::Wry>, extensions: Extensions) {
             tray::build(app, tray_icon)?;
             Ok(())
         })
-        .manage(vcore::state::VCStateMutex(vibecheck_state_pointer.clone()));
+        .manage(vcore::state::VCStateMutex(vibecheck_state_pointer.clone()))
+        .manage(vcore::config::toy_location::ToySettingsLocations(
+            toy_settings,
+        ))
+        .manage(avatar_catalog);
     if has_updater {
         builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     }

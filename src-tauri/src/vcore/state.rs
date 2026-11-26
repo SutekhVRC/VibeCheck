@@ -16,6 +16,7 @@ use crate::osc::oscquery::OscQuery;
 use crate::osc::OscMode;
 use crate::toy_handling::runtime::toy_management_handler::toy_management_handler;
 use crate::toy_handling::toy_manager::ToyManager;
+use crate::vcore::config::toy_location::ToySettingsLocations;
 use crate::vcore::errors::VcoreError;
 
 use super::config::app::VibeCheckConfig;
@@ -189,10 +190,19 @@ impl VibeCheckState {
         let Some(app_handle) = self.app_handle.clone() else {
             return;
         };
-        self.avatar_catalog
-            .start(self.async_rt.handle(), move |state| {
+        let reload_handle = app_handle.clone();
+        self.avatar_catalog.start(
+            self.async_rt.handle(),
+            move |state| {
                 crate::vcore::ipc::emit_plane::emit_avatar_event(&app_handle, &state.into());
-            });
+            },
+            // Toys' settings may be kept per avatar
+            move || {
+                if ToySettingsLocations::given(&reload_handle) {
+                    crate::vcore::ipc::call_plane::native_reload_toy_settings(&reload_handle);
+                }
+            },
+        );
     }
 
     /// Starts showing reported problems in the app. Needs the app handle.

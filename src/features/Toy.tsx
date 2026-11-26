@@ -9,6 +9,7 @@ import { ToyPower } from "@bindings/ToyPower";
 import { Settings2, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import lovenseLogo from "../assets/Lovense.png";
+import { appExtensions } from "../extensions";
 import Tooltip from "../layout/Tooltip";
 import { cn } from "../lib/utils";
 import FeatureForm from "./FeatureForm";
@@ -27,6 +28,7 @@ export default function Toy({
 }) {
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
   const nameInfo = NameInfo(toy);
+  const ToyHeaderSlot = appExtensions.ToyHeader;
 
   const { config } = useCoreEventContext();
   // The Config "advanced" switches now decide what starts open
@@ -62,6 +64,7 @@ export default function Toy({
         } ${toy.features.length === 1 ? "feature" : "features"}`}
         actions={
           <div className="flex items-center gap-4">
+            {ToyHeaderSlot && <ToyHeaderSlot toy={toy} />}
             <Button
               variant="secondary"
               onClick={() => setToySettingsOpen((o) => !o)}
