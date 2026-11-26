@@ -60,16 +60,20 @@ type GeneralKey =
 
 type GeneralSettings = Pick<FeVibeCheckConfig, GeneralKey>;
 
-const GENERAL_TOGGLES: {
-  key: GeneralKey;
-  label: string;
-  tooltip: (typeof TOOLTIP)[keyof typeof TOOLTIP];
-}[] = [
+// Toys' own toggles, in Toys; the rest are the app's, in General
+const TOY_TOGGLES: typeof GENERAL_TOGGLES = [
   {
     key: "scan_on_disconnect",
     label: "Scan On Disconnect",
     tooltip: TOOLTIP.ScanOnDisconnect,
   },
+];
+
+const GENERAL_TOGGLES: {
+  key: GeneralKey;
+  label: string;
+  tooltip: (typeof TOOLTIP)[keyof typeof TOOLTIP];
+}[] = [
   {
     key: "minimize_on_exit",
     label: "Minimize On Exit",
@@ -469,12 +473,74 @@ export default function Config({
         className="px-2 pb-2"
         icon={<Settings className="h-5 w-5" />}
         title="Settings"
-        subtitle="Connection, behaviour and appearance"
+        subtitle="Toys, connection, behaviour and appearance"
       />
 
       <div className="scrollbar min-h-0 w-full flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 px-2 pb-4 pt-3">
-          <Section title="Connection">
+          <Section title="Toys" hint="Saves instantly">
+            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4">
+              <TooltipLabel
+                text="Master intensity"
+                tooltip={TOOLTIP.MasterIntensity}
+              />
+              <Slider
+                multiply={100}
+                min={0}
+                max={1}
+                step={0.01}
+                value={[intensity]}
+                onValueChange={(v) => setIntensity(v[0])}
+                onValueCommit={(v) => saveIntensity(v[0])}
+              />
+              <EditableNumber
+                value={intensity}
+                min={0}
+                max={1}
+                step={0.01}
+                scale={100}
+                onCommit={saveIntensity}
+                label="Master intensity"
+              />
+            </div>
+            <div className="mt-3 grid grid-cols-[minmax(8rem,1fr)_minmax(8rem,2fr)] items-center gap-x-4">
+              <TooltipLabel text="Scan length" tooltip={TOOLTIP.ScanLength} />
+              <Select
+                name="Scan length"
+                value={scanLengthLabel(config.scan_length)}
+                onValueChange={saveScanLength}
+                options={scanLengthOptions}
+              />
+            </div>
+            <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-y-3">
+              {TOY_TOGGLES.map(({ key, label, tooltip }) => (
+                <div key={key} className="contents">
+                  <TooltipLabel text={label} tooltip={tooltip} />
+                  <Switch
+                    size="small"
+                    checked={general[key]}
+                    onCheckedChange={(checked) => saveToggle(key, checked)}
+                  />
+                </div>
+              ))}
+              {/* Frontend-only preference, saved on this device */}
+              <TooltipLabel
+                text="Turn on when scanning"
+                tooltip={TOOLTIP.AutoEnableOnScan}
+              />
+              <Switch
+                size="small"
+                checked={autoEnableOnScan}
+                onCheckedChange={setAutoEnableOnScan}
+              />
+            </div>
+            <div className="mt-4">
+              {/* A new one after a reset, so nothing from before it lingers */}
+              <ToyConnection key={resets} />
+            </div>
+          </Section>
+
+          <Section title="VRChat connection">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <TooltipLabel
                 text="Connect to VRChat"
@@ -546,43 +612,13 @@ export default function Config({
             )}
           </Section>
 
-          <Section title="Toys" hint="Saves instantly">
-            {/* A new one after a reset, so nothing from before it lingers */}
-            <ToyConnection key={resets} />
-            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4">
-              <TooltipLabel
-                text="Master intensity"
-                tooltip={TOOLTIP.MasterIntensity}
-              />
-              <Slider
-                multiply={100}
-                min={0}
-                max={1}
-                step={0.01}
-                value={[intensity]}
-                onValueChange={(v) => setIntensity(v[0])}
-                onValueCommit={(v) => saveIntensity(v[0])}
-              />
-              <EditableNumber
-                value={intensity}
-                min={0}
-                max={1}
-                step={0.01}
-                scale={100}
-                onCommit={saveIntensity}
-                label="Master intensity"
-              />
-            </div>
-            <div className="mt-3 grid grid-cols-[minmax(8rem,1fr)_minmax(8rem,2fr)] items-center gap-x-4">
-              <TooltipLabel text="Scan length" tooltip={TOOLTIP.ScanLength} />
-              <Select
-                name="Scan length"
-                value={scanLengthLabel(config.scan_length)}
-                onValueChange={saveScanLength}
-                options={scanLengthOptions}
-              />
-            </div>
-          </Section>
+          {(appExtensions.settingsSections ?? []).map(
+            ({ id, title, hint, Body }) => (
+              <Section key={id} title={title} hint={hint}>
+                <Body />
+              </Section>
+            ),
+          )}
 
           <Section title="General" hint="Saves instantly">
             <div className="grid grid-cols-[1fr_auto] items-center gap-y-3">
@@ -596,30 +632,12 @@ export default function Config({
                   />
                 </div>
               ))}
-              {/* Frontend-only preference, saved on this device */}
-              <TooltipLabel
-                text="Turn on when scanning"
-                tooltip={TOOLTIP.AutoEnableOnScan}
-              />
-              <Switch
-                size="small"
-                checked={autoEnableOnScan}
-                onCheckedChange={setAutoEnableOnScan}
-              />
             </div>
           </Section>
 
           <Section title="Theme" hint="Saves instantly">
             <ThemePicker />
           </Section>
-
-          {(appExtensions.settingsSections ?? []).map(
-            ({ id, title, hint, Body }) => (
-              <Section key={id} title={title} hint={hint}>
-                <Body />
-              </Section>
-            ),
-          )}
 
           <Section title="Troubleshooting">
             <div className="flex flex-wrap items-center justify-between gap-3">
