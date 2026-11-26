@@ -561,6 +561,7 @@ pub fn native_reload_toy_settings(app_handle: &tauri::AppHandle) {
         }
         Err(e) => warn!("Couldn't reload saved toys' settings: {:?}", e),
     }
+    emit_toy_event(app_handle, FeToyEvent::Reloaded);
 }
 
 /// Clears VRChat's saved avatar OSC configs. Returns the OSC folders that

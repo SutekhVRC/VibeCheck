@@ -147,7 +147,7 @@ follows every change:
 | `turn_on()`, `turn_off()` | the tray menu: `State(Enable)` / `State(Disable)` to the window, which then calls `vibecheck_enable` / `vibecheck_disable` (stopping a scan first) |
 | `panic()`, `resume()` | `panic_stop` / `panic_resume` (`vcore/panic.rs`) |
 | `set_master_intensity()` | the master intensity part of `set_vibecheck_config`; then `Config(Changed)` so the window reloads the settings |
-| `reload_toy_settings()` | what an avatar change does for toy settings (below): every toy's settings loaded again, applied like `alter_toy` (without saving), and `Update` toy events for connected and saved toys |
+| `reload_toy_settings()` | what an avatar change does for toy settings (below): every toy's settings loaded again, applied like `alter_toy` (without saving), `Update` toy events for connected and saved toys, then `Reloaded` (the toy page starts its open forms over with the new settings) |
 
 ### Where toy settings are kept
 

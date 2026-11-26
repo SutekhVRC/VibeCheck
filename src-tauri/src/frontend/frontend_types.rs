@@ -79,6 +79,10 @@ pub enum FeToyEvent {
     Add(FeVCToy),
     Remove(u32),
     Update(FeVCToy),
+    /// Every toy's settings were loaded again from where they're kept (e.g.
+    /// after an avatar change), after their `Update`s: open settings forms
+    /// show the new ones.
+    Reloaded,
     //OfflineSyncAll(Vec<FeVCToy>),
 }
 
