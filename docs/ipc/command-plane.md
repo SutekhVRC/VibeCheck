@@ -143,8 +143,10 @@ follows every change:
 
 | `Control` | Same path as |
 |---|---|
-| `state()` | a snapshot: on, panic, master intensity, connected toys (name, battery), VRChat found, toy service status, and an opaque key for the avatar VRChat loaded last (a hash of its id, never the id; kept while VRChat is gone) and its name once VRChat has written its OSC config (read from `usr_*/Avatars/<id>.json`, cached, retried every 10 s while missing; never logged) |
+| `state()` | a snapshot: on, panic, master intensity, scanning (`vcore/scan.rs`), connected toys (name, battery), VRChat found, toy service status, and an opaque key for the avatar VRChat loaded last (a hash of its id, never the id; kept while VRChat is gone) and its name once VRChat has written its OSC config (read from `usr_*/Avatars/<id>.json`, cached, retried every 10 s while missing; never logged) |
 | `turn_on()`, `turn_off()` | the tray menu: `State(Enable)` / `State(Disable)` to the window, which then calls `vibecheck_enable` / `vibecheck_disable` (stopping a scan first) |
+| `scan()` | the scan button: `State(Scan)` to the window while on, or `State(EnableAndScan)` while off if "Turn on when scanning" is set (otherwise an error, nothing happens) |
+| `stop_scan()` | what the scan length's timer does: stop the scan, then `Scan(Stop)` so the window's button follows |
 | `panic()`, `resume()` | `panic_stop` / `panic_resume` (`vcore/panic.rs`) |
 | `set_master_intensity()` | the master intensity part of `set_vibecheck_config`; then `Config(Changed)` so the window reloads the settings |
 | `reload_toy_settings()` | what an avatar change does for toy settings (below): every toy's settings loaded again, applied like `alter_toy` (without saving), `Update` toy events for connected and saved toys, then `Reloaded` (the toy page starts its open forms over with the new settings) |
