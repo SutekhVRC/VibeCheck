@@ -7,7 +7,8 @@
  *
  * - Turning on and off goes through the frontend, exactly like the tray's
  *   menu (FeStateEvent), so scanning stops first and the window's switch
- *   stays right.
+ *   stays right. Starting a scan does too; stopping one is what the scan
+ *   length's timer does (vcore/scan.rs), then the window is told.
  * - Panic and resume are the same functions as the panic button, hotkey and
  *   OSC API parameter.
  * - Master intensity is saved like Settings saves it, and the window is
@@ -19,12 +20,12 @@
  * state lock.
  */
 
-use log::info;
+use log::{info, warn};
 use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Manager};
 
 use crate::{
-    frontend::frontend_types::{FeConfigEvent, FeCoreEvent, FeStateEvent},
+    frontend::frontend_types::{FeConfigEvent, FeCoreEvent, FeScanEvent, FeStateEvent},
     toy_handling::ToyPower,
     util::toy_service::ToyServiceStatus,
     vcore::{
@@ -32,7 +33,7 @@ use crate::{
             call_plane::{native_reload_toy_settings, save_config},
             emit_plane::emit_core_event,
         },
-        panic,
+        panic, scan,
         state::{RunningState, VCStateMutex},
     },
 };
@@ -52,6 +53,8 @@ pub struct ControlState {
     pub panicked: bool,
     /// Master intensity, 0.0 to 1.0.
     pub master_intensity: f64,
+    /// Looking for toys (a scan is running).
+    pub scanning: bool,
     /// Toys connected now, by name.
     pub toys: Vec<ToyState>,
     /// VRChat is running (found over OSCQuery).
@@ -119,6 +122,7 @@ impl Control {
             on: matches!(vc.running, RunningState::Running),
             panicked: vc.safety.is_panicked(),
             master_intensity: vc.config.master_intensity,
+            scanning: scan::is_scanning(),
             toys,
             vrchat_found: *vc.avatar_catalog.presence().borrow(),
             toy_service,
@@ -141,6 +145,50 @@ impl Control {
     pub fn turn_off(&self) {
         info!("Turning off (control)");
         emit_core_event(&self.app, FeCoreEvent::State(FeStateEvent::Disable));
+    }
+
+    /// Looks for toys, as the window's scan button does: while VibeCheck is
+    /// on, or turning it on first if "Turn on when scanning" is set. The
+    /// scan stops by itself after the scan length (or with
+    /// [`stop_scan`](Self::stop_scan)).
+    pub fn scan(&self) -> Result<(), String> {
+        let (on, turn_on) = {
+            let state = self.app.state::<VCStateMutex>();
+            let vc = state.0.lock();
+            (
+                matches!(vc.running, RunningState::Running),
+                vc.config.auto_enable_on_scan,
+            )
+        };
+        let event = match (on, turn_on) {
+            (true, _) => FeStateEvent::Scan,
+            (false, true) => FeStateEvent::EnableAndScan,
+            (false, false) => return Err("VibeCheck is off".into()),
+        };
+        info!("Scanning (control)");
+        emit_core_event(&self.app, FeCoreEvent::State(event));
+        Ok(())
+    }
+
+    /// Stops a scan, as the window's stop button does; the window follows.
+    pub fn stop_scan(&self) {
+        info!("Stopping the scan (control)");
+        let state = self.app.state::<VCStateMutex>();
+        let vc = state.0.lock();
+        let Some(client) = vc.bp_client.as_ref() else {
+            return;
+        };
+        let stop = client.stop_scanning();
+        let app = self.app.clone();
+        vc.async_rt.spawn(async move {
+            match stop.await {
+                Ok(()) => {
+                    scan::scan_stopped();
+                    emit_core_event(&app, FeCoreEvent::Scan(FeScanEvent::Stop));
+                }
+                Err(e) => warn!("Couldn't stop the scan: {}", e),
+            }
+        });
     }
 
     /// Panic stop: every toy stops until [`resume`](Self::resume).

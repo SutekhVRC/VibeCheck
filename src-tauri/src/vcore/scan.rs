@@ -9,9 +9,13 @@
  * Every scan start and stop bumps a generation number. A timer only stops
  * the scan it was started for, so stopping and starting again doesn't get
  * the new scan cut short by the old timer.
+ *
+ * Whether a scan is running is kept here too (`is_scanning`), for Control:
+ * every start goes through `stop_after_scan_length`, every stop through
+ * `scan_stopped` or the timer.
  */
 
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -23,10 +27,17 @@ use crate::vcore::ipc::emit_plane::emit_core_event;
 use crate::vcore::state::VibeCheckState;
 
 static SCAN_GENERATION: AtomicU64 = AtomicU64::new(0);
+static SCANNING: AtomicBool = AtomicBool::new(false);
 
 /// Call when a scan stops for any other reason, so its timer does nothing.
 pub fn scan_stopped() {
     SCAN_GENERATION.fetch_add(1, Ordering::SeqCst);
+    SCANNING.store(false, Ordering::SeqCst);
+}
+
+/// Whether a scan is running (started and not stopped yet).
+pub fn is_scanning() -> bool {
+    SCANNING.load(Ordering::SeqCst)
 }
 
 /// Call after a scan starts: stops it once the scan length has passed,
@@ -34,6 +45,7 @@ pub fn scan_stopped() {
 /// configured now.
 pub fn stop_after_scan_length(vc_lock: &VibeCheckState, state: Arc<Mutex<VibeCheckState>>) {
     let generation = SCAN_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+    SCANNING.store(true, Ordering::SeqCst);
     let seconds = vc_lock.config.scan_length;
     if seconds == 0 {
         return; // Scans until stopped
@@ -43,6 +55,7 @@ pub fn stop_after_scan_length(vc_lock: &VibeCheckState, state: Arc<Mutex<VibeChe
         if SCAN_GENERATION.load(Ordering::SeqCst) != generation {
             return;
         }
+        SCANNING.store(false, Ordering::SeqCst);
         let (stop, app_handle) = {
             let vc_lock = state.lock();
             (
