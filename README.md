@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <img src="./docs/images/app.png" alt="VibeCheck with a toy connected" width="820" />
+  <img src="./docs/images/app.gif" alt="Turning VibeCheck on, a toy connecting, setting up its input, and the live diagnostics" width="820" />
 </p>
 
 <p align="center">
@@ -48,6 +48,10 @@
 4. **Turn VibeCheck on and look for toys.** The [App Setup](https://github.com/SutekhVRC/VibeCheck/wiki/VibeCheck-App-Setup) guide walks you through the rest.
 
 ## Features
+
+<p align="center">
+  <img src="./docs/images/app.png" alt="A connected toy's settings in VibeCheck" width="720" />
+</p>
 
 - **Per-motor tuning:** output range, idle speed, flip input, and Smooth, Rate and Constant modes. Rate follows how fast you stroke.
 - **Input filters** choose which sockets or plugs drive each toy.
