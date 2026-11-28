@@ -37,7 +37,7 @@
 - **Nothing in between, so lower latency.** [Buttplug.io](https://buttplug.io/) is built in: VibeCheck talks to your toys over Bluetooth itself, so every command goes straight to the toy instead of through another app, and there's nothing extra to start. Works with [hundreds of toys](https://iostindex.com/?filter0ButtplugSupport=4).
 - **Intiface Central works too.** Prefer it, or no Bluetooth on your PC? Connect through [Intiface Central](https://github.com/SutekhVRC/VibeCheck/wiki/Intiface-Central) on your computer or phone instead.
 - **SPS and TPS built in.** SPS 3, older SPS (even mixed) and TPS, with depth, touch and frot. Or drive toys from any avatar parameter you like.
-- **Sets itself up with VRChat.** Finds VRChat over OSCQuery on its own port, so it runs alongside your other OSC apps.
+- **Easy to set up.** It finds VRChat by itself (alongside your other OSC apps), a checklist walks you through your first toy, and it suggests your avatar's own parameters as you type, warning you if one doesn't exist. A Test button and live diagnostics show what's happening without guesswork.
 - **Safe by design.** A panic stop that is always one press away (button, **Ctrl + Alt + P**, tray or avatar menu) and a master intensity for every toy.
 - **Windows and Linux,** with in-app updates on both.
 
