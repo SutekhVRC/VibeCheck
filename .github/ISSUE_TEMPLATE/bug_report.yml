@@ -1,0 +1,86 @@
+name: Bug report
+description: Something in VibeCheck doesn't work as it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! The log file is the most useful part: it usually shows what went wrong straight away.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Turn VibeCheck on
+        2. Connect the toy
+        3. ...
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: VibeCheck version
+      description: Shown in Settings > About.
+      placeholder: "0.7.28"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - Linux
+    validations:
+      required: true
+
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Toy connection
+      description: Settings > Toy connection.
+      options:
+        - This computer (Bluetooth)
+        - Intiface Central
+        - Not about toys
+    validations:
+      required: true
+
+  - type: input
+    id: toys
+    attributes:
+      label: Toys
+      description: Brand and model of the toys involved, if any.
+      placeholder: "Lovense Nora"
+    validations:
+      required: false
+
+  - type: textarea
+    id: avatar
+    attributes:
+      label: Avatar setup
+      description: If it's about haptics in VRChat, whether the avatar uses SPS or TPS, and the parameters or processor the toy uses.
+    validations:
+      required: false
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log file
+      description: |
+        In VibeCheck, open Settings > Troubleshooting > **Open log folder** and drag `VibeCheck.log` here (attach `VibeCheck.old.log` too if the problem happened before your last restart).
+        Your home folder, computer name, IP and Bluetooth addresses and VRChat IDs are left out of the log.
+      placeholder: Drag the log file here
+    validations:
+      required: false

@@ -1,0 +1,27 @@
+name: Feature request
+description: An idea for something VibeCheck could do
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like?
+      description: Describe what VibeCheck should do.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why?
+      description: What you're trying to do, and what's in the way today.
+    validations:
+      required: true
+
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Other apps that do this, screenshots, avatar setups...
+    validations:
+      required: false

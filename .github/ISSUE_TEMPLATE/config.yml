@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions and help
+    url: https://discord.gg/C8ACSGSyfq
+    about: Ask in the VibeCheck Discord for help setting things up.
+  - name: Wiki
+    url: https://github.com/SutekhVRC/VibeCheck/wiki
+    about: Guides for setting up VibeCheck, toys and avatars.
