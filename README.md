@@ -22,30 +22,43 @@
   <a href="https://github.com/SutekhVRC/VibeCheck/issues"><b>Report a bug</b></a>
 </p>
 
+<p align="center">
+  <img src="./docs/images/app.png" alt="VibeCheck with a toy connected" width="820" />
+</p>
+
+<p align="center">
+  <b>Avatar gets touched</b> &nbsp;→&nbsp; <b>VRChat sends it over OSC</b> &nbsp;→&nbsp; <b>VibeCheck</b> &nbsp;→&nbsp; <b>your toy reacts</b>
+</p>
+
 ---
 
-## Features
+## Why VibeCheck
 
-- **Bluetooth toy support** through [Buttplug.io](https://buttplug.io/): connect any [supported toy](https://iostindex.com/?filter0ButtplugSupport=4) directly, no extra app needed. Toys show up as soon as they connect.
-- **No Bluetooth on your PC?** Connect through [Intiface Central](https://intiface.com/central/) on your phone instead: your toys pair with the phone, and VibeCheck drives them over Wi-Fi ([how](https://github.com/SutekhVRC/VibeCheck/wiki/Intiface-Central)).
-- **Driven by your avatar**: map VRChat avatar parameters to each toy motor over OSC.
-- **Connects automatically** over OSCQuery on its own port, so it works alongside other OSC apps. Manual ports are still an option.
-- **SPS and TPS support**: SPS 3 and older SPS (including mixing the two), with depth, touch and frot, plus TPS. Input filters pick which sockets or plugs drive each toy.
-- **Fine-tuning per motor**: output range, idle speed, flip input, plus Smooth, Rate and Constant processing modes. Rate follows how fast you stroke.
-- **Safety controls**: a panic stop (sidebar button, **Ctrl + Alt + P**, the tray menu or an avatar parameter) and a master intensity slider for every toy.
-- **In-game control** with the [VibeCheck OSC API](https://github.com/SutekhVRC/VibeCheck/wiki/Advanced-Features): turn VibeCheck on or off, panic stop, and enable or disable toys by anatomy from your avatar menu.
-- **Battery levels sent back to VRChat** as OSC data for your avatar to use.
-- **Live diagnostics**: see every parameter VRChat sends, what each toy's settings make of it, and a log of every OSC message, without a separate OSC tool.
-- **Windows and Linux**, with in-app updates on both (AppImage, `.deb` and `.rpm` on Linux). On Linux, VRChat runs through Proton as usual.
-- **Quality of life**: themes, a tray menu with live status, a configurable scan length, scanning automatically when a toy disconnects, desktop notifications, and minimising instead of closing.
+- **No extra apps.** VibeCheck talks to your toys over Bluetooth itself, through [Buttplug.io](https://buttplug.io/), so it works with [hundreds of toys](https://iostindex.com/?filter0ButtplugSupport=4). No Bluetooth on your PC? Use [Intiface Central](https://github.com/SutekhVRC/VibeCheck/wiki/Intiface-Central) on your phone instead.
+- **SPS and TPS built in.** SPS 3, older SPS (even mixed) and TPS, with depth, touch and frot. Or drive toys from any avatar parameter you like.
+- **Sets itself up with VRChat.** Finds VRChat over OSCQuery on its own port, so it runs alongside your other OSC apps.
+- **Safe by design.** A panic stop that is always one press away (button, **Ctrl + Alt + P**, tray or avatar menu) and a master intensity for every toy.
+- **Windows and Linux,** with in-app updates on both.
 
 ## Getting started
 
-1. **Get a toy** that [Buttplug.io supports](https://iostindex.com/?filter0ButtplugSupport=4).
-2. **Connect it**: follow [Connecting Toys](https://github.com/SutekhVRC/VibeCheck/wiki/Connecting-Toys).
-3. **Install VibeCheck** from the [latest release](https://github.com/SutekhVRC/VibeCheck/releases/latest): the installer on Windows, or the AppImage, `.deb` or `.rpm` on Linux.
-4. **Set up your avatar** with a known system or your own: [Avatar Setup](https://github.com/SutekhVRC/VibeCheck/wiki/Avatar-Setup).
-5. **Set up the app**: [VibeCheck App Setup](https://github.com/SutekhVRC/VibeCheck/wiki/VibeCheck-App-Setup).
+1. **Get a toy** that [Buttplug.io supports](https://iostindex.com/?filter0ButtplugSupport=4) and [connect it](https://github.com/SutekhVRC/VibeCheck/wiki/Connecting-Toys).
+2. **Install VibeCheck** from the [latest release](https://github.com/SutekhVRC/VibeCheck/releases/latest): the installer on Windows, or the AppImage, `.deb` or `.rpm` on Linux.
+3. **Set up your avatar** with SPS, TPS or your own contacts: [Avatar Setup](https://github.com/SutekhVRC/VibeCheck/wiki/Avatar-Setup).
+4. **Turn VibeCheck on and look for toys.** The [App Setup](https://github.com/SutekhVRC/VibeCheck/wiki/VibeCheck-App-Setup) guide walks you through the rest.
+
+## Features
+
+- **Per-motor tuning:** output range, idle speed, flip input, and Smooth, Rate and Constant modes. Rate follows how fast you stroke.
+- **Input filters** choose which sockets or plugs drive each toy.
+- **In-game control** with the [OSC API](https://github.com/SutekhVRC/VibeCheck/wiki/Advanced-Features): turn VibeCheck on or off, panic stop, and switch toys by anatomy from your avatar menu.
+- **Battery levels** sent back to VRChat for your avatar to show.
+- **Live diagnostics:** see every parameter VRChat sends and what each toy makes of it, without a separate OSC tool.
+- **Themes,** a tray menu with live status, scanning again when a toy drops, and desktop notifications.
+
+<p align="center">
+  <img src="./docs/images/themes.png" alt="VibeCheck's themes" width="520" />
+</p>
 
 ## Documentation
 
@@ -59,7 +72,7 @@ All guides live on the [wiki](https://github.com/SutekhVRC/VibeCheck/wiki):
 | [Avatar Setup](https://github.com/SutekhVRC/VibeCheck/wiki/Avatar-Setup) | OSC, custom setups, SPS and TPS |
 | [Toy Options](https://github.com/SutekhVRC/VibeCheck/wiki/Toy-Options-List) | Every per-toy and per-motor setting |
 | [Settings](https://github.com/SutekhVRC/VibeCheck/wiki/VibeCheck-Settings) | Every app setting |
-| [OSC API](https://github.com/SutekhVRC/VibeCheck/wiki/Advanced-Features) | Parameters to turn VibeCheck on and off, panic stop and toggle toys by anatomy from inside VRChat |
+| [OSC API](https://github.com/SutekhVRC/VibeCheck/wiki/Advanced-Features) | Parameters to control VibeCheck from inside VRChat |
 | [Panic Stop](https://github.com/SutekhVRC/VibeCheck/wiki/Panic-Stop) | Stopping every toy at once |
 | [Themes](https://github.com/SutekhVRC/VibeCheck/wiki/Themes) | The app's themes |
 | [Diagnostics](https://github.com/SutekhVRC/VibeCheck/wiki/Diagnostics) | Checking what VRChat sends and what your toys make of it |
@@ -78,38 +91,14 @@ All guides live on the [wiki](https://github.com/SutekhVRC/VibeCheck/wiki):
 </p>
 
 <p align="center">
-  Get help, share avatar setups, suggest features and hang out.<br />
-  <b><a href="https://discord.gg/C8ACSGSyfq">discord.gg/C8ACSGSyfq</a></b>
+  Get help, share avatar setups, suggest features and hang out.
 </p>
 
-## Bugs and feature requests
+Found a bug or have an idea? [Open an issue](https://github.com/SutekhVRC/VibeCheck/issues) or tell us on [Discord](https://discord.gg/C8ACSGSyfq).
 
-Found a bug or have an idea? Please [open an issue](https://github.com/SutekhVRC/VibeCheck/issues) or tell us on [Discord](https://discord.gg/C8ACSGSyfq). Reports help a lot!
+## Contributing
 
-## Building from source
-
-VibeCheck is a [Tauri](https://tauri.app/) app with a Rust backend and a React frontend.
-
-You'll need [Rust](https://www.rust-lang.org/tools/install), [Node.js](https://nodejs.org/) with [Yarn](https://yarnpkg.com/) (enable it with `corepack enable`) and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your platform.
-
-```bash
-yarn install       # install frontend dependencies
-yarn tauri dev     # run the app in development mode
-yarn tauri build   # build an installer
-```
-
-The Rust code is a Cargo workspace rooted at `src-tauri/`: the app, the [`vibecheck-core`](./docs/runtime/vibecheck-core.md) library that holds the module runtime, and `osc-tool`. To write an input, processor or output, see [Writing modules](./docs/runtime/writing-modules.md). [Toy command path](./docs/runtime/toy-command-path.md) follows an avatar parameter all the way to a toy's motor, and [Errors](./docs/runtime/errors.md) covers how problems reach the user. Run the tests from `src-tauri/` with `cargo test --workspace`.
-
-### Testing OSC without VRChat
-
-The workspace includes [`osc-tool`](./src-tauri/crates/osc-tool/README.md), a small command-line tool for checking VibeCheck's OSC input and reading an avatar's parameters from VRChat. Run it from `src-tauri/`:
-
-```bash
-cargo run -p osc-tool -- listen                       # is VRChat sending? (close VibeCheck first)
-cargo run -p osc-tool -- send Boop 0.5                # send a parameter to VibeCheck as if VRChat did
-cargo run -p osc-tool -- sweep Boop 0 1 --back        # ramp a parameter up and back down
-cargo run -p osc-tool -- avatar --out avatar.json     # save the avatar's parameters from VRChat
-```
+VibeCheck is a [Tauri](https://tauri.app/) app with a Rust backend and a React frontend. [CONTRIBUTING.md](./CONTRIBUTING.md) covers building from source, the code layout and testing without VRChat.
 
 ## License
 
