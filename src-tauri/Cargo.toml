@@ -1,6 +1,6 @@
 [package]
 name = "vibecheck"
-version = "0.7.26"
+version = "0.7.27"
 edition = "2021"
 authors = ["SutekhVRC"]
 rust-version = "1.89"
